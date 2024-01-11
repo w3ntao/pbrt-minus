@@ -8,7 +8,7 @@
 #include "base/world.h"
 #include "base/material.h"
 #include "base/integrator.h"
-#include "cameras/perspective_camera.h"
+#include "cameras/perspective.h"
 #include "shapes/sphere.h"
 #include "integrators/path.h"
 
