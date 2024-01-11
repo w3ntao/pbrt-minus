@@ -11,6 +11,7 @@
 #include "cameras/perspective.h"
 #include "shapes/sphere.h"
 #include "integrators/path.h"
+#include "integrators/surface_normal.h"
 
 using namespace std;
 
@@ -29,6 +30,10 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 
 __global__ void create_path_integrator(Integrator **gpu_integrator) {
     *gpu_integrator = new PathIntegrator();
+}
+
+__global__ void create_surface_normal_integrator(Integrator **gpu_integrator) {
+    *gpu_integrator = new SurfaceNormalIntegrator();
 }
 
 #define RND (curand_uniform(&local_rand_state))
@@ -166,7 +171,7 @@ int main() {
 
     Integrator **gpu_integrator;
     checkCudaErrors(cudaMalloc((void **)&gpu_integrator, sizeof(Integrator *)));
-    create_path_integrator<<<1, 1>>>(gpu_integrator);
+    create_surface_normal_integrator<<<1, 1>>>(gpu_integrator);
 
     create_world<<<1, 1>>>(gpu_shape_list, gpu_world, gpu_camera, width, height, gpu_rand_create_world);
     checkCudaErrors(cudaGetLastError());

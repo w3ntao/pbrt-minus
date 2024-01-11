@@ -1,0 +1,21 @@
+#pragma once
+
+#include "base/integrator.h"
+
+class SurfaceNormalIntegrator : public Integrator {
+    public:
+        PBRT_GPU SurfaceNormalIntegrator() = default;
+
+        ~SurfaceNormalIntegrator() override = default;
+
+        PBRT_GPU Color get_radiance(const Ray &ray, const World *const *world,
+                                    curandState *local_rand_state) const override {
+            Intersection intersection;
+            if (!(*world)->intersect(intersection, ray, 0.001f, FLT_MAX)) {
+                return Color(0.0, 0.0, 0.0);
+            }
+
+            const Vector3 n = Vector3(intersection.n).softmax();
+            return Color(n.x, n.y, n.z);
+        }
+};
