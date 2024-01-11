@@ -7,11 +7,11 @@ class Point {
     public:
         double x, y, z;
 
-        __host__ __device__ Point() : x(0.0), y(0.0), z(0.0){};
+        PBRT_CPU_GPU Point() : x(0.0), y(0.0), z(0.0){};
 
-        __host__ __device__ Point(double _x, double _y, double _z) : x(_x), y(_y), z(_z){};
+        PBRT_CPU_GPU Point(double _x, double _y, double _z) : x(_x), y(_y), z(_z){};
 
-        __host__ __device__ double &operator[](int index) {
+        PBRT_CPU_GPU double &operator[](int index) {
             switch (index) {
             case 0: {
                 return x;
@@ -32,7 +32,7 @@ class Point {
             }
         }
 
-        __host__ __device__ double operator[](int index) const {
+        PBRT_CPU_GPU double operator[](int index) const {
             switch (index) {
             case 0: {
                 return x;
@@ -53,23 +53,23 @@ class Point {
             }
         }
 
-        __device__ inline Vector3 to_vector() const {
+        PBRT_GPU inline Vector3 to_vector() const {
             return Vector3(x, y, z);
         }
 };
 
-__device__ inline Point operator+(const Point &p, const Vector3 &v) {
+PBRT_GPU inline Point operator+(const Point &p, const Vector3 &v) {
     return Point(p.x + v.x, p.y + v.y, p.z + v.z);
 }
 
-__device__ inline Vector3 operator-(const Point &left, const Point &right) {
+PBRT_GPU inline Vector3 operator-(const Point &left, const Point &right) {
     return Vector3(left.x - right.x, left.y - right.y, left.z - right.z);
 }
 
-__device__ inline Point operator-(const Point &p, const Vector3 &v) {
+PBRT_GPU inline Point operator-(const Point &p, const Vector3 &v) {
     return Point(p.x - v.x, p.y - v.y, p.z - v.z);
 }
 
-__device__ inline Vector3 operator-(const Vector3 &v, const Point &p) {
+PBRT_GPU inline Vector3 operator-(const Vector3 &v, const Point &p) {
     return Vector3(v.x - p.x, v.y - p.y, v.z - p.z);
 }

@@ -7,10 +7,10 @@ class World {
         Shape **list;
         int size;
 
-        __device__ World(Shape **_list, int n) : list(_list), size(n) {}
+        PBRT_GPU World(Shape **_list, int n) : list(_list), size(n) {}
 
-        __device__ bool intersect(Intersection &intersection, const Ray &ray, double t_min,
-                                  double t_max) const {
+        PBRT_GPU bool intersect(Intersection &intersection, const Ray &ray, double t_min,
+                                double t_max) const {
             bool intersected = false;
             double closest_so_far = t_max;
             Intersection temp_intersection;

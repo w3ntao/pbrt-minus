@@ -4,7 +4,7 @@
 
 class Camera {
     public:
-        __device__ virtual ~Camera() {}
+        PBRT_GPU virtual ~Camera() {}
 
-        __device__ virtual Ray get_ray(double s, double t, curandState *local_rand_state) const = 0;
+        PBRT_GPU virtual Ray get_ray(double s, double t, curandState *local_rand_state) const = 0;
 };

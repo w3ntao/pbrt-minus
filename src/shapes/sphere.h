@@ -11,11 +11,11 @@ class Sphere : public Shape {
     public:
         ~Sphere() override = default;
 
-        __device__ Sphere(const Point &_center, double _radius, const Material *_material_ptr)
+        PBRT_GPU Sphere(const Point &_center, double _radius, const Material *_material_ptr)
             : center(_center), radius(_radius), material_ptr(_material_ptr) {}
 
-        __device__ bool intersect(Intersection &intersection, const Ray &ray, double t_min,
-                                  double t_max) const override {
+        PBRT_GPU bool intersect(Intersection &intersection, const Ray &ray, double t_min,
+                                double t_max) const override {
             Vector3 oc = ray.o - center;
             double a = dot(ray.d, ray.d);
             double b = dot(oc, ray.d);
@@ -45,7 +45,7 @@ class Sphere : public Shape {
             }
         }
 
-        __device__ const Material *get_material_ptr() const override {
+        PBRT_GPU const Material *get_material_ptr() const override {
             return material_ptr;
         }
 };

@@ -5,12 +5,12 @@
 
 class PathIntegrator : public Integrator {
     public:
-        __device__ PathIntegrator() = default;
+        PBRT_GPU PathIntegrator() = default;
 
         ~PathIntegrator() override = default;
 
-        __device__ Color get_radiance(const Ray &ray, const World *const *world,
-                                      curandState *local_rand_state) const override {
+        PBRT_GPU Color get_radiance(const Ray &ray, const World *const *world,
+                                    curandState *local_rand_state) const override {
             Ray current_ray = ray;
             Color current_attenuation = Color(1.0, 1.0, 1.0);
             for (int i = 0; i < 50; i++) {

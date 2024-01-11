@@ -13,10 +13,10 @@ struct Intersection {
 
 class Shape {
     public:
-        __device__ virtual ~Shape() {}
+        PBRT_GPU virtual ~Shape() {}
 
-        __device__ virtual bool intersect(Intersection &intersection, const Ray &ray, double t_min,
-                                          double t_max) const = 0;
+        PBRT_GPU virtual bool intersect(Intersection &intersection, const Ray &ray, double t_min,
+                                        double t_max) const = 0;
 
-        __device__ virtual const Material *get_material_ptr() const = 0;
+        PBRT_GPU virtual const Material *get_material_ptr() const = 0;
 };
