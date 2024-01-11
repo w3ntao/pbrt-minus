@@ -1,6 +1,9 @@
 #include <iostream>
 #include <string>
+#include <iomanip>
+
 #include <curand_kernel.h>
+
 #include "util/image.h"
 #include "base/world.h"
 #include "base/material.h"
@@ -30,8 +33,8 @@ __global__ void create_path_integrator(Integrator **gpu_integrator) {
 
 #define RND (curand_uniform(&local_rand_state))
 
-__global__ void create_world(Shape **gpu_shape_list, World **gpu_world, Camera **gpu_camera, uint width,
-                             uint height, curandState *rand_state) {
+__global__ void create_world(Shape **gpu_shape_list, World **gpu_world, Camera **gpu_camera, int width,
+                             int height, curandState *rand_state) {
     curandState local_rand_state = *rand_state;
     gpu_shape_list[0] = new Sphere(Point(0, -1000.0, -1), 1000, new Lambertian(Color(0.5, 0.5, 0.5)));
     int i = 1;
@@ -81,21 +84,21 @@ __global__ void rand_init(curandState *rand_state) {
     curand_init(1984, 0, 0, rand_state);
 }
 
-__global__ void render_init(uint width, uint height, curandState *rand_state) {
-    uint x = threadIdx.x + blockIdx.x * blockDim.x;
-    uint y = threadIdx.y + blockIdx.y * blockDim.y;
+__global__ void render_init(int width, int height, curandState *rand_state) {
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y = threadIdx.y + blockIdx.y * blockDim.y;
     if ((x >= width) || (y >= height))
         return;
-    uint pixel_index = y * width + x;
+    int pixel_index = y * width + x;
     // Each thread gets same seed, a different sequence number, no offset
     curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
 }
 
-__global__ void render(Color *frame_buffer, uint width, uint height, uint num_samples,
+__global__ void render(Color *frame_buffer, int width, int height, int num_samples,
                        const Integrator *const *integrator, const Camera *const *camera,
                        const World *const *world, curandState *rand_state) {
-    uint x = threadIdx.x + blockIdx.x * blockDim.x;
-    uint y = threadIdx.y + blockIdx.y * blockDim.y;
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y = threadIdx.y + blockIdx.y * blockDim.y;
     if ((x >= width) || (y >= height)) {
         return;
     }
@@ -104,7 +107,7 @@ __global__ void render(Color *frame_buffer, uint width, uint height, uint num_sa
     curandState *local_rand_state = &(rand_state[pixel_index]);
 
     Color final_color(0, 0, 0);
-    for (uint s = 0; s < num_samples; s++) {
+    for (int s = 0; s < num_samples; s++) {
         float u = float(x + curand_uniform(local_rand_state)) / float(width);
         float v = float(y + curand_uniform(local_rand_state)) / float(height);
         final_color +=
@@ -117,23 +120,23 @@ __global__ void render(Color *frame_buffer, uint width, uint height, uint num_sa
     frame_buffer[y * width + x] = final_color;
 }
 
-void writer_to_file(const string &file_name, uint width, uint height, const Color *frame_buffer) {
+void writer_to_file(const string &file_name, int width, int height, const Color *frame_buffer) {
     Image image(frame_buffer, width, height);
     image.flip();
     image.writePNG(file_name);
 }
 
 int main() {
-    uint width = 1960;
-    uint height = 1080;
+    int width = 1960;
+    int height = 1080;
 
     float ratio = 1.0;
-    width = uint(width * ratio);
-    height = uint(height * ratio);
+    width = int(width * ratio);
+    height = int(height * ratio);
 
-    uint thread_width = 8;
-    uint thread_height = 8;
-    uint num_samples = 1;
+    int thread_width = 8;
+    int thread_height = 8;
+    int num_samples = 1;
 
     cerr << "Rendering a " << width << "x" << height << " image (samples per pixel: " << num_samples << ") ";
     cerr << "in " << thread_width << "x" << thread_height << " blocks.\n";
@@ -154,7 +157,7 @@ int main() {
     checkCudaErrors(cudaDeviceSynchronize());
 
     Shape **gpu_shape_list;
-    uint num_sphere = 22 * 22 + 1 + 3;
+    int num_sphere = 22 * 22 + 1 + 3;
     checkCudaErrors(cudaMalloc((void **)&gpu_shape_list, num_sphere * sizeof(Shape *)));
     World **gpu_world;
     checkCudaErrors(cudaMalloc((void **)&gpu_world, sizeof(World *)));
@@ -183,7 +186,7 @@ int main() {
     checkCudaErrors(cudaDeviceSynchronize());
 
     double timer_seconds = ((double)(clock() - start)) / CLOCKS_PER_SEC;
-    cerr << "took " << timer_seconds << " seconds.\n";
+    cerr << std::setprecision(1) << "took " << timer_seconds << " seconds.\n";
 
     string file_name = "output.png";
     writer_to_file(file_name, width, height, frame_buffer);

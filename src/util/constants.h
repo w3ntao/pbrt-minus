@@ -5,8 +5,6 @@
 #ifndef CUDA_RAY_TRACER_CONSTANTS_H
 #define CUDA_RAY_TRACER_CONSTANTS_H
 
-typedef unsigned int uint;
-
 const double CPU_PI = std::acos(-1.0);
 
 inline float clamp_0_1(float x) {

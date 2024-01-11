@@ -13,19 +13,19 @@
 class Image {
     private:
         std::vector<Color> pixels;
-        uint width, height;
+        int width, height;
 
     public:
         Image() : width(0), height(0) {}
 
-        Image(uint _width, uint _height) : width(_width), height(_height) {
+        Image(int _width, int _height) : width(_width), height(_height) {
             pixels = std::vector<Color>(_width * _height);
         }
 
-        Image(const Color *frame_buffer, uint _width, uint _height) : width(_width), height(_height) {
+        Image(const Color *frame_buffer, int _width, int _height) : width(_width), height(_height) {
             pixels = std::vector<Color>(_width * _height);
-            for (uint x = 0; x < width; ++x) {
-                for (uint y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                for (int y = 0; y < height; ++y) {
                     size_t pixel_index = y * width + x;
                     (*this)(x, y) = frame_buffer[pixel_index];
                 }
@@ -42,10 +42,10 @@ class Image {
         void flip() {
             std::vector<Color> flipped_pixels = std::vector<Color>(width * height);
 
-            for (uint x = 0; x < width; ++x) {
-                for (uint y = 0; y < height; ++y) {
-                    uint pixel_index = y * width + x;
-                    uint flipped_index = (height - 1 - y) * width + x;
+            for (int x = 0; x < width; ++x) {
+                for (int y = 0; y < height; ++y) {
+                    int pixel_index = y * width + x;
+                    int flipped_index = (height - 1 - y) * width + x;
 
                     flipped_pixels[flipped_index] = pixels[pixel_index];
                 }
@@ -53,17 +53,17 @@ class Image {
             pixels = flipped_pixels;
         }
 
-        void create(uint _width, uint _height) {
+        void create(int _width, int _height) {
             width = _width;
             height = _height;
             pixels = std::vector<Color>(_width * _height);
         }
 
-        Color &operator()(uint x, uint y) {
+        Color &operator()(int x, int y) {
             return pixels[y * width + x];
         }
 
-        const Color &operator()(uint x, uint y) const {
+        const Color &operator()(int x, int y) const {
             return pixels[y * width + x];
         }
 
