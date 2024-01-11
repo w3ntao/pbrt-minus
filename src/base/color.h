@@ -1,9 +1,4 @@
-//
-// Created by wentao on 4/6/23.
-//
-
-#ifndef CUDA_RAY_TRACER_COLOR_H
-#define CUDA_RAY_TRACER_COLOR_H
+#pragma once
 
 class Color {
     public:
@@ -59,5 +54,3 @@ __device__ inline Color operator*(float scalar, const Color &c) {
 __device__ inline Color operator/(const Color c, float divisor) {
     return Color(c.r / divisor, c.g / divisor, c.b / divisor);
 }
-
-#endif // CUDA_RAY_TRACER_COLOR_H

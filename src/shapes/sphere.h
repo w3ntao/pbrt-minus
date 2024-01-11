@@ -1,9 +1,4 @@
-//
-// Created by wentao on 4/7/23.
-//
-
-#ifndef CUDA_RAY_TRACER_SPHERE_H
-#define CUDA_RAY_TRACER_SPHERE_H
+#pragma once
 
 #include "base/shape.h"
 
@@ -54,5 +49,3 @@ class Sphere : public Shape {
             return material_ptr;
         }
 };
-
-#endif // CUDA_RAY_TRACER_SPHERE_H

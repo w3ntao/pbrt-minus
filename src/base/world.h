@@ -1,9 +1,4 @@
-//
-// Created by wentao on 4/7/23.
-//
-
-#ifndef CUDA_RAY_TRACER_WORLD_H
-#define CUDA_RAY_TRACER_WORLD_H
+#pragma once
 
 #include "base/shape.h"
 
@@ -13,7 +8,7 @@ class World {
         int size;
 
         __device__ World(Shape **_list, int n) : list(_list), size(n) {}
-        
+
         __device__ bool intersect(Intersection &intersection, const Ray &ray, float t_min,
                                   float t_max) const {
             bool intersected = false;
@@ -30,5 +25,3 @@ class World {
             return intersected;
         }
 };
-
-#endif // CUDA_RAY_TRACER_WORLD_H

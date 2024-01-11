@@ -1,9 +1,4 @@
-//
-// Created by wentao on 4/13/23.
-//
-
-#ifndef CUDA_RAY_TRACER_PATH_H
-#define CUDA_RAY_TRACER_PATH_H
+#pragma once
 
 #include "base/integrator.h"
 #include <cfloat>
@@ -41,5 +36,3 @@ class PathIntegrator : public Integrator {
             return Color(0.0, 0.0, 0.0); // exceeded recursion
         }
 };
-
-#endif // CUDA_RAY_TRACER_PATH_H

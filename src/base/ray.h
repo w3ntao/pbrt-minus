@@ -1,9 +1,4 @@
-//
-// Created by wentao on 4/6/23.
-//
-
-#ifndef CUDA_RAY_TRACER_RAY_H
-#define CUDA_RAY_TRACER_RAY_H
+#pragma once
 
 #include "base/point.h"
 #include "base/vector3.h"
@@ -21,5 +16,3 @@ class Ray {
             return o + t * d;
         }
 };
-
-#endif // CUDA_RAY_TRACER_RAY_H

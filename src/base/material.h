@@ -1,9 +1,4 @@
-//
-// Created by wentao on 4/12/23.
-//
-
-#ifndef CUDA_RAY_TRACER_MATERIAL_H
-#define CUDA_RAY_TRACER_MATERIAL_H
+#pragma once
 
 struct Intersection;
 
@@ -129,5 +124,3 @@ class Dielectric : public Material {
 
         float ref_idx;
 };
-
-#endif // CUDA_RAY_TRACER_MATERIAL_H

@@ -136,7 +136,7 @@ int main() {
 
     int thread_width = 8;
     int thread_height = 8;
-    int num_samples = 1;
+    int num_samples = 10;
 
     cerr << "Rendering a " << width << "x" << height << " image (samples per pixel: " << num_samples << ") ";
     cerr << "in " << thread_width << "x" << thread_height << " blocks.\n";
@@ -186,7 +186,7 @@ int main() {
     checkCudaErrors(cudaDeviceSynchronize());
 
     double timer_seconds = ((double)(clock() - start)) / CLOCKS_PER_SEC;
-    cerr << std::setprecision(1) << "took " << timer_seconds << " seconds.\n";
+    cerr << std::fixed << std::setprecision(1) << "took " << timer_seconds << " seconds.\n";
 
     string file_name = "output.png";
     writer_to_file(file_name, width, height, frame_buffer);

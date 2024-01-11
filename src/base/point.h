@@ -1,5 +1,4 @@
-#ifndef CUDA_RAY_TRACER_POINT_H
-#define CUDA_RAY_TRACER_POINT_H
+#pragma once
 
 #include <stdexcept>
 #include "vector3.h"
@@ -74,5 +73,3 @@ __device__ inline Point operator-(const Point &p, const Vector3 &v) {
 __device__ inline Vector3 operator-(const Vector3 &v, const Point &p) {
     return Vector3(v.x - p.x, v.y - p.y, v.z - p.z);
 }
-
-#endif // CUDA_RAY_TRACER_POINT_H

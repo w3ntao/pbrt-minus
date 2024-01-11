@@ -1,9 +1,4 @@
-//
-// Created by wentao on 4/6/23.
-//
-
-#ifndef CUDA_RAY_TRACER_VECTOR3_H
-#define CUDA_RAY_TRACER_VECTOR3_H
+#pragma once
 
 #include <stdexcept>
 
@@ -101,5 +96,3 @@ __host__ __device__ inline Vector3 cross(const Vector3 &left, const Vector3 &rig
     return Vector3((left[1] * right[2] - left[2] * right[1]), (-(left[0] * right[2] - left[2] * right[0])),
                    (left[0] * right[1] - left[1] * right[0]));
 }
-
-#endif // CUDA_RAY_TRACER_VECTOR3_H

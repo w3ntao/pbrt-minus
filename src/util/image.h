@@ -1,13 +1,8 @@
-//
-// Created by wentao on 4/6/23.
-//
-
-#ifndef CUDA_RAY_TRACER_IMAGE_H
-#define CUDA_RAY_TRACER_IMAGE_H
+#pragma once
 
 #include <vector>
 #include <string>
-#include "constants.h"
+#include "common.h"
 #include "base/color.h"
 
 class Image {
@@ -71,4 +66,3 @@ class Image {
 
         void readPNG(const std::string &file_name);
 };
-#endif // CUDA_RAY_TRACER_IMAGE_H

@@ -1,9 +1,4 @@
-//
-// Created by wentao on 4/13/23.
-//
-
-#ifndef CUDA_RAY_TRACER_PERSPECTIVE_CAMERA_H
-#define CUDA_RAY_TRACER_PERSPECTIVE_CAMERA_H
+#pragma once
 
 #include "base/camera.h"
 
@@ -50,5 +45,3 @@ class PerspectiveCamera : public Camera {
         Vector3 u, v, w;
         float lens_radius;
 };
-
-#endif // CUDA_RAY_TRACER_PERSPECTIVE_CAMERA_H
