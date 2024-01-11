@@ -1,7 +1,7 @@
 #pragma once
 
+#include <limits>
 #include "base/integrator.h"
-#include <cfloat>
 
 class PathIntegrator : public Integrator {
     public:
@@ -15,7 +15,7 @@ class PathIntegrator : public Integrator {
             Color current_attenuation = Color(1.0, 1.0, 1.0);
             for (int i = 0; i < 50; i++) {
                 Intersection intersection;
-                if ((*world)->intersect(intersection, current_ray, 0.001f, FLT_MAX)) {
+                if ((*world)->intersect(intersection, current_ray, 0.001f, std::numeric_limits<double>::max())) {
                     Ray scattered_ray;
                     Color attenuation;
                     if (!intersection.material_ptr->scatter(current_ray, intersection, attenuation,
