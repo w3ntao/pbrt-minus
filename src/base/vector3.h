@@ -4,11 +4,11 @@
 
 class Vector3 {
     public:
-        float x, y, z;
+        double x, y, z;
 
         __host__ __device__ Vector3() : x(0), y(0), z(0){};
 
-        __host__ __device__ Vector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+        __host__ __device__ Vector3(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
 
         __host__ __device__ Vector3 operator+(const Vector3 &b) const {
             return Vector3(x + b.x, y + b.y, z + b.z);
@@ -22,19 +22,19 @@ class Vector3 {
             return Vector3(-x, -y, -z);
         }
 
-        __host__ __device__ Vector3 operator*(float factor) const {
+        __host__ __device__ Vector3 operator*(double factor) const {
             return Vector3(x * factor, y * factor, z * factor);
         }
 
-        __host__ __device__ Vector3 operator/(float divisor) const {
+        __host__ __device__ Vector3 operator/(double divisor) const {
             return Vector3(x / divisor, y / divisor, z / divisor);
         }
 
-        __host__ __device__ inline float squared_length() const {
+        __host__ __device__ inline double squared_length() const {
             return x * x + y * y + z * z;
         }
 
-        __host__ __device__ inline float length() const {
+        __host__ __device__ inline double length() const {
             return std::sqrt(squared_length());
         }
 
@@ -42,7 +42,7 @@ class Vector3 {
             return *this / length();
         }
 
-        __host__ __device__ float &operator[](int index) {
+        __host__ __device__ double &operator[](int index) {
             switch (index) {
             case 0: {
                 return x;
@@ -63,7 +63,7 @@ class Vector3 {
             }
         }
 
-        __host__ __device__ float operator[](int index) const {
+        __host__ __device__ double operator[](int index) const {
             switch (index) {
             case 0: {
                 return x;
@@ -84,11 +84,11 @@ class Vector3 {
             }
         }
 };
-__host__ __device__ Vector3 operator*(float factor, const Vector3 &v) {
+__host__ __device__ Vector3 operator*(double factor, const Vector3 &v) {
     return v * factor;
 }
 
-__host__ __device__ float dot(const Vector3 &left, const Vector3 &right) {
+__host__ __device__ double dot(const Vector3 &left, const Vector3 &right) {
     return left.x * right.x + left.y * right.y + left.z * right.z;
 }
 

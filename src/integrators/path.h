@@ -28,7 +28,7 @@ class PathIntegrator : public Integrator {
                     continue;
                 }
 
-                float t = 0.5f * (current_ray.d.normalize().y + 1.0f);
+                double t = 0.5f * (current_ray.d.normalize().y + 1.0f);
                 Vector3 c = (1.0f - t) * Vector3(1.0, 1.0, 1.0) + t * Vector3(0.5, 0.7, 1.0);
                 return current_attenuation * Color(c.x, c.y, c.z);
             }

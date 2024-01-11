@@ -40,7 +40,7 @@ __global__ void create_world(Shape **gpu_shape_list, World **gpu_world, Camera *
     int i = 1;
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
-            float choose_mat = RND;
+            double choose_mat = RND;
             Point center(a + RND, 0.2, b + RND);
             if (choose_mat < 0.8f) {
                 gpu_shape_list[i++] =
@@ -64,10 +64,10 @@ __global__ void create_world(Shape **gpu_shape_list, World **gpu_world, Camera *
 
     Point look_from(13, 2, 3);
     Point look_at(0, 0, 0);
-    float dist_to_focus = (look_from - look_at).length();
-    float aperture = 0.1;
+    double dist_to_focus = (look_from - look_at).length();
+    double aperture = 0.1;
     *gpu_camera = new PerspectiveCamera(look_from, look_at, Vector3(0, 1, 0), 30.0,
-                                        float(width) / float(height), aperture, dist_to_focus);
+                                        double(width) / double(height), aperture, dist_to_focus);
 }
 
 __global__ void free_world(Integrator **gpu_integrator, World **gpu_world, Camera **gpu_camera) {
@@ -108,13 +108,13 @@ __global__ void render(Color *frame_buffer, int width, int height, int num_sampl
 
     Color final_color(0, 0, 0);
     for (int s = 0; s < num_samples; s++) {
-        float u = float(x + curand_uniform(local_rand_state)) / float(width);
-        float v = float(y + curand_uniform(local_rand_state)) / float(height);
+        double u = double(x + curand_uniform(local_rand_state)) / double(width);
+        double v = double(y + curand_uniform(local_rand_state)) / double(height);
         final_color +=
             (*integrator)->get_radiance((*camera)->get_ray(u, v, local_rand_state), world, local_rand_state);
     }
 
-    final_color /= float(num_samples);
+    final_color /= double(num_samples);
 
     final_color = Color(sqrt(final_color.r), sqrt(final_color.g), sqrt(final_color.b));
     frame_buffer[y * width + x] = final_color;
@@ -130,7 +130,7 @@ int main() {
     int width = 1960;
     int height = 1080;
 
-    float ratio = 1.0;
+    double ratio = 1.0;
     width = int(width * ratio);
     height = int(height * ratio);
 

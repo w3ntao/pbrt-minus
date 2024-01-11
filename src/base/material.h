@@ -5,16 +5,16 @@ struct Intersection;
 #include "base/ray.h"
 #include "base/shape.h"
 
-__device__ float schlick(float cosine, float ref_idx) {
-    float r0 = (1.0f - ref_idx) / (1.0f + ref_idx);
+__device__ double schlick(double cosine, double ref_idx) {
+    double r0 = (1.0f - ref_idx) / (1.0f + ref_idx);
     r0 = r0 * r0;
     return r0 + (1.0f - r0) * pow((1.0f - cosine), 5.0f);
 }
 
-__device__ bool refract(const Vector3 &v, const Vector3 &n, float ni_over_nt, Vector3 &refracted) {
+__device__ bool refract(const Vector3 &v, const Vector3 &n, double ni_over_nt, Vector3 &refracted) {
     Vector3 uv = v.normalize();
-    float dt = dot(uv, n);
-    float discriminant = 1.0f - ni_over_nt * ni_over_nt * (1 - dt * dt);
+    double dt = dot(uv, n);
+    double discriminant = 1.0f - ni_over_nt * ni_over_nt * (1 - dt * dt);
 
     if (discriminant <= 0) {
         return false;
@@ -69,7 +69,7 @@ class Metal : public Material {
     public:
         ~Metal() override = default;
 
-        __device__ Metal(const Color &a, float f) : albedo(a), fuzz(gpu_clamp_0_1(f)) {}
+        __device__ Metal(const Color &a, double f) : albedo(a), fuzz(gpu_clamp_0_1(f)) {}
 
         __device__ bool scatter(const Ray &r_in, const Intersection &intersection, Color &attenuation,
                                 Ray &scattered, curandState *local_rand_state) const override {
@@ -79,24 +79,24 @@ class Metal : public Material {
             return (dot(scattered.d, intersection.n) > 0.0f);
         }
         Color albedo;
-        float fuzz;
+        double fuzz;
 };
 
 class Dielectric : public Material {
     public:
         ~Dielectric() override = default;
 
-        __device__ explicit Dielectric(float ri) : ref_idx(ri) {}
+        __device__ explicit Dielectric(double ri) : ref_idx(ri) {}
 
         __device__ bool scatter(const Ray &r_in, const Intersection &intersection, Color &attenuation,
                                 Ray &scattered, curandState *local_rand_state) const override {
             Vector3 outward_normal;
             Vector3 reflected = reflect(r_in.d, intersection.n);
-            float ni_over_nt;
+            double ni_over_nt;
             attenuation = Color(1.0, 1.0, 1.0);
             Vector3 refracted;
-            float reflect_prob;
-            float cosine;
+            double reflect_prob;
+            double cosine;
             if (dot(r_in.d, intersection.n) > 0.0f) {
                 outward_normal = -intersection.n;
                 ni_over_nt = ref_idx;
@@ -122,5 +122,5 @@ class Dielectric : public Material {
             return true;
         }
 
-        float ref_idx;
+        double ref_idx;
 };

@@ -5,13 +5,13 @@
 
 class Point {
     public:
-        float x, y, z;
+        double x, y, z;
 
         __host__ __device__ Point() : x(0.0), y(0.0), z(0.0){};
 
-        __host__ __device__ Point(float _x, float _y, float _z) : x(_x), y(_y), z(_z){};
+        __host__ __device__ Point(double _x, double _y, double _z) : x(_x), y(_y), z(_z){};
 
-        __host__ __device__ float &operator[](int index) {
+        __host__ __device__ double &operator[](int index) {
             switch (index) {
             case 0: {
                 return x;
@@ -32,7 +32,7 @@ class Point {
             }
         }
 
-        __host__ __device__ float operator[](int index) const {
+        __host__ __device__ double operator[](int index) const {
             switch (index) {
             case 0: {
                 return x;

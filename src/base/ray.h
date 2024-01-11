@@ -12,7 +12,7 @@ class Ray {
 
         __device__ Ray(const Point _o, const Vector3 _d) : o(_o), d(_d) {}
 
-        __device__ Point at(float t) const {
+        __device__ Point at(double t) const {
             return o + t * d;
         }
 };

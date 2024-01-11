@@ -125,9 +125,9 @@ void Image::readPNG(const std::string &file_name) {
         for (size_t x = 0; x < width; x++) {
             auto v = pixels[y * width + x];
 
-            v.r = (float)(*b++) / 255.f;
-            v.g = (float)(*b++) / 255.f;
-            v.b = (float)(*b++) / 255.f;
+            v.r = (double)(*b++) / 255.f;
+            v.g = (double)(*b++) / 255.f;
+            v.b = (double)(*b++) / 255.f;
             if (png_get_channels(png_ptr, info_ptr) == 4) {
                 b++;
             }
