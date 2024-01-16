@@ -4,22 +4,22 @@
 
 class Sphere : public Shape {
     private:
-        Point center;
+        Point3f center;
         double radius;
         const Material *material_ptr;
 
     public:
         ~Sphere() override = default;
 
-        PBRT_GPU Sphere(const Point &_center, double _radius, const Material *_material_ptr)
+        PBRT_GPU Sphere(const Point3f &_center, double _radius, const Material *_material_ptr)
             : center(_center), radius(_radius), material_ptr(_material_ptr) {}
 
         PBRT_GPU bool intersect(Intersection &intersection, const Ray &ray, double t_min,
                                 double t_max) const override {
-            Vector3 oc = ray.o - center;
-            double a = dot(ray.d, ray.d);
-            double b = dot(oc, ray.d);
-            double c = dot(oc, oc) - radius * radius;
+            Vector3f oc = ray.o - center;
+            double a = ray.d.dot(ray.d);
+            double b = oc.dot(ray.d);
+            double c = oc.dot(oc) - radius * radius;
             double discriminant = b * b - a * c;
 
             if (discriminant < 0.0) {

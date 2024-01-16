@@ -6,8 +6,8 @@ class Material;
 
 struct Intersection {
         double t;
-        Point p;
-        Vector3 n;
+        Point3f p;
+        Vector3f n;
         const Material *material_ptr;
 };
 

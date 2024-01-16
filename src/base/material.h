@@ -11,9 +11,10 @@ PBRT_GPU double schlick(double cosine, double ref_idx) {
     return r0 + (1.0f - r0) * pow((1.0f - cosine), 5.0f);
 }
 
-PBRT_GPU bool refract(const Vector3 &v, const Vector3 &n, double ni_over_nt, Vector3 &refracted) {
-    Vector3 uv = v.normalize();
-    double dt = dot(uv, n);
+PBRT_GPU bool refract(const Vector3f &v, const Vector3f &n, double ni_over_nt,
+                      Vector3f &refracted) {
+    Vector3f uv = v.normalize();
+    double dt = uv.dot(n);
     double discriminant = 1.0f - ni_over_nt * ni_over_nt * (1 - dt * dt);
 
     if (discriminant <= 0) {
@@ -24,29 +25,30 @@ PBRT_GPU bool refract(const Vector3 &v, const Vector3 &n, double ni_over_nt, Vec
     return true;
 }
 
-PBRT_GPU Vector3 random_vector(curandState *local_rand_state) {
-    return Vector3(curand_uniform(local_rand_state), curand_uniform(local_rand_state),
-                   curand_uniform(local_rand_state));
+PBRT_GPU Vector3f random_vector(curandState *local_rand_state) {
+    return Vector3f(curand_uniform(local_rand_state), curand_uniform(local_rand_state),
+                    curand_uniform(local_rand_state));
 }
 
-PBRT_GPU Vector3 random_in_unit_sphere(curandState *local_rand_state) {
-    Vector3 p;
+PBRT_GPU Vector3f random_in_unit_sphere(curandState *local_rand_state) {
+    Vector3f p;
     do {
-        p = 2.0f * random_vector(local_rand_state) - Vector3(1, 1, 1);
+        p = 2.0 * random_vector(local_rand_state) - Vector3f(1, 1, 1);
     } while (p.squared_length() >= 1.0f);
     return p;
 }
 
-PBRT_GPU Vector3 reflect(const Vector3 &v, const Vector3 &n) {
-    return v - 2.0f * dot(v, n) * n;
+PBRT_GPU Vector3f reflect(const Vector3f &v, const Vector3f &n) {
+    return v - 2.0f * v.dot(n) * n;
 }
 
 class Material {
     public:
         PBRT_GPU virtual ~Material() {}
 
-        PBRT_GPU virtual bool scatter(const Ray &r_in, const Intersection &intersection, Color &attenuation,
-                                      Ray &scattered, curandState *local_rand_state) const = 0;
+        PBRT_GPU virtual bool scatter(const Ray &r_in, const Intersection &intersection,
+                                      Color &attenuation, Ray &scattered,
+                                      curandState *local_rand_state) const = 0;
 };
 
 class Lambertian : public Material {
@@ -56,7 +58,8 @@ class Lambertian : public Material {
         PBRT_GPU explicit Lambertian(const Color &a) : albedo(a) {}
         PBRT_GPU bool scatter(const Ray &r_in, const Intersection &intersection, Color &attenuation,
                               Ray &scattered, curandState *local_rand_state) const override {
-            Point target = intersection.p + intersection.n + random_in_unit_sphere(local_rand_state);
+            Point3f target =
+                intersection.p + intersection.n + random_in_unit_sphere(local_rand_state);
             scattered = Ray(intersection.p, target - intersection.p);
             attenuation = albedo;
             return true;
@@ -73,10 +76,11 @@ class Metal : public Material {
 
         PBRT_GPU bool scatter(const Ray &r_in, const Intersection &intersection, Color &attenuation,
                               Ray &scattered, curandState *local_rand_state) const override {
-            Vector3 reflected = reflect(r_in.d.normalize(), intersection.n);
-            scattered = Ray(intersection.p, reflected + fuzz * random_in_unit_sphere(local_rand_state));
+            Vector3f reflected = reflect(r_in.d.normalize(), intersection.n);
+            scattered =
+                Ray(intersection.p, reflected + fuzz * random_in_unit_sphere(local_rand_state));
             attenuation = albedo;
-            return (dot(scattered.d, intersection.n) > 0.0f);
+            return scattered.d.dot(intersection.n) > 0.0;
         }
         Color albedo;
         double fuzz;
@@ -90,22 +94,22 @@ class Dielectric : public Material {
 
         PBRT_GPU bool scatter(const Ray &r_in, const Intersection &intersection, Color &attenuation,
                               Ray &scattered, curandState *local_rand_state) const override {
-            Vector3 outward_normal;
-            Vector3 reflected = reflect(r_in.d, intersection.n);
+            Vector3f outward_normal;
+            Vector3f reflected = reflect(r_in.d, intersection.n);
             double ni_over_nt;
             attenuation = Color(1.0, 1.0, 1.0);
-            Vector3 refracted;
+            Vector3f refracted;
             double reflect_prob;
             double cosine;
-            if (dot(r_in.d, intersection.n) > 0.0f) {
+            if (r_in.d.dot(intersection.n) > 0.0) {
                 outward_normal = -intersection.n;
                 ni_over_nt = ref_idx;
-                cosine = dot(r_in.d, intersection.n) / r_in.d.length();
+                cosine = r_in.d.dot(intersection.n) / r_in.d.length();
                 cosine = sqrt(1.0f - ref_idx * ref_idx * (1 - cosine * cosine));
             } else {
                 outward_normal = intersection.n;
                 ni_over_nt = 1.0f / ref_idx;
-                cosine = -dot(r_in.d, intersection.n) / r_in.d.length();
+                cosine = -r_in.d.dot(intersection.n) / r_in.d.length();
             }
 
             if (refract(r_in.d, outward_normal, ni_over_nt, refracted)) {

@@ -1,18 +1,18 @@
 #pragma once
 
-#include "base/point.h"
-#include "base/vector3.h"
+#include "euclidean_space/point.h"
+#include "euclidean_space/vector3.h"
 
 class Ray {
     public:
-        Point o;
-        Vector3 d;
+        Point3f o;
+        Vector3f d;
 
         PBRT_GPU Ray() {}
 
-        PBRT_GPU Ray(const Point _o, const Vector3 _d) : o(_o), d(_d) {}
+        PBRT_GPU Ray(const Point3f _o, const Vector3f _d) : o(_o), d(_d) {}
 
-        PBRT_GPU Point at(double t) const {
+        PBRT_GPU Point3f at(double t) const {
             return o + t * d;
         }
 };
