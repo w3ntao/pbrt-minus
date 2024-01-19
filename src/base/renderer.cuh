@@ -51,6 +51,8 @@ class Renderer {
 
 __global__ void init_gpu_renderer(Renderer *gpu_renderer, IntegratorType type, int width,
                                   int height) {
+    // TODO: time to parse pbrt file
+
     *gpu_renderer = Renderer(width, height);
 
     const Transform matrix_translate = Transform::translate(Vector3f(0, 0, -140));
