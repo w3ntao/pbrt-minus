@@ -17,9 +17,10 @@ class SurfaceNormalIntegrator : public Integrator {
             return Color(0.0, 0.0, 0.0);
         }
 
-        const Normal3f normal = shape_intersection->interation.n;
+        Vector3f normal = shape_intersection->interation.n.to_vector3();
+        normal = normal.face_forward(-ray.d);
 
-        const Vector3f n = normal.to_vector3().softmax();
+        const Vector3f n = normal.softmax();
 
         return Color(n.x, n.y, n.z);
     }

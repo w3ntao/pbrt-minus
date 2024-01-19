@@ -120,6 +120,10 @@ class Vector3 {
                        x * right.y - y * right.x);
     }
 
+    PBRT_CPU_GPU Vector3 face_forward(const Vector3 &v) const {
+        return this->dot(v) < 0.0 ? (-*this) : (*this);
+    }
+
     PBRT_CPU_GPU void coordinate_system(Vector3 *v2, Vector3 *v3) const {
         double sign = std::copysign(1.0, z);
         double a = -1.0 / (sign + z);
