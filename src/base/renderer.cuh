@@ -18,8 +18,6 @@
 #include "integrators/path.h"
 #include "integrators/surface_normal.h"
 
-const int shape_num = 2;
-
 enum IntegratorType { PATH, SURFACE_NORMAL };
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
@@ -37,58 +35,85 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 }
 
 class Renderer {
-    public:
-        int width = -1;
-        int height = -1;
-        const Integrator *integrator = nullptr;
-        const World *world = nullptr;
-        const Camera *camera = nullptr;
+  public:
+    int width = -1;
+    int height = -1;
+    const Integrator *integrator = nullptr;
+    const World *world = nullptr;
+    const Camera *camera = nullptr;
 
-        PBRT_GPU Renderer(int _width, int _height) : width(_width), height(_height) {}
+    PBRT_GPU Renderer(int _width, int _height) : width(_width), height(_height) {}
 
-        PBRT_GPU ~Renderer() {
-            if (integrator) {
-                delete integrator;
-            }
-
-            if (world) {
-                delete world;
-            }
-
-            if (camera) {
-                delete camera;
-            }
-        }
+    PBRT_GPU ~Renderer() {
+        delete integrator;
+        delete world;
+        delete camera;
+    }
 };
 
 __global__ void init_gpu_renderer(Renderer *gpu_renderer, IntegratorType type, int width,
                                   int height) {
-
-    (*gpu_renderer) = Renderer(width, height);
+    *gpu_renderer = Renderer(width, height);
 
     const Transform matrix_translate = Transform::translate(Vector3f(0, 0, -140));
 
-    int *vertex_indices = new int[6];
-    vertex_indices[0] = 0;
-    vertex_indices[1] = 1;
-    vertex_indices[2] = 2;
-    vertex_indices[3] = 2;
-    vertex_indices[4] = 3;
-    vertex_indices[5] = 0;
+    int *v_idx_0 = new int[6];
+    v_idx_0[0] = 0;
+    v_idx_0[1] = 1;
+    v_idx_0[2] = 2;
+    v_idx_0[3] = 2;
+    v_idx_0[4] = 3;
+    v_idx_0[5] = 0;
 
-    Point3f *points = new Point3f[4];
-    points[0] = Point3f(-400, -400, 0);
-    points[1] = Point3f(400, -400, 0);
-    points[2] = Point3f(400, 400, 0);
-    points[3] = Point3f(-400, 400, 0);
+    Point3f *p0 = new Point3f[4];
+    p0[0] = Point3f(-400, -400, 0);
+    p0[1] = Point3f(400, -400, 0);
+    p0[2] = Point3f(400, 400, 0);
+    p0[3] = Point3f(-400, 400, 0);
 
-    const TriangleMesh *mesh = new TriangleMesh(matrix_translate, vertex_indices, 6, points, 4);
+    int *v_idx_1 = new int[6];
+    v_idx_1[0] = 0;
+    v_idx_1[1] = 1;
+    v_idx_1[2] = 2;
+    v_idx_1[3] = 2;
+    v_idx_1[4] = 3;
+    v_idx_1[5] = 0;
 
-    delete[] vertex_indices;
-    delete[] points;
+    Point3f *p1 = new Point3f[4];
+    p1[0] = Point3f(-400, -400, 0);
+    p1[1] = Point3f(400, -400, 0);
+    p1[2] = Point3f(400, -400, 1000);
+    p1[3] = Point3f(-400, -400, 1000);
 
-    World *gpu_world = new World(shape_num);
-    gpu_world->add_triangles(mesh);
+    int *v_idx_2 = new int[6];
+    v_idx_2[0] = 0;
+    v_idx_2[1] = 1;
+    v_idx_2[2] = 2;
+    v_idx_2[3] = 2;
+    v_idx_2[4] = 3;
+    v_idx_2[5] = 0;
+
+    Point3f *p2 = new Point3f[4];
+    p2[0] = Point3f(-400, -400, 0);
+    p2[1] = Point3f(-400, 400, 0);
+    p2[2] = Point3f(-400, 400, 1000);
+    p2[3] = Point3f(-400, -400, 1000);
+
+    const TriangleMesh *mesh0 = new TriangleMesh(matrix_translate, v_idx_0, 6, p0, 4);
+    const TriangleMesh *mesh1 = new TriangleMesh(matrix_translate, v_idx_1, 6, p1, 4);
+    const TriangleMesh *mesh2 = new TriangleMesh(matrix_translate, v_idx_2, 6, p2, 4);
+
+    delete[] v_idx_0;
+    delete[] v_idx_1;
+    delete[] v_idx_2;
+    delete[] p0;
+    delete[] p1;
+    delete[] p2;
+
+    World *gpu_world = new World(6);
+    gpu_world->add_triangles(mesh0);
+    gpu_world->add_triangles(mesh1);
+    gpu_world->add_triangles(mesh2);
     gpu_renderer->world = gpu_world;
 
     Integrator *gpu_integrator = nullptr;
@@ -109,14 +134,14 @@ __global__ void init_gpu_renderer(Renderer *gpu_renderer, IntegratorType type, i
 
     gpu_renderer->integrator = gpu_integrator;
 
-    Point3f look_from(13, 2, 3);
-    Point3f look_at(0, 0, 0);
+    Point3f look_from(200, 250, 70);
+    Point3f look_at(0, 33, -50);
+    Vector3f up(0, 0, 1);
     double dist_to_focus = (look_from - look_at).length();
     double aperture = 0.1;
 
-    gpu_renderer->camera =
-        new PerspectiveCamera(look_from, look_at, Vector3f(0, 1, 0), 30.0,
-                              double(width) / double(height), aperture, dist_to_focus);
+    gpu_renderer->camera = new PerspectiveCamera(
+        look_from, look_at, up, 30.0, double(width) / double(height), aperture, dist_to_focus);
 }
 
 __global__ void free_renderer(Renderer *renderer) {
@@ -141,21 +166,18 @@ __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer 
     const Camera *camera = renderer->camera;
     const World *world = renderer->world;
 
-    frame_buffer[pixel_index] = Color(double(x) / (width - 1), double(y) / (height - 1), 0.0);
+    // frame_buffer[pixel_index] = Color(double(x) / (width - 1), double(y) / (height - 1), 0.0);
 
-    return;
-
-    curandState *local_rand_state = new curandState();
-    curand_init(1984, pixel_index, 0, local_rand_state);
+    curandState local_rand_state;
+    curand_init(1984, pixel_index, 0, &local_rand_state);
 
     Color final_color(0, 0, 0);
     for (int s = 0; s < num_samples; s++) {
-        double u = double(x + curand_uniform(local_rand_state)) / double(width);
-        double v = double(y + curand_uniform(local_rand_state)) / double(height);
-        final_color += integrator->get_radiance(camera->get_ray(u, v, local_rand_state), world,
-                                                local_rand_state);
+        double u = double(x + curand_uniform(&local_rand_state)) / double(width);
+        double v = double(y + curand_uniform(&local_rand_state)) / double(height);
+        final_color += integrator->get_radiance(camera->get_ray(u, v, &local_rand_state), world,
+                                                &local_rand_state);
     }
-    delete local_rand_state;
 
     final_color /= double(num_samples);
 

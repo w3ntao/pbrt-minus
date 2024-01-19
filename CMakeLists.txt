@@ -5,7 +5,7 @@ if (NOT CMAKE_CUDA_COMPILER)
     # required by CLion
 endif ()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(pbrt-cuda LANGUAGES CUDA CXX)
