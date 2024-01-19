@@ -45,10 +45,6 @@ class Triangle final : public Shape {
         return ShapeIntersection(si, tri_intersection->t);
     }
 
-    PBRT_GPU const Material *get_material_ptr() const override {
-        return nullptr;
-    }
-
   private:
     PBRT_GPU std::optional<TriangleIntersection>
     intersect_triangle(const Ray &ray, double t_max, Point3f p0, Point3f p1, Point3f p2) const {

@@ -10,10 +10,8 @@
 
 #include "util/image.h"
 #include "base/world.h"
-#include "base/material.h"
 #include "base/integrator.h"
 #include "cameras/perspective.h"
-#include "shapes/sphere.h"
 #include "shapes/triangle.h"
 #include "integrators/path.h"
 #include "integrators/surface_normal.h"
@@ -127,6 +125,7 @@ __global__ void init_gpu_renderer(Renderer *gpu_renderer, IntegratorType type, i
         break;
     }
     default: {
+        printf("Integrator type not known\n");
         asm("trap;");
         break;
     }
