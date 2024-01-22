@@ -1,6 +1,9 @@
 #pragma once
 
 #include "base/color.h"
+#include "base/ray.h"
+#include "base/world.h"
+#include <curand_kernel.h>
 
 class Integrator {
   public:

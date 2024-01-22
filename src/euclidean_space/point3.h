@@ -3,7 +3,6 @@
 #include <stdexcept>
 
 #include "euclidean_space/vector3.h"
-#include "util/interval.h"
 
 template <typename T>
 class Point3 {

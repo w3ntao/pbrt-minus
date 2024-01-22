@@ -24,7 +24,6 @@ set(EXEC_PROGRAM "pbrt-cuda")
 
 add_executable(${EXEC_PROGRAM}
         src/main.cu
-        src/util/image.cu
 )
 
 target_include_directories(${EXEC_PROGRAM} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")

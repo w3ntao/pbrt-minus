@@ -1,5 +1,6 @@
 #pragma once
 
+#include <curand_kernel.h>
 #include "base/camera.h"
 
 PBRT_GPU Vector3f random_in_unit_disk(curandState *local_rand_state) {

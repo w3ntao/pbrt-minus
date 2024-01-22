@@ -10,6 +10,5 @@ target("pbrt-cuda")
     add_packages("png")
 
     add_includedirs("src")
-    add_files("src/*/*.cu")
     add_files("src/main.cu")
 target_end()

@@ -9,7 +9,6 @@
 #include <curand_kernel.h>
 
 #include "util/image.h"
-#include "base/world.h"
 #include "base/integrator.h"
 #include "cameras/perspective.h"
 #include "shapes/triangle.h"
@@ -167,8 +166,6 @@ __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer 
     const Camera *camera = renderer->camera;
     const World *world = renderer->world;
 
-    // frame_buffer[pixel_index] = Color(double(x) / (width - 1), double(y) / (height - 1), 0.0);
-
     curandState local_rand_state;
     curand_init(1984, pixel_index, 0, &local_rand_state);
 
@@ -191,7 +188,7 @@ void writer_to_file(const std::string &file_name, int width, int height,
                     const Color *frame_buffer) {
     Image image(frame_buffer, width, height);
     image.flip();
-    image.writePNG(file_name);
+    image.export_to_png(file_name);
 }
 
 void render(int num_samples, const std::string &file_name) {
@@ -226,7 +223,7 @@ void render(int num_samples, const std::string &file_name) {
     const double timer_seconds = (double)(clock() - start) / CLOCKS_PER_SEC;
     std::cerr << std::fixed << std::setprecision(1) << "took " << timer_seconds << " seconds.\n";
 
-    writer_to_file(file_name, width, height, frame_buffer);
+    Image::write_frame_buffer_to_png(file_name, frame_buffer, width, height);
 
     free_renderer<<<1, 1>>>(gpu_renderer);
     checkCudaErrors(cudaFree(gpu_renderer));
