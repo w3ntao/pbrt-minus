@@ -11,6 +11,13 @@ A simpler, less performant physically based ray tracer rewritten from PBRT-v4.
 
 ## build
 
+### clone repository
+
+clone this repository with its submodule:
+```
+$ git clone --recursive https://github.com/w3ntao/pbrt-cuda.git
+```
+
 ### build with CMake
 
 ```
