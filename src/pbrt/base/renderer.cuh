@@ -191,10 +191,10 @@ void writer_to_file(const std::string &filename, const Color *frame_buffer, int 
         for (unsigned x = 0; x < width; x++) {
             const auto &color = frame_buffer[y * width + x];
 
-            pixels[4 * (width * y  + x) + 0] = (unsigned char) (color.r * 256);
-            pixels[4 * (width * y  + x) + 1] = (unsigned char) (color.g * 256);
-            pixels[4 * (width * y  + x) + 2] = (unsigned char) (color.b * 256);
-            pixels[4 * (width * y  + x) + 3] = 255;
+            pixels[4 * (width * y + x) + 0] = (unsigned char)(color.r * 256);
+            pixels[4 * (width * y + x) + 1] = (unsigned char)(color.g * 256);
+            pixels[4 * (width * y + x) + 2] = (unsigned char)(color.b * 256);
+            pixels[4 * (width * y + x) + 3] = 255;
         }
     }
 

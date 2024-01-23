@@ -4,6 +4,8 @@
 #include <array>
 #include <stdexcept>
 
+#include "pbrt/util/math.h"
+
 template <typename T>
 class Vector3 {
   public:

@@ -55,4 +55,24 @@ class Token {
     Token(TypeOfToken _type, const std::string &_value) : type(_type), value({_value}) {}
 
     Token(TypeOfToken _type, const std::vector<std::string> _value) : type(_type), value(_value) {}
+
+    void print() const {
+        std::cout << parsing_type_to_string(type);
+        if (value.size() > 0) {
+            std::cout << ": { ";
+            for (const auto &x : value) {
+                std::cout << x << " ";
+            }
+            std::cout << "}";
+        }
+        std::cout << "\n";
+    }
+
+    double to_number() const {
+        if (type != Number) {
+            throw std::runtime_error("you should only invoke it with type Number.");
+        }
+
+        return stod(value[0]);
+    }
 };
