@@ -43,7 +43,9 @@ PBRT_GPU inline Interval sqr(Interval i) {
         std::swap(alow, ahigh);
     }
 
-    if (in_range(0, i))
+    if (in_range(0, i)) {
         return Interval(0, mul_round_up(ahigh, ahigh));
+    }
+
     return Interval(mul_round_down(alow, alow), mul_round_up(ahigh, ahigh));
 }
