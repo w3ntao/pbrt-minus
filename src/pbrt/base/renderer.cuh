@@ -8,12 +8,12 @@
 
 #include <curand_kernel.h>
 
-#include "pbrt/util/image.h"
 #include "pbrt/base/integrator.h"
 #include "pbrt/cameras/perspective.h"
 #include "pbrt/shapes/triangle.h"
 #include "pbrt/integrators/path.h"
 #include "pbrt/integrators/surface_normal.h"
+#include "ext/lodepng/lodepng.h"
 
 enum IntegratorType { PATH, SURFACE_NORMAL };
 
@@ -184,11 +184,28 @@ __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer 
     frame_buffer[pixel_index] = final_color;
 }
 
-void writer_to_file(const std::string &file_name, int width, int height,
-                    const Color *frame_buffer) {
-    Image image(frame_buffer, width, height);
-    image.flip();
-    image.export_to_png(file_name);
+void writer_to_file(const std::string &filename, const Color *frame_buffer, int width, int height) {
+    std::vector<unsigned char> pixels(width * height * 4);
+
+    for (unsigned y = 0; y < height; y++) {
+        for (unsigned x = 0; x < width; x++) {
+            const auto &color = frame_buffer[y * width + x];
+
+            pixels[4 * (width * y  + x) + 0] = (unsigned char) (color.r * 256);
+            pixels[4 * (width * y  + x) + 1] = (unsigned char) (color.g * 256);
+            pixels[4 * (width * y  + x) + 2] = (unsigned char) (color.b * 256);
+            pixels[4 * (width * y  + x) + 3] = 255;
+        }
+    }
+
+    // Encode the image
+    unsigned error = lodepng::encode(filename, pixels, width, height);
+    // if there's an error, display it
+    if (error) {
+        std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error)
+                  << std::endl;
+        throw std::runtime_error("lodepng::encode() fail");
+    }
 }
 
 void render(int num_samples, const std::string &file_name) {
@@ -223,7 +240,7 @@ void render(int num_samples, const std::string &file_name) {
     const double timer_seconds = (double)(clock() - start) / CLOCKS_PER_SEC;
     std::cerr << std::fixed << std::setprecision(1) << "took " << timer_seconds << " seconds.\n";
 
-    Image::write_frame_buffer_to_png(file_name, frame_buffer, width, height);
+    writer_to_file(file_name, frame_buffer, width, height);
 
     free_renderer<<<1, 1>>>(gpu_renderer);
     checkCudaErrors(cudaFree(gpu_renderer));

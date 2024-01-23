@@ -25,6 +25,7 @@ endif ()
 
 add_executable(${PROJ_NAME}
         src/pbrt/main.cu
+        src/ext/lodepng/lodepng.cpp
 )
 
 target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
