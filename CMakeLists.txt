@@ -8,7 +8,9 @@ endif ()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(pbrt-cuda LANGUAGES CUDA CXX)
+set(PROJ_NAME "pbrt-cuda")
+
+project(${PROJ_NAME} LANGUAGES CUDA CXX)
 
 find_package(PNG QUIET)
 if (PNG_FOUND)
@@ -20,15 +22,14 @@ else ()
     message(FATAL_ERROR "libpng-dev is required to build the project.\nPlease install libpng-dev.")
 endif ()
 
-set(EXEC_PROGRAM "pbrt-cuda")
 
-add_executable(${EXEC_PROGRAM}
-        src/main.cu
+add_executable(${PROJ_NAME}
+        src/pbrt/main.cu
 )
 
-target_include_directories(${EXEC_PROGRAM} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-target_link_libraries(${EXEC_PROGRAM} PRIVATE ${PNG_LIBRARY})
+target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(${PROJ_NAME} PRIVATE ${PNG_LIBRARY})
 
-target_compile_options(${EXEC_PROGRAM} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+target_compile_options(${PROJ_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
         --expt-relaxed-constexpr
         >)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "shapes/triangle.h"
+#include "pbrt/shapes/triangle.h"
 
 class World {
   public:

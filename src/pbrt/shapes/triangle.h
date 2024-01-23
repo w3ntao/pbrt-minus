@@ -1,9 +1,9 @@
 #pragma once
 
-#include "base/shape.h"
-#include "euclidean_space/vector2.h"
-#include "util/float.h"
-#include "shapes/triangle_mesh.h"
+#include "pbrt/base/shape.h"
+#include "pbrt/euclidean_space/vector2.h"
+#include "pbrt/util/float.h"
+#include "pbrt/shapes/triangle_mesh.h"
 
 struct TriangleIntersection {
     double b0, b1, b2;

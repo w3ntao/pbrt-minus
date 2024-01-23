@@ -1,7 +1,7 @@
 #pragma once
 
-#include "euclidean_space/point3.h"
-#include "util/interval.h"
+#include "pbrt/euclidean_space/point3.h"
+#include "pbrt/util/interval.h"
 
 // Point3fi Definition
 class Point3fi : public Point3<Interval> {

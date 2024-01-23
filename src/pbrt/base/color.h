@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/math.h"
+#include "pbrt/util/math.h"
 
 class Color {
   public:

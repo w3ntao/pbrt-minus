@@ -1,8 +1,8 @@
 #pragma once
 
-#include "euclidean_space/point2.h"
-#include "euclidean_space/normal3f.h"
-#include "euclidean_space/point3fi.h"
+#include "pbrt/euclidean_space/point2.h"
+#include "pbrt/euclidean_space/normal3f.h"
+#include "pbrt/euclidean_space/point3fi.h"
 
 class Interaction {
   public:

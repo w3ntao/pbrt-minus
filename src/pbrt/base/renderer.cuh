@@ -8,12 +8,12 @@
 
 #include <curand_kernel.h>
 
-#include "util/image.h"
-#include "base/integrator.h"
-#include "cameras/perspective.h"
-#include "shapes/triangle.h"
-#include "integrators/path.h"
-#include "integrators/surface_normal.h"
+#include "pbrt/util/image.h"
+#include "pbrt/base/integrator.h"
+#include "pbrt/cameras/perspective.h"
+#include "pbrt/shapes/triangle.h"
+#include "pbrt/integrators/path.h"
+#include "pbrt/integrators/surface_normal.h"
 
 enum IntegratorType { PATH, SURFACE_NORMAL };
 

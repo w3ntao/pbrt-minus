@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base/integrator.h"
+#include "pbrt/base/integrator.h"
 
 class PathIntegrator : public Integrator {
   public:

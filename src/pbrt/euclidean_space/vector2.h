@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdexcept>
-#include <euclidean_space/point2.h>
+#include "pbrt/util/macro.h"
 
 template <typename T>
 class Vector2 {
@@ -30,7 +30,3 @@ class Vector2 {
 };
 
 using Vector2f = Vector2<double>;
-
-PBRT_CPU_GPU Vector2f operator-(const Point2f &left, const Point2f &right) {
-    return Vector2f(left.x - right.x, left.y - right.y);
-}

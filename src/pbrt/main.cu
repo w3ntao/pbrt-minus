@@ -1,4 +1,4 @@
-#include "base/renderer.cuh"
+#include "pbrt/base/renderer.cuh"
 
 using namespace std;
 

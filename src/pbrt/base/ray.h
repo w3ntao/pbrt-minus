@@ -1,7 +1,7 @@
 #pragma once
 
-#include "euclidean_space/point3.h"
-#include "euclidean_space/vector3.h"
+#include "pbrt/euclidean_space/point3.h"
+#include "pbrt/euclidean_space/vector3.h"
 
 class Ray {
   public:

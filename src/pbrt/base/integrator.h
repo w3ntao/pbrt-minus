@@ -1,9 +1,10 @@
 #pragma once
 
-#include "base/color.h"
-#include "base/ray.h"
-#include "base/world.h"
 #include <curand_kernel.h>
+
+#include "pbrt/base/color.h"
+#include "pbrt/base/ray.h"
+#include "pbrt/base/world.h"
 
 class Integrator {
   public:

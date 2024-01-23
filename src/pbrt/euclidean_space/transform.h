@@ -1,6 +1,6 @@
 #pragma once
 
-#include "euclidean_space/squared_matrix.h"
+#include "pbrt/euclidean_space/squared_matrix.h"
 
 class Transform {
     SquareMatrix<4> m;

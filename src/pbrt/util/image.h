@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "base/color.h"
+#include "pbrt/base/color.h"
 
 class Image {
   private:

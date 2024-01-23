@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/macro.h"
+#include "pbrt/util/macro.h"
 
 inline double clamp_0_1(double x) {
     return x < 0.0 ? 0.0 : (x > 1.0 ? 1.0 : x);

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "util/macro.h"
-#include "euclidean_space/vector3.h"
+#include "pbrt/util/macro.h"
+#include "pbrt/euclidean_space/vector3.h"
 
 static const double CPU_PI = std::acos(-1.0);
 

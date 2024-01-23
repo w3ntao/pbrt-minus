@@ -1,6 +1,7 @@
 #pragma once
 
-#include "util/macro.h"
+#include "pbrt/util/macro.h"
+#include "pbrt/euclidean_space/vector2.h"
 
 template <typename T>
 class Point2 {
@@ -61,4 +62,8 @@ using Point2f = Point2<double>;
 template <typename T>
 PBRT_CPU_GPU Point2<T> operator*(T factor, const Point2<T> &p) {
     return p * factor;
+}
+
+PBRT_CPU_GPU Vector2f operator-(const Point2f &left, const Point2f &right) {
+    return Vector2f(left.x - right.x, left.y - right.y);
 }

@@ -2,10 +2,9 @@
 
 #include <optional>
 
-#include "base/ray.h"
-#include "base/interaction.h"
-#include "euclidean_space/point2.h"
-#include "util/float.h"
+#include "pbrt/base/ray.h"
+#include "pbrt/base/interaction.h"
+#include "pbrt/util/float.h"
 
 // ShapeIntersection Definition
 struct ShapeIntersection {

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "euclidean_space/vector3.h"
-
 template <int N>
 class SquareMatrix {
   private:

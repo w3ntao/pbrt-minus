@@ -1,6 +1,6 @@
 #pragma once
 
-#include "euclidean_space/transform.h"
+#include "pbrt/euclidean_space/transform.h"
 
 class TriangleMesh {
   public:
