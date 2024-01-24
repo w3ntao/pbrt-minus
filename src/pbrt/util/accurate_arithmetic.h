@@ -18,11 +18,11 @@ inline double FMA(double a, double b, double c) {
     return std::fma(a, b, c);
 }
 
-PBRT_CPU_GPU Vector3f FMA(double a, const Vector3f &b, const Vector3f &c) {
+PBRT_CPU_GPU inline Vector3f FMA(double a, const Vector3f &b, const Vector3f &c) {
     return {FMA(a, b.x, c.x), FMA(a, b.y, c.y), FMA(a, b.z, c.z)};
 }
 
-PBRT_CPU_GPU Vector3f FMA(const Vector3f &a, double b, const Vector3f &c) {
+PBRT_CPU_GPU inline Vector3f FMA(const Vector3f &a, double b, const Vector3f &c) {
     return FMA(b, a, c);
 }
 

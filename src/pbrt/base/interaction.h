@@ -12,7 +12,7 @@ class Interaction {
     Point2f uv;
 
     PBRT_CPU_GPU
-    Interaction(Point3fi pi, Normal3f n, Point2f uv, Vector3f wo)
+    explicit Interaction(Point3fi pi, Normal3f n, Point2f uv, Vector3f wo)
         : pi(pi), n(n), uv(uv), wo(wo.normalize()) {}
 };
 
@@ -34,8 +34,8 @@ class SurfaceInteraction : public Interaction {
     double dvdy = NAN;
 
     PBRT_CPU_GPU
-    SurfaceInteraction(Point3fi pi, Point2f uv, Vector3f wo, Vector3f dpdu, Vector3f dpdv,
-                       Normal3f dndu, Normal3f dndv, bool flipNormal)
+    explicit SurfaceInteraction(Point3fi pi, Point2f uv, Vector3f wo, Vector3f dpdu, Vector3f dpdv,
+                                Normal3f dndu, Normal3f dndv, bool flipNormal)
         : Interaction(pi, Normal3f(dpdu.cross(dpdv).normalize()), uv, wo), dpdu(dpdu), dpdv(dpdv),
           dndu(dndu), dndv(dndv) {
         // Initialize shading geometry from true geometry

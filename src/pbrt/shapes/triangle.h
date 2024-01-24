@@ -2,7 +2,7 @@
 
 #include "pbrt/base/shape.h"
 #include "pbrt/euclidean_space/vector2.h"
-#include "pbrt/util/float.h"
+#include "pbrt/util/accurate_arithmetic.h"
 #include "pbrt/shapes/triangle_mesh.h"
 
 struct TriangleIntersection {

@@ -3,11 +3,10 @@
 #include <cstring>
 
 template <class To, class From>
-PBRT_CPU_GPU
-    typename std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From> &&
+PBRT_CPU_GPU std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From> &&
                                   std::is_trivially_copyable_v<To>,
                               To>
-    bit_cast(const From &src) noexcept {
+bit_cast(const From &src) noexcept {
     static_assert(std::is_trivially_constructible_v<To>,
                   "This implementation requires the destination type to be trivially "
                   "constructible");
@@ -83,7 +82,7 @@ PBRT_CPU_GPU double add_round_up(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU double add_round_down(double a, double b) {
+PBRT_CPU_GPU inline double add_round_down(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __dadd_rd(a, b);
 #else
@@ -91,14 +90,14 @@ PBRT_CPU_GPU double add_round_down(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU double sub_round_up(double a, double b) {
+PBRT_CPU_GPU inline double sub_round_up(double a, double b) {
     return add_round_up(a, -b);
 }
-PBRT_CPU_GPU double sub_round_down(double a, double b) {
+PBRT_CPU_GPU inline double sub_round_down(double a, double b) {
     return add_round_down(a, -b);
 }
 
-PBRT_CPU_GPU double mul_round_up(double a, double b) {
+PBRT_CPU_GPU inline double mul_round_up(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __dmul_ru(a, b);
 #else
@@ -106,7 +105,7 @@ PBRT_CPU_GPU double mul_round_up(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU double mul_round_down(double a, double b) {
+PBRT_CPU_GPU inline double mul_round_down(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __dmul_rd(a, b);
 #else
@@ -114,14 +113,14 @@ PBRT_CPU_GPU double mul_round_down(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU double div_round_up(double a, double b) {
+PBRT_CPU_GPU inline double div_round_up(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __ddiv_ru(a, b);
 #else
     return NextFloatUp(a / b);
 #endif
 }
-PBRT_CPU_GPU double div_round_down(double a, double b) {
+PBRT_CPU_GPU inline double div_round_down(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __ddiv_rd(a, b);
 #else
@@ -129,7 +128,7 @@ PBRT_CPU_GPU double div_round_down(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU double sqrt_round_up(double a) {
+PBRT_CPU_GPU inline double sqrt_round_up(double a) {
 #if defined(__CUDA_ARCH__)
     return __dsqrt_ru(a);
 #else
@@ -137,7 +136,7 @@ PBRT_CPU_GPU double sqrt_round_up(double a) {
 #endif
 }
 
-PBRT_CPU_GPU double sqrt_round_down(double a) {
+PBRT_CPU_GPU inline double sqrt_round_down(double a) {
 #if defined(__CUDA_ARCH__)
     return __dsqrt_rd(a);
 #else
