@@ -50,13 +50,6 @@ class PerspectiveCamera : public Camera {
             camera_from_raster(Point3f(0.0, 1.0, 0.0)) - camera_from_raster(Point3f(0.0, 0.0, 0.0));
     }
 
-    PBRT_GPU Ray get_ray(double s, double t, curandState *local_rand_state) const override {
-        Vector3f rd = lens_radius * random_in_unit_disk(local_rand_state);
-        Vector3f offset = u * rd.x + v * rd.y;
-        return Ray(origin + offset,
-                   lower_left_corner + s * horizontal + t * vertical - origin - offset);
-    }
-
     PBRT_GPU Ray generate_ray(const Point2f &sampled_p_film) const override {
         // Compute raster and camera sample positions
         const auto p_film = Point3f(sampled_p_film.x, sampled_p_film.y, 0.0);

@@ -15,7 +15,7 @@ struct CameraTransform {
     Transform world_from_render;
     Transform render_from_world;
 
-    PBRT_CPU_GPU CameraTransform(Transform _world_from_camera,
+    PBRT_CPU_GPU CameraTransform(const Transform &_world_from_camera,
                                  RenderingCoordinateSystem rendering_space) {
         switch (rendering_space) {
         case CameraCoordSystem: {
@@ -51,8 +51,6 @@ class Camera {
         : resolution(_resolution), camera_transform(_camera_transform) {}
 
     PBRT_GPU virtual ~Camera() {}
-
-    PBRT_GPU virtual Ray get_ray(double s, double t, curandState *local_rand_state) const = 0;
 
     PBRT_GPU virtual Ray generate_ray(const Point2f &sampled_p_film) const = 0;
 };

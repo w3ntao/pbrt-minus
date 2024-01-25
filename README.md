@@ -7,7 +7,7 @@ A simpler, less performant physically based ray tracer rewritten from PBRT-v4.
 * C++ (>= 17)
 * CUDA (>= 12)
 * CMake or [Xmake](https://xmake.io/)
-
+* PNG library ([for Debian](https://packages.debian.org/search?keywords=libpng-dev), [for Arch](https://archlinux.org/packages/extra/x86_64/libpng/))
 
 ## build
 

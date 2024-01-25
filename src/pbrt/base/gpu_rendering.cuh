@@ -150,22 +150,6 @@ __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer 
     const Ray ray = camera->generate_ray(sampled_p_film);
 
     frame_buffer[pixel_index] = integrator->get_radiance(ray, aggregate, &local_rand_state);
-
-    return;
-
-    Color final_color(0, 0, 0);
-
-    for (int s = 0; s < num_samples; s++) {
-        double u = double(x + curand_uniform(&local_rand_state)) / double(width);
-        double v = double(y + curand_uniform(&local_rand_state)) / double(height);
-        final_color += integrator->get_radiance(camera->get_ray(u, v, &local_rand_state), aggregate,
-                                                &local_rand_state);
-    }
-
-    final_color /= double(num_samples);
-    final_color = Color(sqrt(final_color.r), sqrt(final_color.g), sqrt(final_color.b));
-
-    frame_buffer[pixel_index] = final_color;
 }
 
 void writer_to_file(const std::string &filename, const Color *frame_buffer, int width, int height) {
