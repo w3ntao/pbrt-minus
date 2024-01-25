@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/util/rounding_arithmetic.h"
+#include "accurate_arithmetic.h"
 
 class Interval {
   public:
@@ -15,7 +16,7 @@ class Interval {
         : low(std::min(low, high)), high(std::max(low, high)) {}
 
     PBRT_CPU_GPU
-    static Interval FromValueAndError(double v, double err) {
+    static Interval from_value_and_error(double v, double err) {
         Interval i;
         if (err == 0) {
             i.low = v;
@@ -26,6 +27,50 @@ class Interval {
         }
         return i;
     }
+
+    PBRT_CPU_GPU double midpoint() const {
+        return (low + high) / 2;
+    }
+
+    PBRT_CPU_GPU
+    explicit operator double() const {
+        return midpoint();
+    }
+
+    PBRT_CPU_GPU double width() const {
+        return high - low;
+    }
+
+    PBRT_CPU_GPU
+    bool exactly(double v) const {
+        return low == v && high == v;
+    }
+
+    PBRT_CPU_GPU
+    bool operator==(double v) const {
+        return exactly(v);
+    }
+
+    PBRT_CPU_GPU Interval operator+(double f) const {
+        return (*this) + Interval(f);
+    }
+
+    PBRT_CPU_GPU
+    Interval operator+(const Interval &i) const {
+        return {add_round_down(low, i.low), add_round_up(high, i.high)};
+    }
+
+    PBRT_CPU_GPU
+    void operator+=(double f) {
+        (*this) = (*this) + f;
+    }
+
+    PBRT_CPU_GPU Interval operator*(double f) const {
+        return f > 0.0 ? Interval(mul_round_down(f, low), mul_round_up(f, high))
+                       : Interval(mul_round_down(f, high), mul_round_up(f, low));
+    }
+
+    PBRT_CPU_GPU Interval operator/(const Interval &i) const;
 };
 
 // Interval Inline Functions
@@ -48,4 +93,28 @@ PBRT_GPU inline Interval sqr(Interval i) {
     }
 
     return Interval(mul_round_down(alow, alow), mul_round_up(ahigh, ahigh));
+}
+
+PBRT_CPU_GPU inline Interval operator*(double f, const Interval &i) {
+    return i * f;
+}
+
+PBRT_CPU_GPU inline Interval operator+(double f, const Interval &i) {
+    return i + f;
+}
+
+PBRT_CPU_GPU Interval Interval::operator/(const Interval &i) const {
+    if (in_range(0, i)) {
+        // The interval we're dividing by straddles zero, so just
+        // return an interval of everything.
+
+        return Interval(-Infinity, Infinity);
+    }
+
+    double lowQuot[4] = {div_round_down(low, i.low), div_round_down(high, i.low),
+                         div_round_down(low, i.high), div_round_down(high, i.high)};
+    double highQuot[4] = {div_round_up(low, i.low), div_round_up(high, i.low),
+                          div_round_up(low, i.high), div_round_up(high, i.high)};
+    return {std::min({lowQuot[0], lowQuot[1], lowQuot[2], lowQuot[3]}),
+            std::max({highQuot[0], highQuot[1], highQuot[2], highQuot[3]})};
 }

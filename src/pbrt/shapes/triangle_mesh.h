@@ -27,7 +27,13 @@ class TriangleMesh {
         auto temp_points = new Point3f[_points_num];
         for (int i = 0; i < _points_num; i++) {
             temp_points[i] = transform(_points[i]);
+
+            /*
+            printf("point[%d]: (%f, %f, %f)\n", i, temp_points[i].x, temp_points[i].y,
+                   temp_points[i].z);
+                   */
         }
+        // printf("\n");
 
         p = temp_points;
     }

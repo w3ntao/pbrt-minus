@@ -51,20 +51,13 @@ __global__ void init_gpu_integrator(Renderer *renderer) {
     renderer->integrator = gpu_integrator;
 }
 
-__global__ void init_gpu_camera(Renderer *renderer, int width, int height) {
-    Point3f look_from(200, 250, 70);
-    Point3f look_at(0, 33, -50);
-    Vector3f up(0, 0, 1);
-    double dist_to_focus = (look_from - look_at).length();
-    double aperture = 0.1;
-
-    renderer->camera =
-        new PerspectiveCamera(width, height, look_from, look_at, up, 30.0,
-                              double(width) / double(height), aperture, dist_to_focus);
+__global__ void init_gpu_camera(Renderer *renderer, Point2i resolution,
+                                CameraTransform camera_transform) {
+    renderer->camera = new PerspectiveCamera(resolution, camera_transform);
 }
 
 __global__ void init_gpu_aggregate(Renderer *renderer, int num_primitive) {
-    const Transform matrix_translate = Transform::translate(Vector3f(0, 0, -140));
+    const Transform matrix_translate = Transform::translate(-200, -250, -210);
 
     int *v_idx_0 = new int[6];
     v_idx_0[0] = 0;
@@ -135,8 +128,8 @@ __global__ void free_renderer(Renderer *renderer) {
 __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer *renderer) {
     const Camera *camera = renderer->camera;
 
-    int width = camera->width;
-    int height = camera->height;
+    int width = camera->resolution.x;
+    int height = camera->resolution.y;
 
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -152,7 +145,16 @@ __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer 
     curandState local_rand_state;
     curand_init(1984, pixel_index, 0, &local_rand_state);
 
+    // TODO: no random value here
+    auto sampled_p_film = Point2f(x, y) + Point2f(0.5, 0.5);
+    const Ray ray = camera->generate_ray(sampled_p_film);
+
+    frame_buffer[pixel_index] = integrator->get_radiance(ray, aggregate, &local_rand_state);
+
+    return;
+
     Color final_color(0, 0, 0);
+
     for (int s = 0; s < num_samples; s++) {
         double u = double(x + curand_uniform(&local_rand_state)) / double(width);
         double v = double(y + curand_uniform(&local_rand_state)) / double(height);
@@ -161,7 +163,6 @@ __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer 
     }
 
     final_color /= double(num_samples);
-
     final_color = Color(sqrt(final_color.r), sqrt(final_color.g), sqrt(final_color.b));
 
     frame_buffer[pixel_index] = final_color;

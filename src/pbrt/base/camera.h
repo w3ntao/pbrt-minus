@@ -1,38 +1,58 @@
 #pragma once
 
 #include "pbrt/base/ray.h"
+#include "pbrt/euclidean_space/transform.h"
 
-/*
-pub enum RenderingCoordinateSystem {
-    Camera,
-    CameraWorld,
-    World,
-}
-
-#[derive(Copy, Clone)]
-pub struct CameraTransform {
-    pub render_from_camera: Transform,
-    pub camera_from_render: Transform,
-    pub world_from_render: Transform,
-}
-*/
-
-/*
 enum RenderingCoordinateSystem {
-    Camera,
-    CameraWorld,
-    World,
+    CameraCoordSystem,
+    CameraWorldCoordSystem,
+    WorldCoordSystem,
 };
-*/
+
+struct CameraTransform {
+    Transform render_from_camera;
+    Transform camera_from_render;
+    Transform world_from_render;
+    Transform render_from_world;
+
+    PBRT_CPU_GPU CameraTransform(Transform _world_from_camera,
+                                 RenderingCoordinateSystem rendering_space) {
+        switch (rendering_space) {
+        case CameraCoordSystem: {
+            world_from_render = _world_from_camera;
+            break;
+        }
+
+        case CameraWorldCoordSystem: {
+            // the default option
+            auto p_camera = _world_from_camera(Point3f(0, 0, 0));
+            world_from_render = Transform::translate(p_camera.x, p_camera.y, p_camera.z);
+            break;
+        }
+
+        case WorldCoordSystem: {
+            world_from_render = Transform::identity();
+            break;
+        }
+        }
+
+        render_from_world = world_from_render.inverse();
+        render_from_camera = render_from_world * _world_from_camera;
+        camera_from_render = render_from_camera.inverse();
+    }
+};
 
 class Camera {
   public:
-    const int width = -1;
-    const int height = -1;
+    Point2i resolution;
+    CameraTransform camera_transform;
 
-    PBRT_GPU Camera(int _width, int _height) : width(_width), height(_height) {}
+    PBRT_GPU Camera(const Point2i &_resolution, const CameraTransform &_camera_transform)
+        : resolution(_resolution), camera_transform(_camera_transform) {}
 
     PBRT_GPU virtual ~Camera() {}
 
     PBRT_GPU virtual Ray get_ray(double s, double t, curandState *local_rand_state) const = 0;
+
+    PBRT_GPU virtual Ray generate_ray(const Point2f &sampled_p_film) const = 0;
 };

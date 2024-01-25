@@ -10,6 +10,14 @@ class SquareMatrix {
     double val[N][N];
 
   public:
+    PBRT_CPU_GPU SquareMatrix(const SquareMatrix &matrix) {
+        for (int i = 0; i < N; i++) {
+            for (int k = 0; k < N; k++) {
+                val[i][k] = matrix.val[i][k];
+            }
+        }
+    }
+
     PBRT_CPU_GPU SquareMatrix() {
         for (int i = 0; i < N; i++) {
             for (int k = 0; k < N; k++) {

@@ -19,15 +19,17 @@ class GraphicsState {
 class SceneBuilder {
   private:
     Renderer *renderer = nullptr;
-    Point2i dimension;
+    Point2i resolution;
 
     GraphicsState graphics_state;
     std::stack<GraphicsState> pushed_graphics_state;
     std::map<std::string, Transform> named_coordinate_systems;
+    Transform render_from_world;
 
-    SceneBuilder() : dimension(1960, 1080) {
-        // TODO: read dimension from PBRT file
+    SceneBuilder() : resolution(1368, 1026) {
+        // TODO: read resolution from PBRT file
         checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(Renderer)));
+        init_gpu_renderer<<<1, 1>>>(renderer);
     }
 
     std::vector<int> split_tokens_into_statements(const std::vector<Token> &tokens) {
@@ -44,24 +46,28 @@ class SceneBuilder {
         return keyword_range;
     }
 
+    Transform get_render_from_object() const {
+        return render_from_world * graphics_state.current_transform;
+    }
+
     void option_camera(const std::vector<Token> &tokens) {
-        for (const auto &t : tokens) {
-            std::cout << t;
-        }
-
         if (tokens[1].type != String) {
-            throw std::runtime_error("the 2nd token should be String");
+            throw std::runtime_error("option_camera() fail: the 2nd token should be String");
         }
 
-        auto camera_type = tokens[1].value[0];
+        const auto camera_type = tokens[1].value[0];
         if (camera_type == "perspective") {
             auto camera_from_world = graphics_state.current_transform;
             auto world_from_camera = camera_from_world.inverse();
 
             named_coordinate_systems["camera"] = world_from_camera;
 
-            // TODO: progress 2024/04/25 implementing Camera
+            auto camera_transform = CameraTransform(
+                world_from_camera, RenderingCoordinateSystem::CameraWorldCoordSystem);
 
+            render_from_world = camera_transform.render_from_world;
+
+            init_gpu_camera<<<1, 1>>>(renderer, resolution, camera_transform);
             return;
         }
 
@@ -84,14 +90,21 @@ class SceneBuilder {
         graphics_state.current_transform *= transform_look_at;
     }
 
+    void world_shape(const std::vector<Token> &tokens) {
+        auto render_from_object = get_render_from_object();
+        auto object_from_render = render_from_object.inverse();
+        bool reverse_orientation = graphics_state.reversed_orientation;
+
+        // TODO: progress 2024/01/25 wentao implementing Shape
+    }
+
     void world_translate(const std::vector<Token> &tokens) {
         std::vector<double> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
             data.push_back(tokens[idx].to_number());
         }
 
-        graphics_state.current_transform *=
-            Transform::translate(Vector3f(data[0], data[1], data[2]));
+        graphics_state.current_transform *= Transform::translate(data[0], data[1], data[2]);
     }
 
     void parse_statement(const std::vector<Token> &statements) {
@@ -111,9 +124,7 @@ class SceneBuilder {
             graphics_state.current_transform = Transform::identity();
             named_coordinate_systems["world"] = graphics_state.current_transform;
 
-            init_gpu_renderer<<<1, 1>>>(renderer);
             init_gpu_integrator<<<1, 1>>>(renderer);
-            init_gpu_camera<<<1, 1>>>(renderer, dimension.x, dimension.y);
 
             return;
         }
@@ -133,6 +144,11 @@ class SceneBuilder {
 
             if (keyword == "LookAt") {
                 option_lookat(statements);
+                return;
+            }
+
+            if (keyword == "Shape") {
+                world_shape(statements);
                 return;
             }
 
@@ -194,7 +210,7 @@ class SceneBuilder {
         int thread_width = 8;
         int thread_height = 8;
 
-        std::cerr << "Rendering a " << dimension.x << "x" << dimension.y
+        std::cerr << "Rendering a " << resolution.x << "x" << resolution.y
                   << " image (samples per pixel: " << num_samples << ") ";
         std::cerr << "in " << thread_width << "x" << thread_height << " blocks.\n";
 
@@ -207,12 +223,12 @@ class SceneBuilder {
         // allocate FB
         Color *frame_buffer;
         checkCudaErrors(
-            cudaMallocManaged((void **)&frame_buffer, sizeof(Color) * dimension.x * dimension.y));
+            cudaMallocManaged((void **)&frame_buffer, sizeof(Color) * resolution.x * resolution.y));
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
         clock_t start = clock();
-        dim3 blocks(dimension.x / thread_width + 1, dimension.y / thread_height + 1, 1);
+        dim3 blocks(resolution.x / thread_width + 1, resolution.y / thread_height + 1, 1);
         dim3 threads(thread_width, thread_height, 1);
 
         gpu_render<<<blocks, threads>>>(frame_buffer, num_samples, renderer);
@@ -223,7 +239,7 @@ class SceneBuilder {
         std::cerr << std::fixed << std::setprecision(1) << "took " << timer_seconds
                   << " seconds.\n";
 
-        writer_to_file(file_name, frame_buffer, dimension.x, dimension.y);
+        writer_to_file(file_name, frame_buffer, resolution.x, resolution.y);
 
         checkCudaErrors(cudaFree(frame_buffer));
         checkCudaErrors(cudaGetLastError());

@@ -1,0 +1,107 @@
+#pragma once
+
+#include "pbrt/util/macro.h"
+#include "pbrt/util/accurate_arithmetic.h"
+#include "pbrt/euclidean_space/point2.h"
+#include "pbrt/euclidean_space/vector2.h"
+
+// Bounds2 Definition
+template <typename T>
+class Bounds2 {
+  public:
+    // Bounds2 Public Methods
+    PBRT_CPU_GPU
+    Bounds2() {
+        T min_num = std::numeric_limits<T>::lowest();
+        T max_num = std::numeric_limits<T>::max();
+        p_min = Point2<T>(max_num, max_num);
+        p_max = Point2<T>(min_num, min_num);
+    }
+
+    PBRT_CPU_GPU
+    explicit Bounds2(Point2<T> p) : p_min(p), p_max(p) {}
+
+    PBRT_CPU_GPU
+    Bounds2(Point2<T> p1, Point2<T> p2) : p_min(p1.min(p2)), p_max(p1.max(p2)) {}
+
+    template <typename U>
+    PBRT_CPU_GPU explicit Bounds2(const Bounds2<U> &b) {
+        if (b.IsEmpty())
+            // Be careful about overflowing float->int conversions and the
+            // like.
+            *this = Bounds2<T>();
+        else {
+            p_min = Point2<T>(b.p_min);
+            p_max = Point2<T>(b.p_max);
+        }
+    }
+
+    PBRT_CPU_GPU
+    Vector2<T> Diagonal() const {
+        return p_max - p_min;
+    }
+
+    PBRT_CPU_GPU
+    T area() const {
+        Vector2<T> d = p_max - p_min;
+        return d.x * d.y;
+    }
+
+    PBRT_CPU_GPU
+    bool IsEmpty() const {
+        return p_min.x >= p_max.x || p_min.y >= p_max.y;
+    }
+
+    PBRT_CPU_GPU
+    bool is_degenerate() const {
+        return p_min.x > p_max.x || p_min.y > p_max.y;
+    }
+
+    PBRT_CPU_GPU
+    int max_dimension() const {
+        Vector2<T> diag = Diagonal();
+        return diag.x > diag.y ? 0 : 1;
+    }
+
+    PBRT_CPU_GPU
+    Point2<T> operator[](int i) const {
+        return (i == 0) ? p_min : p_max;
+    }
+
+    PBRT_CPU_GPU
+    Point2<T> &operator[](int i) {
+        return (i == 0) ? p_min : p_max;
+    }
+
+    PBRT_CPU_GPU
+    bool operator==(const Bounds2<T> &b) const {
+        return b.p_min == p_min && b.p_max == p_max;
+    }
+
+    PBRT_CPU_GPU
+    bool operator!=(const Bounds2<T> &b) const {
+        return b.p_min != p_min || b.p_max != p_max;
+    }
+
+    PBRT_CPU_GPU
+    Point2<T> corner(int corner) const {
+        return Point2<T>((*this)[(corner & 1)].x, (*this)[(corner & 2) ? 1 : 0].y);
+    }
+
+    PBRT_CPU_GPU
+    Vector2<T> offset(Point2<T> p) const {
+        Vector2<T> o = p - p_min;
+        if (p_max.x > p_min.x) {
+            o.x /= p_max.x - p_min.x;
+        }
+        if (p_max.y > p_min.y) {
+            o.y /= p_max.y - p_min.y;
+        }
+        return o;
+    }
+
+    // Bounds2 Public Members
+    Point2<T> p_min, p_max;
+};
+
+using Bounds2f = Bounds2<double>;

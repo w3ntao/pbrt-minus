@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "pbrt/util/math.h"
+#include <pbrt/util/interval.h>
 
 template <typename T>
 class Vector3 {
@@ -61,6 +62,12 @@ class Vector3 {
         return Vector3(x + b.x, y + b.y, z + b.z);
     }
 
+    PBRT_CPU_GPU void operator+=(const Vector3 &v) {
+        this->x += v.x;
+        this->y += v.y;
+        this->z += v.z;
+    }
+
     PBRT_CPU_GPU Vector3 operator-() const {
         return Vector3(-x, -y, -z);
     }
@@ -71,6 +78,14 @@ class Vector3 {
 
     PBRT_CPU_GPU Vector3 operator*(T factor) const {
         return Vector3(x * factor, y * factor, z * factor);
+    }
+
+    PBRT_CPU_GPU Vector3 operator*=(double v) {
+        this->x += v;
+        this->y += v;
+        this->z += v;
+
+        return *this;
     }
 
     PBRT_CPU_GPU Vector3 operator/(T divisor) const {
@@ -140,4 +155,12 @@ using Vector3f = Vector3<double>;
 template <typename T>
 PBRT_CPU_GPU Vector3<T> operator*(T factor, const Vector3<T> &v) {
     return v * factor;
+}
+
+PBRT_CPU_GPU inline Vector3f FMA(double a, const Vector3f &b, const Vector3f &c) {
+    return {FMA(a, b.x, c.x), FMA(a, b.y, c.y), FMA(a, b.z, c.z)};
+}
+
+PBRT_CPU_GPU inline Vector3f FMA(const Vector3f &a, double b, const Vector3f &c) {
+    return FMA(b, a, c);
 }
