@@ -58,6 +58,7 @@ class Point2 {
 };
 
 using Point2f = Point2<double>;
+using Point2i = Point2<int>;
 
 template <typename T>
 PBRT_CPU_GPU Point2<T> operator*(T factor, const Point2<T> &p) {

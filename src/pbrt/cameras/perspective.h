@@ -15,8 +15,10 @@ PBRT_GPU Vector3f random_in_unit_disk(curandState *local_rand_state) {
 
 class PerspectiveCamera : public Camera {
   public:
-    PBRT_GPU PerspectiveCamera(Point3f look_from, Point3f look_at, Vector3f up, double vfov,
-                               double aspect, double aperture, double focus_dist) {
+    PBRT_GPU PerspectiveCamera(int width, int height, Point3f look_from, Point3f look_at,
+                               Vector3f up, double vfov, double aspect, double aperture,
+                               double focus_dist)
+        : Camera(width, height) {
         auto PI = acos(-1.0);
         lens_radius = aperture / 2.0f;
         double theta = vfov * PI / 180.0f;
