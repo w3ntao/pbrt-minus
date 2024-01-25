@@ -2,17 +2,17 @@
 
 #include "pbrt/shapes/triangle.h"
 
-class World {
+class Aggregate {
   public:
     Shape **shapes;
     int shape_num;
     int current_num;
 
-    PBRT_GPU World(int n) : current_num(0), shape_num(n) {
+    PBRT_GPU Aggregate(int n) : current_num(0), shape_num(n) {
         shapes = new Shape *[n];
     }
 
-    PBRT_GPU ~World() {
+    PBRT_GPU ~Aggregate() {
         for (int i = 0; i < current_num; ++i) {
             delete shapes[i];
         }

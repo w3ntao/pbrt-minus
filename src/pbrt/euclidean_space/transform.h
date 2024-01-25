@@ -96,6 +96,10 @@ class Transform {
         return Point3<T>(xp, yp, zp) / wp;
     }
 
+    PBRT_CPU_GPU Transform inverse() const {
+        return Transform(inv_m, m);
+    }
+
     friend std::ostream &operator<<(std::ostream &stream, const Transform &transform) {
         stream << "Transform -- m: ";
         stream << transform.m;

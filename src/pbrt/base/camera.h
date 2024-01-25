@@ -2,6 +2,29 @@
 
 #include "pbrt/base/ray.h"
 
+/*
+pub enum RenderingCoordinateSystem {
+    Camera,
+    CameraWorld,
+    World,
+}
+
+#[derive(Copy, Clone)]
+pub struct CameraTransform {
+    pub render_from_camera: Transform,
+    pub camera_from_render: Transform,
+    pub world_from_render: Transform,
+}
+*/
+
+/*
+enum RenderingCoordinateSystem {
+    Camera,
+    CameraWorld,
+    World,
+};
+*/
+
 class Camera {
   public:
     const int width = -1;

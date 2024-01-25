@@ -6,7 +6,7 @@ class PathIntegrator : public Integrator {
   public:
     ~PathIntegrator() override = default;
 
-    PBRT_GPU Color get_radiance(const Ray &ray, const World *world,
+    PBRT_GPU Color get_radiance(const Ray &ray, const Aggregate *aggregate,
                                 curandState *local_rand_state) const override {
 
         printf("PathIntegrator not implemented\n");

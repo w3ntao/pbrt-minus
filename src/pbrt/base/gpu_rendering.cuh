@@ -32,12 +32,12 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 class Renderer {
   public:
     const Integrator *integrator = nullptr;
-    const World *world = nullptr;
+    const Aggregate *aggregate = nullptr;
     const Camera *camera = nullptr;
 
     PBRT_GPU ~Renderer() {
         delete integrator;
-        delete world;
+        delete aggregate;
         delete camera;
     }
 };
@@ -63,8 +63,7 @@ __global__ void init_gpu_camera(Renderer *renderer, int width, int height) {
                               double(width) / double(height), aperture, dist_to_focus);
 }
 
-__global__ void init_gpu_world(Renderer *renderer, int num_primitive) {
-
+__global__ void init_gpu_aggregate(Renderer *renderer, int num_primitive) {
     const Transform matrix_translate = Transform::translate(Vector3f(0, 0, -140));
 
     int *v_idx_0 = new int[6];
@@ -120,11 +119,11 @@ __global__ void init_gpu_world(Renderer *renderer, int num_primitive) {
     delete[] p1;
     delete[] p2;
 
-    World *world = new World(num_primitive);
-    world->add_triangles(mesh0);
-    world->add_triangles(mesh1);
-    world->add_triangles(mesh2);
-    renderer->world = world;
+    Aggregate *aggregate = new Aggregate(num_primitive);
+    aggregate->add_triangles(mesh0);
+    aggregate->add_triangles(mesh1);
+    aggregate->add_triangles(mesh2);
+    renderer->aggregate = aggregate;
 }
 
 __global__ void free_renderer(Renderer *renderer) {
@@ -148,7 +147,7 @@ __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer 
     int pixel_index = y * width + x;
 
     const Integrator *integrator = renderer->integrator;
-    const World *world = renderer->world;
+    const Aggregate *aggregate = renderer->aggregate;
 
     curandState local_rand_state;
     curand_init(1984, pixel_index, 0, &local_rand_state);
@@ -157,7 +156,7 @@ __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer 
     for (int s = 0; s < num_samples; s++) {
         double u = double(x + curand_uniform(&local_rand_state)) / double(width);
         double v = double(y + curand_uniform(&local_rand_state)) / double(height);
-        final_color += integrator->get_radiance(camera->get_ray(u, v, &local_rand_state), world,
+        final_color += integrator->get_radiance(camera->get_ray(u, v, &local_rand_state), aggregate,
                                                 &local_rand_state);
     }
 

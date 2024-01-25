@@ -44,6 +44,31 @@ class SceneBuilder {
         return keyword_range;
     }
 
+    void option_camera(const std::vector<Token> &tokens) {
+        for (const auto &t : tokens) {
+            std::cout << t;
+        }
+
+        if (tokens[1].type != String) {
+            throw std::runtime_error("the 2nd token should be String");
+        }
+
+        auto camera_type = tokens[1].value[0];
+        if (camera_type == "perspective") {
+            auto camera_from_world = graphics_state.current_transform;
+            auto world_from_camera = camera_from_world.inverse();
+
+            named_coordinate_systems["camera"] = world_from_camera;
+
+            // TODO: progress 2024/04/25 implementing Camera
+
+            return;
+        }
+
+        std::cerr << "Camera type `" << camera_type << "` not implemented\n";
+        throw std::runtime_error("camera type not implemented");
+    }
+
     void option_lookat(const std::vector<Token> &tokens) {
         std::vector<double> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
@@ -94,8 +119,14 @@ class SceneBuilder {
         }
         case Keyword: {
             const auto keyword = first_token.value[0];
-            if (keyword == "Camera" || keyword == "Film" || keyword == "Sampler" ||
-                keyword == "Integrator" || keyword == "Material" || keyword == "AreaLightSource") {
+
+            if (keyword == "Camera") {
+                option_camera(statements);
+                return;
+            }
+
+            if (keyword == "Film" || keyword == "Sampler" || keyword == "Integrator" ||
+                keyword == "Material" || keyword == "AreaLightSource") {
                 std::cout << "parse_statement::Keyword `" << keyword << "` ignored\n";
                 return;
             }
@@ -145,9 +176,10 @@ class SceneBuilder {
                                           tokens.begin() + range_of_statements[range_idx + 1]);
             /*
             for (const auto &t : statements) {
-                t.print();
+                std::cout << t;
             }
             std::cout << "\n";
+            continue;
             */
 
             builder.parse_statement(statements);
@@ -167,7 +199,7 @@ class SceneBuilder {
         std::cerr << "in " << thread_width << "x" << thread_height << " blocks.\n";
 
         // TODO: compute num_primitive from PBRT file
-        init_gpu_world<<<1, 1>>>(renderer, 6);
+        init_gpu_aggregate<<<1, 1>>>(renderer, 6);
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());

@@ -116,7 +116,7 @@ class Lexer {
         read_char(); // consume the last quote
 
         std::string string_without_quote =
-            input.substr(last_position + 1, position - 1 - (last_position + 1));
+            input.substr(last_position + 1, position - 2 - (last_position + 1));
 
         if (string_without_quote.find(' ') == std::string::npos) {
             return Token(String, string_without_quote);
