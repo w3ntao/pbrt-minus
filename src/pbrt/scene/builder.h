@@ -20,19 +20,17 @@ class SceneBuilder {
   private:
     Renderer *renderer = nullptr;
     Point2i resolution;
+    std::vector<Token> lookat_tokens;
+    std::vector<Token> camera_tokens;
 
     GraphicsState graphics_state;
     std::stack<GraphicsState> pushed_graphics_state;
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
 
-    SceneBuilder() : resolution(1368, 1026) {
-        // TODO: read resolution from PBRT file
-        checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(Renderer)));
-        init_gpu_renderer<<<1, 1>>>(renderer);
-    }
+    SceneBuilder() : resolution(-1, -1) {}
 
-    std::vector<int> split_tokens_into_statements(const std::vector<Token> &tokens) {
+    std::vector<int> group_tokens(const std::vector<Token> &tokens) {
         std::vector<int> keyword_range;
         for (int idx = 0; idx < tokens.size(); ++idx) {
             const auto &token = tokens[idx];
@@ -50,12 +48,12 @@ class SceneBuilder {
         return render_from_world * graphics_state.current_transform;
     }
 
-    void option_camera(const std::vector<Token> &tokens) {
-        if (tokens[1].type != String) {
+    void option_camera() {
+        if (camera_tokens[1].type != String) {
             throw std::runtime_error("option_camera() fail: the 2nd token should be String");
         }
 
-        const auto camera_type = tokens[1].value[0];
+        const auto camera_type = camera_tokens[1].value[0];
         if (camera_type == "perspective") {
             auto camera_from_world = graphics_state.current_transform;
             auto world_from_camera = camera_from_world.inverse();
@@ -75,10 +73,10 @@ class SceneBuilder {
         throw std::runtime_error("camera type not implemented");
     }
 
-    void option_lookat(const std::vector<Token> &tokens) {
+    void option_lookat() {
         std::vector<double> data;
-        for (int idx = 1; idx < tokens.size(); idx++) {
-            data.push_back(tokens[idx].to_number());
+        for (int idx = 1; idx < lookat_tokens.size(); idx++) {
+            data.push_back(lookat_tokens[idx].to_number());
         }
 
         auto position = Point3f(data[0], data[1], data[2]);
@@ -107,8 +105,8 @@ class SceneBuilder {
         graphics_state.current_transform *= Transform::translate(data[0], data[1], data[2]);
     }
 
-    void parse_statement(const std::vector<Token> &statements) {
-        const Token &first_token = statements[0];
+    void parse_tokens(const std::vector<Token> &tokens) {
+        const Token &first_token = tokens[0];
 
         switch (first_token.type) {
         case AttributeBegin: {
@@ -121,10 +119,19 @@ class SceneBuilder {
             return;
         }
         case WorldBegin: {
+            resolution = Point2i(1368, 1026);
+            printf("resolution 1368x1026 is hardcoded, please delete me\n");
+            // TODO: read resolution from PBRT file
+
+            checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(Renderer)));
+            init_gpu_renderer<<<1, 1>>>(renderer);
+
+            option_lookat();
+            option_camera();
+            init_gpu_integrator<<<1, 1>>>(renderer);
+
             graphics_state.current_transform = Transform::identity();
             named_coordinate_systems["world"] = graphics_state.current_transform;
-
-            init_gpu_integrator<<<1, 1>>>(renderer);
 
             return;
         }
@@ -132,32 +139,26 @@ class SceneBuilder {
             const auto keyword = first_token.value[0];
 
             if (keyword == "Camera") {
-                option_camera(statements);
-                return;
-            }
-
-            if (keyword == "Film" || keyword == "Sampler" || keyword == "Integrator" ||
-                keyword == "Material" || keyword == "AreaLightSource") {
-                std::cout << "parse_statement::Keyword `" << keyword << "` ignored\n";
+                camera_tokens = tokens;
                 return;
             }
 
             if (keyword == "LookAt") {
-                option_lookat(statements);
+                lookat_tokens = tokens;
                 return;
             }
 
             if (keyword == "Shape") {
-                world_shape(statements);
+                world_shape(tokens);
                 return;
             }
 
             if (keyword == "Translate") {
-                world_translate(statements);
+                world_translate(tokens);
                 return;
             }
 
-            std::cout << "parse_statement::Keyword `" << keyword << "` not implemented\n";
+            std::cout << "parse_tokens::Keyword `" << keyword << "` not implemented\n";
 
             return;
         }
@@ -165,40 +166,37 @@ class SceneBuilder {
         // TODO: progress 2024/01/23 parsing PBRT file
         default: {
             printf("unkown token type: `%d`\n", first_token.type);
-            throw std::runtime_error("parse_statement() fail");
+            throw std::runtime_error("parse_tokens() fail");
         }
         }
     }
 
   public:
     ~SceneBuilder() {
+        if (renderer == nullptr) {
+            return;
+        }
+
         free_renderer<<<1, 1>>>(renderer);
         checkCudaErrors(cudaFree(renderer));
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
-
         cudaDeviceReset();
+
         renderer = nullptr;
     }
 
     static void render_pbrt(const std::string &filename) {
-        auto tokens = parse_pbrt_into_token(filename);
+        const auto all_tokens = parse_pbrt_into_token(filename);
 
         auto builder = SceneBuilder();
-        auto range_of_statements = builder.split_tokens_into_statements(tokens);
+        const auto range_of_tokens = builder.group_tokens(all_tokens);
 
-        for (int range_idx = 0; range_idx < range_of_statements.size() - 1; ++range_idx) {
-            auto statements = std::vector(tokens.begin() + range_of_statements[range_idx],
-                                          tokens.begin() + range_of_statements[range_idx + 1]);
-            /*
-            for (const auto &t : statements) {
-                std::cout << t;
-            }
-            std::cout << "\n";
-            continue;
-            */
+        for (int range_idx = 0; range_idx < range_of_tokens.size() - 1; ++range_idx) {
+            auto current_tokens = std::vector(all_tokens.begin() + range_of_tokens[range_idx],
+                                              all_tokens.begin() + range_of_tokens[range_idx + 1]);
 
-            builder.parse_statement(statements);
+            builder.parse_tokens(current_tokens);
         }
 
         // TODO: read those parameter from PBRT file

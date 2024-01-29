@@ -112,10 +112,12 @@ __global__ void init_gpu_aggregate(Renderer *renderer, int num_primitive) {
     delete[] p1;
     delete[] p2;
 
-    Aggregate *aggregate = new Aggregate(num_primitive);
+    Aggregate *aggregate = new Aggregate();
     aggregate->add_triangles(mesh0);
     aggregate->add_triangles(mesh1);
     aggregate->add_triangles(mesh2);
+
+    aggregate->preprocess();
     renderer->aggregate = aggregate;
 }
 
