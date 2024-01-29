@@ -89,6 +89,11 @@ class Point3 {
 
         return Point3(_x, _y, _z);
     }
+
+    friend std::ostream &operator<<(std::ostream &stream, const Point3 &p) {
+        stream << "Point3(" << p.x << ", " << p.y << ", " << p.z << ")";
+        return stream;
+    }
 };
 
 using Point3f = Point3<double>;

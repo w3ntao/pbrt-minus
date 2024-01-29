@@ -14,31 +14,32 @@ class TriangleMesh {
     const Point2f *uv = nullptr;
     const int *faceIndices = nullptr;
 
-    bool reverseOrientation = false;
+    bool reverse_orientation = false;
     bool transformSwapsHandedness = false;
 
-    PBRT_CPU_GPU TriangleMesh(const Transform &transform, const int *_vertex_indices,
-                              int _indices_num, const Point3f *_points, int _points_num)
-        : triangle_num(_indices_num / 3), points_num(_points_num) {
-        int *temp_vertex_indices = new int[_indices_num];
-        memcpy(temp_vertex_indices, _vertex_indices, sizeof(int) * _indices_num);
+    PBRT_GPU TriangleMesh(const Transform &render_from_object, bool _reverse_orientation,
+                          const int *_vertex_indices, int num_indices, const Point3f *_points,
+                          int num_points)
+        : reverse_orientation(_reverse_orientation), triangle_num(num_indices / 3),
+          points_num(num_points) {
+        int *temp_vertex_indices = new int[num_indices];
+        memcpy(temp_vertex_indices, _vertex_indices, sizeof(int) * num_indices);
         vertex_indices = temp_vertex_indices;
 
-        auto temp_points = new Point3f[_points_num];
-        for (int i = 0; i < _points_num; i++) {
-            temp_points[i] = transform(_points[i]);
+        auto temp_points = new Point3f[num_points];
 
-            /*
-            printf("point[%d]: (%f, %f, %f)\n", i, temp_points[i].x, temp_points[i].y,
-                   temp_points[i].z);
-                   */
+        if (render_from_object.is_identity()) {
+            memcpy(temp_points, _points, sizeof(Point3f) * num_points);
+        } else {
+            for (int i = 0; i < num_points; i++) {
+                temp_points[i] = render_from_object(_points[i]);
+            }
         }
-        // printf("\n");
 
         p = temp_points;
     }
 
-    PBRT_CPU_GPU ~TriangleMesh() {
+    PBRT_GPU ~TriangleMesh() {
         delete[] vertex_indices;
         delete[] p;
         delete[] n;

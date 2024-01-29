@@ -32,8 +32,8 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 class Renderer {
   public:
     const Integrator *integrator = nullptr;
-    const Aggregate *aggregate = nullptr;
     const Camera *camera = nullptr;
+    Aggregate *aggregate = nullptr;
 
     PBRT_GPU ~Renderer() {
         delete integrator;
@@ -44,6 +44,7 @@ class Renderer {
 
 __global__ void init_gpu_renderer(Renderer *renderer) {
     *renderer = Renderer();
+    renderer->aggregate = new Aggregate();
 }
 
 __global__ void init_gpu_integrator(Renderer *renderer) {
@@ -56,69 +57,18 @@ __global__ void init_gpu_camera(Renderer *renderer, Point2i resolution,
     renderer->camera = new PerspectiveCamera(resolution, camera_transform);
 }
 
-__global__ void init_gpu_aggregate(Renderer *renderer, int num_primitive) {
-    const Transform matrix_translate = Transform::translate(-200, -250, -210);
+__global__ void gpu_aggregate_preprocess(Renderer *renderer) {
+    renderer->aggregate->preprocess();
+}
 
-    int *v_idx_0 = new int[6];
-    v_idx_0[0] = 0;
-    v_idx_0[1] = 1;
-    v_idx_0[2] = 2;
-    v_idx_0[3] = 2;
-    v_idx_0[4] = 3;
-    v_idx_0[5] = 0;
+__global__ void gpu_add_triangle_mesh(Renderer *renderer, const Transform render_from_object,
+                                      bool reverse_orientation, const Point3f *points,
+                                      int num_points, const int *indicies, int num_indicies,
+                                      const Point2f *uv, int num_uv) {
+    const TriangleMesh *mesh = new TriangleMesh(render_from_object, reverse_orientation, indicies,
+                                                num_indicies, points, num_points);
 
-    Point3f *p0 = new Point3f[4];
-    p0[0] = Point3f(-400, -400, 0);
-    p0[1] = Point3f(400, -400, 0);
-    p0[2] = Point3f(400, 400, 0);
-    p0[3] = Point3f(-400, 400, 0);
-
-    int *v_idx_1 = new int[6];
-    v_idx_1[0] = 0;
-    v_idx_1[1] = 1;
-    v_idx_1[2] = 2;
-    v_idx_1[3] = 2;
-    v_idx_1[4] = 3;
-    v_idx_1[5] = 0;
-
-    Point3f *p1 = new Point3f[4];
-    p1[0] = Point3f(-400, -400, 0);
-    p1[1] = Point3f(400, -400, 0);
-    p1[2] = Point3f(400, -400, 1000);
-    p1[3] = Point3f(-400, -400, 1000);
-
-    int *v_idx_2 = new int[6];
-    v_idx_2[0] = 0;
-    v_idx_2[1] = 1;
-    v_idx_2[2] = 2;
-    v_idx_2[3] = 2;
-    v_idx_2[4] = 3;
-    v_idx_2[5] = 0;
-
-    Point3f *p2 = new Point3f[4];
-    p2[0] = Point3f(-400, -400, 0);
-    p2[1] = Point3f(-400, 400, 0);
-    p2[2] = Point3f(-400, 400, 1000);
-    p2[3] = Point3f(-400, -400, 1000);
-
-    const TriangleMesh *mesh0 = new TriangleMesh(matrix_translate, v_idx_0, 6, p0, 4);
-    const TriangleMesh *mesh1 = new TriangleMesh(matrix_translate, v_idx_1, 6, p1, 4);
-    const TriangleMesh *mesh2 = new TriangleMesh(matrix_translate, v_idx_2, 6, p2, 4);
-
-    delete[] v_idx_0;
-    delete[] v_idx_1;
-    delete[] v_idx_2;
-    delete[] p0;
-    delete[] p1;
-    delete[] p2;
-
-    Aggregate *aggregate = new Aggregate();
-    aggregate->add_triangles(mesh0);
-    aggregate->add_triangles(mesh1);
-    aggregate->add_triangles(mesh2);
-
-    aggregate->preprocess();
-    renderer->aggregate = aggregate;
+    renderer->aggregate->add_triangles(mesh);
 }
 
 __global__ void free_renderer(Renderer *renderer) {

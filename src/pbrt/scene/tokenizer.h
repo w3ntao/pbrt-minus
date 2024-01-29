@@ -56,12 +56,52 @@ class Token {
 
     Token(TypeOfToken _type, const std::vector<std::string> _value) : type(_type), value(_value) {}
 
+    bool operator==(const Token &t) const {
+        if (type != t.type) {
+            return false;
+        }
+
+        if (value.size() != t.value.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < value.size(); ++i) {
+            if (value[i] != t.value[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool operator!=(const Token &t) const {
+        return !(*this == t);
+    }
+
     double to_number() const {
         if (type != Number) {
             throw std::runtime_error("you should only invoke it with type Number.");
         }
 
         return stod(value[0]);
+    }
+
+    std::vector<double> to_floats() const {
+        std::vector<double> floats(value.size());
+        for (int idx = 0; idx < value.size(); idx++) {
+            floats[idx] = stod(value[idx]);
+        }
+
+        return floats;
+    }
+
+    std::vector<int> to_integers() const {
+        std::vector<int> integers(value.size());
+        for (int idx = 0; idx < value.size(); idx++) {
+            integers[idx] = stoi(value[idx]);
+        }
+
+        return integers;
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Token &token) {
@@ -73,7 +113,6 @@ class Token {
             }
             stream << "}";
         }
-        stream << "\n";
 
         return stream;
     }

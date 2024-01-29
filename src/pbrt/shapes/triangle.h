@@ -184,7 +184,7 @@ class Triangle final : public Shape {
         Point3f pHit = ti.b0 * p0 + ti.b1 * p1 + ti.b2 * p2;
         Point2f uvHit = ti.b0 * uv[0] + ti.b1 * uv[1] + ti.b2 * uv[2];
 
-        bool flipNormal = mesh->reverseOrientation ^ mesh->transformSwapsHandedness;
+        bool flipNormal = mesh->reverse_orientation ^ mesh->transformSwapsHandedness;
         // Compute error bounds _pError_ for triangle intersection
         Point3f pAbsSum = (ti.b0 * p0).abs() + (ti.b1 * p1).abs() + (ti.b2 * p2).abs();
         Vector3f pError = gamma(7) * pAbsSum.to_vector3();
@@ -199,7 +199,7 @@ class Triangle final : public Shape {
         isect.n = Normal3f(dp02.cross(dp12).normalize());
         isect.shading.n = isect.n;
 
-        if (mesh->reverseOrientation ^ mesh->transformSwapsHandedness) {
+        if (mesh->reverse_orientation ^ mesh->transformSwapsHandedness) {
             isect.n = isect.shading.n = -isect.n;
         }
 

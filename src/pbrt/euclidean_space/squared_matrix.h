@@ -56,6 +56,22 @@ class SquareMatrix {
         }
     }
 
+    PBRT_CPU_GPU bool operator==(const SquareMatrix &matrix) const {
+        for (int i = 0; i < N; ++i) {
+            for (int k = 0; k < N; ++k) {
+                if (val[i][k] != matrix.val[i][k]) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    PBRT_CPU_GPU bool operator!=(const SquareMatrix &matrix) const {
+        return !(*this == matrix);
+    }
+
     PBRT_CPU_GPU const double *operator[](int i) const {
         return val[i];
     }

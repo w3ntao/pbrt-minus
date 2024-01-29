@@ -67,6 +67,11 @@ class Point2 {
     PBRT_CPU_GPU Point2 max(const Point2 &p) const {
         return Point2(std::max(x, p.x), std::max(y, p.y));
     }
+
+    friend std::ostream &operator<<(std::ostream &stream, const Point2 &p) {
+        stream << "Point2(" << p.x << ", " << p.y << ")";
+        return stream;
+    }
 };
 
 using Point2f = Point2<double>;

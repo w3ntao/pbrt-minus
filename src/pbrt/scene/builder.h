@@ -10,10 +10,121 @@
 
 class GraphicsState {
   public:
-    GraphicsState() : current_transform(Transform::identity()), reversed_orientation(false) {}
+    GraphicsState() : current_transform(Transform::identity()), reverse_orientation(false) {}
 
     Transform current_transform;
-    bool reversed_orientation;
+    bool reverse_orientation;
+};
+
+class ParameterDict {
+  public:
+    ParameterDict(const std::vector<Token> &tokens) {
+        // the 1st token is Keyword
+        // the 2nd token is String
+        // e.g. { Shape trianglemesh }
+
+        for (int idx = 2; idx < tokens.size(); idx += 2) {
+            if (tokens[idx].type != Variable) {
+                throw std::runtime_error("expect token Variable");
+            }
+
+            auto variable_type = tokens[idx].value[0];
+            auto variable_name = tokens[idx].value[1];
+
+            if (variable_type == "point2") {
+                auto numbers = tokens[idx + 1].to_floats();
+                auto p = std::vector<Point2f>(numbers.size() / 2);
+                for (int k = 0; k < p.size(); k++) {
+                    p[k] = Point2f(numbers[k * 2], numbers[k * 2 + 1]);
+                }
+
+                point2s[variable_name] = p;
+                continue;
+            }
+
+            if (variable_type == "point3") {
+                auto numbers = tokens[idx + 1].to_floats();
+                auto p = std::vector<Point3f>(numbers.size() / 3);
+                for (int k = 0; k < p.size(); k++) {
+                    p[k] = Point3f(numbers[k * 3], numbers[k * 3 + 1], numbers[k * 3 + 2]);
+                }
+
+                point3s[variable_name] = p;
+                continue;
+            }
+
+            if (variable_type == "integer") {
+                integers[variable_name] = tokens[idx + 1].to_integers();
+                continue;
+            }
+
+            std::cout << "unkonwn variable type: `" << variable_type << "`\n";
+            throw std::runtime_error("unkonwn variable type");
+        }
+    }
+
+    std::vector<int> get_integer(const std::string &key) const {
+        if (integers.find(key) == integers.end()) {
+            return std::vector<int>();
+        }
+
+        return integers.at(key);
+    }
+
+    std::vector<Point2f> get_point2(const std::string &key) const {
+        if (point2s.find(key) == point2s.end()) {
+            return std::vector<Point2f>();
+        }
+
+        return point2s.at(key);
+    }
+
+    std::vector<Point3f> get_point3(const std::string &key) const {
+        if (point3s.find(key) == point3s.end()) {
+            return std::vector<Point3f>();
+        }
+
+        return point3s.at(key);
+    }
+
+    friend std::ostream &operator<<(std::ostream &stream, const ParameterDict &parameters) {
+        if (!parameters.integers.empty()) {
+            stream << "integers:\n";
+            parameters.print_dict(stream, parameters.integers);
+            stream << "\n";
+        }
+
+        if (!parameters.point2s.empty()) {
+            stream << "Poin2f:\n";
+            parameters.print_dict(stream, parameters.point2s);
+            stream << "\n";
+        }
+
+        if (!parameters.point3s.empty()) {
+            stream << "Poin3f:\n";
+            parameters.print_dict(stream, parameters.point3s);
+            stream << "\n";
+        }
+
+        return stream;
+    }
+
+  private:
+    std::map<std::string, std::vector<Point2f>> point2s;
+    std::map<std::string, std::vector<Point3f>> point3s;
+    std::map<std::string, std::vector<int>> integers;
+
+    template <typename T>
+    void print_dict(std::ostream &stream,
+                    const std::map<std::string, std::vector<T>> kv_map) const {
+        for (const auto &kv : kv_map) {
+            stream << kv.first << ": { ";
+            for (const auto &x : kv.second) {
+                stream << x << ", ";
+            }
+            stream << "}\n";
+        }
+    }
 };
 
 class SceneBuilder {
@@ -89,11 +200,53 @@ class SceneBuilder {
     }
 
     void world_shape(const std::vector<Token> &tokens) {
-        auto render_from_object = get_render_from_object();
-        auto object_from_render = render_from_object.inverse();
-        bool reverse_orientation = graphics_state.reversed_orientation;
+        if (tokens[0] != Token(Keyword, "Shape")) {
+            throw std::runtime_error("expect Keyword(Shape)");
+        }
 
-        // TODO: progress 2024/01/25 wentao implementing Shape
+        auto render_from_object = get_render_from_object();
+        bool reverse_orientation = graphics_state.reverse_orientation;
+
+        auto second_token = tokens[1];
+
+        if (second_token.value[0] == "trianglemesh") {
+            const auto parameters = ParameterDict(tokens);
+
+            auto uv = parameters.get_point2("uv");
+            auto indices = parameters.get_integer("indices");
+            auto points = parameters.get_point3("P");
+
+            Point3f *gpu_points;
+            checkCudaErrors(
+                cudaMallocManaged((void **)&gpu_points, sizeof(Point3f) * points.size()));
+            checkCudaErrors(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
+                                       cudaMemcpyHostToDevice));
+
+            int *gpu_indicies;
+            checkCudaErrors(
+                cudaMallocManaged((void **)&gpu_indicies, sizeof(int) * indices.size()));
+            checkCudaErrors(cudaMemcpy(gpu_indicies, indices.data(), sizeof(int) * indices.size(),
+                                       cudaMemcpyHostToDevice));
+
+            Point2f *gpu_uv;
+            checkCudaErrors(cudaMallocManaged((void **)&gpu_uv, sizeof(Point2f) * uv.size()));
+            checkCudaErrors(
+                cudaMemcpy(gpu_uv, uv.data(), sizeof(Point2f) * uv.size(), cudaMemcpyHostToDevice));
+
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+
+            gpu_add_triangle_mesh<<<1, 1>>>(renderer, render_from_object, reverse_orientation,
+                                            gpu_points, points.size(), gpu_indicies, indices.size(),
+                                            gpu_uv, uv.size());
+
+            checkCudaErrors(cudaFree(gpu_points));
+            checkCudaErrors(cudaFree(gpu_indicies));
+            checkCudaErrors(cudaFree(gpu_uv));
+
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+        }
     }
 
     void world_translate(const std::vector<Token> &tokens) {
@@ -204,7 +357,7 @@ class SceneBuilder {
     }
 
     void render(int num_samples, const std::string &file_name) const {
-        // TODO: read those parameter from PBRT file
+
         int thread_width = 8;
         int thread_height = 8;
 
@@ -212,8 +365,7 @@ class SceneBuilder {
                   << " image (samples per pixel: " << num_samples << ") ";
         std::cerr << "in " << thread_width << "x" << thread_height << " blocks.\n";
 
-        // TODO: compute num_primitive from PBRT file
-        init_gpu_aggregate<<<1, 1>>>(renderer, 6);
+        gpu_aggregate_preprocess<<<1, 1>>>(renderer);
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());

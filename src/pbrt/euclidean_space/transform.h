@@ -112,6 +112,28 @@ class Transform {
     PBRT_CPU_GPU
     Transform(const SquareMatrix<4> &_m, const SquareMatrix<4> &_inv_m) : m(_m), inv_m(_inv_m) {}
 
+    PBRT_CPU_GPU bool is_identity() const {
+        if (m != inv_m) {
+            return false;
+        }
+
+        for (int i = 0; i < 4; i++) {
+            for (int k = 0; k < 4; k++) {
+                if (i == k) {
+                    if (m[i][k] != 1.0) {
+                        return false;
+                    }
+                } else {
+                    if (m[i][k] != 0.0) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
     PBRT_CPU_GPU Transform inverse() const {
         return Transform(inv_m, m);
     }
