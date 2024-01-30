@@ -10,8 +10,8 @@ class IndependentSampler : public Sampler {
     curandState rand_state;
 
   public:
-    PBRT_GPU IndependentSampler(int seed, int subsequence, int offset) {
-        curand_init(seed, subsequence, offset, &rand_state);
+    PBRT_GPU IndependentSampler(int seed) {
+        curand_init(seed, 0, 0, &rand_state);
     }
 
     PBRT_GPU double get_1d() override {

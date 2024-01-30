@@ -93,7 +93,7 @@ __global__ void gpu_parallel_render(RGB *frame_buffer, int num_samples, const Re
 
     const Integrator *integrator = renderer->integrator;
     const Aggregate *aggregate = renderer->aggregate;
-    auto sampler = IndependentSampler(pixel_index, 0, 0);
+    auto sampler = IndependentSampler(pixel_index);
 
     auto accumulated_l = RGB(0, 0, 0);
     for (int i = 0; i < num_samples; ++i) {
