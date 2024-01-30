@@ -15,11 +15,10 @@ PBRT_GPU Vector3f random_in_unit_disk(curandState *local_rand_state) {
 
 class PerspectiveCamera : public Camera {
   public:
-    PBRT_GPU PerspectiveCamera(const Point2i &resolution, const CameraTransform &camera_transform)
+    PBRT_GPU PerspectiveCamera(const Point2i &resolution, const CameraTransform &camera_transform,
+                               double fov)
         : Camera(resolution, camera_transform) {
 
-        // TODO: read fov from parameter
-        double fov = 38;
         auto frame_aspect_ratio = double(resolution.x) / double(resolution.y);
 
         auto screen_window =

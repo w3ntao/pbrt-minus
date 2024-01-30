@@ -53,8 +53,8 @@ __global__ void init_gpu_integrator(Renderer *renderer) {
 }
 
 __global__ void init_gpu_camera(Renderer *renderer, Point2i resolution,
-                                CameraTransform camera_transform) {
-    renderer->camera = new PerspectiveCamera(resolution, camera_transform);
+                                const CameraTransform camera_transform, const double fov) {
+    renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov);
 }
 
 __global__ void gpu_aggregate_preprocess(Renderer *renderer) {
@@ -67,7 +67,6 @@ __global__ void gpu_add_triangle_mesh(Renderer *renderer, const Transform render
                                       const Point2f *uv, int num_uv) {
     const TriangleMesh *mesh = new TriangleMesh(render_from_object, reverse_orientation, indicies,
                                                 num_indicies, points, num_points);
-
     renderer->aggregate->add_triangles(mesh);
 }
 

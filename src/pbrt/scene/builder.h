@@ -21,7 +21,7 @@ class ParameterDict {
     ParameterDict(const std::vector<Token> &tokens) {
         // the 1st token is Keyword
         // the 2nd token is String
-        // e.g. { Shape trianglemesh }
+        // e.g. { Shape "trianglemesh" }, { Camera "perspective" }
 
         for (int idx = 2; idx < tokens.size(); idx += 2) {
             if (tokens[idx].type != Variable) {
@@ -30,6 +30,21 @@ class ParameterDict {
 
             auto variable_type = tokens[idx].value[0];
             auto variable_name = tokens[idx].value[1];
+
+            if (variable_type == "integer") {
+                integers[variable_name] = tokens[idx + 1].to_integers();
+                continue;
+            }
+
+            if (variable_type == "float") {
+                floats[variable_name] = tokens[idx + 1].to_floats();
+                continue;
+            }
+
+            if (variable_type == "string") {
+                strings[variable_name] = tokens[idx + 1].value[0];
+                continue;
+            }
 
             if (variable_type == "point2") {
                 auto numbers = tokens[idx + 1].to_floats();
@@ -53,11 +68,6 @@ class ParameterDict {
                 continue;
             }
 
-            if (variable_type == "integer") {
-                integers[variable_name] = tokens[idx + 1].to_integers();
-                continue;
-            }
-
             std::cout << "unkonwn variable type: `" << variable_type << "`\n";
             throw std::runtime_error("unkonwn variable type");
         }
@@ -65,15 +75,27 @@ class ParameterDict {
 
     std::vector<int> get_integer(const std::string &key) const {
         if (integers.find(key) == integers.end()) {
-            return std::vector<int>();
+            return {};
         }
 
         return integers.at(key);
     }
 
+    std::vector<double> get_float(const std::string &key) const {
+        if (floats.find(key) == floats.end()) {
+            return {};
+        }
+
+        return floats.at(key);
+    }
+
+    std::string get_string(const std::string &key) const {
+        return strings.at(key);
+    }
+
     std::vector<Point2f> get_point2(const std::string &key) const {
         if (point2s.find(key) == point2s.end()) {
-            return std::vector<Point2f>();
+            return {};
         }
 
         return point2s.at(key);
@@ -81,7 +103,7 @@ class ParameterDict {
 
     std::vector<Point3f> get_point3(const std::string &key) const {
         if (point3s.find(key) == point3s.end()) {
-            return std::vector<Point3f>();
+            return {};
         }
 
         return point3s.at(key);
@@ -113,6 +135,8 @@ class ParameterDict {
     std::map<std::string, std::vector<Point2f>> point2s;
     std::map<std::string, std::vector<Point3f>> point3s;
     std::map<std::string, std::vector<int>> integers;
+    std::map<std::string, std::vector<double>> floats;
+    std::map<std::string, std::string> strings;
 
     template <typename T>
     void print_dict(std::ostream &stream,
@@ -130,16 +154,18 @@ class ParameterDict {
 class SceneBuilder {
   private:
     Renderer *renderer = nullptr;
-    Point2i resolution;
+    std::optional<Point2i> resolution = std::nullopt;
+    std::string filename;
     std::vector<Token> lookat_tokens;
     std::vector<Token> camera_tokens;
+    std::vector<Token> film_tokens;
 
     GraphicsState graphics_state;
     std::stack<GraphicsState> pushed_graphics_state;
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
 
-    SceneBuilder() : resolution(-1, -1) {}
+    SceneBuilder() {}
 
     std::vector<int> group_tokens(const std::vector<Token> &tokens) {
         std::vector<int> keyword_range;
@@ -160,10 +186,7 @@ class SceneBuilder {
     }
 
     void option_camera() {
-        if (camera_tokens[1].type != String) {
-            throw std::runtime_error("option_camera() fail: the 2nd token should be String");
-        }
-
+        auto parameters = ParameterDict(camera_tokens);
         const auto camera_type = camera_tokens[1].value[0];
         if (camera_type == "perspective") {
             auto camera_from_world = graphics_state.current_transform;
@@ -176,12 +199,27 @@ class SceneBuilder {
 
             render_from_world = camera_transform.render_from_world;
 
-            init_gpu_camera<<<1, 1>>>(renderer, resolution, camera_transform);
+            double fov = 90;
+            if (const auto _fov = parameters.get_float("fov"); _fov.size() > 0) {
+                fov = _fov[0];
+            }
+
+            init_gpu_camera<<<1, 1>>>(renderer, resolution.value(), camera_transform, fov);
             return;
         }
 
         std::cerr << "Camera type `" << camera_type << "` not implemented\n";
         throw std::runtime_error("camera type not implemented");
+    }
+
+    void option_film() {
+        auto parameters = ParameterDict(film_tokens);
+
+        auto _resolution_x = parameters.get_integer("xresolution")[0];
+        auto _resolution_y = parameters.get_integer("yresolution")[0];
+
+        resolution = Point2i(_resolution_x, _resolution_y);
+        filename = parameters.get_string("filename");
     }
 
     void option_lookat() {
@@ -272,14 +310,11 @@ class SceneBuilder {
             return;
         }
         case WorldBegin: {
-            resolution = Point2i(1368, 1026);
-            printf("resolution 1368x1026 is hardcoded, please delete me\n");
-            // TODO: read resolution from PBRT file
-
             checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(Renderer)));
             init_gpu_renderer<<<1, 1>>>(renderer);
 
             option_lookat();
+            option_film();
             option_camera();
             init_gpu_integrator<<<1, 1>>>(renderer);
 
@@ -293,6 +328,11 @@ class SceneBuilder {
 
             if (keyword == "Camera") {
                 camera_tokens = tokens;
+                return;
+            }
+
+            if (keyword == "Film") {
+                film_tokens = tokens;
                 return;
             }
 
@@ -316,7 +356,6 @@ class SceneBuilder {
             return;
         }
 
-        // TODO: progress 2024/01/23 parsing PBRT file
         default: {
             printf("unkown token type: `%d`\n", first_token.type);
             throw std::runtime_error("parse_tokens() fail");
@@ -352,16 +391,16 @@ class SceneBuilder {
             builder.parse_tokens(current_tokens);
         }
 
-        // TODO: read those parameter from PBRT file
-        builder.render(1, "output.png");
+        builder.render(1);
     }
 
-    void render(int num_samples, const std::string &file_name) const {
-
+    void render(int num_samples) const {
         int thread_width = 8;
         int thread_height = 8;
 
-        std::cerr << "Rendering a " << resolution.x << "x" << resolution.y
+        const auto image_resolution = resolution.value();
+
+        std::cerr << "Rendering a " << image_resolution.x << "x" << image_resolution.y
                   << " image (samples per pixel: " << num_samples << ") ";
         std::cerr << "in " << thread_width << "x" << thread_height << " blocks.\n";
 
@@ -372,13 +411,14 @@ class SceneBuilder {
 
         // allocate FB
         Color *frame_buffer;
-        checkCudaErrors(
-            cudaMallocManaged((void **)&frame_buffer, sizeof(Color) * resolution.x * resolution.y));
+        checkCudaErrors(cudaMallocManaged((void **)&frame_buffer,
+                                          sizeof(Color) * image_resolution.x * image_resolution.y));
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
         clock_t start = clock();
-        dim3 blocks(resolution.x / thread_width + 1, resolution.y / thread_height + 1, 1);
+        dim3 blocks(image_resolution.x / thread_width + 1, image_resolution.y / thread_height + 1,
+                    1);
         dim3 threads(thread_width, thread_height, 1);
 
         gpu_render<<<blocks, threads>>>(frame_buffer, num_samples, renderer);
@@ -389,12 +429,12 @@ class SceneBuilder {
         std::cerr << std::fixed << std::setprecision(1) << "took " << timer_seconds
                   << " seconds.\n";
 
-        writer_to_file(file_name, frame_buffer, resolution.x, resolution.y);
+        writer_to_file(filename, frame_buffer, image_resolution.x, image_resolution.y);
 
         checkCudaErrors(cudaFree(frame_buffer));
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        std::cout << "image saved to `" << file_name << "`\n";
+        std::cout << "image saved to `" << filename << "`\n";
     }
 };
