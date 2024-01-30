@@ -9,11 +9,8 @@
 #include "pbrt/base/integrator.h"
 #include "pbrt/cameras/perspective.h"
 #include "pbrt/shapes/triangle.h"
-#include "pbrt/integrators/path.h"
 #include "pbrt/integrators/surface_normal.h"
 #include "ext/lodepng/lodepng.h"
-
-enum IntegratorType { PATH, SURFACE_NORMAL };
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define checkCudaErrors(val) check_cuda((val), #val, __FILE__, __LINE__)
@@ -29,6 +26,7 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
     }
 }
 
+namespace GPU {
 class Renderer {
   public:
     const Integrator *integrator = nullptr;
@@ -42,17 +40,17 @@ class Renderer {
     }
 };
 
-__global__ void init_gpu_renderer(Renderer *renderer) {
+__global__ void gpu_init_renderer(Renderer *renderer) {
     *renderer = Renderer();
     renderer->aggregate = new Aggregate();
 }
 
-__global__ void init_gpu_integrator(Renderer *renderer) {
+__global__ void gpu_init_integrator(Renderer *renderer) {
     Integrator *gpu_integrator = new SurfaceNormalIntegrator();
     renderer->integrator = gpu_integrator;
 }
 
-__global__ void init_gpu_camera(Renderer *renderer, Point2i resolution,
+__global__ void gpu_init_camera(Renderer *renderer, Point2i resolution,
                                 const CameraTransform camera_transform, const double fov) {
     renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov);
 }
@@ -70,13 +68,13 @@ __global__ void gpu_add_triangle_mesh(Renderer *renderer, const Transform render
     renderer->aggregate->add_triangles(mesh);
 }
 
-__global__ void free_renderer(Renderer *renderer) {
+__global__ void gpu_free_renderer(Renderer *renderer) {
     renderer->~Renderer();
     // renderer was never new in divice code
     // so you have to destruct it manually
 }
 
-__global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer *renderer) {
+__global__ void gpu_parallel_render(RGB *frame_buffer, int num_samples, const Renderer *renderer) {
     const Camera *camera = renderer->camera;
 
     int width = camera->resolution.x;
@@ -100,10 +98,10 @@ __global__ void gpu_render(Color *frame_buffer, int num_samples, const Renderer 
     auto sampled_p_film = Point2f(x, y) + Point2f(0.5, 0.5);
     const Ray ray = camera->generate_ray(sampled_p_film);
 
-    frame_buffer[pixel_index] = integrator->get_radiance(ray, aggregate, &local_rand_state);
+    frame_buffer[pixel_index] = integrator->li(ray, aggregate, &local_rand_state);
 }
 
-void writer_to_file(const std::string &filename, const Color *frame_buffer, int width, int height) {
+void writer_to_file(const std::string &filename, const RGB *frame_buffer, int width, int height) {
     std::vector<unsigned char> pixels(width * height * 4);
 
     for (unsigned y = 0; y < height; y++) {
@@ -126,3 +124,4 @@ void writer_to_file(const std::string &filename, const Color *frame_buffer, int 
         throw std::runtime_error("lodepng::encode() fail");
     }
 }
+} // namespace GPU

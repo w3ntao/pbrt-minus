@@ -153,7 +153,7 @@ class ParameterDict {
 
 class SceneBuilder {
   private:
-    Renderer *renderer = nullptr;
+    GPU::Renderer *renderer = nullptr;
     std::optional<Point2i> resolution = std::nullopt;
     std::string filename;
     std::vector<Token> lookat_tokens;
@@ -204,7 +204,7 @@ class SceneBuilder {
                 fov = _fov[0];
             }
 
-            init_gpu_camera<<<1, 1>>>(renderer, resolution.value(), camera_transform, fov);
+            gpu_init_camera<<<1, 1>>>(renderer, resolution.value(), camera_transform, fov);
             return;
         }
 
@@ -310,13 +310,13 @@ class SceneBuilder {
             return;
         }
         case WorldBegin: {
-            checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(Renderer)));
-            init_gpu_renderer<<<1, 1>>>(renderer);
+            checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
+            gpu_init_renderer<<<1, 1>>>(renderer);
 
             option_lookat();
             option_film();
             option_camera();
-            init_gpu_integrator<<<1, 1>>>(renderer);
+            gpu_init_integrator<<<1, 1>>>(renderer);
 
             graphics_state.current_transform = Transform::identity();
             named_coordinate_systems["world"] = graphics_state.current_transform;
@@ -369,7 +369,7 @@ class SceneBuilder {
             return;
         }
 
-        free_renderer<<<1, 1>>>(renderer);
+        gpu_free_renderer<<<1, 1>>>(renderer);
         checkCudaErrors(cudaFree(renderer));
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
@@ -410,9 +410,9 @@ class SceneBuilder {
         checkCudaErrors(cudaDeviceSynchronize());
 
         // allocate FB
-        Color *frame_buffer;
+        RGB *frame_buffer;
         checkCudaErrors(cudaMallocManaged((void **)&frame_buffer,
-                                          sizeof(Color) * image_resolution.x * image_resolution.y));
+                                          sizeof(RGB) * image_resolution.x * image_resolution.y));
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
@@ -421,7 +421,7 @@ class SceneBuilder {
                     1);
         dim3 threads(thread_width, thread_height, 1);
 
-        gpu_render<<<blocks, threads>>>(frame_buffer, num_samples, renderer);
+        gpu_parallel_render<<<blocks, threads>>>(frame_buffer, num_samples, renderer);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
@@ -429,7 +429,7 @@ class SceneBuilder {
         std::cerr << std::fixed << std::setprecision(1) << "took " << timer_seconds
                   << " seconds.\n";
 
-        writer_to_file(filename, frame_buffer, image_resolution.x, image_resolution.y);
+        GPU::writer_to_file(filename, frame_buffer, image_resolution.x, image_resolution.y);
 
         checkCudaErrors(cudaFree(frame_buffer));
         checkCudaErrors(cudaGetLastError());

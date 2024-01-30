@@ -6,15 +6,15 @@ class SurfaceNormalIntegrator : public Integrator {
   public:
     ~SurfaceNormalIntegrator() override = default;
 
-    PBRT_GPU Color get_radiance(const Ray &ray, const Aggregate *aggregate,
-                                curandState *local_rand_state) const override {
+    PBRT_GPU RGB li(const Ray &ray, const Aggregate *aggregate,
+                    curandState *local_rand_state) const override {
 
         // return Color(1.0, 1.0, 1.0);
 
         const auto shape_intersection = aggregate->intersect(ray);
 
         if (!shape_intersection) {
-            return Color(0.0, 0.0, 0.0);
+            return RGB(0.0, 0.0, 0.0);
         }
 
         Vector3f normal = shape_intersection->interation.n.to_vector3();
@@ -22,6 +22,6 @@ class SurfaceNormalIntegrator : public Integrator {
 
         const Vector3f n = normal.softmax();
 
-        return Color(n.x, n.y, n.z);
+        return RGB(n.x, n.y, n.z);
     }
 };

@@ -60,6 +60,8 @@ class Aggregate {
         }
 
         shapes = temp_shapes;
+
+        printf("total primitives: %d\n", shape_num);
     }
 
     PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray) const {
