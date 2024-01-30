@@ -6,11 +6,7 @@ class SurfaceNormalIntegrator : public Integrator {
   public:
     ~SurfaceNormalIntegrator() override = default;
 
-    PBRT_GPU RGB li(const Ray &ray, const Aggregate *aggregate,
-                    curandState *local_rand_state) const override {
-
-        // return Color(1.0, 1.0, 1.0);
-
+    PBRT_GPU RGB li(const Ray &ray, const Aggregate *aggregate, Sampler *sampler) const override {
         const auto shape_intersection = aggregate->intersect(ray);
 
         if (!shape_intersection) {

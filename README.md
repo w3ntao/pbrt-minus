@@ -7,13 +7,15 @@ A simpler, less performant physically based ray tracer rewritten from PBRT-v4.
 * C++ (>= 17)
 * CUDA (>= 12)
 * CMake or [Xmake](https://xmake.io/)
-* PNG library ([for Debian](https://packages.debian.org/search?keywords=libpng-dev), [for Arch](https://archlinux.org/packages/extra/x86_64/libpng/))
+* PNG
+  library ([for Debian](https://packages.debian.org/search?keywords=libpng-dev), [for Arch](https://archlinux.org/packages/extra/x86_64/libpng/))
 
 ## build
 
 ### clone repository
 
 clone this repository with its submodule:
+
 ```
 $ git clone --recursive https://github.com/w3ntao/pbrt-cuda.git
 ```
@@ -32,7 +34,7 @@ You should find executable at `pbrt-cuda/build/pbrt-cuda`
 ### build with Xmake
 
 ```
-$xmake
+$ xmake
 ```
 
 You should find executable at `pbrt-cuda/build/linux/x86_64/release/pbrt-cuda`

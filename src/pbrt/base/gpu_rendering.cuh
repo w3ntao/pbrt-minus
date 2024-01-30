@@ -6,24 +6,27 @@
 
 #include <curand_kernel.h>
 
-#include "pbrt/base/integrator.h"
+#include "ext/lodepng/lodepng.h"
+
 #include "pbrt/cameras/perspective.h"
 #include "pbrt/shapes/triangle.h"
 #include "pbrt/integrators/surface_normal.h"
-#include "ext/lodepng/lodepng.h"
+#include "pbrt/samplers/independent.h"
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define checkCudaErrors(val) check_cuda((val), #val, __FILE__, __LINE__)
 
-void check_cuda(cudaError_t result, char const *const func, const char *const file,
-                int const line) {
-    if (result) {
-        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " << file << ":"
-                  << line << " '" << func << "' \n";
-        // Make sure we call CUDA Device Reset before exiting
-        cudaDeviceReset();
-        exit(-1);
+inline void check_cuda(cudaError_t result, char const *const func, const char *const file,
+                       int const line) {
+    if (!result) {
+        return;
     }
+
+    std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " << file << ":"
+              << line << " '" << func << "' \n";
+    // Make sure we call CUDA Device Reset before exiting
+    cudaDeviceReset();
+    exit(-1);
 }
 
 namespace GPU {
@@ -90,15 +93,16 @@ __global__ void gpu_parallel_render(RGB *frame_buffer, int num_samples, const Re
 
     const Integrator *integrator = renderer->integrator;
     const Aggregate *aggregate = renderer->aggregate;
+    auto sampler = IndependentSampler(pixel_index, 0, 0);
 
-    curandState local_rand_state;
-    curand_init(1984, pixel_index, 0, &local_rand_state);
+    auto accumulated_l = RGB(0, 0, 0);
+    for (int i = 0; i < num_samples; ++i) {
+        auto sampled_p_film = Point2f(x, y) + Point2f(0.5, 0.5) + sampler.get_2d();
+        const Ray ray = camera->generate_ray(sampled_p_film);
+        accumulated_l += integrator->li(ray, aggregate, &sampler);
+    }
 
-    // TODO: no random value here
-    auto sampled_p_film = Point2f(x, y) + Point2f(0.5, 0.5);
-    const Ray ray = camera->generate_ray(sampled_p_film);
-
-    frame_buffer[pixel_index] = integrator->li(ray, aggregate, &local_rand_state);
+    frame_buffer[pixel_index] = accumulated_l / double(num_samples);
 }
 
 void writer_to_file(const std::string &filename, const RGB *frame_buffer, int width, int height) {

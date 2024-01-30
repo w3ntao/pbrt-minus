@@ -378,7 +378,7 @@ class SceneBuilder {
         renderer = nullptr;
     }
 
-    static void render_pbrt(const std::string &filename) {
+    static void render_pbrt(const std::string &filename, int num_samples) {
         const auto all_tokens = parse_pbrt_into_token(filename);
 
         auto builder = SceneBuilder();
@@ -391,7 +391,7 @@ class SceneBuilder {
             builder.parse_tokens(current_tokens);
         }
 
-        builder.render(1);
+        builder.render(num_samples);
     }
 
     void render(int num_samples) const {
