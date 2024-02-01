@@ -21,13 +21,8 @@ constexpr double gamma(int n) {
     return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
 }
 
-PBRT_CPU_GPU
-inline double FMA(double a, double b, double c) {
-    return std::fma(a, b, c);
-}
-
-PBRT_CPU_GPU
-inline long double FMA(long double a, long double b, long double c) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T FMA(T a, T b, T c) {
     return std::fma(a, b, c);
 }
 

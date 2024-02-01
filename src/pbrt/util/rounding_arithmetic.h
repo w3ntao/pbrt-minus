@@ -15,8 +15,8 @@ bit_cast(const From &src) noexcept {
     return dst;
 }
 
-PBRT_CPU_GPU
-inline uint64_t FloatToBits(double f) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU uint64_t float_to_bits(T f) {
 #if defined(__CUDA_ARCH__)
     return __double_as_longlong(f);
 #else
@@ -24,8 +24,8 @@ inline uint64_t FloatToBits(double f) {
 #endif
 }
 
-PBRT_CPU_GPU
-inline double BitsToFloat(uint64_t ui) {
+template <typename T, std::enable_if_t<std::is_same_v<T, uint64_t>, bool> = true>
+PBRT_CPU_GPU double bits_to_float(T ui) {
 #if defined(__CUDA_ARCH__)
     return __longlong_as_double(ui);
 #else
@@ -33,9 +33,8 @@ inline double BitsToFloat(uint64_t ui) {
 #endif
 }
 
-
-PBRT_CPU_GPU
-inline double next_float_up(double v) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T next_float_up(T v) {
     if (std::isinf(v) && v > 0.0) {
         return v;
     }
@@ -44,22 +43,18 @@ inline double next_float_up(double v) {
         v = 0.0;
     }
 
-    uint64_t ui = FloatToBits(v);
+    uint64_t ui = float_to_bits(v);
     if (v >= 0.0) {
         ++ui;
     } else {
         --ui;
     }
 
-    return BitsToFloat(ui);
+    return bits_to_float(ui);
 }
 
-template <class T>
-PBRT_CPU_GPU
-double next_float_up(T) = delete; // prevent non double argument passed in
-
-PBRT_CPU_GPU
-inline double next_float_down(double v) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T next_float_down(T v) {
     // Handle infinity and positive zero
     if (std::isinf(v) && v < 0.0) {
         return v;
@@ -69,21 +64,18 @@ inline double next_float_down(double v) {
         v = -0.0;
     }
 
-    uint64_t ui = FloatToBits(v);
+    uint64_t ui = float_to_bits(v);
     if (v > 0) {
         --ui;
     } else {
         ++ui;
     }
 
-    return BitsToFloat(ui);
+    return bits_to_float(ui);
 }
 
-template <class T>
-PBRT_CPU_GPU
-double next_float_down(T) = delete; // prevent non double argument passed in
-
-PBRT_CPU_GPU inline double add_round_up(double a, double b) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T add_round_up(T a, T b) {
 #if defined(__CUDA_ARCH__)
     return __dadd_ru(a, b);
 #else
@@ -91,7 +83,8 @@ PBRT_CPU_GPU inline double add_round_up(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU inline double add_round_down(double a, double b) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T add_round_down(T a, T b) {
 #if defined(__CUDA_ARCH__)
     return __dadd_rd(a, b);
 #else
@@ -99,14 +92,18 @@ PBRT_CPU_GPU inline double add_round_down(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU inline double sub_round_up(double a, double b) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T sub_round_up(T a, T b) {
     return add_round_up(a, -b);
 }
-PBRT_CPU_GPU inline double sub_round_down(double a, double b) {
+
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T sub_round_down(T a, T b) {
     return add_round_down(a, -b);
 }
 
-PBRT_CPU_GPU inline double mul_round_up(double a, double b) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T mul_round_up(T a, T b) {
 #if defined(__CUDA_ARCH__)
     return __dmul_ru(a, b);
 #else
@@ -114,7 +111,8 @@ PBRT_CPU_GPU inline double mul_round_up(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU inline double mul_round_down(double a, double b) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T mul_round_down(T a, T b) {
 #if defined(__CUDA_ARCH__)
     return __dmul_rd(a, b);
 #else
@@ -122,14 +120,17 @@ PBRT_CPU_GPU inline double mul_round_down(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU inline double div_round_up(double a, double b) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T div_round_up(T a, T b) {
 #if defined(__CUDA_ARCH__)
     return __ddiv_ru(a, b);
 #else
     return next_float_up(a / b);
 #endif
 }
-PBRT_CPU_GPU inline double div_round_down(double a, double b) {
+
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T div_round_down(T a, T b) {
 #if defined(__CUDA_ARCH__)
     return __ddiv_rd(a, b);
 #else
@@ -137,7 +138,8 @@ PBRT_CPU_GPU inline double div_round_down(double a, double b) {
 #endif
 }
 
-PBRT_CPU_GPU inline double sqrt_round_up(double a) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T sqrt_round_up(T a) {
 #if defined(__CUDA_ARCH__)
     return __dsqrt_ru(a);
 #else
@@ -145,7 +147,8 @@ PBRT_CPU_GPU inline double sqrt_round_up(double a) {
 #endif
 }
 
-PBRT_CPU_GPU inline double sqrt_round_down(double a) {
+template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU T sqrt_round_down(T a) {
 #if defined(__CUDA_ARCH__)
     return __dsqrt_rd(a);
 #else
