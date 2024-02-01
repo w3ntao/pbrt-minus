@@ -26,12 +26,25 @@ inline double FMA(double a, double b, double c) {
     return std::fma(a, b, c);
 }
 
+PBRT_CPU_GPU
+inline long double FMA(long double a, long double b, long double c) {
+    return std::fma(a, b, c);
+}
+
 template <typename Ta, typename Tb, typename Tc, typename Td>
 PBRT_CPU_GPU auto difference_of_products(Ta a, Tb b, Tc c, Td d) {
     auto cd = c * d;
     auto diff = FMA(a, b, -cd);
     auto error = FMA(-c, d, cd);
     return diff + error;
+}
+
+template <typename Ta, typename Tb, typename Tc, typename Td>
+PBRT_CPU_GPU auto sum_of_products(Ta a, Tb b, Tc c, Td d) {
+    auto cd = c * d;
+    auto sum = FMA(a, b, cd);
+    auto error = FMA(c, d, -cd);
+    return sum + error;
 }
 
 static constexpr double lerp(double x, double a, double b) {

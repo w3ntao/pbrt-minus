@@ -48,12 +48,16 @@ class Point2 {
         }
     }
 
-    PBRT_CPU_GPU bool operator==(const Point2 &right) const {
-        return x == right.x && y == right.y;
+    PBRT_CPU_GPU bool operator==(const Point2 &p) const {
+        return x == p.x && y == p.y;
     }
 
-    PBRT_CPU_GPU Point2 operator+(const Point2 &right) const {
-        return Point2(x + right.x, y + right.y);
+    PBRT_CPU_GPU Point2 operator+(const Point2 &p) const {
+        return Point2(x + p.x, y + p.y);
+    }
+
+    PBRT_CPU_GPU Point2 operator-(const Vector2f &v) const {
+        return Point2(x - v.x, y - v.y);
     }
 
     PBRT_CPU_GPU Point2 operator*(T factor) const {

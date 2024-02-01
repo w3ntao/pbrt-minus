@@ -15,8 +15,8 @@ struct TriangleIntersection {
 
 class Triangle final : public Shape {
   public:
-    const TriangleMesh *mesh;
     const int triangle_idx;
+    const TriangleMesh *mesh;
 
     PBRT_GPU Triangle(int _idx, const TriangleMesh *_mesh) : triangle_idx(_idx), mesh(_mesh) {}
 
@@ -26,13 +26,21 @@ class Triangle final : public Shape {
         }
     }
 
-    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray,
-                                                        double t_max = Infinity) const override {
+    PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const override {
+        auto points = get_points();
+        auto p0 = points[0];
+        auto p1 = points[1];
+        auto p2 = points[2];
 
-        const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
-        const Point3f p0 = mesh->p[v[0]];
-        const Point3f p1 = mesh->p[v[1]];
-        const Point3f p2 = mesh->p[v[2]];
+        return intersect_triangle(ray, t_max, p0, p1, p2).has_value();
+    }
+
+    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray,
+                                                        double t_max) const override {
+        auto points = get_points();
+        auto p0 = points[0];
+        auto p1 = points[1];
+        auto p2 = points[2];
 
         std::optional<TriangleIntersection> tri_intersection =
             intersect_triangle(ray, t_max, p0, p1, p2);
@@ -46,9 +54,20 @@ class Triangle final : public Shape {
     }
 
   private:
-    PBRT_GPU std::optional<TriangleIntersection>
-    intersect_triangle(const Ray &ray, double t_max, Point3f p0, Point3f p1, Point3f p2) const {
+    PBRT_GPU
+    std::array<Point3f, 3> get_points() const {
+        const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
+        const Point3f p0 = mesh->p[v[0]];
+        const Point3f p1 = mesh->p[v[1]];
+        const Point3f p2 = mesh->p[v[2]];
 
+        return {p0, p1, p2};
+    }
+
+    PBRT_GPU std::optional<TriangleIntersection> intersect_triangle(const Ray &ray, double t_max,
+                                                                    const Point3f &p0,
+                                                                    const Point3f &p1,
+                                                                    const Point3f &p2) const {
         // Return no intersection if triangle is degenerate
         if ((p2 - p0).cross(p1 - p0).squared_length() == 0.0) {
             return {};
@@ -145,7 +164,7 @@ class Triangle final : public Shape {
     }
 
     PBRT_GPU SurfaceInteraction interaction_from_intersection(const TriangleIntersection &ti,
-                                                              Vector3f wo) const {
+                                                              const Vector3f &wo) const {
         const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
         const Point3f p0 = mesh->p[v[0]];
         const Point3f p1 = mesh->p[v[1]];

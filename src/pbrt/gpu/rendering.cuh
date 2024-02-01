@@ -11,6 +11,7 @@
 #include "pbrt/cameras/perspective.h"
 #include "pbrt/shapes/triangle.h"
 #include "pbrt/integrators/surface_normal.h"
+#include "pbrt/integrators/ambient_occlusion.h"
 #include "pbrt/samplers/independent.h"
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
@@ -49,7 +50,8 @@ __global__ void gpu_init_renderer(Renderer *renderer) {
 }
 
 __global__ void gpu_init_integrator(Renderer *renderer) {
-    Integrator *gpu_integrator = new SurfaceNormalIntegrator();
+    // Integrator *gpu_integrator = new SurfaceNormalIntegrator();
+    Integrator *gpu_integrator = new AmbientOcclusionIntegrator();
     renderer->integrator = gpu_integrator;
 }
 
@@ -95,7 +97,7 @@ __global__ void gpu_parallel_render(RGB *frame_buffer, int num_samples, const Re
     const Aggregate *aggregate = renderer->aggregate;
     auto sampler = IndependentSampler(pixel_index);
 
-    auto accumulated_l = RGB(0, 0, 0);
+    auto accumulated_l = RGB(0);
     for (int i = 0; i < num_samples; ++i) {
         auto sampled_p_film = Point2f(x, y) + Point2f(0.5, 0.5) + sampler.get_2d();
         const Ray ray = camera->generate_ray(sampled_p_film);

@@ -14,6 +14,8 @@ class IndependentSampler : public Sampler {
         curand_init(seed, 0, 0, &rand_state);
     }
 
+    ~IndependentSampler() override = default;
+
     PBRT_GPU double get_1d() override {
         return curand_uniform(&rand_state);
     }

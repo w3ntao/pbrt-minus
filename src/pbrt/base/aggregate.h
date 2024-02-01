@@ -64,13 +64,22 @@ class Aggregate {
         printf("total primitives: %d\n", shape_num);
     }
 
+    PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const {
+        for (int idx = 0; idx < shape_num; idx++) {
+            if (shapes[idx]->fast_intersect(ray, t_max)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray) const {
         double best_t = Infinity;
         std::optional<ShapeIntersection> best_intersection = {};
         for (int idx = 0; idx < shape_num; idx++) {
-            const auto shape_intersection = shapes[idx]->intersect(ray);
-
-            if (!shape_intersection || shape_intersection->t_hit > best_t) {
+            const auto shape_intersection = shapes[idx]->intersect(ray, best_t);
+            if (!shape_intersection) {
                 continue;
             }
 

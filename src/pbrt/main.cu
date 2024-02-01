@@ -4,5 +4,7 @@ using namespace std;
 
 int main() {
     std::string input_file = "/home/wentao/Desktop/pbrt-minus-scenes/cornell-box/cornell-box.pbrt";
-    SceneBuilder::render_pbrt(input_file, 10);
+    SceneBuilder::render_pbrt(input_file, 16);
+
+    return 0;
 }

@@ -33,18 +33,19 @@ inline double BitsToFloat(uint64_t ui) {
 #endif
 }
 
+
 PBRT_CPU_GPU
-inline double NextFloatUp(double v) {
-    if (std::isinf(v) && v > 0.) {
+inline double next_float_up(double v) {
+    if (std::isinf(v) && v > 0.0) {
         return v;
     }
 
-    if (v == -0.f) {
-        v = 0.f;
+    if (v == -0.0) {
+        v = 0.0;
     }
 
     uint64_t ui = FloatToBits(v);
-    if (v >= 0.) {
+    if (v >= 0.0) {
         ++ui;
     } else {
         --ui;
@@ -53,18 +54,22 @@ inline double NextFloatUp(double v) {
     return BitsToFloat(ui);
 }
 
+template <class T>
 PBRT_CPU_GPU
-inline float NextFloatDown(float v) {
-    // Handle infinity and positive zero for _NextFloatDown()_
-    if (std::isinf(v) && v < 0.) {
+double next_float_up(T) = delete; // prevent non double argument passed in
+
+PBRT_CPU_GPU
+inline double next_float_down(double v) {
+    // Handle infinity and positive zero
+    if (std::isinf(v) && v < 0.0) {
         return v;
     }
 
-    if (v == 0.f) {
-        v = -0.f;
+    if (v == 0.0) {
+        v = -0.0;
     }
 
-    uint32_t ui = FloatToBits(v);
+    uint64_t ui = FloatToBits(v);
     if (v > 0) {
         --ui;
     } else {
@@ -74,11 +79,15 @@ inline float NextFloatDown(float v) {
     return BitsToFloat(ui);
 }
 
-PBRT_CPU_GPU double add_round_up(double a, double b) {
+template <class T>
+PBRT_CPU_GPU
+double next_float_down(T) = delete; // prevent non double argument passed in
+
+PBRT_CPU_GPU inline double add_round_up(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __dadd_ru(a, b);
 #else
-    return NextFloatUp(a + b);
+    return next_float_up(a + b);
 #endif
 }
 
@@ -86,7 +95,7 @@ PBRT_CPU_GPU inline double add_round_down(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __dadd_rd(a, b);
 #else
-    return NextFloatDown(a + b);
+    return next_float_down(a + b);
 #endif
 }
 
@@ -101,7 +110,7 @@ PBRT_CPU_GPU inline double mul_round_up(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __dmul_ru(a, b);
 #else
-    return NextFloatUp(a * b);
+    return next_float_up(a * b);
 #endif
 }
 
@@ -109,7 +118,7 @@ PBRT_CPU_GPU inline double mul_round_down(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __dmul_rd(a, b);
 #else
-    return NextFloatDown(a * b);
+    return next_float_down(a * b);
 #endif
 }
 
@@ -117,14 +126,14 @@ PBRT_CPU_GPU inline double div_round_up(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __ddiv_ru(a, b);
 #else
-    return NextFloatUp(a / b);
+    return next_float_up(a / b);
 #endif
 }
 PBRT_CPU_GPU inline double div_round_down(double a, double b) {
 #if defined(__CUDA_ARCH__)
     return __ddiv_rd(a, b);
 #else
-    return NextFloatDown(a / b);
+    return next_float_down(a / b);
 #endif
 }
 
@@ -132,7 +141,7 @@ PBRT_CPU_GPU inline double sqrt_round_up(double a) {
 #if defined(__CUDA_ARCH__)
     return __dsqrt_ru(a);
 #else
-    return NextFloatUp(std::sqrt(a));
+    return next_float_up(std::sqrt(a));
 #endif
 }
 
@@ -140,6 +149,6 @@ PBRT_CPU_GPU inline double sqrt_round_down(double a) {
 #if defined(__CUDA_ARCH__)
     return __dsqrt_rd(a);
 #else
-    return NextFloatDown(std::sqrt(a));
+    return next_float_down(std::sqrt(a));
 #endif
 }

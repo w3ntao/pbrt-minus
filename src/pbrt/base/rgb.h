@@ -8,6 +8,8 @@ class RGB {
 
     PBRT_CPU_GPU RGB() : r(0.0), g(0.0), b(0.0) {}
 
+    PBRT_CPU_GPU RGB(double x) : r(x), g(x), b(x) {}
+
     PBRT_CPU_GPU RGB(double _r, double _g, double _b) : r(_r), g(_g), b(_b) {}
 
     PBRT_CPU_GPU RGB clamp() const {

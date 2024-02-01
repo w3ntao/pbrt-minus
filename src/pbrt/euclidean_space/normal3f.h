@@ -2,6 +2,7 @@
 
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/vector3.h"
+#include "pbrt/util/accurate_arithmetic.h"
 
 class Normal3f {
   public:
@@ -10,6 +11,7 @@ class Normal3f {
     double z;
 
     PBRT_CPU_GPU Normal3f() : x(NAN), y(NAN), z(NAN) {}
+
     PBRT_CPU_GPU Normal3f(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
 
     PBRT_CPU_GPU Normal3f(const Vector3f &v) : x(v.x), y(v.y), z(v.z) {}
@@ -35,5 +37,13 @@ class Normal3f {
         y *= factor;
         z *= factor;
         return *this;
+    }
+
+    PBRT_CPU_GPU Normal3f abs() const {
+        return Normal3f(std::abs(x), std::abs(y), std::abs(z));
+    }
+
+    PBRT_CPU_GPU double dot(const Vector3f &v) const {
+        return FMA(x, v.x, sum_of_products(y, v.y, z, v.z));
     }
 };

@@ -3,6 +3,7 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/point3fi.h"
+#include "pbrt/base/differential_ray.h"
 
 class Interaction {
   public:
@@ -12,7 +13,8 @@ class Interaction {
     Point2f uv;
 
     PBRT_CPU_GPU
-    explicit Interaction(Point3fi pi, Normal3f n, Point2f uv, Vector3f wo)
+    explicit Interaction(const Point3fi &pi, const Normal3f &n, const Point2f &uv,
+                         const Vector3f &wo)
         : pi(pi), n(n), uv(uv), wo(wo.normalize()) {}
 };
 
@@ -34,8 +36,9 @@ class SurfaceInteraction : public Interaction {
     double dvdy = NAN;
 
     PBRT_CPU_GPU
-    explicit SurfaceInteraction(Point3fi pi, Point2f uv, Vector3f wo, Vector3f dpdu, Vector3f dpdv,
-                                Normal3f dndu, Normal3f dndv, bool flipNormal)
+    explicit SurfaceInteraction(const Point3fi &pi, const Point2f &uv, const Vector3f &wo,
+                                const Vector3f &dpdu, const Vector3f &dpdv, Normal3f dndu,
+                                const Normal3f &dndv, bool flip_normal)
         : Interaction(pi, Normal3f(dpdu.cross(dpdv).normalize()), uv, wo), dpdu(dpdu), dpdv(dpdv),
           dndu(dndu), dndv(dndv) {
         // Initialize shading geometry from true geometry
@@ -46,9 +49,18 @@ class SurfaceInteraction : public Interaction {
         shading.dndv = dndv;
 
         // Adjust normal based on orientation and handedness
-        if (flipNormal) {
+        if (flip_normal) {
             n *= -1;
             shading.n *= -1;
         }
+    }
+
+    PBRT_CPU_GPU
+    Point3f offset_ray_origin(const Vector3f &w) const {
+        return Ray::offset_ray_origin(pi, n, w);
+    }
+
+    PBRT_GPU DifferentialRay spawn_ray(const Vector3f &d) const {
+        return DifferentialRay(offset_ray_origin(d), d);
     }
 };

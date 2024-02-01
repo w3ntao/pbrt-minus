@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/base/integrator.h"
+#include "pbrt/util/sampling.h"
 
 class SurfaceNormalIntegrator : public Integrator {
   public:
@@ -17,7 +18,6 @@ class SurfaceNormalIntegrator : public Integrator {
         normal = normal.face_forward(-ray.d);
 
         const Vector3f n = normal.softmax();
-
         return RGB(n.x, n.y, n.z);
     }
 };

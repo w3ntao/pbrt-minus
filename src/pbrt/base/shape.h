@@ -19,6 +19,8 @@ class Shape {
   public:
     PBRT_GPU virtual ~Shape() {}
 
+    PBRT_GPU virtual bool fast_intersect(const Ray &ray, double t_max) const = 0;
+
     PBRT_GPU virtual std::optional<ShapeIntersection> intersect(const Ray &ray,
-                                                                double t_max = Infinity) const = 0;
+                                                                double t_max) const = 0;
 };
