@@ -4,6 +4,7 @@
 #include <map>
 #include <chrono>
 
+#include "pbrt/scene/command_line_option.h"
 #include "pbrt/scene/parser.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
@@ -20,19 +21,25 @@ class GraphicsState {
 
 class SceneBuilder {
   private:
+    std::optional<int> samples_per_pixel;
+    std::optional<std::string> integrator;
+
     GPU::Renderer *renderer = nullptr;
     std::optional<Point2i> resolution = std::nullopt;
     std::string filename;
     std::vector<Token> lookat_tokens;
     std::vector<Token> camera_tokens;
     std::vector<Token> film_tokens;
+    std::vector<Token> sampler_tokens;
 
     GraphicsState graphics_state;
     std::stack<GraphicsState> pushed_graphics_state;
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
 
-    SceneBuilder() {}
+    SceneBuilder(const CommandLineOption &command_line_option)
+        : samples_per_pixel(command_line_option.samples_per_pixel),
+          integrator(command_line_option.integrator) {}
 
     std::vector<int> group_tokens(const std::vector<Token> &tokens) {
         std::vector<int> keyword_range;
@@ -104,6 +111,21 @@ class SceneBuilder {
         graphics_state.current_transform *= transform_look_at;
     }
 
+    void option_sampler() {
+        // TODO: sampler is not parsed, only pixelsamples read
+        const auto parameters = ParameterDict(sampler_tokens);
+        auto samples_from_parameters = parameters.get_integer("pixelsamples");
+
+        if (!samples_per_pixel) {
+            if (!samples_from_parameters.empty()) {
+                samples_per_pixel = samples_from_parameters[0];
+            } else {
+                samples_per_pixel = 4;
+                // default samples per pixel
+            }
+        }
+    }
+
     void world_shape(const std::vector<Token> &tokens) {
         if (tokens[0] != Token(Keyword, "Shape")) {
             throw std::runtime_error("expect Keyword(Shape)");
@@ -114,9 +136,9 @@ class SceneBuilder {
 
         auto second_token = tokens[1];
 
-        if (second_token.value[0] == "trianglemesh") {
-            const auto parameters = ParameterDict(tokens);
+        const auto parameters = ParameterDict(tokens);
 
+        if (second_token.value[0] == "trianglemesh") {
             auto uv = parameters.get_point2("uv");
             auto indices = parameters.get_integer("indices");
             auto points = parameters.get_point3("P");
@@ -183,6 +205,8 @@ class SceneBuilder {
             option_lookat();
             option_film();
             option_camera();
+            option_sampler();
+
             gpu_init_integrator<<<1, 1>>>(renderer);
 
             graphics_state.current_transform = Transform::identity();
@@ -205,6 +229,11 @@ class SceneBuilder {
 
             if (keyword == "LookAt") {
                 lookat_tokens = tokens;
+                return;
+            }
+
+            if (keyword == "Sampler") {
+                sampler_tokens = tokens;
                 return;
             }
 
@@ -245,10 +274,15 @@ class SceneBuilder {
         renderer = nullptr;
     }
 
-    static void render_pbrt(const std::string &filename, int num_samples) {
-        const auto all_tokens = parse_pbrt_into_token(filename);
+    static void render_pbrt(const CommandLineOption &command_line_option) {
+        if (!std::filesystem::exists(command_line_option.input_file)) {
+            const std::string error = "file not found: " + command_line_option.input_file;
+            throw std::runtime_error(error.c_str());
+        }
 
-        auto builder = SceneBuilder();
+        const auto all_tokens = parse_pbrt_into_token(command_line_option.input_file);
+
+        auto builder = SceneBuilder(command_line_option);
         const auto range_of_tokens = builder.group_tokens(all_tokens);
 
         for (int range_idx = 0; range_idx < range_of_tokens.size() - 1; ++range_idx) {
@@ -258,18 +292,16 @@ class SceneBuilder {
             builder.parse_tokens(current_tokens);
         }
 
-        builder.render(num_samples);
+        builder.render();
     }
 
-    void render(int num_samples) const {
+    void render() const {
         int thread_width = 8;
         int thread_height = 8;
 
-        const auto image_resolution = resolution.value();
-
         std::cout << "\n";
-        std::cout << "rendering a " << image_resolution.x << "x" << image_resolution.y
-                  << " image (samples per pixel: " << num_samples << ") ";
+        std::cout << "rendering a " << resolution->x << "x" << resolution->y
+                  << " image (samples per pixel: " << samples_per_pixel.value() << ") ";
         std::cout << "in " << thread_width << "x" << thread_height << " blocks.\n";
 
         gpu_aggregate_preprocess<<<1, 1>>>(renderer);
@@ -279,18 +311,17 @@ class SceneBuilder {
 
         // allocate FB
         RGB *frame_buffer;
-        checkCudaErrors(cudaMallocManaged((void **)&frame_buffer,
-                                          sizeof(RGB) * image_resolution.x * image_resolution.y));
+        checkCudaErrors(
+            cudaMallocManaged((void **)&frame_buffer, sizeof(RGB) * resolution->x * resolution->y));
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
         auto start = std::chrono::system_clock::now();
 
-        dim3 blocks(image_resolution.x / thread_width + 1, image_resolution.y / thread_height + 1,
-                    1);
+        dim3 blocks(resolution->x / thread_width + 1, resolution->y / thread_height + 1, 1);
         dim3 threads(thread_width, thread_height, 1);
 
-        gpu_parallel_render<<<blocks, threads>>>(frame_buffer, num_samples, renderer);
+        gpu_parallel_render<<<blocks, threads>>>(frame_buffer, samples_per_pixel.value(), renderer);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
@@ -299,7 +330,7 @@ class SceneBuilder {
         std::cout << std::fixed << std::setprecision(1) << "took " << duration.count()
                   << " seconds.\n";
 
-        GPU::writer_to_file(filename, frame_buffer, image_resolution.x, image_resolution.y);
+        GPU::writer_to_file(filename, frame_buffer, resolution->x, resolution->y);
 
         checkCudaErrors(cudaFree(frame_buffer));
         checkCudaErrors(cudaGetLastError());

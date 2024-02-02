@@ -66,22 +66,22 @@ class Transform {
         return scale(inv_tan_ang, inv_tan_ang, 1.0) * Transform(persp);
     }
 
-    static Transform lookat(const Point3f &pos, const Point3f &look, const Vector3f &up) {
+    static Transform lookat(const Point3f &position, const Point3f &look, const Vector3f &up) {
         auto world_from_camera = SquareMatrix<4>::zero();
-        world_from_camera[0][3] = pos.x;
-        world_from_camera[1][3] = pos.y;
-        world_from_camera[2][3] = pos.z;
+        world_from_camera[0][3] = position.x;
+        world_from_camera[1][3] = position.y;
+        world_from_camera[2][3] = position.z;
         world_from_camera[3][3] = 1.0;
 
-        auto dir = (look - pos).normalize();
+        auto direction = (look - position).normalize();
 
-        if (up.normalize().cross(dir).length() == 0.0) {
+        if (up.normalize().cross(direction).length() == 0.0) {
             throw std::invalid_argument(
                 "LookAt: `up` vector and viewing direction are pointing in the same direction");
         }
 
-        auto right = up.normalize().cross(dir).normalize();
-        auto new_up = dir.cross(right);
+        auto right = up.normalize().cross(direction).normalize();
+        auto new_up = direction.cross(right);
 
         world_from_camera[0][0] = right.x;
         world_from_camera[1][0] = right.y;
@@ -91,9 +91,9 @@ class Transform {
         world_from_camera[1][1] = new_up.y;
         world_from_camera[2][1] = new_up.z;
         world_from_camera[3][1] = 0.0;
-        world_from_camera[0][2] = dir.x;
-        world_from_camera[1][2] = dir.y;
-        world_from_camera[2][2] = dir.z;
+        world_from_camera[0][2] = direction.x;
+        world_from_camera[1][2] = direction.y;
+        world_from_camera[2][2] = direction.z;
         world_from_camera[3][2] = 0.0;
 
         auto camera_from_world = world_from_camera.inverse();

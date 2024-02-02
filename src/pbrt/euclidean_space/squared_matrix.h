@@ -181,3 +181,15 @@ PBRT_CPU_GPU inline SquareMatrix<4> SquareMatrix<4>::inverse() const {
 
     return SquareMatrix(inv);
 }
+
+template <int N>
+PBRT_CPU_GPU SquareMatrix<N> SquareMatrix<N>::inverse() const {
+    // inverse() not implemented for this dimension
+    printf("inverse() not implemented for SquareMatrix<%d>\n", N);
+
+#if defined(__CUDA_ARCH__)
+    asm("trap;");
+#else
+    throw std::runtime_error("SquareMatrix<N>::inverse() not implemented");
+#endif
+}

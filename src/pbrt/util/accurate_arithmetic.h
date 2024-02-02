@@ -41,7 +41,3 @@ PBRT_CPU_GPU auto sum_of_products(Ta a, Tb b, Tc c, Td d) {
     auto error = FMA(c, d, -cd);
     return sum + error;
 }
-
-static constexpr double lerp(double x, double a, double b) {
-    return (1 - x) * a + x * b;
-}

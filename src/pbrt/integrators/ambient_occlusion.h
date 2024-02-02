@@ -19,13 +19,6 @@ class AmbientOcclusionIntegrator : public Integrator {
 
         auto normal = isect.n.to_vector3().face_forward(-ray.d);
 
-        // return RGB(normal.dot(-ray.d));
-
-        /*
-        auto softmax_n = normal.softmax();
-        return RGB(softmax_n.x, softmax_n.y, softmax_n.z);
-        */
-
         auto u = sampler->get_2d();
         auto local_wi = sample_cosine_hemisphere(u);
         auto pdf = cosine_hemisphere_pdf(std::abs(local_wi.z));
@@ -34,26 +27,17 @@ class AmbientOcclusionIntegrator : public Integrator {
             return RGB(0.0, 0.0, 0.0);
         }
 
-        // return RGB(normal.dot(-ray.d));
-
         auto frame = Frame::from_z(normal);
         auto wi = frame.from_local(local_wi);
 
-        /*
-        auto softmax = wi.softmax();
-        return RGB(softmax.x, softmax.y, softmax.z);
-        */
-
-        // this part is fine
-        // TODO: progress 2024/01/30 wentao debugging AmbientOcclusionIntegrator
-
         // Divide by PI so that fully visible is one.
         auto spawned_ray = isect.spawn_ray(wi);
-        if (!aggregate->fast_intersect(spawned_ray, Infinity)) {
-            const auto grey = normal.dot(wi) / (compute_pi() * pdf);
-            return RGB(grey);
+
+        if (aggregate->fast_intersect(spawned_ray, Infinity)) {
+            return RGB(0.0, 0.0, 0.0);
         }
 
-        return RGB(0.0, 0.0, 0.0);
+        const auto grey = normal.dot(wi) / (compute_pi() * pdf);
+        return RGB(grey);
     }
 };
