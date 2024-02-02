@@ -276,8 +276,8 @@ class SceneBuilder {
 
     static void render_pbrt(const CommandLineOption &command_line_option) {
         if (!std::filesystem::exists(command_line_option.input_file)) {
-            const std::string error = "file not found: " + command_line_option.input_file;
-            throw std::runtime_error(error.c_str());
+            std::cout << "file not found: `" + command_line_option.input_file + "`\n\n";
+            exit(1);
         }
 
         const auto all_tokens = parse_pbrt_into_token(command_line_option.input_file);

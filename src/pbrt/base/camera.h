@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pbrt/spectra/spectrum.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/base/ray.h"

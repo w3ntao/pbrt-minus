@@ -80,6 +80,10 @@ class Vector3 {
         return Vector3(x * factor, y * factor, z * factor);
     }
 
+    PBRT_CPU_GPU friend Vector3 operator*(T factor, const Vector3 &v) {
+        return v * factor;
+    }
+
     PBRT_CPU_GPU Vector3 operator*=(double v) {
         this->x += v;
         this->y += v;
@@ -151,11 +155,6 @@ class Vector3 {
 };
 
 using Vector3f = Vector3<double>;
-
-template <typename T>
-PBRT_CPU_GPU Vector3<T> operator*(T factor, const Vector3<T> &v) {
-    return v * factor;
-}
 
 PBRT_CPU_GPU inline Vector3f FMA(double a, const Vector3f &b, const Vector3f &c) {
     return {FMA(a, b.x, c.x), FMA(a, b.y, c.y), FMA(a, b.z, c.z)};

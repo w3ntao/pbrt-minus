@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 #include <filesystem>
+#include <iostream>
 
 struct CommandLineOption {
     std::string input_file;
@@ -36,6 +37,12 @@ struct CommandLineOption {
 
             input_file = argument;
             idx += 1;
+        }
+
+        if (input_file.empty()) {
+            std::cout << "please provide a PBRT input file from command line:\n"
+                      << "$ pbrt-cuda example.pbrt\n";
+            exit(1);
         }
     }
 };

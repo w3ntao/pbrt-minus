@@ -31,6 +31,10 @@ constexpr double clamp_0_1(double x) {
     return clamp(x, 0, 1);
 }
 
+PBRT_CPU_GPU inline double lerp(double x, double a, double b) {
+    return (1 - x) * a + x * b;
+}
+
 PBRT_CPU_GPU constexpr double sqr(double v) {
     return v * v;
 }

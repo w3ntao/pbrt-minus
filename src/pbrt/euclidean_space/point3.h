@@ -55,12 +55,32 @@ class Point3 {
         }
     }
 
-    PBRT_CPU_GPU Point3 operator+(const Point3 &right) const {
-        return Point3(x + right.x, y + right.y, z + right.z);
+    PBRT_CPU_GPU Point3 operator+(const Point3 &p) const {
+        return Point3(x + p.x, y + p.y, z + p.z);
+    }
+
+    PBRT_CPU_GPU Point3 operator+(const Vector3<T> &v) const {
+        return Point3(x + v.x, y + v.y, z + v.z);
+    }
+
+    PBRT_CPU_GPU Vector3<T> operator-(const Point3 &p) const {
+        return Vector3<T>(x - p.x, y - p.y, z - p.z);
+    }
+
+    PBRT_CPU_GPU Point3 operator-(const Vector3<T> &v) const {
+        return Point3(x - v.x, y - v.y, z - v.z);
+    }
+
+    PBRT_CPU_GPU friend Vector3<T> operator-(const Vector3<T> &v, const Point3 &p) {
+        return Vector3<T>(v.x - p.x, v.y - p.y, v.z - p.z);
     }
 
     PBRT_CPU_GPU Point3 operator*(T factor) const {
         return Point3(x * factor, y * factor, z * factor);
+    }
+
+    PBRT_CPU_GPU friend Point3 operator*(T factor, const Point3 &p) {
+        return p * factor;
     }
 
     PBRT_CPU_GPU Point3 operator*=(T factor) {
@@ -97,28 +117,3 @@ class Point3 {
 };
 
 using Point3f = Point3<double>;
-
-template <typename T>
-PBRT_CPU_GPU Point3<T> operator*(T factor, const Point3<T> &p) {
-    return p * factor;
-}
-
-template <typename T>
-PBRT_CPU_GPU Vector3<T> operator-(const Vector3<T> &v, const Point3<T> &p) {
-    return Vector3<T>(v.x - p.x, v.y - p.y, v.z - p.z);
-}
-
-template <typename T>
-PBRT_CPU_GPU Point3<T> operator+(const Point3<T> &p, const Vector3<T> &v) {
-    return Point3<T>(p.x + v.x, p.y + v.y, p.z + v.z);
-}
-
-template <typename T>
-PBRT_CPU_GPU Vector3<T> operator-(const Point3<T> &left, const Point3<T> &right) {
-    return Vector3<T>(left.x - right.x, left.y - right.y, left.z - right.z);
-}
-
-template <typename T>
-PBRT_CPU_GPU Point3<T> operator-(const Point3<T> &p, const Vector3<T> &v) {
-    return Point3(p.x - v.x, p.y - v.y, p.z - v.z);
-}
