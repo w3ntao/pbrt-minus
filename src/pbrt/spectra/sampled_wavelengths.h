@@ -9,28 +9,35 @@
 // SampledWavelengths Definitions
 class SampledWavelengths {
   public:
+    PBRT_CPU_GPU SampledWavelengths(const std::array<double, NSpectrumSamples> &_lambda,
+                                    const std::array<double, NSpectrumSamples> &_pdf)
+        : lambda(_lambda), pdf(_pdf) {}
+
     PBRT_CPU_GPU
-    static SampledWavelengths SampleUniform(double u, double lambda_min = Lambda_min,
-                                            double lambda_max = Lambda_max) {
-        SampledWavelengths swl;
+    static SampledWavelengths SampleUniform(double u, double lambda_min = LAMBDA_MIN,
+                                            double lambda_max = LAMBDA_MAX) {
+
+        std::array<double, NSpectrumSamples> lambda;
+
         // Sample first wavelength using _u_
-        swl.lambda[0] = lerp(u, lambda_min, lambda_max);
+        lambda[0] = lerp(u, lambda_min, lambda_max);
 
         // Initialize _lambda_ for remaining wavelengths
         double delta = (lambda_max - lambda_min) / NSpectrumSamples;
         for (int i = 1; i < NSpectrumSamples; ++i) {
-            swl.lambda[i] = swl.lambda[i - 1] + delta;
-            if (swl.lambda[i] > lambda_max) {
-                swl.lambda[i] = lambda_min + (swl.lambda[i] - lambda_max);
+            lambda[i] = lambda[i - 1] + delta;
+            if (lambda[i] > lambda_max) {
+                lambda[i] = lambda_min + (lambda[i] - lambda_max);
             }
         }
 
+        std::array<double, NSpectrumSamples> pdf;
         // Compute PDF for sampled wavelengths
         for (int i = 0; i < NSpectrumSamples; ++i) {
-            swl.pdf[i] = 1 / (lambda_max - lambda_min);
+            pdf[i] = 1 / (lambda_max - lambda_min);
         }
 
-        return swl;
+        return SampledWavelengths(lambda, pdf);
     }
 
     // TODO: progress 2024/02/03: blocked by SampleVisibleWavelengths and VisibleWavelengthsPDF

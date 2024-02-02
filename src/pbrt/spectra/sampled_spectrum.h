@@ -2,7 +2,6 @@
 
 #include "pbrt/spectra/xyz.h"
 
-// SampledSpectrum Definition
 class SampledSpectrum {
   public:
     PBRT_CPU_GPU explicit SampledSpectrum(const std::array<double, NSpectrumSamples> _values)
@@ -23,7 +22,6 @@ class SampledSpectrum {
         return values[i];
     }
 
-    // SampledSpectrum Public Methods
     PBRT_CPU_GPU
     SampledSpectrum operator+(const SampledSpectrum &s) const {
         std::array<double, NSpectrumSamples> sum;

@@ -10,5 +10,5 @@ class Spectrum {
     virtual double operator()(double lambda) const = 0;
 
     PBRT_CPU_GPU
-    virtual SampledSpectrum Sample(const SampledWavelengths &lambda) const = 0;
+    virtual SampledSpectrum sample(const SampledWavelengths &lambda) const = 0;
 };
