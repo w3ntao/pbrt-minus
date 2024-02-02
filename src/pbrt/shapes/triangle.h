@@ -1,8 +1,8 @@
 #pragma once
 
+#include "pbrt/util/math.h"
 #include "pbrt/base/shape.h"
 #include "pbrt/euclidean_space/vector2.h"
-#include "pbrt/util/accurate_arithmetic.h"
 #include "pbrt/shapes/triangle_mesh.h"
 
 struct TriangleIntersection {

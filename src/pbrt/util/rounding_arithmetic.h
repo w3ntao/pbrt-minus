@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include "pbrt/util/macro.h"
 
 template <class To, class From>
 PBRT_CPU_GPU std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From> &&

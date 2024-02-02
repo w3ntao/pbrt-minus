@@ -4,7 +4,7 @@
 
 #include "pbrt/base/ray.h"
 #include "pbrt/base/interaction.h"
-#include "pbrt/util/accurate_arithmetic.h"
+#include "pbrt/util/math.h"
 
 // ShapeIntersection Definition
 struct ShapeIntersection {

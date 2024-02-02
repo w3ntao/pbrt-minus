@@ -13,6 +13,7 @@
 #include "pbrt/integrators/surface_normal.h"
 #include "pbrt/integrators/ambient_occlusion.h"
 #include "pbrt/samplers/independent.h"
+#include "pbrt/spectra/color_encoding.h"
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define checkCudaErrors(val) check_cuda((val), #val, __FILE__, __LINE__)
@@ -108,23 +109,23 @@ __global__ void gpu_parallel_render(RGB *frame_buffer, int num_samples, const Re
 }
 
 void writer_to_file(const std::string &filename, const RGB *frame_buffer, int width, int height) {
+    SRGBColorEncoding srgb_encoding;
     std::vector<unsigned char> pixels(width * height * 4);
 
     for (unsigned y = 0; y < height; y++) {
         for (unsigned x = 0; x < width; x++) {
             const auto &color = frame_buffer[y * width + x];
 
-            pixels[4 * (width * y + x) + 0] = (unsigned char)(color.r * 256);
-            pixels[4 * (width * y + x) + 1] = (unsigned char)(color.g * 256);
-            pixels[4 * (width * y + x) + 2] = (unsigned char)(color.b * 256);
+            pixels[4 * (width * y + x) + 0] = srgb_encoding.from_linear(color.r);
+            pixels[4 * (width * y + x) + 1] = srgb_encoding.from_linear(color.g);
+            pixels[4 * (width * y + x) + 2] = srgb_encoding.from_linear(color.b);
             pixels[4 * (width * y + x) + 3] = 255;
         }
     }
 
     // Encode the image
-    unsigned error = lodepng::encode(filename, pixels, width, height);
     // if there's an error, display it
-    if (error) {
+    if (unsigned error = lodepng::encode(filename, pixels, width, height); error) {
         std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error)
                   << std::endl;
         throw std::runtime_error("lodepng::encode() fail");

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pbrt/util/rounding_arithmetic.h"
-#include "accurate_arithmetic.h"
+#include "math.h"
 
 class Interval {
   public:

@@ -13,7 +13,7 @@ class RGB {
     PBRT_CPU_GPU RGB(double _r, double _g, double _b) : r(_r), g(_g), b(_b) {}
 
     PBRT_CPU_GPU RGB clamp() const {
-        return RGB(gpu_clamp_0_1(r), gpu_clamp_0_1(g), gpu_clamp_0_1(b));
+        return RGB(clamp_0_1(r), clamp_0_1(g), clamp_0_1(b));
     }
 
     PBRT_GPU RGB operator+(const RGB &right) const {

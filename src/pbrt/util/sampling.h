@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pbrt/euclidean_space/vector3.h"
-#include "pbrt/util/accurate_arithmetic.h"
+#include "pbrt/util/math.h"
 
 PBRT_CPU_GPU
 inline double cosine_hemisphere_pdf(double cos_theta) {
@@ -15,6 +15,7 @@ inline Point2f sample_uniform_disk_concentric(Point2f u) {
     if (u_offset == Point2f(0.0, 0.0)) {
         return Point2f(0.0, 0.0);
     }
+
     // Apply concentric mapping to point
     double r = NAN;
     double theta = NAN;

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
-#include "pbrt/util/accurate_arithmetic.h"
+#include "pbrt/util/math.h"
 #include "pbrt/util/compensated_float.h"
 
 template <int N>
