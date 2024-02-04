@@ -39,3 +39,15 @@ inline Vector3f sample_cosine_hemisphere(Point2f u) {
     auto z = std::sqrt(1.0 - sqr(d.x) - sqr(d.y));
     return Vector3f(d.x, d.y, z);
 }
+
+PBRT_CPU_GPU inline double visible_wavelengths_pdf(double lambda) {
+    if (lambda < LAMBDA_MIN || lambda > LAMBDA_MAX) {
+        return 0;
+    }
+
+    return 0.0039398042f / sqr(std::cosh(0.0072f * (lambda - 538)));
+}
+
+PBRT_CPU_GPU inline double sample_visible_wavelengths(double u) {
+    return 538 - 138.888889f * std::atanh(0.85691062f - 1.82750197f * u);
+}

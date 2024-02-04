@@ -5,54 +5,45 @@
 
 template <int N>
 class SquareMatrix {
-  private:
-    double val[N][N];
-
   public:
     PBRT_CPU_GPU SquareMatrix(const SquareMatrix &matrix) {
-        for (int i = 0; i < N; i++) {
-            for (int k = 0; k < N; k++) {
-                val[i][k] = matrix.val[i][k];
-            }
-        }
+        memcpy(val, matrix.val, sizeof(val));
     }
 
     PBRT_CPU_GPU SquareMatrix() {
         for (int i = 0; i < N; i++) {
             for (int k = 0; k < N; k++) {
-                val[i][k] = i == k ? 1 : 0;
+                val[i][k] = i == k ? 1.0 : 0.0;
             }
         }
     }
 
     PBRT_CPU_GPU static SquareMatrix zero() {
-        const double data[4][4] = {
-            {0, 0, 0, 0},
-            {0, 0, 0, 0},
-            {0, 0, 0, 0},
-            {0, 0, 0, 0},
-        };
-
+        double data[4][4] = {0.0};
         return SquareMatrix(data);
+    }
+
+    PBRT_CPU_GPU static SquareMatrix diag(const double data[N]) {
+        double m[N][N] = {0.0};
+        for (int i = 0; i < N; i++) {
+            m[i][i] = data[i];
+        }
+
+        return SquareMatrix(m);
     }
 
     PBRT_CPU_GPU static SquareMatrix identity() {
-        const double data[4][4] = {
-            {1, 0, 0, 0},
-            {0, 1, 0, 0},
-            {0, 0, 1, 0},
-            {0, 0, 0, 1},
-        };
+        double data[N][N] = {0.0};
+        for (int i = 0; i < N; i++) {
+            data[i][i] = 1.0;
+        }
 
-        return SquareMatrix(data);
+        return {data};
     }
 
-    PBRT_CPU_GPU SquareMatrix(const double data[N][N]) {
-        for (int i = 0; i < N; i++) {
-            for (int k = 0; k < N; k++) {
-                val[i][k] = data[i][k];
-            }
-        }
+    PBRT_CPU_GPU
+    SquareMatrix(const double data[N][N]) {
+        memcpy(val, data, sizeof(val));
     }
 
     PBRT_CPU_GPU bool operator==(const SquareMatrix &matrix) const {
@@ -92,6 +83,8 @@ class SquareMatrix {
         return r;
     }
 
+    PBRT_CPU_GPU double determinant() const;
+
     PBRT_CPU_GPU SquareMatrix inverse() const;
 
     friend std::ostream &operator<<(std::ostream &stream, const SquareMatrix &t) {
@@ -107,7 +100,87 @@ class SquareMatrix {
 
         return stream;
     }
+
+  private:
+    double val[N][N];
+    // TODO: declare val as std::array<std::array<double, N>, N>
 };
+
+template <>
+PBRT_CPU_GPU double SquareMatrix<3>::determinant() const {
+    const auto m = this->val;
+
+    double minor12 = difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
+    double minor02 = difference_of_products(m[1][0], m[2][2], m[1][2], m[2][0]);
+    double minor01 = difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
+
+    return std::fma(m[0][2], minor01, difference_of_products(m[0][0], minor12, m[0][1], minor02));
+}
+
+template <>
+PBRT_CPU_GPU double SquareMatrix<4>::determinant() const {
+    const auto m = this->val;
+
+    double s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
+    double s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
+    double s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
+
+    double s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
+    double s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
+    double s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
+
+    double c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
+    double c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
+    double c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
+
+    double c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
+    double c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
+    double c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
+
+    return difference_of_products(s0, c5, s1, c4) + difference_of_products(s2, c3, -s3, c2) +
+           difference_of_products(s5, c0, s4, c1);
+}
+
+template <int N>
+PBRT_CPU_GPU double SquareMatrix<N>::determinant() const {
+    printf("inverse() not implemented for SquareMatrix<%d>\n", N);
+
+#if defined(__CUDA_ARCH__)
+    asm("trap;");
+#else
+    throw std::runtime_error("SquareMatrix<N>::inverse() not implemented");
+#endif
+}
+
+template <>
+PBRT_CPU_GPU inline SquareMatrix<3> SquareMatrix<3>::inverse() const {
+    const double det = determinant();
+    if (det == 0.0) {
+        printf("can't inverse a singular matrix\n");
+#if defined(__CUDA_ARCH__)
+        asm("trap;");
+#else
+        throw std::runtime_error("singular matrix");
+#endif
+    }
+
+    const double inv_det = 1.0 / det;
+
+    const auto m = this->val;
+
+    double r[3][3];
+    r[0][0] = inv_det * difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
+    r[1][0] = inv_det * difference_of_products(m[1][2], m[2][0], m[1][0], m[2][2]);
+    r[2][0] = inv_det * difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
+    r[0][1] = inv_det * difference_of_products(m[0][2], m[2][1], m[0][1], m[2][2]);
+    r[1][1] = inv_det * difference_of_products(m[0][0], m[2][2], m[0][2], m[2][0]);
+    r[2][1] = inv_det * difference_of_products(m[0][1], m[2][0], m[0][0], m[2][1]);
+    r[0][2] = inv_det * difference_of_products(m[0][1], m[1][2], m[0][2], m[1][1]);
+    r[1][2] = inv_det * difference_of_products(m[0][2], m[1][0], m[0][0], m[1][2]);
+    r[2][2] = inv_det * difference_of_products(m[0][0], m[1][1], m[0][1], m[1][0]);
+
+    return SquareMatrix<3>(r);
+}
 
 template <>
 PBRT_CPU_GPU inline SquareMatrix<4> SquareMatrix<4>::inverse() const {
@@ -124,7 +197,7 @@ PBRT_CPU_GPU inline SquareMatrix<4> SquareMatrix<4>::inverse() const {
       http://www.geometrictools.com/Documentation/LaplaceExpansionTheorem.pdf
     */
 
-    auto m = this->val;
+    const auto m = this->val;
 
     double s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
     double s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);

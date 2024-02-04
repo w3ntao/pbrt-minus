@@ -31,6 +31,20 @@ constexpr double clamp_0_1(double x) {
     return clamp(x, 0, 1);
 }
 
+template <typename Predicate>
+PBRT_CPU_GPU inline size_t find_interval(size_t sz, const Predicate &pred) {
+    using ssize_t = std::make_signed_t<size_t>;
+    ssize_t size = (ssize_t)sz - 2, first = 1;
+    while (size > 0) {
+        // Evaluate predicate at midpoint and update _first_ and _size_
+        size_t half = (size_t)size >> 1, middle = first + half;
+        bool predResult = pred(middle);
+        first = predResult ? middle + 1 : first;
+        size = predResult ? size - (half + 1) : half;
+    }
+    return (size_t)clamp((ssize_t)first - 1, 0, sz - 2);
+}
+
 PBRT_CPU_GPU inline double lerp(double x, double a, double b) {
     return (1 - x) * a + x * b;
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/vector2.h"
 
@@ -56,6 +57,10 @@ class Point2 {
         return Point2(x + p.x, y + p.y);
     }
 
+    PBRT_CPU_GPU Point2 operator+(const Vector2<T> &v) const {
+        return Point2(x + v.x, y + v.y);
+    }
+
     PBRT_CPU_GPU Point2 operator-(const Vector2f &v) const {
         return Point2(x - v.x, y - v.y);
     }
@@ -75,6 +80,10 @@ class Point2 {
     friend std::ostream &operator<<(std::ostream &stream, const Point2 &p) {
         stream << "Point2(" << p.x << ", " << p.y << ")";
         return stream;
+    }
+
+    PBRT_CPU_GPU Point2<double> to_point2f() const {
+        return Point2<double>(double(x), double(y));
     }
 };
 

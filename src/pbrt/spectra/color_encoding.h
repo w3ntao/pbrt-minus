@@ -1,5 +1,6 @@
 #pragma once
 
+#include "xyz.h"
 #include "pbrt/util/math.h"
 
 class ColorEncoding {
@@ -92,5 +93,37 @@ class SRGBColorEncoding : ColorEncoding {
         0.8227858543, 0.8307699561, 0.8387991190, 0.8468732834, 0.8549926877, 0.8631572723,
         0.8713672161, 0.8796223402, 0.8879231811, 0.8962693810, 0.9046613574, 0.9130986929,
         0.9215820432, 0.9301108718, 0.9386858940, 0.9473065734, 0.9559735060, 0.9646862745,
-        0.9734454751, 0.9822505713, 0.9911022186, 1.0000000000};
+        0.9734454751, 0.9822505713, 0.9911022186, 1.0000000000,
+    };
 };
+
+PBRT_GPU
+SquareMatrix<3> white_balance(Point2f srcWhite, Point2f targetWhite) {
+    // Find LMS coefficients for source and target white
+    const double data_LMSFromXYZ[3][3] = {
+        {0.8951, 0.2664, -0.1614},
+        {-0.7502, 1.7135, 0.0367},
+        {0.0389, -0.0685, 1.0296},
+    };
+    const SquareMatrix<3> LMSFromXYZ(data_LMSFromXYZ);
+
+    const double data_XYZFromLMS[3][3] = {
+        {0.986993, -0.147054, 0.159963},
+        {0.432305, 0.51836, 0.0492912},
+        {-0.00852866, 0.0400428, 0.968487},
+    };
+    const SquareMatrix<3> XYZFromLMS(data_XYZFromLMS);
+
+    XYZ srcXYZ = XYZ::from_xyY(srcWhite);
+    XYZ dstXYZ = XYZ::from_xyY(targetWhite);
+
+    auto srcLMS = LMSFromXYZ * srcXYZ;
+    auto dstLMS = LMSFromXYZ * dstXYZ;
+
+    // Return white balancing matrix for source and target white
+
+    double diag_data[3] = {dstLMS[0] / srcLMS[0], dstLMS[1] / srcLMS[1], dstLMS[2] / srcLMS[2]};
+    SquareMatrix<3> LMScorrect = SquareMatrix<3>::diag(diag_data);
+
+    return XYZFromLMS * LMScorrect * LMSFromXYZ;
+}

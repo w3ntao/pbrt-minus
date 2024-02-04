@@ -3,7 +3,7 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/point3fi.h"
-#include "pbrt/base/differential_ray.h"
+#include "pbrt/base/ray.h"
 
 class Interaction {
   public:

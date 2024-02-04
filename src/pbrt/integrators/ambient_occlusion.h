@@ -1,30 +1,33 @@
 #pragma once
 
-#include "pbrt/base/differential_ray.h"
+#include "pbrt/base/ray.h"
 #include "pbrt/base/integrator.h"
 #include "pbrt/util/sampling.h"
 #include "pbrt/euclidean_space/frame.h"
 
 class AmbientOcclusionIntegrator : public Integrator {
+  public:
+    PBRT_GPU AmbientOcclusionIntegrator(const Spectrum *_illuminant_spectrum,
+                                        double _illuminant_scale)
+        : illuminant_spectrum(_illuminant_spectrum), illuminant_scale(_illuminant_scale) {}
 
-    ~AmbientOcclusionIntegrator() override = default;
-
-    PBRT_GPU RGB li(const Ray &ray, const Aggregate *aggregate, Sampler *sampler) const override {
+    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda,
+                                const Aggregate *aggregate, Sampler &sampler) const override {
         const auto shape_intersection = aggregate->intersect(ray);
         if (!shape_intersection) {
-            return RGB(0.0, 0.0, 0.0);
+            return SampledSpectrum(0);
         }
 
         const SurfaceInteraction &isect = shape_intersection->interation;
 
         auto normal = isect.n.to_vector3().face_forward(-ray.d);
 
-        auto u = sampler->get_2d();
+        auto u = sampler.get_2d();
         auto local_wi = sample_cosine_hemisphere(u);
         auto pdf = cosine_hemisphere_pdf(std::abs(local_wi.z));
 
         if (pdf == 0.0) {
-            return RGB(0.0, 0.0, 0.0);
+            return SampledSpectrum(0);
         }
 
         auto frame = Frame::from_z(normal);
@@ -34,10 +37,14 @@ class AmbientOcclusionIntegrator : public Integrator {
         auto spawned_ray = isect.spawn_ray(wi);
 
         if (aggregate->fast_intersect(spawned_ray, Infinity)) {
-            return RGB(0.0, 0.0, 0.0);
+            return SampledSpectrum(0);
         }
 
-        const auto grey = normal.dot(wi) / (compute_pi() * pdf);
-        return RGB(grey);
+        return illuminant_spectrum->sample(lambda) *
+               (illuminant_scale * normal.dot(wi) / (compute_pi() * pdf));
     }
+
+  private:
+    const Spectrum *illuminant_spectrum;
+    double illuminant_scale;
 };

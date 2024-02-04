@@ -1,6 +1,8 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
+#include "pbrt/euclidean_space/point2.h"
+#include "pbrt/euclidean_space/squared_matrix.h"
 
 class XYZ {
   public:
@@ -104,6 +106,13 @@ class XYZ {
     PBRT_CPU_GPU
     friend XYZ operator*(double a, const XYZ &s) {
         return s * a;
+    }
+
+    PBRT_CPU_GPU
+    friend XYZ operator*(const SquareMatrix<3> &m, const XYZ &rhs) {
+        return XYZ(inner_product(m[0][0], rhs.x, m[0][1], rhs.y, m[0][2], rhs.z),
+                   inner_product(m[1][0], rhs.x, m[1][1], rhs.y, m[1][2], rhs.z),
+                   inner_product(m[2][0], rhs.x, m[2][1], rhs.y, m[2][2], rhs.z));
     }
 
     PBRT_CPU_GPU

@@ -4,7 +4,6 @@
 #include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/euclidean_space/normal3f.h"
 
-
 class Ray {
   public:
     Point3f o;
@@ -41,4 +40,16 @@ class Ray {
 
         return po;
     }
+};
+
+class DifferentialRay : public Ray {
+  public:
+    // RayDifferential Public Members
+    bool hasDifferentials = false;
+    Point3f rxOrigin;
+    Point3f ryOrigin;
+    Vector3f rxDirection;
+    Vector3f ryDirection;
+
+    PBRT_GPU DifferentialRay(Point3f o, Vector3f d) : Ray(o, d) {}
 };

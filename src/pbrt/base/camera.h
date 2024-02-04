@@ -45,6 +45,24 @@ struct CameraTransform {
     }
 };
 
+// CameraSample Definition
+struct CameraSample {
+    Point2f p_film;
+    Point2f p_lens;
+    double filter_weight = 1;
+
+    PBRT_GPU CameraSample(const Point2f &_p_film, const Point2f &_p_lens, double _filter_weight)
+        : p_film(_p_film), p_lens(_p_lens), filter_weight(_filter_weight) {}
+};
+
+// CameraRay Definition
+struct CameraRay {
+    Ray ray;
+    SampledSpectrum weight = SampledSpectrum(1);
+
+    PBRT_GPU CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum(1)) {}
+};
+
 class Camera {
   public:
     Point2i resolution;
@@ -55,5 +73,5 @@ class Camera {
 
     PBRT_GPU virtual ~Camera() {}
 
-    PBRT_GPU virtual Ray generate_ray(const Point2f &sampled_p_film) const = 0;
+    PBRT_GPU virtual CameraRay generate_ray(const CameraSample &sample) const = 0;
 };

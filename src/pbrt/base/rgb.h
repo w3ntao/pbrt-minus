@@ -16,45 +16,68 @@ class RGB {
         return RGB(clamp_0_1(r), clamp_0_1(g), clamp_0_1(b));
     }
 
-    PBRT_GPU RGB operator+(const RGB &right) const {
+    PBRT_CPU_GPU RGB operator+(const RGB &right) const {
         return RGB(r + right.r, g + right.g, b + right.b);
     }
 
-    PBRT_GPU RGB operator-(const RGB &right) const {
+    PBRT_CPU_GPU RGB operator-(const RGB &right) const {
         return RGB(r - right.r, g - right.g, b - right.b);
     }
 
-    PBRT_GPU RGB operator*(const RGB &right) const {
+    PBRT_CPU_GPU RGB operator*(const RGB &right) const {
         return RGB(r * right.r, g * right.g, b * right.b);
     }
 
-    PBRT_GPU RGB operator*(double scalar) const {
+    PBRT_CPU_GPU RGB operator*(double scalar) const {
         return RGB(r * scalar, g * scalar, b * scalar);
     }
 
-    PBRT_GPU RGB operator/(double divisor) const {
+    PBRT_CPU_GPU RGB operator/(double divisor) const {
         return RGB(r / divisor, g / divisor, b / divisor);
     }
 
-    PBRT_GPU void operator+=(const RGB &c) {
+    PBRT_CPU_GPU void operator+=(const RGB &c) {
         r += c.r;
         g += c.g;
         b += c.b;
     }
 
-    PBRT_GPU void operator*=(const RGB &c) {
+    PBRT_CPU_GPU void operator*=(const RGB &c) {
         r *= c.r;
         g *= c.g;
         b *= c.b;
     }
 
-    PBRT_GPU void operator/=(double divisor) {
+    PBRT_CPU_GPU void operator/=(double divisor) {
         r /= divisor;
         g /= divisor;
         b /= divisor;
     }
+
+    PBRT_CPU_GPU double operator[](int idx) const {
+        switch (idx) {
+        case 0: {
+            return r;
+        }
+        case 1: {
+            return g;
+        }
+        case 2: {
+            return b;
+        }
+        default: {
+            printf("RGB: invalid index: `%d`\n", idx);
+
+#if defined(__CUDA_ARCH__)
+            asm("trap;");
+#else
+            throw std::runtime_error("RGB: invalid index\n");
+#endif
+        }
+        }
+    }
 };
 
-PBRT_GPU inline RGB operator*(double scalar, const RGB &c) {
+PBRT_CPU_GPU inline RGB operator*(double scalar, const RGB &c) {
     return RGB(c.r * scalar, c.g * scalar, c.b * scalar);
 }

@@ -2,6 +2,7 @@
 
 #include <curand_kernel.h>
 #include "pbrt/base/camera.h"
+#include "pbrt/base/filter.h"
 #include "pbrt/euclidean_space/bounds2.h"
 
 PBRT_GPU Vector3f random_in_unit_disk(curandState *local_rand_state) {
@@ -16,8 +17,8 @@ PBRT_GPU Vector3f random_in_unit_disk(curandState *local_rand_state) {
 class PerspectiveCamera : public Camera {
   public:
     PBRT_GPU PerspectiveCamera(const Point2i &resolution, const CameraTransform &camera_transform,
-                               double fov)
-        : Camera(resolution, camera_transform) {
+                               double fov, double _lens_radius)
+        : Camera(resolution, camera_transform), lens_radius(_lens_radius) {
 
         auto frame_aspect_ratio = double(resolution.x) / double(resolution.y);
 
@@ -49,39 +50,21 @@ class PerspectiveCamera : public Camera {
             camera_from_raster(Point3f(0.0, 1.0, 0.0)) - camera_from_raster(Point3f(0.0, 0.0, 0.0));
     }
 
-    PBRT_GPU Ray generate_ray(const Point2f &sampled_p_film) const override {
-        // Compute raster and camera sample positions
-        const auto p_film = Point3f(sampled_p_film.x, sampled_p_film.y, 0.0);
+    PBRT_GPU CameraRay generate_ray(const CameraSample &sample) const override {
+        Point3f pFilm = Point3f(sample.p_film.x, sample.p_film.y, 0);
+        Point3f pCamera = camera_from_raster(pFilm);
 
-        const auto p_camera = camera_from_raster(p_film);
+        Ray ray(Point3f(0, 0, 0), pCamera.to_vector3().normalize());
 
-        const auto ray = Ray(Point3f(0, 0, 0), p_camera.to_vector3().normalize());
+        if (lens_radius > 0) {
+            printf("lens_radius > 0 not implemented\n");
+            asm("trap;");
+        }
 
-        return camera_transform.render_from_camera(ray);
+        return CameraRay(camera_transform.render_from_camera(ray));
     }
 
   private:
-    PBRT_CPU_GPU void print_matrix(const SquareMatrix<4> &matrix) const {
-        printf("{\n");
-        for (int i = 0; i < 4; ++i) {
-            printf("    { ");
-            for (int k = 0; k < 4; ++k) {
-                printf("%f, ", matrix[i][k]);
-            }
-            printf("},\n");
-        }
-        printf("}");
-    }
-
-    PBRT_CPU_GPU void print_transform(const Transform &transform) const {
-        printf("m:\n");
-        print_matrix(transform.m);
-
-        printf("m_inv:\n");
-        print_matrix(transform.inv_m);
-        printf("\n");
-    }
-
     Transform raster_from_screen;
     Transform screen_from_raster;
     Transform screen_from_camera;
@@ -90,10 +73,5 @@ class PerspectiveCamera : public Camera {
     Vector3f dx_camera;
     Vector3f dy_camera;
 
-    Point3f origin;
-    Point3f lower_left_corner;
-    Vector3f horizontal;
-    Vector3f vertical;
-    Vector3f u, v, w;
     double lens_radius;
 };

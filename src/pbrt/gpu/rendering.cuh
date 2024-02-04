@@ -2,18 +2,25 @@
 
 #include <iostream>
 #include <string>
-#include <iomanip>
 
 #include <curand_kernel.h>
 
 #include "ext/lodepng/lodepng.h"
+
+#include "pbrt/spectra/constants.h"
+#include "pbrt/spectra/color_encoding.h"
+#include "pbrt/spectra/piecewise_linear_spectrum.h"
+#include "pbrt/spectra/rgb_color_space.h"
+#include "pbrt/spectra/sampled_wavelengths.h"
+
+#include "pbrt/films/pixel_sensor.h"
+#include "pbrt/films/rgb_film.h"
 
 #include "pbrt/cameras/perspective.h"
 #include "pbrt/shapes/triangle.h"
 #include "pbrt/integrators/surface_normal.h"
 #include "pbrt/integrators/ambient_occlusion.h"
 #include "pbrt/samplers/independent.h"
-#include "pbrt/spectra/color_encoding.h"
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define checkCudaErrors(val) check_cuda((val), #val, __FILE__, __LINE__)
@@ -32,33 +39,166 @@ inline void check_cuda(cudaError_t result, char const *const func, const char *c
 }
 
 namespace GPU {
+class GlobalVariable {
+  public:
+    PBRT_GPU ~GlobalVariable() {
+        delete rgb_color_space;
+    }
+
+    PBRT_GPU
+    GlobalVariable(const double *cie_lambdas, const double *cie_x_value, const double *cie_y_value,
+                   const double *cie_z_value, const double *cie_illum_d6500, int length_d65,
+                   const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table,
+                   RGBtoSpectrumData::Gamut gamut) {
+        auto _cie_x_piecewise_linear_spectrum =
+            PiecewiseLinearSpectrum(cie_lambdas, cie_x_value, NUM_CIE_SAMPLES);
+        auto _cie_y_piecewise_linear_spectrum =
+            PiecewiseLinearSpectrum(cie_lambdas, cie_y_value, NUM_CIE_SAMPLES);
+        auto _cie_z_piecewise_linear_spectrum =
+            PiecewiseLinearSpectrum(cie_lambdas, cie_z_value, NUM_CIE_SAMPLES);
+
+        cie_x = DenselySampledSpectrum(_cie_x_piecewise_linear_spectrum);
+        cie_y = DenselySampledSpectrum(_cie_y_piecewise_linear_spectrum);
+        cie_z = DenselySampledSpectrum(_cie_z_piecewise_linear_spectrum);
+
+        auto illum_d65 =
+            PiecewiseLinearSpectrum::from_interleaved(cie_illum_d6500, length_d65, true, &cie_y);
+
+        if (gamut == RGBtoSpectrumData::SRGB) {
+            rgb_color_space = new RGBColorSpace(
+                Point2f(0.64, 0.33), Point2f(0.3, 0.6), Point2f(0.15, 0.06), illum_d65,
+                rgb_to_spectrum_table, std::array<const Spectrum *, 3>{&cie_x, &cie_y, &cie_z});
+
+            return;
+        }
+
+        printf("\nthis color space is not implemented\n\n");
+        asm("trap;");
+    }
+
+    PBRT_GPU [[nodiscard]] std::array<const Spectrum *, 3> get_cie_xyz() const {
+        return {&cie_x, &cie_y, &cie_z};
+    }
+
+    const RGBColorSpace *rgb_color_space = nullptr;
+
+  private:
+    DenselySampledSpectrum cie_x;
+    DenselySampledSpectrum cie_y;
+    DenselySampledSpectrum cie_z;
+};
+
 class Renderer {
   public:
     const Integrator *integrator = nullptr;
     const Camera *camera = nullptr;
     Aggregate *aggregate = nullptr;
+    const Filter *filter = nullptr;
+    const GlobalVariable *global_varialbes = nullptr;
+
+    Pixel *pixels = nullptr;
+    PixelSensor sensor;
 
     PBRT_GPU ~Renderer() {
         delete integrator;
         delete aggregate;
         delete camera;
+        delete filter;
+        delete global_varialbes;
+    }
+
+    PBRT_GPU
+    void add_sample(int pixel_index, const SampledSpectrum &radiance_l,
+                    const SampledWavelengths &lambda, double weight) {
+        auto rgb = sensor.to_sensor_rgb(radiance_l, lambda);
+
+        for (int c = 0; c < 3; ++c) {
+            pixels[pixel_index].rgb_sum[c] += weight * rgb[c];
+        }
+        pixels[pixel_index].weight_sum += weight;
     }
 };
 
-__global__ void gpu_init_renderer(Renderer *renderer) {
+__global__ void gpu_init_rgb_to_spectrum_table_coefficients(
+    RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
+    const double *rgb_to_spectrum_table_coefficients) {
+    /*
+     * max thread size: 1024
+     * total dimension: 3 * 64 * 64 * 64 * 3
+     * 3: blocks.x
+     * 64: blocks.y
+     * 64: blocks.z
+     * 64: threads.x
+     * 3:  threads.y
+     */
+
+    constexpr int resolution = RGBtoSpectrumData::RES;
+
+    int max_component = blockIdx.x;
+    int z = blockIdx.y;
+    int y = blockIdx.z;
+
+    int x = threadIdx.x;
+    int c = threadIdx.y;
+
+    int idx = (((max_component * resolution + z) * resolution + y) * resolution + x) * 3 + c;
+
+    rgb_to_spectrum_data->coefficients[max_component][z][y][x][c] =
+        rgb_to_spectrum_table_coefficients[idx];
+}
+
+__global__ void
+gpu_init_rgb_to_spectrum_table_scale(RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
+                                     const double *rgb_to_spectrum_table_scale) {
+    int idx = threadIdx.x;
+    rgb_to_spectrum_data->scale[idx] = rgb_to_spectrum_table_scale[idx];
+}
+
+__global__ void
+gpu_init_global_variables(Renderer *renderer, const double *cie_lambdas, const double *cie_x_value,
+                          const double *cie_y_value, const double *cie_z_value,
+                          const double *cie_illum_d6500, int length_d65,
+                          const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table) {
     *renderer = Renderer();
+    // don't new anything in constructor Renderer()
+
+    renderer->global_varialbes =
+        new GlobalVariable(cie_lambdas, cie_x_value, cie_y_value, cie_z_value, cie_illum_d6500,
+                           length_d65, rgb_to_spectrum_table, RGBtoSpectrumData::SRGB);
+}
+
+__global__ void gpu_init_aggregate(Renderer *renderer) {
     renderer->aggregate = new Aggregate();
 }
 
 __global__ void gpu_init_integrator(Renderer *renderer) {
-    // Integrator *gpu_integrator = new SurfaceNormalIntegrator();
-    Integrator *gpu_integrator = new AmbientOcclusionIntegrator();
-    renderer->integrator = gpu_integrator;
+    auto illuminant_spectrum = renderer->global_varialbes->rgb_color_space->illuminant;
+    auto cie_y = renderer->global_varialbes->get_cie_xyz()[1];
+
+    auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
+    // renderer->integrator = new SurfaceNormalIntegrator();
+    renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
 }
 
-__global__ void gpu_init_camera(Renderer *renderer, Point2i resolution,
+__global__ void gpu_init_filter(Renderer *renderer) {
+    renderer->filter = new BoxFilter(0.5);
+}
+
+__global__ void gpu_init_pixel_sensor(Renderer *renderer) {
+    auto cie_xyz = renderer->global_varialbes->get_cie_xyz();
+    const auto color_space = renderer->global_varialbes->rgb_color_space;
+    auto illuminant_spectrum = color_space->illuminant;
+
+    renderer->sensor = PixelSensor::cie_1931(cie_xyz, color_space, illuminant_spectrum, 1);
+}
+
+__global__ void gpu_init_camera(Renderer *renderer, const Point2i resolution,
                                 const CameraTransform camera_transform, const double fov) {
-    renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov);
+    renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov, 0.0);
+}
+
+__global__ void gpu_init_pixels(Renderer *renderer, Pixel *pixels) {
+    renderer->pixels = pixels;
 }
 
 __global__ void gpu_aggregate_preprocess(Renderer *renderer) {
@@ -80,7 +220,33 @@ __global__ void gpu_free_renderer(Renderer *renderer) {
     // so you have to destruct it manually
 }
 
-__global__ void gpu_parallel_render(RGB *frame_buffer, int num_samples, const Renderer *renderer) {
+__device__ void gpu_render(Renderer *renderer, const Point2i &p_pixel, const int num_samples) {
+    const Camera *camera = renderer->camera;
+
+    int width = camera->resolution.x;
+    int pixel_index = p_pixel.y * width + p_pixel.x;
+
+    const Integrator *integrator = renderer->integrator;
+    const Aggregate *aggregate = renderer->aggregate;
+    auto sampler = IndependentSampler(pixel_index);
+
+    renderer->pixels[pixel_index] = Pixel();
+
+    for (int i = 0; i < num_samples; ++i) {
+        auto camera_sample = sampler.get_camera_sample(p_pixel, renderer->filter);
+
+        auto lu = sampler.get_1d();
+        auto lambda = SampledWavelengths::sample_visible(lu);
+
+        auto ray = camera->generate_ray(camera_sample);
+
+        auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, aggregate, sampler);
+
+        renderer->add_sample(pixel_index, radiance_l, lambda, camera_sample.filter_weight);
+    }
+}
+
+__global__ void gpu_parallel_render(Renderer *renderer, int num_samples) {
     const Camera *camera = renderer->camera;
 
     int width = camera->resolution.x;
@@ -92,40 +258,33 @@ __global__ void gpu_parallel_render(RGB *frame_buffer, int num_samples, const Re
         return;
     }
 
-    int pixel_index = y * width + x;
-
-    const Integrator *integrator = renderer->integrator;
-    const Aggregate *aggregate = renderer->aggregate;
-    auto sampler = IndependentSampler(pixel_index);
-
-    auto accumulated_l = RGB(0);
-    for (int i = 0; i < num_samples; ++i) {
-        auto sampled_p_film = Point2f(x, y) + Point2f(0.5, 0.5) + sampler.get_2d();
-        const Ray ray = camera->generate_ray(sampled_p_film);
-        accumulated_l += integrator->li(ray, aggregate, &sampler);
-    }
-
-    frame_buffer[pixel_index] = accumulated_l / double(num_samples);
+    gpu_render(renderer, Point2i(x, y), num_samples);
 }
 
-void writer_to_file(const std::string &filename, const RGB *frame_buffer, int width, int height) {
+void writer_to_file(const std::string &filename, const Pixel *pixels, const Point2i &resolution) {
+    int width = resolution.x;
+    int height = resolution.y;
+
     SRGBColorEncoding srgb_encoding;
-    std::vector<unsigned char> pixels(width * height * 4);
+    std::vector<unsigned char> png_pixels(width * height * 4);
 
     for (unsigned y = 0; y < height; y++) {
         for (unsigned x = 0; x < width; x++) {
-            const auto &color = frame_buffer[y * width + x];
+            int index = y * width + x;
+            const auto &_pixel = pixels[index];
+            auto color =
+                RGB(_pixel.rgb_sum[0], _pixel.rgb_sum[1], _pixel.rgb_sum[2]) / _pixel.weight_sum;
 
-            pixels[4 * (width * y + x) + 0] = srgb_encoding.from_linear(color.r);
-            pixels[4 * (width * y + x) + 1] = srgb_encoding.from_linear(color.g);
-            pixels[4 * (width * y + x) + 2] = srgb_encoding.from_linear(color.b);
-            pixels[4 * (width * y + x) + 3] = 255;
+            png_pixels[4 * index + 0] = srgb_encoding.from_linear(color.r);
+            png_pixels[4 * index + 1] = srgb_encoding.from_linear(color.g);
+            png_pixels[4 * index + 2] = srgb_encoding.from_linear(color.b);
+            png_pixels[4 * index + 3] = 255;
         }
     }
 
     // Encode the image
     // if there's an error, display it
-    if (unsigned error = lodepng::encode(filename, pixels, width, height); error) {
+    if (unsigned error = lodepng::encode(filename, png_pixels, width, height); error) {
         std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error)
                   << std::endl;
         throw std::runtime_error("lodepng::encode() fail");

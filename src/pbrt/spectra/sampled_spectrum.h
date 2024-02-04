@@ -9,7 +9,9 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     explicit SampledSpectrum(double c) {
-        values.fill(c);
+        for (int i = 0; i < NSpectrumSamples; ++i) {
+            values[i] = c;
+        }
     }
 
     PBRT_CPU_GPU
@@ -137,16 +139,6 @@ class SampledSpectrum {
         return values != s.values;
     }
 
-    // TODO: progress 2024/02/03: implementing XYZ, blocked by DenselySampledSpectrum
-    /*
-    PBRT_CPU_GPU
-    XYZ ToXYZ(const SampledWavelengths &lambda) const;
-    PBRT_CPU_GPU
-    RGB ToRGB(const SampledWavelengths &lambda, const RGBColorSpace &cs) const;
-    PBRT_CPU_GPU
-    Float y(const SampledWavelengths &lambda) const;
-    */
-
     PBRT_CPU_GPU
     bool is_positive() const {
         for (int i = 0; i < NSpectrumSamples; ++i) {
@@ -179,12 +171,29 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     double average() const {
-        double sum = values[0];
-        for (int i = 1; i < NSpectrumSamples; ++i) {
+        double sum = 0;
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             sum += values[i];
         }
 
         return sum / NSpectrumSamples;
+    }
+
+    PBRT_CPU_GPU void print() const {
+        printf("[ ");
+        for (int i = 0; i < NSpectrumSamples; ++i) {
+            printf("%f, ", values[i]);
+        }
+        printf("]\n");
+    }
+
+    PBRT_CPU_GPU SampledSpectrum safe_div(const SampledSpectrum &divisor) const {
+        std::array<double, NSpectrumSamples> quotient;
+        for (int i = 0; i < NSpectrumSamples; ++i) {
+            quotient[i] = divisor[i] == 0.0 ? 0.0 : values[i] / divisor[i];
+        }
+
+        return SampledSpectrum(quotient);
     }
 
   private:

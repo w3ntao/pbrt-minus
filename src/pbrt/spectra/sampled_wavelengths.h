@@ -3,12 +3,20 @@
 #include <array>
 
 #include "pbrt/util/math.h"
+#include "pbrt/util/sampling.h"
 #include "pbrt/spectra/constants.h"
 #include "pbrt/spectra/sampled_spectrum.h"
 
 // SampledWavelengths Definitions
 class SampledWavelengths {
   public:
+    PBRT_CPU_GPU SampledWavelengths() {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
+            lambda[i] = 0.0;
+            pdf[i] = 0.0;
+        }
+    }
+
     PBRT_CPU_GPU SampledWavelengths(const std::array<double, NSpectrumSamples> &_lambda,
                                     const std::array<double, NSpectrumSamples> &_pdf)
         : lambda(_lambda), pdf(_pdf) {}
@@ -16,7 +24,6 @@ class SampledWavelengths {
     PBRT_CPU_GPU
     static SampledWavelengths SampleUniform(double u, double lambda_min = LAMBDA_MIN,
                                             double lambda_max = LAMBDA_MAX) {
-
         std::array<double, NSpectrumSamples> lambda;
 
         // Sample first wavelength using _u_
@@ -40,24 +47,24 @@ class SampledWavelengths {
         return SampledWavelengths(lambda, pdf);
     }
 
-    // TODO: progress 2024/02/03: blocked by SampleVisibleWavelengths and VisibleWavelengthsPDF
-    /*
     PBRT_CPU_GPU
-    static SampledWavelengths SampleVisible(double u) {
-        SampledWavelengths swl;
+    static SampledWavelengths sample_visible(double _u) {
+        std::array<double, NSpectrumSamples> lambda;
+        std::array<double, NSpectrumSamples> pdf;
+
         for (int i = 0; i < NSpectrumSamples; ++i) {
             // Compute _up_ for $i$th wavelength sample
-            double up = u + double(i) / NSpectrumSamples;
-            if (up > 1) {
-                up -= 1;
+            double u_prime = _u + double(i) / NSpectrumSamples;
+            if (u_prime > 1) {
+                u_prime -= 1;
             }
 
-            swl.lambda[i] = SampleVisibleWavelengths(up);
-            swl.pdf[i] = VisibleWavelengthsPDF(swl.lambda[i]);
+            lambda[i] = sample_visible_wavelengths(u_prime);
+            pdf[i] = visible_wavelengths_pdf(lambda[i]);
         }
-        return swl;
+
+        return {lambda, pdf};
     }
-    */
 
     PBRT_CPU_GPU
     bool operator==(const SampledWavelengths &swl) const {
@@ -105,6 +112,19 @@ class SampledWavelengths {
             }
         }
         return true;
+    }
+
+    PBRT_CPU_GPU void print() const {
+        printf("lambda: [");
+        for (int i = 0; i < NSpectrumSamples; ++i) {
+            printf("%f, ", lambda[i]);
+        }
+        printf("]\n");
+        printf("pdf: [");
+        for (int i = 0; i < NSpectrumSamples; ++i) {
+            printf("%f, ", pdf[i]);
+        }
+        printf("]\n");
     }
 
   private:

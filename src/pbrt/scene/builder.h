@@ -4,11 +4,17 @@
 #include <map>
 #include <chrono>
 
-#include "pbrt/scene/command_line_option.h"
-#include "pbrt/scene/parser.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
+
+#include "pbrt/spectra/rgb_to_spectrum_data.h"
+
+#include "pbrt/filters/box.h"
+
+#include "pbrt/scene/command_line_option.h"
+#include "pbrt/scene/parser.h"
 #include "pbrt/scene/parameter_dict.h"
+
 #include "pbrt/gpu/rendering.cuh"
 
 class GraphicsState {
@@ -36,6 +42,8 @@ class SceneBuilder {
     std::stack<GraphicsState> pushed_graphics_state;
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
+
+    RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table_gpu = nullptr;
 
     SceneBuilder(const CommandLineOption &command_line_option)
         : samples_per_pixel(command_line_option.samples_per_pixel),
@@ -199,14 +207,103 @@ class SceneBuilder {
             return;
         }
         case WorldBegin: {
+            const auto rgb_spectrum_table_cpu =
+                RGBtoSpectrumData::compute_spectrum_table_data("sRGB");
+
+            double *cie_lambdas_gpu;
+            double *cie_x_value_gpu;
+            double *cie_y_value_gpu;
+            double *cie_z_value_gpu;
+            double *cie_illum_d6500_gpu;
+            double *rgb_to_spectrum_table_scale;
+            double *rgb_to_spectrum_table_coefficients;
+
+            checkCudaErrors(cudaMallocManaged((void **)&cie_lambdas_gpu, sizeof(CIE_LAMBDA_CPU)));
+            checkCudaErrors(cudaMallocManaged((void **)&cie_x_value_gpu, sizeof(CIE_X_VALUE_CPU)));
+            checkCudaErrors(cudaMallocManaged((void **)&cie_y_value_gpu, sizeof(CIE_Y_VALUE_CPU)));
+            checkCudaErrors(cudaMallocManaged((void **)&cie_z_value_gpu, sizeof(CIE_Z_VALUE_CPU)));
+            checkCudaErrors(
+                cudaMallocManaged((void **)&cie_illum_d6500_gpu, sizeof(CIE_Illum_D6500)));
+            checkCudaErrors(
+                cudaMallocManaged((void **)&rgb_to_spectrum_table_scale,
+                                  sizeof(double) * rgb_spectrum_table_cpu.scale.size()));
+            checkCudaErrors(
+                cudaMallocManaged((void **)&rgb_to_spectrum_table_coefficients,
+                                  sizeof(double) * rgb_spectrum_table_cpu.coefficients.size()));
+
+            std::vector gpu_data = {
+                cie_lambdas_gpu,
+                cie_x_value_gpu,
+                cie_y_value_gpu,
+                cie_z_value_gpu,
+                cie_illum_d6500_gpu,
+                rgb_to_spectrum_table_scale,
+                rgb_to_spectrum_table_coefficients,
+            };
+
+            checkCudaErrors(cudaMemcpy(cie_lambdas_gpu, CIE_LAMBDA_CPU, sizeof(CIE_LAMBDA_CPU),
+                                       cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(cie_x_value_gpu, CIE_X_VALUE_CPU, sizeof(CIE_X_VALUE_CPU),
+                                       cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(cie_y_value_gpu, CIE_Y_VALUE_CPU, sizeof(CIE_Y_VALUE_CPU),
+                                       cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(cie_z_value_gpu, CIE_Z_VALUE_CPU, sizeof(CIE_Z_VALUE_CPU),
+                                       cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(cie_illum_d6500_gpu, CIE_Illum_D6500,
+                                       sizeof(CIE_Illum_D6500), cudaMemcpyHostToDevice));
+
+            checkCudaErrors(cudaMemcpy(
+                rgb_to_spectrum_table_scale, rgb_spectrum_table_cpu.scale.data(),
+                sizeof(double) * rgb_spectrum_table_cpu.scale.size(), cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(rgb_to_spectrum_table_coefficients,
+                                       rgb_spectrum_table_cpu.coefficients.data(),
+                                       sizeof(double) * rgb_spectrum_table_cpu.coefficients.size(),
+                                       cudaMemcpyHostToDevice));
+
+            checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table_gpu,
+                                              sizeof(RGBtoSpectrumData::RGBtoSpectrumTableGPU)));
+
+            const int num_component = 3;
+            const int resolution = RGBtoSpectrumData::RES;
+            const int channel = 3;
+
+            /*
+             * max thread size: 1024
+             * total dimension: 3 * 64 * 64 * 64 * 3
+             * 3: blocks.x
+             * 64: blocks.y
+             * 64: blocks.z
+             * 64: threads.x
+             * 3:  threads.y
+             */
+            dim3 blocks(num_component, resolution, resolution);
+            dim3 threads(resolution, channel, 1);
+            GPU::gpu_init_rgb_to_spectrum_table_coefficients<<<blocks, threads>>>(
+                rgb_to_spectrum_table_gpu, rgb_to_spectrum_table_coefficients);
+
+            GPU::gpu_init_rgb_to_spectrum_table_scale<<<1, resolution>>>(
+                rgb_to_spectrum_table_gpu, rgb_to_spectrum_table_scale);
+
             checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
-            gpu_init_renderer<<<1, 1>>>(renderer);
+
+            gpu_init_global_variables<<<1, 1>>>(
+                renderer, cie_lambdas_gpu, cie_x_value_gpu, cie_y_value_gpu, cie_z_value_gpu,
+                cie_illum_d6500_gpu, sizeof(CIE_Illum_D6500) / sizeof(double),
+                rgb_to_spectrum_table_gpu);
+
+            for (int i = 0; i < gpu_data.size(); ++i) {
+                checkCudaErrors(cudaFree(gpu_data[i]));
+            }
 
             option_lookat();
             option_film();
             option_camera();
             option_sampler();
 
+            gpu_init_pixel_sensor<<<1, 1>>>(renderer);
+            gpu_init_filter<<<1, 1>>>(renderer);
+
+            gpu_init_aggregate<<<1, 1>>>(renderer);
             gpu_init_integrator<<<1, 1>>>(renderer);
 
             graphics_state.current_transform = Transform::identity();
@@ -261,17 +358,13 @@ class SceneBuilder {
 
   public:
     ~SceneBuilder() {
-        if (renderer == nullptr) {
-            return;
-        }
-
         gpu_free_renderer<<<1, 1>>>(renderer);
         checkCudaErrors(cudaFree(renderer));
+        checkCudaErrors(cudaFree(rgb_to_spectrum_table_gpu));
+
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
         cudaDeviceReset();
-
-        renderer = nullptr;
     }
 
     static void render_pbrt(const CommandLineOption &command_line_option) {
@@ -309,19 +402,19 @@ class SceneBuilder {
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        // allocate FB
-        RGB *frame_buffer;
+        Pixel *pixels;
         checkCudaErrors(
-            cudaMallocManaged((void **)&frame_buffer, sizeof(RGB) * resolution->x * resolution->y));
+            cudaMallocManaged((void **)&pixels, sizeof(Pixel) * resolution->x * resolution->y));
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
+
+        GPU::gpu_init_pixels<<<1, 1>>>(renderer, pixels);
 
         auto start = std::chrono::system_clock::now();
 
         dim3 blocks(resolution->x / thread_width + 1, resolution->y / thread_height + 1, 1);
         dim3 threads(thread_width, thread_height, 1);
-
-        gpu_parallel_render<<<blocks, threads>>>(frame_buffer, samples_per_pixel.value(), renderer);
+        gpu_parallel_render<<<blocks, threads>>>(renderer, samples_per_pixel.value());
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
@@ -330,9 +423,10 @@ class SceneBuilder {
         std::cout << std::fixed << std::setprecision(1) << "took " << duration.count()
                   << " seconds.\n";
 
-        GPU::writer_to_file(filename, frame_buffer, resolution->x, resolution->y);
+        GPU::writer_to_file(filename, pixels, resolution.value());
 
-        checkCudaErrors(cudaFree(frame_buffer));
+        checkCudaErrors(cudaFree(pixels));
+
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 

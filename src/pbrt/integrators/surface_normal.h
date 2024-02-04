@@ -5,11 +5,13 @@
 
 class SurfaceNormalIntegrator : public Integrator {
   public:
-    ~SurfaceNormalIntegrator() override = default;
+    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda,
+                                const Aggregate *aggregate, Sampler &sampler) const override {
+        // TODO: li() for SurfaceNormalIntegrator is not implemented
 
-    PBRT_GPU RGB li(const Ray &ray, const Aggregate *aggregate, Sampler *sampler) const override {
-        const auto shape_intersection = aggregate->intersect(ray);
+        return SampledSpectrum(0);
 
+        /*
         if (!shape_intersection) {
             return RGB(0.0, 0.0, 0.0);
         }
@@ -19,5 +21,6 @@ class SurfaceNormalIntegrator : public Integrator {
 
         const Vector3f n = normal.softmax();
         return RGB(n.x, n.y, n.z);
+        */
     }
 };
