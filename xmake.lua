@@ -2,7 +2,7 @@ add_rules("mode.debug", "mode.release")
 
 add_requires("png", {system = true})
 
-target("pbrt-cuda")
+target("pbrt-minus")
     set_kind("binary")
     add_cugencodes("native")
     add_cuflags("--expt-relaxed-constexpr")

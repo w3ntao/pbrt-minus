@@ -41,7 +41,7 @@ struct CommandLineOption {
 
         if (input_file.empty()) {
             std::cout << "please provide a PBRT input file from command line:\n"
-                      << "$ pbrt-cuda example.pbrt\n";
+                      << "$ pbrt-minus example.pbrt\n";
             exit(1);
         }
     }
