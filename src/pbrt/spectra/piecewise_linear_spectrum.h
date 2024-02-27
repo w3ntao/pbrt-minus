@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
-#include "pbrt/spectra/spectrum.h"
+#include "pbrt/base/spectrum.h"
 
 class PiecewiseLinearSpectrum : public Spectrum {
   public:

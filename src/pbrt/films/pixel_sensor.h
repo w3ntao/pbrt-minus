@@ -1,11 +1,10 @@
 #pragma once
 
+#include "pbrt/base/spectrum.h"
 #include "pbrt/euclidean_space/squared_matrix.h"
-#include "pbrt/spectra/spectrum.h"
+#include "pbrt/spectra/rgb.h"
 #include "pbrt/spectra/rgb_color_space.h"
 #include "pbrt/spectra/color_encoding.h"
-
-#include "pbrt/base/rgb.h"
 
 class PixelSensor {
   public:

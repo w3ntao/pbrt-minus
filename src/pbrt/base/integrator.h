@@ -1,10 +1,9 @@
 #pragma once
 
-#include "pbrt/spectra/sampled_spectrum.h"
-#include "pbrt/base/rgb.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/base/aggregate.h"
 #include "pbrt/base/sampler.h"
+#include "pbrt/spectra/sampled_spectrum.h"
 
 class Integrator {
   public:

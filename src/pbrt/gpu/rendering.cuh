@@ -107,14 +107,34 @@ class Renderer {
         delete global_varialbes;
     }
 
+    PBRT_GPU void evaluate_pixel_sample(const Point2i &p_pixel, const int num_samples) {
+        int width = camera->resolution.x;
+        int pixel_index = p_pixel.y * width + p_pixel.x;
+
+        auto sampler = IndependentSampler(pixel_index);
+
+        pixels[pixel_index] = Pixel();
+
+        for (int i = 0; i < num_samples; ++i) {
+            auto camera_sample = sampler.get_camera_sample(p_pixel, filter);
+
+            auto lu = sampler.get_1d();
+            auto lambda = SampledWavelengths::sample_visible(lu);
+
+            auto ray = camera->generate_ray(camera_sample);
+
+            auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, aggregate, sampler);
+
+            add_sample(pixel_index, radiance_l, lambda, camera_sample.filter_weight);
+        }
+    }
+
     PBRT_GPU
     void add_sample(int pixel_index, const SampledSpectrum &radiance_l,
                     const SampledWavelengths &lambda, double weight) {
         auto rgb = sensor.to_sensor_rgb(radiance_l, lambda);
 
-        for (int c = 0; c < 3; ++c) {
-            pixels[pixel_index].rgb_sum[c] += weight * rgb[c];
-        }
+        pixels[pixel_index].rgb_sum += weight * rgb;
         pixels[pixel_index].weight_sum += weight;
     }
 };
@@ -220,32 +240,6 @@ __global__ void gpu_free_renderer(Renderer *renderer) {
     // so you have to destruct it manually
 }
 
-__device__ void gpu_render(Renderer *renderer, const Point2i &p_pixel, const int num_samples) {
-    const Camera *camera = renderer->camera;
-
-    int width = camera->resolution.x;
-    int pixel_index = p_pixel.y * width + p_pixel.x;
-
-    const Integrator *integrator = renderer->integrator;
-    const Aggregate *aggregate = renderer->aggregate;
-    auto sampler = IndependentSampler(pixel_index);
-
-    renderer->pixels[pixel_index] = Pixel();
-
-    for (int i = 0; i < num_samples; ++i) {
-        auto camera_sample = sampler.get_camera_sample(p_pixel, renderer->filter);
-
-        auto lu = sampler.get_1d();
-        auto lambda = SampledWavelengths::sample_visible(lu);
-
-        auto ray = camera->generate_ray(camera_sample);
-
-        auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, aggregate, sampler);
-
-        renderer->add_sample(pixel_index, radiance_l, lambda, camera_sample.filter_weight);
-    }
-}
-
 __global__ void gpu_parallel_render(Renderer *renderer, int num_samples) {
     const Camera *camera = renderer->camera;
 
@@ -258,7 +252,7 @@ __global__ void gpu_parallel_render(Renderer *renderer, int num_samples) {
         return;
     }
 
-    gpu_render(renderer, Point2i(x, y), num_samples);
+    renderer->evaluate_pixel_sample(Point2i(x, y), num_samples);
 }
 
 void writer_to_file(const std::string &filename, const Pixel *pixels, const Point2i &resolution) {

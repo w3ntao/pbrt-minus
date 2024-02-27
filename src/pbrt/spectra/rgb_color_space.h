@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
-#include "pbrt/spectra/spectrum.h"
+#include "pbrt/base/spectrum.h"
 #include "pbrt/spectra/densely_sampled_spectrum.h"
 #include "pbrt/spectra/rgb_to_spectrum_data.h"
 

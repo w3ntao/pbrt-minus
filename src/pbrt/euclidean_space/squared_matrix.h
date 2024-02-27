@@ -1,25 +1,22 @@
 #pragma once
 
+#include <array>
 #include "pbrt/util/math.h"
 #include "pbrt/util/compensated_float.h"
 
 template <int N>
 class SquareMatrix {
   public:
-    PBRT_CPU_GPU SquareMatrix(const SquareMatrix &matrix) {
-        memcpy(val, matrix.val, sizeof(val));
-    }
+    PBRT_CPU_GPU SquareMatrix(const SquareMatrix &matrix) : val(matrix.val) {}
 
-    PBRT_CPU_GPU SquareMatrix() {
+    PBRT_CPU_GPU SquareMatrix() : val({0.0}) {
         for (int i = 0; i < N; i++) {
-            for (int k = 0; k < N; k++) {
-                val[i][k] = i == k ? 1.0 : 0.0;
-            }
+            val[i][i] = 1.0;
         }
     }
 
     PBRT_CPU_GPU static SquareMatrix zero() {
-        double data[4][4] = {0.0};
+        double data[N][N] = {0.0};
         return SquareMatrix(data);
     }
 
@@ -43,7 +40,11 @@ class SquareMatrix {
 
     PBRT_CPU_GPU
     SquareMatrix(const double data[N][N]) {
-        memcpy(val, data, sizeof(val));
+        for (int i = 0; i < N; ++i) {
+            for (int k = 0; k < N; ++k) {
+                val[i][k] = data[i][k];
+            }
+        }
     }
 
     PBRT_CPU_GPU bool operator==(const SquareMatrix &matrix) const {
@@ -62,11 +63,11 @@ class SquareMatrix {
         return !(*this == matrix);
     }
 
-    PBRT_CPU_GPU const double *operator[](int i) const {
+    PBRT_CPU_GPU std::array<double, N> operator[](int i) const {
         return val[i];
     }
 
-    PBRT_CPU_GPU double *operator[](int i) {
+    PBRT_CPU_GPU std::array<double, N> &operator[](int i) {
         return val[i];
     }
 
@@ -102,8 +103,7 @@ class SquareMatrix {
     }
 
   private:
-    double val[N][N];
-    // TODO: declare val as std::array<std::array<double, N>, N>
+    std::array<std::array<double, N>, N> val;
 };
 
 template <>

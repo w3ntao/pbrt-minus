@@ -6,8 +6,6 @@
 #include <array>
 #include <vector>
 
-#include "pbrt/euclidean_space/point2.h"
-
 namespace RGBtoSpectrumData {
 
 static constexpr int CIE_SAMPLES = 95;

@@ -1,9 +1,10 @@
 #pragma once
 
+#include "pbrt/spectra/rgb.h"
+
 struct Pixel {
-    double rgb_sum[3];
-    // TODO: replace double[3] with RGB
+    RGB rgb_sum;
     double weight_sum;
 
-    PBRT_GPU Pixel() : rgb_sum{0, 0, 0}, weight_sum(0) {}
+    PBRT_GPU Pixel() : rgb_sum(RGB(0.0, 0.0, 0.0)), weight_sum(0.0) {}
 };
