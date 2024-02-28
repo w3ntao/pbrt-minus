@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/util/math.h"
+#include "pbrt/euclidean_space/squared_matrix.h"
 
 class RGB {
   public:
@@ -38,6 +39,13 @@ class RGB {
 
     PBRT_CPU_GPU RGB operator*(double scalar) const {
         return RGB(r * scalar, g * scalar, b * scalar);
+    }
+
+    PBRT_CPU_GPU
+    friend RGB operator*(const SquareMatrix<3> &m, const RGB &rgb) {
+        return RGB(inner_product(m[0][0], rgb.r, m[0][1], rgb.g, m[0][2], rgb.b),
+                   inner_product(m[1][0], rgb.r, m[1][1], rgb.g, m[1][2], rgb.b),
+                   inner_product(m[2][0], rgb.r, m[2][1], rgb.g, m[2][2], rgb.b));
     }
 
     PBRT_CPU_GPU RGB operator/(double divisor) const {

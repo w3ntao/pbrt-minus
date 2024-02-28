@@ -1,18 +1,33 @@
 #pragma once
 
-#include <array>
 #include "pbrt/util/math.h"
 #include "pbrt/util/compensated_float.h"
-#include "pbrt/spectra/rgb.h"
 
 template <int N>
 class SquareMatrix {
   public:
-    PBRT_CPU_GPU SquareMatrix(const SquareMatrix &matrix) : val(matrix.val) {}
-
-    PBRT_CPU_GPU SquareMatrix() : val({0.0}) {
+    PBRT_CPU_GPU SquareMatrix() {
         for (int i = 0; i < N; i++) {
-            val[i][i] = 1.0;
+            for (int k = 0; k < N; k++) {
+                val[i][k] = i == k ? 1.0 : 0.0;
+            }
+        }
+    }
+
+    PBRT_CPU_GPU
+    SquareMatrix(const double data[N][N]) {
+        for (int i = 0; i < N; ++i) {
+            for (int k = 0; k < N; ++k) {
+                val[i][k] = data[i][k];
+            }
+        }
+    }
+
+    PBRT_CPU_GPU SquareMatrix(const SquareMatrix &matrix) {
+        for (int i = 0; i < N; i++) {
+            for (int k = 0; k < N; k++) {
+                val[i][k] = matrix.val[i][k];
+            }
         }
     }
 
@@ -39,15 +54,6 @@ class SquareMatrix {
         return {data};
     }
 
-    PBRT_CPU_GPU
-    SquareMatrix(const double data[N][N]) {
-        for (int i = 0; i < N; ++i) {
-            for (int k = 0; k < N; ++k) {
-                val[i][k] = data[i][k];
-            }
-        }
-    }
-
     PBRT_CPU_GPU bool operator==(const SquareMatrix &matrix) const {
         for (int i = 0; i < N; ++i) {
             for (int k = 0; k < N; ++k) {
@@ -64,11 +70,11 @@ class SquareMatrix {
         return !(*this == matrix);
     }
 
-    PBRT_CPU_GPU std::array<double, N> operator[](int i) const {
+    PBRT_CPU_GPU const double *operator[](int i) const {
         return val[i];
     }
 
-    PBRT_CPU_GPU std::array<double, N> &operator[](int i) {
+    PBRT_CPU_GPU double *operator[](int i) {
         return val[i];
     }
 
@@ -83,22 +89,6 @@ class SquareMatrix {
             }
         }
         return r;
-    }
-
-    PBRT_CPU_GPU RGB operator*(const RGB &rgb) const {
-        if (N != 3) {
-            printf("you should only multiple RGB with SquareMatrix<3>\n");
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("you should only multiple RGB with SquareMatrix<3>");
-#endif
-        }
-
-        const auto m = this->val;
-        return RGB(inner_product(m[0][0], rgb.r, m[0][1], rgb.g, m[0][2], rgb.b),
-                   inner_product(m[1][0], rgb.r, m[1][1], rgb.g, m[1][2], rgb.b),
-                   inner_product(m[2][0], rgb.r, m[2][1], rgb.g, m[2][2], rgb.b));
     }
 
     PBRT_CPU_GPU double determinant() const;
@@ -120,7 +110,7 @@ class SquareMatrix {
     }
 
   private:
-    std::array<std::array<double, N>, N> val;
+    double val[N][N];
 };
 
 template <>

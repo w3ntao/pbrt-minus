@@ -73,7 +73,6 @@ class DenselySampledSpectrum : public Spectrum {
         }
 
         return DenselySampledSpectrum::from_piecewise_linear_spectrum(cie_lambda, values, nCIES);
-        // TODO: 2024/02/28 progress: building DenselySampledSpectrum::cie_d()
     }
 
     PBRT_GPU

@@ -42,7 +42,6 @@ struct RGBtoSpectrumBuffer {
 };
 
 struct RGBtoSpectrumTableCPU {
-    // TODO: unite RGBtoSpectrumTableCPU and RGBtoSpectrumTableGPU into one?
     std::array<double, RES> z_nodes;
     std::vector<double> coefficients;
 

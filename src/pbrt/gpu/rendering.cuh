@@ -99,7 +99,6 @@ class Renderer {
 
     const GlobalVariable *global_varialbes = nullptr;
 
-    Pixel *pixels = nullptr;
     PixelSensor sensor;
 
     PBRT_GPU ~Renderer() {
@@ -116,8 +115,6 @@ class Renderer {
         int pixel_index = p_pixel.y * width + p_pixel.x;
 
         auto sampler = IndependentSampler(pixel_index);
-
-        pixels[pixel_index] = Pixel();
 
         for (int i = 0; i < num_samples; ++i) {
             auto camera_sample = sampler.get_camera_sample(p_pixel, filter);
@@ -224,13 +221,17 @@ __global__ void gpu_init_pixel_sensor_cie_1931(Renderer *renderer, const double 
         cie_xyz, color_space, white_balance_val == 0 ? nullptr : &d_illum, imaging_ratio);
 }
 
-__global__ void gpu_init_rgb_film(Renderer *renderer, Point2i dimension) {
-    if (renderer->pixels == nullptr) {
-        printf("ERROR: renderer->pixels is nullptr\n\n");
-        asm("trap;");
+__global__ void gpu_init_pixels(Pixel *pixels, Point2i dimension) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= dimension.x * dimension.y) {
+        return;
     }
 
-    renderer->film = new RGBFilm(renderer->pixels, &(renderer->sensor), dimension,
+    pixels[idx] = Pixel();
+}
+
+__global__ void gpu_init_rgb_film(Renderer *renderer, Point2i dimension, Pixel *pixels) {
+    renderer->film = new RGBFilm(pixels, &(renderer->sensor), dimension,
                                  renderer->global_varialbes->rgb_color_space);
 }
 
@@ -243,12 +244,11 @@ __global__ void gpu_aggregate_preprocess(Renderer *renderer) {
     renderer->aggregate->preprocess();
 }
 
-__global__ void gpu_add_triangle_mesh(Renderer *renderer, const Transform render_from_object,
-                                      bool reverse_orientation, const Point3f *points,
-                                      int num_points, const int *indicies, int num_indicies,
-                                      const Point2f *uv, int num_uv) {
-    const TriangleMesh *mesh = new TriangleMesh(render_from_object, reverse_orientation, indicies,
-                                                num_indicies, points, num_points);
+__global__ void gpu_add_triangle_mesh(Renderer *renderer, bool reverse_orientation,
+                                      const Point3f *points, int num_points, const int *indicies,
+                                      int num_indicies, const Point2f *uv, int num_uv) {
+    const TriangleMesh *mesh =
+        new TriangleMesh(reverse_orientation, indicies, num_indicies, points, num_points);
     renderer->aggregate->add_triangles(mesh);
 }
 
