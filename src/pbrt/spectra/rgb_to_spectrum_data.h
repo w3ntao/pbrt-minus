@@ -6,6 +6,9 @@
 #include <array>
 #include <vector>
 
+#include "pbrt/spectra/rgb.h"
+#include "pbrt/spectra/rgb_sigmoid_polynomial.h"
+
 namespace RGBtoSpectrumData {
 
 static constexpr int CIE_SAMPLES = 95;
@@ -39,16 +42,57 @@ struct RGBtoSpectrumBuffer {
 };
 
 struct RGBtoSpectrumTableCPU {
-    std::array<double, RES> scale;
+    // TODO: unite RGBtoSpectrumTableCPU and RGBtoSpectrumTableGPU into one?
+    std::array<double, RES> z_nodes;
     std::vector<double> coefficients;
 
-    RGBtoSpectrumTableCPU(std::array<double, RES> _scale, const std::vector<double> &_coefficients)
-        : scale(_scale), coefficients(_coefficients) {}
+    RGBtoSpectrumTableCPU(std::array<double, RES> _z_nodes,
+                          const std::vector<double> &_coefficients)
+        : z_nodes(_z_nodes), coefficients(_coefficients) {}
 };
 
 struct RGBtoSpectrumTableGPU {
-    double scale[RES];
+    double z_nodes[RES];
     double coefficients[3][RES][RES][RES][3];
+
+    PBRT_GPU
+    RGBSigmoidPolynomial operator()(const RGB &rgb) const {
+        // Handle uniform _rgb_ values
+        if (rgb[0] == rgb[1] && rgb[1] == rgb[2]) {
+            return RGBSigmoidPolynomial(0, 0, (rgb[0] - 0.5f) / std::sqrt(rgb[0] * (1.0 - rgb[0])));
+        }
+
+        // Find maximum component and compute remapped component values
+        int maxc = (rgb[0] > rgb[1]) ? ((rgb[0] > rgb[2]) ? 0 : 2) : ((rgb[1] > rgb[2]) ? 1 : 2);
+        double z = rgb[maxc];
+        double x = rgb[(maxc + 1) % 3] * (RES - 1) / z;
+        double y = rgb[(maxc + 2) % 3] * (RES - 1) / z;
+
+        // Compute integer indices and offsets for coefficient interpolation
+        int xi = std::min((int)x, RES - 2);
+        int yi = std::min((int)y, RES - 2);
+        int zi = find_interval(RES, [&](int i) { return z_nodes[i] < z; });
+
+        double dx = x - xi;
+        double dy = y - yi;
+        double dz = (z - z_nodes[zi]) / (z_nodes[zi + 1] - z_nodes[zi]);
+
+        // Trilinearly interpolate sigmoid polynomial coefficients _c_
+        std::array<double, 3> c;
+        for (int i = 0; i < 3; ++i) {
+            // Define _co_ lambda for looking up sigmoid polynomial coefficients
+            auto co = [&](int _dx, int _dy, int _dz) {
+                return coefficients[maxc][zi + _dz][yi + _dy][xi + _dx][i];
+            };
+
+            c[i] = lerp(
+                dz,
+                lerp(dy, lerp(dx, co(0, 0, 0), co(1, 0, 0)), lerp(dx, co(0, 1, 0), co(1, 1, 0))),
+                lerp(dy, lerp(dx, co(0, 0, 1), co(1, 0, 1)), lerp(dx, co(0, 1, 1), co(1, 1, 1))));
+        }
+
+        return RGBSigmoidPolynomial(c[0], c[1], c[2]);
+    }
 };
 
 // clang-format off

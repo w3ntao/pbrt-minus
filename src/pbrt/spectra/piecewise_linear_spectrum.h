@@ -3,6 +3,7 @@
 #include "pbrt/util/macro.h"
 #include "pbrt/base/spectrum.h"
 
+// TODO: replace PiecewiseLinearSpectrum with DenselySampledSpectrum
 class PiecewiseLinearSpectrum : public Spectrum {
   public:
     PBRT_GPU PiecewiseLinearSpectrum() : length(0), lambdas(nullptr), values(nullptr) {}

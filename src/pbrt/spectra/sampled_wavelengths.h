@@ -127,7 +127,7 @@ class SampledWavelengths {
         printf("]\n");
     }
 
-  private:
+    // private:
     std::array<double, NSpectrumSamples> lambda;
     std::array<double, NSpectrumSamples> pdf;
 };

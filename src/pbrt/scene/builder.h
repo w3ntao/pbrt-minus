@@ -8,9 +8,6 @@
 #include "pbrt/euclidean_space/transform.h"
 
 #include "pbrt/spectra/rgb_to_spectrum_data.h"
-
-#include "pbrt/filters/box.h"
-
 #include "pbrt/scene/command_line_option.h"
 #include "pbrt/scene/parser.h"
 #include "pbrt/scene/parameter_dict.h"
@@ -28,10 +25,12 @@ class GraphicsState {
 class SceneBuilder {
   private:
     std::optional<int> samples_per_pixel;
-    std::optional<std::string> integrator;
+    std::optional<std::string> integrator_name;
 
     GPU::Renderer *renderer = nullptr;
-    std::optional<Point2i> resolution = std::nullopt;
+    std::vector<double *> gpu_doubles;
+
+    std::optional<Point2i> film_resolution = std::nullopt;
     std::string filename;
     std::vector<Token> lookat_tokens;
     std::vector<Token> camera_tokens;
@@ -47,7 +46,7 @@ class SceneBuilder {
 
     SceneBuilder(const CommandLineOption &command_line_option)
         : samples_per_pixel(command_line_option.samples_per_pixel),
-          integrator(command_line_option.integrator) {}
+          integrator_name(command_line_option.integrator) {}
 
     std::vector<int> group_tokens(const std::vector<Token> &tokens) {
         std::vector<int> keyword_range;
@@ -86,7 +85,10 @@ class SceneBuilder {
                 fov = _fov[0];
             }
 
-            gpu_init_camera<<<1, 1>>>(renderer, resolution.value(), camera_transform, fov);
+            gpu_init_camera<<<1, 1>>>(renderer, film_resolution.value(), camera_transform, fov);
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+
             return;
         }
 
@@ -100,7 +102,7 @@ class SceneBuilder {
         auto _resolution_x = parameters.get_integer("xresolution")[0];
         auto _resolution_y = parameters.get_integer("yresolution")[0];
 
-        resolution = Point2i(_resolution_x, _resolution_y);
+        film_resolution = Point2i(_resolution_x, _resolution_y);
         filename = parameters.get_string("filename");
     }
 
@@ -210,6 +212,7 @@ class SceneBuilder {
             const auto rgb_spectrum_table_cpu =
                 RGBtoSpectrumData::compute_spectrum_table_data("sRGB");
 
+            // TODO: add this gpu pointer data as member variables
             double *cie_lambdas_gpu;
             double *cie_x_value_gpu;
             double *cie_y_value_gpu;
@@ -217,6 +220,11 @@ class SceneBuilder {
             double *cie_illum_d6500_gpu;
             double *rgb_to_spectrum_table_scale;
             double *rgb_to_spectrum_table_coefficients;
+
+            double *cie_s0_gpu;
+            double *cie_s1_gpu;
+            double *cie_s2_gpu;
+            double *cie_s_lambda_gpu;
 
             checkCudaErrors(cudaMallocManaged((void **)&cie_lambdas_gpu, sizeof(CIE_LAMBDA_CPU)));
             checkCudaErrors(cudaMallocManaged((void **)&cie_x_value_gpu, sizeof(CIE_X_VALUE_CPU)));
@@ -226,20 +234,22 @@ class SceneBuilder {
                 cudaMallocManaged((void **)&cie_illum_d6500_gpu, sizeof(CIE_Illum_D6500)));
             checkCudaErrors(
                 cudaMallocManaged((void **)&rgb_to_spectrum_table_scale,
-                                  sizeof(double) * rgb_spectrum_table_cpu.scale.size()));
+                                  sizeof(double) * rgb_spectrum_table_cpu.z_nodes.size()));
             checkCudaErrors(
                 cudaMallocManaged((void **)&rgb_to_spectrum_table_coefficients,
                                   sizeof(double) * rgb_spectrum_table_cpu.coefficients.size()));
 
-            std::vector gpu_data = {
-                cie_lambdas_gpu,
-                cie_x_value_gpu,
-                cie_y_value_gpu,
-                cie_z_value_gpu,
-                cie_illum_d6500_gpu,
-                rgb_to_spectrum_table_scale,
-                rgb_to_spectrum_table_coefficients,
-            };
+            checkCudaErrors(cudaMallocManaged((void **)&cie_s0_gpu, sizeof(CIE_S0)));
+            checkCudaErrors(cudaMallocManaged((void **)&cie_s1_gpu, sizeof(CIE_S1)));
+            checkCudaErrors(cudaMallocManaged((void **)&cie_s2_gpu, sizeof(CIE_S2)));
+            checkCudaErrors(cudaMallocManaged((void **)&cie_s_lambda_gpu, sizeof(CIE_S_lambda)));
+
+            for (auto const ptr : {cie_lambdas_gpu, cie_x_value_gpu, cie_y_value_gpu,
+                                   cie_z_value_gpu, cie_illum_d6500_gpu,
+                                   rgb_to_spectrum_table_scale, rgb_to_spectrum_table_coefficients,
+                                   cie_s0_gpu, cie_s1_gpu, cie_s2_gpu, cie_s_lambda_gpu}) {
+                gpu_doubles.push_back(ptr);
+            }
 
             checkCudaErrors(cudaMemcpy(cie_lambdas_gpu, CIE_LAMBDA_CPU, sizeof(CIE_LAMBDA_CPU),
                                        cudaMemcpyHostToDevice));
@@ -253,8 +263,8 @@ class SceneBuilder {
                                        sizeof(CIE_Illum_D6500), cudaMemcpyHostToDevice));
 
             checkCudaErrors(cudaMemcpy(
-                rgb_to_spectrum_table_scale, rgb_spectrum_table_cpu.scale.data(),
-                sizeof(double) * rgb_spectrum_table_cpu.scale.size(), cudaMemcpyHostToDevice));
+                rgb_to_spectrum_table_scale, rgb_spectrum_table_cpu.z_nodes.data(),
+                sizeof(double) * rgb_spectrum_table_cpu.z_nodes.size(), cudaMemcpyHostToDevice));
             checkCudaErrors(cudaMemcpy(rgb_to_spectrum_table_coefficients,
                                        rgb_spectrum_table_cpu.coefficients.data(),
                                        sizeof(double) * rgb_spectrum_table_cpu.coefficients.size(),
@@ -263,8 +273,14 @@ class SceneBuilder {
             checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table_gpu,
                                               sizeof(RGBtoSpectrumData::RGBtoSpectrumTableGPU)));
 
+            checkCudaErrors(cudaMemcpy(cie_s0_gpu, CIE_S0, sizeof(CIE_S0), cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(cie_s1_gpu, CIE_S1, sizeof(CIE_S1), cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(cie_s2_gpu, CIE_S2, sizeof(CIE_S2), cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(cie_s_lambda_gpu, CIE_S_lambda, sizeof(CIE_S_lambda),
+                                       cudaMemcpyHostToDevice));
+
             const int num_component = 3;
-            const int resolution = RGBtoSpectrumData::RES;
+            const int rgb_to_spectrum_data_resolution = RGBtoSpectrumData::RES;
             const int channel = 3;
 
             /*
@@ -276,12 +292,13 @@ class SceneBuilder {
              * 64: threads.x
              * 3:  threads.y
              */
-            dim3 blocks(num_component, resolution, resolution);
-            dim3 threads(resolution, channel, 1);
+            dim3 blocks(num_component, rgb_to_spectrum_data_resolution,
+                        rgb_to_spectrum_data_resolution);
+            dim3 threads(rgb_to_spectrum_data_resolution, channel, 1);
             GPU::gpu_init_rgb_to_spectrum_table_coefficients<<<blocks, threads>>>(
                 rgb_to_spectrum_table_gpu, rgb_to_spectrum_table_coefficients);
 
-            GPU::gpu_init_rgb_to_spectrum_table_scale<<<1, resolution>>>(
+            GPU::gpu_init_rgb_to_spectrum_table_scale<<<1, rgb_to_spectrum_data_resolution>>>(
                 rgb_to_spectrum_table_gpu, rgb_to_spectrum_table_scale);
 
             checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
@@ -291,18 +308,22 @@ class SceneBuilder {
                 cie_illum_d6500_gpu, sizeof(CIE_Illum_D6500) / sizeof(double),
                 rgb_to_spectrum_table_gpu);
 
-            for (int i = 0; i < gpu_data.size(); ++i) {
-                checkCudaErrors(cudaFree(gpu_data[i]));
-            }
-
             option_lookat();
             option_film();
             option_camera();
             option_sampler();
 
-            gpu_init_pixel_sensor<<<1, 1>>>(renderer);
+            checkCudaErrors(
+                cudaMallocManaged((void **)&(renderer->pixels),
+                                  sizeof(Pixel) * film_resolution->x * film_resolution->y));
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+
+            gpu_init_pixel_sensor_cie_1931<<<1, 1>>>(renderer, cie_s0_gpu, cie_s1_gpu, cie_s2_gpu,
+                                                     cie_s_lambda_gpu);
             gpu_init_filter<<<1, 1>>>(renderer);
 
+            gpu_init_rgb_film<<<1, 1>>>(renderer, film_resolution.value());
             gpu_init_aggregate<<<1, 1>>>(renderer);
             gpu_init_integrator<<<1, 1>>>(renderer);
 
@@ -358,6 +379,12 @@ class SceneBuilder {
 
   public:
     ~SceneBuilder() {
+        for (int i = 0; i < gpu_doubles.size(); ++i) {
+            checkCudaErrors(cudaFree(gpu_doubles[i]));
+        }
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+
         gpu_free_renderer<<<1, 1>>>(renderer);
         checkCudaErrors(cudaFree(renderer));
         checkCudaErrors(cudaFree(rgb_to_spectrum_table_gpu));
@@ -393,26 +420,18 @@ class SceneBuilder {
         int thread_height = 8;
 
         std::cout << "\n";
-        std::cout << "rendering a " << resolution->x << "x" << resolution->y
+        std::cout << "rendering a " << film_resolution->x << "x" << film_resolution->y
                   << " image (samples per pixel: " << samples_per_pixel.value() << ") ";
         std::cout << "in " << thread_width << "x" << thread_height << " blocks.\n";
 
         gpu_aggregate_preprocess<<<1, 1>>>(renderer);
-
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
-
-        Pixel *pixels;
-        checkCudaErrors(
-            cudaMallocManaged((void **)&pixels, sizeof(Pixel) * resolution->x * resolution->y));
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
-
-        GPU::gpu_init_pixels<<<1, 1>>>(renderer, pixels);
 
         auto start = std::chrono::system_clock::now();
 
-        dim3 blocks(resolution->x / thread_width + 1, resolution->y / thread_height + 1, 1);
+        dim3 blocks(film_resolution->x / thread_width + 1, film_resolution->y / thread_height + 1,
+                    1);
         dim3 threads(thread_width, thread_height, 1);
         gpu_parallel_render<<<blocks, threads>>>(renderer, samples_per_pixel.value());
         checkCudaErrors(cudaGetLastError());
@@ -423,9 +442,20 @@ class SceneBuilder {
         std::cout << std::fixed << std::setprecision(1) << "took " << duration.count()
                   << " seconds.\n";
 
-        GPU::writer_to_file(filename, pixels, resolution.value());
+        RGB *output_rgb;
+        checkCudaErrors(cudaMallocManaged((void **)&output_rgb,
+                                          sizeof(RGB) * film_resolution->x * film_resolution->y));
 
-        checkCudaErrors(cudaFree(pixels));
+        int batch = 256;
+        int total_jobs = film_resolution->x * film_resolution->y / batch + 1;
+        write_frame_buffer_to_rgb<<<total_jobs, batch>>>(renderer, output_rgb);
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+
+        GPU::writer_to_file(filename, output_rgb, film_resolution.value());
+
+        checkCudaErrors(cudaFree(output_rgb));
+        checkCudaErrors(cudaFree(renderer->pixels));
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());

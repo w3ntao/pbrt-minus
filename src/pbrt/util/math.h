@@ -21,6 +21,15 @@ static double degree_to_radian(double degree) {
     return compute_pi() / 180.0 * degree;
 }
 
+template <typename T>
+PBRT_CPU_GPU std::enable_if_t<std::is_floating_point_v<T>, bool> is_inf(T v) {
+#if defined(__CUDA_ARCH__)
+    return isinf(v);
+#else
+    return std::isinf(v);
+#endif
+}
+
 PBRT_CPU_GPU
 constexpr double clamp(double x, double low, double high) {
     return x < low ? low : (x > high ? high : x);
@@ -32,7 +41,7 @@ constexpr double clamp_0_1(double x) {
 }
 
 template <typename Predicate>
-PBRT_CPU_GPU inline size_t find_interval(size_t sz, const Predicate &pred) {
+PBRT_CPU_GPU size_t find_interval(size_t sz, const Predicate &pred) {
     using ssize_t = std::make_signed_t<size_t>;
     ssize_t size = (ssize_t)sz - 2, first = 1;
     while (size > 0) {
@@ -86,4 +95,14 @@ PBRT_CPU_GPU auto sum_of_products(Ta a, Tb b, Tc c, Td d) {
     auto sum = FMA(a, b, cd);
     auto error = FMA(c, d, -cd);
     return sum + error;
+}
+
+template <int n>
+PBRT_CPU_GPU constexpr double pow(double v) {
+    if constexpr (n < 0) {
+        return 1 / pow<-n>(v);
+    }
+
+    double n2 = pow<n / 2>(v);
+    return n2 * n2 * pow<n & 1>(v);
 }

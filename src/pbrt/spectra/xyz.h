@@ -108,6 +108,7 @@ class XYZ {
         return s * a;
     }
 
+    // TODO: move this function to SquareMatrix<3>
     PBRT_CPU_GPU
     friend XYZ operator*(const SquareMatrix<3> &m, const XYZ &rhs) {
         return XYZ(inner_product(m[0][0], rhs.x, m[0][1], rhs.y, m[0][2], rhs.z),

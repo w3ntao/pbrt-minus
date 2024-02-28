@@ -23,6 +23,7 @@ class TriangleMesh {
         : reverse_orientation(_reverse_orientation), triangle_num(num_indices / 3),
           points_num(num_points) {
         int *temp_vertex_indices = new int[num_indices];
+        // TODO: new this data from cudaMallocManaged
         memcpy(temp_vertex_indices, _vertex_indices, sizeof(int) * num_indices);
         vertex_indices = temp_vertex_indices;
 

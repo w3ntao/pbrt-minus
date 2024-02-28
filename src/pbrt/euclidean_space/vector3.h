@@ -58,6 +58,10 @@ class Vector3 {
         }
     }
 
+    PBRT_CPU_GPU bool operator==(const Vector3 &v) const {
+        return x == v.x && y == v.y && z == v.z;
+    }
+
     PBRT_CPU_GPU Vector3 operator+(const Vector3 &b) const {
         return Vector3(x + b.x, y + b.y, z + b.z);
     }
@@ -128,8 +132,9 @@ class Vector3 {
         return *this / length();
     }
 
-    PBRT_CPU_GPU Vector3 softmax() const {
-        return Vector3(exp10f(x), exp10f(y), exp10f(z)).normalize();
+    PBRT_GPU Vector3 softmax() const {
+        auto v = Vector3(exp10f(x), exp10f(y), exp10f(z));
+        return v / (v.x + v.y + v.z);
     }
 
     PBRT_CPU_GPU T dot(const Vector3 &right) const {

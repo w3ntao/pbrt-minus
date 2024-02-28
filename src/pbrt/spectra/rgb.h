@@ -12,8 +12,16 @@ class RGB {
 
     PBRT_CPU_GPU RGB(double _r, double _g, double _b) : r(_r), g(_g), b(_b) {}
 
-    PBRT_CPU_GPU RGB clamp() const {
-        return RGB(clamp_0_1(r), clamp_0_1(g), clamp_0_1(b));
+    PBRT_CPU_GPU RGB clamp_zero() const {
+        return RGB(std::max<double>(0, r), std::max<double>(0, g), std::max<double>(0, b));
+    }
+
+    PBRT_CPU_GPU bool operator==(const RGB &rhs) const {
+        return r == rhs.r && g == rhs.g && b == rhs.b;
+    }
+
+    PBRT_CPU_GPU bool operator!=(const RGB &rhs) const {
+        return !(*this == rhs);
     }
 
     PBRT_CPU_GPU RGB operator+(const RGB &right) const {

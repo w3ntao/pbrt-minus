@@ -3,6 +3,7 @@
 #include <array>
 #include "pbrt/util/math.h"
 #include "pbrt/util/compensated_float.h"
+#include "pbrt/spectra/rgb.h"
 
 template <int N>
 class SquareMatrix {
@@ -82,6 +83,22 @@ class SquareMatrix {
             }
         }
         return r;
+    }
+
+    PBRT_CPU_GPU RGB operator*(const RGB &rgb) const {
+        if (N != 3) {
+            printf("you should only multiple RGB with SquareMatrix<3>\n");
+#if defined(__CUDA_ARCH__)
+            asm("trap;");
+#else
+            throw std::runtime_error("you should only multiple RGB with SquareMatrix<3>");
+#endif
+        }
+
+        const auto m = this->val;
+        return RGB(inner_product(m[0][0], rgb.r, m[0][1], rgb.g, m[0][2], rgb.b),
+                   inner_product(m[1][0], rgb.r, m[1][1], rgb.g, m[1][2], rgb.b),
+                   inner_product(m[2][0], rgb.r, m[2][1], rgb.g, m[2][2], rgb.b));
     }
 
     PBRT_CPU_GPU double determinant() const;

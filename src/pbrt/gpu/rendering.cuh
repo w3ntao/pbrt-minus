@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <assert.h>
 
 #include <curand_kernel.h>
 
@@ -13,9 +14,9 @@
 #include "pbrt/spectra/rgb_color_space.h"
 #include "pbrt/spectra/sampled_wavelengths.h"
 
+#include "pbrt/filters/box.h"
 #include "pbrt/films/pixel_sensor.h"
 #include "pbrt/films/rgb_film.h"
-
 #include "pbrt/cameras/perspective.h"
 #include "pbrt/shapes/triangle.h"
 #include "pbrt/integrators/surface_normal.h"
@@ -94,6 +95,8 @@ class Renderer {
     const Camera *camera = nullptr;
     Aggregate *aggregate = nullptr;
     const Filter *filter = nullptr;
+    Film *film = nullptr;
+
     const GlobalVariable *global_varialbes = nullptr;
 
     Pixel *pixels = nullptr;
@@ -104,6 +107,7 @@ class Renderer {
         delete aggregate;
         delete camera;
         delete filter;
+        delete film;
         delete global_varialbes;
     }
 
@@ -117,7 +121,6 @@ class Renderer {
 
         for (int i = 0; i < num_samples; ++i) {
             auto camera_sample = sampler.get_camera_sample(p_pixel, filter);
-
             auto lu = sampler.get_1d();
             auto lambda = SampledWavelengths::sample_visible(lu);
 
@@ -125,17 +128,8 @@ class Renderer {
 
             auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, aggregate, sampler);
 
-            add_sample(pixel_index, radiance_l, lambda, camera_sample.filter_weight);
+            film->add_sample(p_pixel, radiance_l, lambda, camera_sample.filter_weight);
         }
-    }
-
-    PBRT_GPU
-    void add_sample(int pixel_index, const SampledSpectrum &radiance_l,
-                    const SampledWavelengths &lambda, double weight) {
-        auto rgb = sensor.to_sensor_rgb(radiance_l, lambda);
-
-        pixels[pixel_index].rgb_sum += weight * rgb;
-        pixels[pixel_index].weight_sum += weight;
     }
 };
 
@@ -171,7 +165,7 @@ __global__ void
 gpu_init_rgb_to_spectrum_table_scale(RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
                                      const double *rgb_to_spectrum_table_scale) {
     int idx = threadIdx.x;
-    rgb_to_spectrum_data->scale[idx] = rgb_to_spectrum_table_scale[idx];
+    rgb_to_spectrum_data->z_nodes[idx] = rgb_to_spectrum_table_scale[idx];
 }
 
 __global__ void
@@ -192,11 +186,17 @@ __global__ void gpu_init_aggregate(Renderer *renderer) {
 }
 
 __global__ void gpu_init_integrator(Renderer *renderer) {
+
     auto illuminant_spectrum = renderer->global_varialbes->rgb_color_space->illuminant;
     auto cie_y = renderer->global_varialbes->get_cie_xyz()[1];
 
     auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
-    // renderer->integrator = new SurfaceNormalIntegrator();
+
+    /*
+    renderer->integrator = new SurfaceNormalIntegrator(
+        *(renderer->global_varialbes->rgb_color_space), renderer->sensor);
+    */
+
     renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
 }
 
@@ -204,21 +204,39 @@ __global__ void gpu_init_filter(Renderer *renderer) {
     renderer->filter = new BoxFilter(0.5);
 }
 
-__global__ void gpu_init_pixel_sensor(Renderer *renderer) {
+__global__ void gpu_init_pixel_sensor_cie_1931(Renderer *renderer, const double *cie_s0,
+                                               const double *cie_s1, const double *cie_s2,
+                                               const double *cie_s_lambda) {
+    // TODO: default value for PixelSensor, will remove later
+    double iso = 100;
+    double white_balance_val = 0.0;
+    double exposure_time = 1.0;
+    double imaging_ratio = exposure_time * iso / 100.0;
+
+    auto d_illum =
+        DenselySampledSpectrum::cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, cie_s0,
+                                      cie_s1, cie_s2, cie_s_lambda);
+
     auto cie_xyz = renderer->global_varialbes->get_cie_xyz();
     const auto color_space = renderer->global_varialbes->rgb_color_space;
-    auto illuminant_spectrum = color_space->illuminant;
 
-    renderer->sensor = PixelSensor::cie_1931(cie_xyz, color_space, illuminant_spectrum, 1);
+    renderer->sensor = PixelSensor::cie_1931(
+        cie_xyz, color_space, white_balance_val == 0 ? nullptr : &d_illum, imaging_ratio);
+}
+
+__global__ void gpu_init_rgb_film(Renderer *renderer, Point2i dimension) {
+    if (renderer->pixels == nullptr) {
+        printf("ERROR: renderer->pixels is nullptr\n\n");
+        asm("trap;");
+    }
+
+    renderer->film = new RGBFilm(renderer->pixels, &(renderer->sensor), dimension,
+                                 renderer->global_varialbes->rgb_color_space);
 }
 
 __global__ void gpu_init_camera(Renderer *renderer, const Point2i resolution,
                                 const CameraTransform camera_transform, const double fov) {
     renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov, 0.0);
-}
-
-__global__ void gpu_init_pixels(Renderer *renderer, Pixel *pixels) {
-    renderer->pixels = pixels;
 }
 
 __global__ void gpu_aggregate_preprocess(Renderer *renderer) {
@@ -255,7 +273,21 @@ __global__ void gpu_parallel_render(Renderer *renderer, int num_samples) {
     renderer->evaluate_pixel_sample(Point2i(x, y), num_samples);
 }
 
-void writer_to_file(const std::string &filename, const Pixel *pixels, const Point2i &resolution) {
+__global__ void write_frame_buffer_to_rgb(const Renderer *renderer, RGB *output_rgb) {
+    const Camera *camera = renderer->camera;
+
+    int width = camera->resolution.x;
+    int height = camera->resolution.y;
+
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= width * height) {
+        return;
+    }
+
+    renderer->film->write_to_rgb(output_rgb, idx);
+}
+
+void writer_to_file(const std::string &filename, const RGB *pixels_rgb, const Point2i &resolution) {
     int width = resolution.x;
     int height = resolution.y;
 
@@ -265,13 +297,11 @@ void writer_to_file(const std::string &filename, const Pixel *pixels, const Poin
     for (unsigned y = 0; y < height; y++) {
         for (unsigned x = 0; x < width; x++) {
             int index = y * width + x;
-            const auto &_pixel = pixels[index];
-            auto color =
-                RGB(_pixel.rgb_sum[0], _pixel.rgb_sum[1], _pixel.rgb_sum[2]) / _pixel.weight_sum;
+            auto rgb = pixels_rgb[index];
 
-            png_pixels[4 * index + 0] = srgb_encoding.from_linear(color.r);
-            png_pixels[4 * index + 1] = srgb_encoding.from_linear(color.g);
-            png_pixels[4 * index + 2] = srgb_encoding.from_linear(color.b);
+            png_pixels[4 * index + 0] = srgb_encoding.from_linear(rgb.r);
+            png_pixels[4 * index + 1] = srgb_encoding.from_linear(rgb.g);
+            png_pixels[4 * index + 2] = srgb_encoding.from_linear(rgb.b);
             png_pixels[4 * index + 3] = 255;
         }
     }
