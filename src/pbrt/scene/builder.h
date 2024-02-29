@@ -57,20 +57,20 @@ struct GPUconstants {
         double *rgb_to_spectrum_table_scale;
         double *rgb_to_spectrum_table_coefficients;
 
-        checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table_scale,
-                                          sizeof(double) * rgb_spectrum_table_cpu.z_nodes.size()));
+        int scale_size = sizeof(double) * RGBtoSpectrumData::RES;
+        int coeffs_size = sizeof(double) * 3 * 3 * RGBtoSpectrumData::RES * RGBtoSpectrumData::RES *
+                          RGBtoSpectrumData::RES;
+
+        checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table_scale, scale_size));
         checkCudaErrors(
-            cudaMallocManaged((void **)&rgb_to_spectrum_table_coefficients,
-                              sizeof(double) * rgb_spectrum_table_cpu.coefficients.size()));
+            cudaMallocManaged((void **)&rgb_to_spectrum_table_coefficients, coeffs_size));
 
-        checkCudaErrors(cudaMemcpy(
-            rgb_to_spectrum_table_scale, rgb_spectrum_table_cpu.z_nodes.data(),
-            sizeof(double) * rgb_spectrum_table_cpu.z_nodes.size(), cudaMemcpyHostToDevice));
-        checkCudaErrors(cudaMemcpy(
-            rgb_to_spectrum_table_coefficients, rgb_spectrum_table_cpu.coefficients.data(),
-            sizeof(double) * rgb_spectrum_table_cpu.coefficients.size(), cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(rgb_to_spectrum_table_scale, rgb_spectrum_table_cpu.z_nodes,
+                                   scale_size, cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(rgb_to_spectrum_table_coefficients,
+                                   rgb_spectrum_table_cpu.coefficients, coeffs_size,
+                                   cudaMemcpyHostToDevice));
 
-        // TODO: add rgb_to_spectrum_table_gpu to GPUconstants
         checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table_gpu,
                                           sizeof(RGBtoSpectrumData::RGBtoSpectrumTableGPU)));
 
@@ -102,7 +102,7 @@ struct GPUconstants {
     }
 
     ~GPUconstants() {
-        for (auto ptr : {
+        for (auto ptr : std::vector<void *>{
                  cie_lambdas_gpu,
                  cie_x_value_gpu,
                  cie_y_value_gpu,
@@ -112,10 +112,10 @@ struct GPUconstants {
                  cie_s0_gpu,
                  cie_s1_gpu,
                  cie_s2_gpu,
+                 rgb_to_spectrum_table_gpu,
              }) {
             checkCudaErrors(cudaFree(ptr));
         }
-        checkCudaErrors(cudaFree(rgb_to_spectrum_table_gpu));
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
@@ -241,6 +241,28 @@ class SceneBuilder {
 
         film_resolution = Point2i(_resolution_x, _resolution_y);
         filename = parameters.get_string("filename");
+
+        gpu_init_pixel_sensor_cie_1931<<<1, 1>>>(renderer, gpu_constants.cie_s0_gpu,
+                                                 gpu_constants.cie_s1_gpu, gpu_constants.cie_s2_gpu,
+                                                 gpu_constants.cie_s_lambda_gpu);
+        gpu_init_filter<<<1, 1>>>(renderer);
+
+        Pixel *gpu_pixels;
+        checkCudaErrors(cudaMallocManaged((void **)&gpu_pixels,
+                                          sizeof(Pixel) * film_resolution->x * film_resolution->y));
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+        gpu_dynamic_pointers.push_back(gpu_pixels);
+
+        int batch = 256;
+        int total_job = film_resolution->x * film_resolution->y / 256 + 1;
+        GPU::gpu_init_pixels<<<total_job, batch>>>(gpu_pixels, film_resolution.value());
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+
+        gpu_init_rgb_film<<<1, 1>>>(renderer, film_resolution.value(), gpu_pixels);
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
     }
 
     void option_lookat() {
@@ -357,29 +379,8 @@ class SceneBuilder {
             option_camera();
             option_sampler();
 
-            gpu_init_pixel_sensor_cie_1931<<<1, 1>>>(
-                renderer, gpu_constants.cie_s0_gpu, gpu_constants.cie_s1_gpu,
-                gpu_constants.cie_s2_gpu, gpu_constants.cie_s_lambda_gpu);
-            gpu_init_filter<<<1, 1>>>(renderer);
-
-            Pixel *gpu_pixels;
-            checkCudaErrors(cudaMallocManaged(
-                (void **)&gpu_pixels, sizeof(Pixel) * film_resolution->x * film_resolution->y));
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
-            gpu_dynamic_pointers.push_back(gpu_pixels);
-
-            int batch = 256;
-            int total_job = film_resolution->x * film_resolution->y / 256 + 1;
-            GPU::gpu_init_pixels<<<total_job, batch>>>(gpu_pixels, film_resolution.value());
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
-
-            gpu_init_rgb_film<<<1, 1>>>(renderer, film_resolution.value(), gpu_pixels);
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
-
             gpu_init_aggregate<<<1, 1>>>(renderer);
+
             gpu_init_integrator<<<1, 1>>>(renderer);
 
             checkCudaErrors(cudaGetLastError());

@@ -3,7 +3,6 @@
 #include <thread>
 #include <mutex>
 #include <stack>
-#include <array>
 #include <vector>
 
 #include "pbrt/spectra/rgb.h"
@@ -42,12 +41,16 @@ struct RGBtoSpectrumBuffer {
 };
 
 struct RGBtoSpectrumTableCPU {
-    std::array<double, RES> z_nodes;
-    std::vector<double> coefficients;
+    double *z_nodes;
+    double *coefficients;
 
-    RGBtoSpectrumTableCPU(std::array<double, RES> _z_nodes,
-                          const std::vector<double> &_coefficients)
-        : z_nodes(_z_nodes), coefficients(_coefficients) {}
+    RGBtoSpectrumTableCPU()
+        : z_nodes(new double[RES]), coefficients(new double[3 * 3 * RES * RES * RES]) {}
+
+    ~RGBtoSpectrumTableCPU() {
+        delete z_nodes;
+        delete coefficients;
+    }
 };
 
 struct RGBtoSpectrumTableGPU {
@@ -508,8 +511,7 @@ void gauss_newton(const RGBtoSpectrumBuffer *data, const double rgb[3], double c
     }
 }
 
-void compute(std::vector<double> &out, int j, const RGBtoSpectrumBuffer &data,
-             const std::array<double, RES> &scale, int l) {
+void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *scale, int l) {
     const double y = j / double(RES - 1);
     fflush(stdout);
     for (int i = 0; i < RES; ++i) {
@@ -559,9 +561,8 @@ void compute(std::vector<double> &out, int j, const RGBtoSpectrumBuffer &data,
     }
 }
 
-void single_thread_worker(std::vector<double> &out, std::stack<int> &job_list, std::mutex &mtx,
-                          const RGBtoSpectrumBuffer &data, const std::array<double, RES> &scale,
-                          int l) {
+void single_thread_worker(double *out, std::stack<int> &job_list, std::mutex &mtx,
+                          const RGBtoSpectrumBuffer &data, const double *scale, int l) {
     for (;;) {
         mtx.lock();
         if (job_list.empty()) {
@@ -586,35 +587,33 @@ RGBtoSpectrumTableCPU compute_spectrum_table_data(const std::string &str_gamut) 
     RGBtoSpectrumBuffer data;
     init_tables(&data, gamut);
 
-    std::array<double, RES> scale;
+    RGBtoSpectrumTableCPU result;
+
     for (int k = 0; k < RES; ++k) {
-        scale[k] = smoothstep(smoothstep(k / double(RES - 1)));
+        result.z_nodes[k] = smoothstep(smoothstep(k / double(RES - 1)));
     }
 
-    constexpr int size_buffer = 3 * 3 * RES * RES * RES;
-    std::vector<double> out(size_buffer);
+    // TODO: build a thread pool in the future
+    const int num_of_workers = std::max(int(std::thread::hardware_concurrency()), RES);
+    for (int l = 0; l < 3; ++l) {
+        std::stack<int> job_list;
+        for (int y = 0; y < RES; y++) {
+            job_list.push(y);
+        }
 
-    {
-        const int num_of_workers = std::max(int(std::thread::hardware_concurrency()), RES);
-        for (int l = 0; l < 3; ++l) {
-            std::stack<int> job_list;
-            for (int y = 0; y < RES; y++) {
-                job_list.push(y);
-            }
+        std::mutex mtx;
+        std::vector<std::thread> workers(num_of_workers);
+        for (int idx = 0; idx < num_of_workers; ++idx) {
+            workers[idx] =
+                std::thread(single_thread_worker, result.coefficients, std::ref(job_list),
+                            std::ref(mtx), std::ref(data), result.z_nodes, l);
+        }
 
-            std::mutex mtx;
-            std::vector<std::thread> workers(num_of_workers);
-            for (int idx = 0; idx < num_of_workers; ++idx) {
-                workers[idx] = std::thread(single_thread_worker, std::ref(out), std::ref(job_list),
-                                           std::ref(mtx), std::ref(data), scale, l);
-            }
-
-            for (auto &t : workers) {
-                t.join();
-            }
+        for (auto &t : workers) {
+            t.join();
         }
     }
 
-    return {scale, out};
+    return result;
 }
 }; // namespace RGBtoSpectrumData
