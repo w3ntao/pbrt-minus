@@ -183,6 +183,7 @@ class SceneBuilder {
         for (auto ptr : gpu_dynamic_pointers) {
             checkCudaErrors(cudaFree(ptr));
         }
+        checkCudaErrors(cudaGetLastError());
     }
 
     std::vector<int> group_tokens(const std::vector<Token> &tokens) {
@@ -245,7 +246,12 @@ class SceneBuilder {
         gpu_init_pixel_sensor_cie_1931<<<1, 1>>>(renderer, gpu_constants.cie_s0_gpu,
                                                  gpu_constants.cie_s1_gpu, gpu_constants.cie_s2_gpu,
                                                  gpu_constants.cie_s_lambda_gpu);
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+
         gpu_init_filter<<<1, 1>>>(renderer);
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
 
         Pixel *gpu_pixels;
         checkCudaErrors(cudaMallocManaged((void **)&gpu_pixels,
@@ -312,17 +318,16 @@ class SceneBuilder {
             auto indices = parameters.get_integer("indices");
             auto points = parameters.get_point3("P");
 
-            if (!render_from_object.is_identity()) {
-                for (auto &_p : points) {
-                    _p = render_from_object(_p);
-                }
-            }
-
             Point3f *gpu_points;
             checkCudaErrors(
                 cudaMallocManaged((void **)&gpu_points, sizeof(Point3f) * points.size()));
             checkCudaErrors(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
                                        cudaMemcpyHostToDevice));
+
+            int batch = 256;
+            int total_jobs = points.size() / batch + 1;
+            GPU::apply_transofrm<<<total_jobs, batch>>>(gpu_points, render_from_object,
+                                                        points.size());
 
             int *gpu_indicies;
             checkCudaErrors(
@@ -334,9 +339,6 @@ class SceneBuilder {
             checkCudaErrors(cudaMallocManaged((void **)&gpu_uv, sizeof(Point2f) * uv.size()));
             checkCudaErrors(
                 cudaMemcpy(gpu_uv, uv.data(), sizeof(Point2f) * uv.size(), cudaMemcpyHostToDevice));
-
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
 
             gpu_dynamic_pointers.push_back(gpu_indicies);
             gpu_dynamic_pointers.push_back(gpu_points);
@@ -467,13 +469,10 @@ class SceneBuilder {
         checkCudaErrors(cudaMallocManaged((void **)&output_rgb,
                                           sizeof(RGB) * film_resolution->x * film_resolution->y));
 
-        int batch = 256;
-        int total_jobs = film_resolution->x * film_resolution->y / batch + 1;
-        write_frame_buffer_to_rgb<<<total_jobs, batch>>>(renderer, output_rgb);
+        copy_gpu_pixels_to_rgb<<<blocks, threads>>>(renderer, output_rgb);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        // TODO: directly access RGB contents from Renderer?
         GPU::writer_to_file(filename, output_rgb, film_resolution.value());
 
         checkCudaErrors(cudaFree(output_rgb));

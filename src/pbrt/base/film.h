@@ -8,5 +8,5 @@ class Film {
     PBRT_GPU virtual void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
                                      const SampledWavelengths &lambda, double weight) = 0;
 
-    PBRT_GPU virtual void write_to_rgb(RGB *output_rgb, int idx) const = 0;
+    PBRT_GPU virtual RGB get_pixel_rgb(const Point2i &p) const = 0;
 };

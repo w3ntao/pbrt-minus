@@ -31,13 +31,14 @@ class RGBFilm : public Film {
         pixels[pixel_index].weight_sum += weight;
     }
 
-    PBRT_GPU void write_to_rgb(RGB *output_rgb, int idx) const override {
+    PBRT_GPU RGB get_pixel_rgb(const Point2i &p) const override {
+        int idx = p.x + p.y * resolution.x;
         auto pixel_rgb = pixels[idx].rgb_sum;
         if (pixels[idx].weight_sum != 0) {
             pixel_rgb /= pixels[idx].weight_sum;
         }
 
-        output_rgb[idx] = output_rgb_from_sensor_rgb * pixel_rgb;
+        return output_rgb_from_sensor_rgb * pixel_rgb;
     }
 
   private:

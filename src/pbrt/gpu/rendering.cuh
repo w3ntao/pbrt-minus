@@ -130,6 +130,16 @@ class Renderer {
     }
 };
 
+template <typename T>
+__global__ void apply_transofrm(T *data, const Transform transform, int length) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    data[idx] = transform(data[idx]);
+}
+
 __global__ void gpu_init_rgb_to_spectrum_table_coefficients(
     RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
     const double *rgb_to_spectrum_table_coefficients) {
@@ -273,18 +283,20 @@ __global__ void gpu_parallel_render(Renderer *renderer, int num_samples) {
     renderer->evaluate_pixel_sample(Point2i(x, y), num_samples);
 }
 
-__global__ void write_frame_buffer_to_rgb(const Renderer *renderer, RGB *output_rgb) {
+__global__ void copy_gpu_pixels_to_rgb(const Renderer *renderer, RGB *output_rgb) {
     const Camera *camera = renderer->camera;
 
     int width = camera->resolution.x;
     int height = camera->resolution.y;
 
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= width * height) {
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y = threadIdx.y + blockIdx.y * blockDim.y;
+    if (x >= width || y >= height) {
         return;
     }
 
-    renderer->film->write_to_rgb(output_rgb, idx);
+    int flat_idx = x + y * width;
+    output_rgb[flat_idx] = renderer->film->get_pixel_rgb(Point2i(x, y));
 }
 
 void writer_to_file(const std::string &filename, const RGB *pixels_rgb, const Point2i &resolution) {
