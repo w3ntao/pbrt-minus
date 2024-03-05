@@ -25,10 +25,11 @@ class Point3 {
             return z;
         }
         default: {
+            printf("Point3: invalid index `%d`\n\n", index);
 #if defined(__CUDA_ARCH__)
             asm("trap;");
 #else
-            throw std::runtime_error("Point: invalid index `" + std::to_string(index) + "`");
+            throw std::runtime_error("Point: invalid index\n");
 #endif
         }
         }
@@ -92,6 +93,14 @@ class Point3 {
 
     PBRT_CPU_GPU Point3 operator/(T divisor) const {
         return Point3(x / divisor, y / divisor, z / divisor);
+    }
+
+    PBRT_CPU_GPU Point3 min(const Point3 &p) const {
+        return Point3(std::min(x, p.x), std::min(y, p.y), std::min(z, p.z));
+    }
+
+    PBRT_CPU_GPU Point3 max(const Point3 &p) const {
+        return Point3(std::max(x, p.x), std::max(y, p.y), std::max(z, p.z));
     }
 
     PBRT_CPU_GPU Vector3<T> to_vector3() const {

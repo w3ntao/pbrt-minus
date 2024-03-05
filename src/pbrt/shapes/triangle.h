@@ -13,7 +13,7 @@ struct TriangleIntersection {
         : b0(_b0), b1(_b1), b2(_b2), t(_t) {}
 };
 
-class Triangle final : public Shape {
+class Triangle : public Shape {
   public:
     const int triangle_idx;
     const TriangleMesh *mesh;
@@ -24,6 +24,11 @@ class Triangle final : public Shape {
         if (triangle_idx == 0) {
             delete mesh;
         }
+    }
+
+    PBRT_GPU Bounds3f bounds() const override {
+        auto points = get_points();
+        return Bounds3f(points.data(), 3);
     }
 
     PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const override {

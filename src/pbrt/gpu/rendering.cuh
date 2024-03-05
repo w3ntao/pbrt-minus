@@ -14,13 +14,19 @@
 #include "pbrt/spectra/rgb_color_space.h"
 #include "pbrt/spectra/sampled_wavelengths.h"
 
+#include "pbrt/accelerator/bvh.h"
+
 #include "pbrt/filters/box.h"
+
 #include "pbrt/films/pixel_sensor.h"
 #include "pbrt/films/rgb_film.h"
+
 #include "pbrt/cameras/perspective.h"
+
 #include "pbrt/shapes/triangle.h"
 #include "pbrt/integrators/surface_normal.h"
 #include "pbrt/integrators/ambient_occlusion.h"
+
 #include "pbrt/samplers/independent.h"
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples

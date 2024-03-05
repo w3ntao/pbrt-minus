@@ -11,10 +11,10 @@ class Bounds2 {
     // Bounds2 Public Methods
     PBRT_CPU_GPU
     Bounds2() {
-        T min_num = std::numeric_limits<T>::lowest();
-        T max_num = std::numeric_limits<T>::max();
-        p_min = Point2<T>(max_num, max_num);
-        p_max = Point2<T>(min_num, min_num);
+        T minimum = std::numeric_limits<T>::lowest();
+        T maximun = std::numeric_limits<T>::max();
+        p_min = Point2<T>(maximun, maximun);
+        p_max = Point2<T>(minimum, minimum);
     }
 
     PBRT_CPU_GPU
@@ -23,13 +23,10 @@ class Bounds2 {
     PBRT_CPU_GPU
     Bounds2(Point2<T> p1, Point2<T> p2) : p_min(p1.min(p2)), p_max(p1.max(p2)) {}
 
-    template <typename U>
-    PBRT_CPU_GPU explicit Bounds2(const Bounds2<U> &b) {
-        if (b.IsEmpty())
-            // Be careful about overflowing float->int conversions and the
-            // like.
+    PBRT_CPU_GPU explicit Bounds2(const Bounds2<T> &b) {
+        if (b.is_empty()) {
             *this = Bounds2<T>();
-        else {
+        } else {
             p_min = Point2<T>(b.p_min);
             p_max = Point2<T>(b.p_max);
         }
@@ -47,7 +44,7 @@ class Bounds2 {
     }
 
     PBRT_CPU_GPU
-    bool IsEmpty() const {
+    bool is_empty() const {
         return p_min.x >= p_max.x || p_min.y >= p_max.y;
     }
 
@@ -99,7 +96,6 @@ class Bounds2 {
         return o;
     }
 
-    // Bounds2 Public Members
     Point2<T> p_min, p_max;
 };
 

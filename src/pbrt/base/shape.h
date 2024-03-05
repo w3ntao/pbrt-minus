@@ -4,7 +4,7 @@
 
 #include "pbrt/base/ray.h"
 #include "pbrt/base/interaction.h"
-#include "pbrt/util/math.h"
+#include "pbrt/euclidean_space/bounds3.h"
 
 // ShapeIntersection Definition
 struct ShapeIntersection {
@@ -18,6 +18,8 @@ struct ShapeIntersection {
 class Shape {
   public:
     PBRT_GPU virtual ~Shape() {}
+
+    PBRT_GPU virtual Bounds3f bounds() const = 0;
 
     PBRT_GPU virtual bool fast_intersect(const Ray &ray, double t_max) const = 0;
 

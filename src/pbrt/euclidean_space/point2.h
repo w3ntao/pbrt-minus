@@ -53,6 +53,10 @@ class Point2 {
         return x == p.x && y == p.y;
     }
 
+    PBRT_CPU_GPU bool operator!=(const Point2 &p) const {
+        return !((*this) == p);
+    }
+
     PBRT_CPU_GPU Point2 operator+(const Point2 &p) const {
         return Point2(x + p.x, y + p.y);
     }

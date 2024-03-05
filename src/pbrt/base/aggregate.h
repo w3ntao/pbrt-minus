@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/shapes/triangle.h"
+#include "pbrt/accelerator/bvh.h"
 
 class Aggregate {
   private:
@@ -17,8 +18,10 @@ class Aggregate {
         }
     };
 
+    BVH *bvh = nullptr;
+
   public:
-    const Shape **shapes = nullptr; // a list of Shape ptr
+    Shape const *const *shapes = nullptr; // a list of Shape ptr
     int shape_num;
 
     NodeOfShape *head_of_shapes = nullptr;
@@ -33,9 +36,10 @@ class Aggregate {
         for (int i = 0; i < shape_num; ++i) {
             delete shapes[i];
         }
-        delete[] shapes;
+        delete shapes;
 
         delete head_of_shapes;
+        delete bvh;
     }
 
     PBRT_GPU void add_triangles(const TriangleMesh *mesh) {
@@ -61,10 +65,12 @@ class Aggregate {
 
         shapes = temp_shapes;
 
-        printf("total primitives: %d\n", shape_num);
+        bvh = new BVH(shapes, shape_num);
     }
 
     PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const {
+        return bvh->fast_intersect(ray, t_max);
+
         for (int idx = 0; idx < shape_num; idx++) {
             if (shapes[idx]->fast_intersect(ray, t_max)) {
                 return true;
@@ -75,6 +81,8 @@ class Aggregate {
     }
 
     PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray) const {
+        return bvh->intersect(ray, Infinity);
+
         double best_t = Infinity;
         std::optional<ShapeIntersection> best_intersection = {};
         for (int idx = 0; idx < shape_num; idx++) {

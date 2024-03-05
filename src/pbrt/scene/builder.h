@@ -442,16 +442,24 @@ class SceneBuilder {
         int thread_width = 8;
         int thread_height = 8;
 
-        std::cout << "\n";
-        std::cout << "rendering a " << film_resolution->x << "x" << film_resolution->y
-                  << " image (samples per pixel: " << samples_per_pixel.value() << ") ";
-        std::cout << "in " << thread_width << "x" << thread_height << " blocks.\n";
+        auto start_bvh = std::chrono::system_clock::now();
 
         gpu_aggregate_preprocess<<<1, 1>>>(renderer);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        auto start = std::chrono::system_clock::now();
+        auto start_rendering = std::chrono::system_clock::now();
+
+        const std::chrono::duration<double> duration_bvh{std::chrono::system_clock::now() -
+                                                         start_rendering};
+        std::cout << std::fixed << std::setprecision(1) << "BVH constructing took "
+                  << duration_bvh.count() << " seconds.\n"
+                  << std::flush;
+
+        std::cout << "\n";
+        std::cout << "rendering a " << film_resolution->x << "x" << film_resolution->y
+                  << " image (samples per pixel: " << samples_per_pixel.value() << ") ";
+        std::cout << "in " << thread_width << "x" << thread_height << " blocks.\n" << std::flush;
 
         dim3 blocks(film_resolution->x / thread_width + 1, film_resolution->y / thread_height + 1,
                     1);
@@ -460,10 +468,12 @@ class SceneBuilder {
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        const std::chrono::duration<double> duration{std::chrono::system_clock::now() - start};
+        const std::chrono::duration<double> duration_rendering{std::chrono::system_clock::now() -
+                                                               start_rendering};
 
-        std::cout << std::fixed << std::setprecision(1) << "took " << duration.count()
-                  << " seconds.\n";
+        std::cout << std::fixed << std::setprecision(1) << "rendering took "
+                  << duration_rendering.count() << " seconds.\n"
+                  << std::flush;
 
         RGB *output_rgb;
         checkCudaErrors(cudaMallocManaged((void **)&output_rgb,
