@@ -88,7 +88,7 @@ class Lexer {
     std::vector<std::string> read_list() {
         read_char(); // consume '['
         std::vector<std::string> values;
-        for (;;) {
+        while (true) {
             auto token = next_token();
 
             if (token.type == RightBracket) {
@@ -99,6 +99,8 @@ class Lexer {
                 values.push_back(token.value[0]);
                 continue;
             }
+
+            printf("unknown token type: %d\n", token.type);
 
             throw std::runtime_error("Lexer::read_list() error");
         }
@@ -201,7 +203,7 @@ class Lexer {
                 return parse_identifier(read_identifier());
             }
 
-            if (current_char == '-' || is_digit(current_char.value())) {
+            if (current_char == '-' || current_char == '.' || is_digit(current_char.value())) {
                 return Token(Number, read_number());
             }
 

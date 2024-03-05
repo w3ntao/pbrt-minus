@@ -52,8 +52,18 @@ class ParameterDict {
                 continue;
             }
 
-            std::cout << "unkonwn variable type: `" << variable_type << "`\n";
-            throw std::runtime_error("unkonwn variable type");
+            if (variable_type == "normal") {
+                auto numbers = tokens[idx + 1].to_floats();
+                auto n = std::vector<Normal3f>(numbers.size() / 3);
+                for (int k = 0; k < n.size(); k++) {
+                    n[k] = Normal3f(numbers[k * 3], numbers[k * 3 + 1], numbers[k * 3 + 2]);
+                }
+                normals[variable_name] = n;
+                continue;
+            }
+
+            std::cerr << "\nParameterDict(): unknown variable type: `" << variable_type << "`\n\n";
+            throw std::runtime_error("unknown variable type");
         }
     }
 
@@ -118,6 +128,7 @@ class ParameterDict {
   private:
     std::map<std::string, std::vector<Point2f>> point2s;
     std::map<std::string, std::vector<Point3f>> point3s;
+    std::map<std::string, std::vector<Normal3f>> normals;
     std::map<std::string, std::vector<int>> integers;
     std::map<std::string, std::vector<double>> floats;
     std::map<std::string, std::string> strings;

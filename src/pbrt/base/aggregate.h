@@ -6,16 +6,10 @@
 class Aggregate {
   private:
     struct NodeOfShape {
-        const Shape *shape;
-        NodeOfShape *next;
+        const Shape *shape = nullptr;
+        NodeOfShape *next = nullptr;
 
         PBRT_GPU explicit NodeOfShape(const Shape *_shape) : shape(_shape), next(nullptr) {}
-
-        PBRT_GPU ~NodeOfShape() {
-            if (next != nullptr) {
-                delete next;
-            }
-        }
     };
 
     BVH *bvh = nullptr;
@@ -36,9 +30,17 @@ class Aggregate {
         for (int i = 0; i < shape_num; ++i) {
             delete shapes[i];
         }
-        delete shapes;
+        delete[] shapes;
 
-        delete head_of_shapes;
+        auto node = head_of_shapes;
+        while (node) {
+            // you can't recursively delete NodeOfShape in its destructor
+            // it will trigger stack overflow (too many recursion)
+            auto next_to_delete = node->next;
+            delete node;
+            node = next_to_delete;
+        }
+
         delete bvh;
     }
 
@@ -70,31 +72,9 @@ class Aggregate {
 
     PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const {
         return bvh->fast_intersect(ray, t_max);
-
-        for (int idx = 0; idx < shape_num; idx++) {
-            if (shapes[idx]->fast_intersect(ray, t_max)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray) const {
         return bvh->intersect(ray, Infinity);
-
-        double best_t = Infinity;
-        std::optional<ShapeIntersection> best_intersection = {};
-        for (int idx = 0; idx < shape_num; idx++) {
-            const auto shape_intersection = shapes[idx]->intersect(ray, best_t);
-            if (!shape_intersection) {
-                continue;
-            }
-
-            best_t = shape_intersection->t_hit;
-            best_intersection = shape_intersection;
-        }
-
-        return best_intersection;
     }
 };

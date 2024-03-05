@@ -163,7 +163,7 @@ class BVH {
         auto root =
             BVHBuildNode::build_recursive(primitives, bvh_primitives, n_primitives,
                                           ordered_primitives, n_ordered_primitives, node_count);
-        delete bvh_primitives;
+        delete[] bvh_primitives;
 
         linear_bvh_nodes = new LinearBVHNode[node_count];
 
@@ -175,8 +175,8 @@ class BVH {
     }
 
     PBRT_GPU ~BVH() {
-        delete linear_bvh_nodes;
-        delete ordered_primitives;
+        delete[] linear_bvh_nodes;
+        delete[] ordered_primitives;
     }
 
     PBRT_GPU Bounds3f bounds() const {

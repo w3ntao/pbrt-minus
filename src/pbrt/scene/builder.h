@@ -14,6 +14,17 @@
 
 #include "pbrt/gpu/rendering.cuh"
 
+namespace {
+std::string get_dirname(const std::string &full_path) {
+    const size_t last_slash_idx = full_path.rfind('/');
+    if (std::string::npos != last_slash_idx) {
+        return full_path.substr(0, last_slash_idx);
+    }
+
+    throw std::runtime_error("get_dirname() fails");
+}
+} // namespace
+
 class GraphicsState {
   public:
     GraphicsState() : current_transform(Transform::identity()), reverse_orientation(false) {}
@@ -137,6 +148,7 @@ struct GPUconstants {
 };
 
 class SceneBuilder {
+    std::string root;
     std::optional<int> samples_per_pixel;
     std::optional<std::string> integrator_name;
 
@@ -186,7 +198,7 @@ class SceneBuilder {
         checkCudaErrors(cudaGetLastError());
     }
 
-    std::vector<int> group_tokens(const std::vector<Token> &tokens) {
+    static std::vector<int> group_tokens(const std::vector<Token> &tokens) {
         std::vector<int> keyword_range;
         for (int idx = 0; idx < tokens.size(); ++idx) {
             const auto &token = tokens[idx];
@@ -370,11 +382,13 @@ class SceneBuilder {
             pushed_graphics_state.push(graphics_state);
             return;
         }
+
         case AttributeEnd: {
             graphics_state = pushed_graphics_state.top();
             pushed_graphics_state.pop();
             return;
         }
+
         case WorldBegin: {
             option_lookat();
             option_film();
@@ -393,6 +407,7 @@ class SceneBuilder {
 
             return;
         }
+
         case Keyword: {
             const auto keyword = first_token.value[0];
 
@@ -403,6 +418,13 @@ class SceneBuilder {
 
             if (keyword == "Film") {
                 film_tokens = tokens;
+                return;
+            }
+
+            if (keyword == "Include") {
+                auto filename = tokens[1].value[0];
+                auto fullpath = root.size() > 0 ? root + "/" + filename : filename;
+                parse_file(fullpath);
                 return;
             }
 
@@ -438,10 +460,19 @@ class SceneBuilder {
         }
     }
 
-    void render() const {
-        int thread_width = 8;
-        int thread_height = 8;
+    void parse_file(const std::string &filename) {
+        const auto all_tokens = parse_pbrt_into_token(filename);
+        const auto range_of_tokens = SceneBuilder::group_tokens(all_tokens);
 
+        for (int range_idx = 0; range_idx < range_of_tokens.size() - 1; ++range_idx) {
+            auto current_tokens = std::vector(all_tokens.begin() + range_of_tokens[range_idx],
+                                              all_tokens.begin() + range_of_tokens[range_idx + 1]);
+
+            parse_tokens(current_tokens);
+        }
+    }
+
+    void render() const {
         auto start_bvh = std::chrono::system_clock::now();
 
         gpu_aggregate_preprocess<<<1, 1>>>(renderer);
@@ -450,11 +481,13 @@ class SceneBuilder {
 
         auto start_rendering = std::chrono::system_clock::now();
 
-        const std::chrono::duration<double> duration_bvh{std::chrono::system_clock::now() -
-                                                         start_rendering};
+        const std::chrono::duration<double> duration_bvh{start_rendering - start_bvh};
         std::cout << std::fixed << std::setprecision(1) << "BVH constructing took "
                   << duration_bvh.count() << " seconds.\n"
                   << std::flush;
+
+        int thread_width = 8;
+        int thread_height = 8;
 
         std::cout << "\n";
         std::cout << "rendering a " << film_resolution->x << "x" << film_resolution->y
@@ -499,17 +532,13 @@ class SceneBuilder {
             exit(1);
         }
 
-        const auto all_tokens = parse_pbrt_into_token(command_line_option.input_file);
-
         auto builder = SceneBuilder(command_line_option);
-        const auto range_of_tokens = builder.group_tokens(all_tokens);
 
-        for (int range_idx = 0; range_idx < range_of_tokens.size() - 1; ++range_idx) {
-            auto current_tokens = std::vector(all_tokens.begin() + range_of_tokens[range_idx],
-                                              all_tokens.begin() + range_of_tokens[range_idx + 1]);
+        auto input_file = command_line_option.input_file;
 
-            builder.parse_tokens(current_tokens);
-        }
+        builder.root = get_dirname(input_file);
+
+        builder.parse_file(input_file);
 
         builder.render();
     }
