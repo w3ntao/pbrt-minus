@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <string>
-#include <assert.h>
 
 #include <curand_kernel.h>
 
@@ -29,11 +28,8 @@
 
 #include "pbrt/samplers/independent.h"
 
-// limited version of checkCudaErrors from helper_cuda.h in CUDA examples
-#define checkCudaErrors(val) check_cuda((val), #val, __FILE__, __LINE__)
-
-inline void check_cuda(cudaError_t result, char const *const func, const char *const file,
-                       int const line) {
+inline void _check_cuda(cudaError_t result, char const *const func, const char *const file,
+                        int const line) {
     if (!result) {
         return;
     }
@@ -44,6 +40,8 @@ inline void check_cuda(cudaError_t result, char const *const func, const char *c
     cudaDeviceReset();
     exit(-1);
 }
+// limited version of checkCudaErrors from helper_cuda.h in CUDA examples
+#define checkCudaErrors(val) _check_cuda((val), #val, __FILE__, __LINE__)
 
 namespace GPU {
 class GlobalVariable {
@@ -205,12 +203,10 @@ __global__ void gpu_init_integrator(Renderer *renderer) {
 
     auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
 
-    /*
     renderer->integrator = new SurfaceNormalIntegrator(
-        *(renderer->global_varialbes->rgb_color_space), renderer->sensor);
-    */
+        *(renderer->global_variables->rgb_color_space), renderer->sensor);
 
-    renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
+    // renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
 }
 
 __global__ void gpu_init_filter(Renderer *renderer) {
@@ -261,10 +257,10 @@ __global__ void gpu_aggregate_preprocess(Renderer *renderer) {
 }
 
 __global__ void gpu_add_triangle_mesh(Renderer *renderer, bool reverse_orientation,
-                                      const Point3f *points, int num_points, const int *indicies,
-                                      int num_indicies, const Point2f *uv, int num_uv) {
+                                      const Point3f *points, int num_points, const int *indices,
+                                      int num_indices, const Point2f *uv, int num_uv) {
     const TriangleMesh *mesh =
-        new TriangleMesh(reverse_orientation, indicies, num_indicies, points, num_points);
+        new TriangleMesh(reverse_orientation, indices, num_indices, points, num_points);
     renderer->aggregate->add_triangles(mesh);
 }
 

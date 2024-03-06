@@ -14,7 +14,7 @@ class Normal3f {
 
     PBRT_CPU_GPU Normal3f(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
 
-    PBRT_CPU_GPU Normal3f(const Vector3f &v) : x(v.x), y(v.y), z(v.z) {}
+    PBRT_CPU_GPU explicit Normal3f(const Vector3f &v) : x(v.x), y(v.y), z(v.z) {}
 
     PBRT_CPU_GPU Vector3f to_vector3() const {
         return Vector3f(x, y, z);

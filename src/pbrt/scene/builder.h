@@ -11,6 +11,7 @@
 #include "pbrt/scene/command_line_option.h"
 #include "pbrt/scene/parser.h"
 #include "pbrt/scene/parameter_dict.h"
+#include "pbrt/shapes/loop_subdivide.h"
 
 #include "pbrt/gpu/rendering.cuh"
 
@@ -354,11 +355,10 @@ class SceneBuilder {
         auto render_from_object = get_render_from_object();
         bool reverse_orientation = graphics_state.reverse_orientation;
 
-        auto second_token = tokens[1];
-
         const auto parameters = ParameterDict(tokens);
 
-        if (second_token.value[0] == "trianglemesh") {
+        auto type_of_shape = tokens[1].value[0];
+        if (type_of_shape == "trianglemesh") {
             auto uv = parameters.get_point2("uv");
             auto indices = parameters.get_integer("indices");
             auto points = parameters.get_point3("P");
@@ -373,11 +373,12 @@ class SceneBuilder {
             int total_jobs = points.size() / batch + 1;
             GPU::apply_transofrm<<<total_jobs, batch>>>(gpu_points, render_from_object,
                                                         points.size());
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
 
-            int *gpu_indicies;
-            checkCudaErrors(
-                cudaMallocManaged((void **)&gpu_indicies, sizeof(int) * indices.size()));
-            checkCudaErrors(cudaMemcpy(gpu_indicies, indices.data(), sizeof(int) * indices.size(),
+            int *gpu_indices;
+            checkCudaErrors(cudaMallocManaged((void **)&gpu_indices, sizeof(int) * indices.size()));
+            checkCudaErrors(cudaMemcpy(gpu_indices, indices.data(), sizeof(int) * indices.size(),
                                        cudaMemcpyHostToDevice));
 
             Point2f *gpu_uv;
@@ -385,17 +386,71 @@ class SceneBuilder {
             checkCudaErrors(
                 cudaMemcpy(gpu_uv, uv.data(), sizeof(Point2f) * uv.size(), cudaMemcpyHostToDevice));
 
-            gpu_dynamic_pointers.push_back(gpu_indicies);
-            gpu_dynamic_pointers.push_back(gpu_points);
-            gpu_dynamic_pointers.push_back(gpu_uv);
-
             gpu_add_triangle_mesh<<<1, 1>>>(renderer, reverse_orientation, gpu_points,
-                                            points.size(), gpu_indicies, indices.size(), gpu_uv,
+                                            points.size(), gpu_indices, indices.size(), gpu_uv,
                                             uv.size());
 
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
+
+            gpu_dynamic_pointers.push_back(gpu_indices);
+            gpu_dynamic_pointers.push_back(gpu_points);
+            gpu_dynamic_pointers.push_back(gpu_uv);
+
+            return;
         }
+
+        if (type_of_shape == "loopsubdiv") {
+            auto levels = parameters.get_integer("levels")[0];
+            auto indices = parameters.get_integer("indices");
+            auto points = parameters.get_point3("P");
+
+            const auto loop_subdivide_data = LoopSubdivide::build(
+                render_from_object, reverse_orientation, levels, indices, points);
+
+            const auto cpu_points = &loop_subdivide_data.p_limit;
+            const auto cpu_indices = &loop_subdivide_data.vertex_indices;
+
+            Point3f *gpu_points;
+            checkCudaErrors(
+                cudaMallocManaged((void **)&gpu_points, sizeof(Point3f) * cpu_points->size()));
+            checkCudaErrors(cudaMemcpy(gpu_points, cpu_points->data(),
+                                       sizeof(Point3f) * cpu_points->size(),
+                                       cudaMemcpyHostToDevice));
+
+            int batch = 256;
+            int total_jobs = cpu_points->size() / batch + 1;
+            GPU::apply_transofrm<<<total_jobs, batch>>>(gpu_points, render_from_object,
+                                                        cpu_points->size());
+
+            int *gpu_indices;
+            checkCudaErrors(
+                cudaMallocManaged((void **)&gpu_indices, sizeof(int) * cpu_indices->size()));
+            checkCudaErrors(cudaMemcpy(gpu_indices, cpu_indices->data(),
+                                       sizeof(int) * cpu_indices->size(), cudaMemcpyHostToDevice));
+
+            // TODO: combine these 2 gpu_add_triangle_mesh with cpu_points and cpu_vertices
+
+            gpu_add_triangle_mesh<<<1, 1>>>(renderer, reverse_orientation, gpu_points,
+                                            cpu_points->size(), gpu_indices, cpu_indices->size(),
+                                            nullptr, 0);
+
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+
+            gpu_dynamic_pointers.push_back(gpu_points);
+            gpu_dynamic_pointers.push_back(gpu_indices);
+
+            return;
+        }
+
+        if (type_of_shape == "sphere") {
+            printf("\nignore Shape::sphere for the moment\n\n");
+            return;
+        }
+
+        std::cerr << "\n\nunknown shape: `" << type_of_shape << "`\n\n\n";
+        throw std::runtime_error("unknown shape");
     }
 
     void world_translate(const std::vector<Token> &tokens) {
@@ -429,9 +484,10 @@ class SceneBuilder {
             option_sampler();
 
             gpu_init_aggregate<<<1, 1>>>(renderer);
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
 
             gpu_init_integrator<<<1, 1>>>(renderer);
-
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
 

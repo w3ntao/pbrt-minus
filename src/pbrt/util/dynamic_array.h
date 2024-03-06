@@ -35,6 +35,7 @@ class DynamicArray {
         }
 
         auto new_data = new T[_capacity];
+
         memcpy(new_data, ptr_data, sizeof(T) * used_size);
         delete[] ptr_data;
 

@@ -68,6 +68,12 @@ class Point3 {
         return Point3(x + v.x, y + v.y, z + v.z);
     }
 
+    PBRT_CPU_GPU void operator+=(const Point3 &p) {
+        for (int idx = 0; idx < 3; idx++) {
+            (*this)[idx] += p[idx];
+        }
+    }
+
     PBRT_CPU_GPU Vector3<T> operator-(const Point3 &p) const {
         return Vector3<T>(x - p.x, y - p.y, z - p.z);
     }

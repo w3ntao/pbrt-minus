@@ -20,6 +20,7 @@ class Aggregate {
 
     PBRT_GPU void add_triangles(const TriangleMesh *mesh) {
         shapes.reserve(shapes.size() + mesh->triangle_num);
+        
         for (int i = 0; i < mesh->triangle_num; ++i) {
             auto triangle = new Triangle(i, mesh);
             shapes.push(triangle);
