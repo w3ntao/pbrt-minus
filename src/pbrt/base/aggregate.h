@@ -1,44 +1,18 @@
 #pragma once
 
+#include "pbrt/util/dynamic_array.h"
 #include "pbrt/shapes/triangle.h"
 #include "pbrt/accelerator/bvh.h"
 
 class Aggregate {
   private:
-    struct NodeOfShape {
-        const Shape *shape = nullptr;
-        NodeOfShape *next = nullptr;
-
-        PBRT_GPU explicit NodeOfShape(const Shape *_shape) : shape(_shape), next(nullptr) {}
-    };
-
     BVH *bvh = nullptr;
+    DynamicArray<const Shape *> shapes;
 
   public:
-    Shape const *const *shapes = nullptr; // a list of Shape ptr
-    int shape_num;
-
-    NodeOfShape *head_of_shapes = nullptr;
-    NodeOfShape *tail_of_shapes = nullptr;
-
-    PBRT_GPU Aggregate() : shape_num(0) {
-        head_of_shapes = new NodeOfShape(nullptr);
-        tail_of_shapes = head_of_shapes;
-    }
-
     PBRT_GPU ~Aggregate() {
-        for (int i = 0; i < shape_num; ++i) {
-            delete shapes[i];
-        }
-        delete[] shapes;
-
-        auto node = head_of_shapes;
-        while (node) {
-            // you can't recursively delete NodeOfShape in its destructor
-            // it will trigger stack overflow (too many recursion)
-            auto next_to_delete = node->next;
-            delete node;
-            node = next_to_delete;
+        for (int idx = 0; idx < shapes.size(); idx++) {
+            delete shapes[idx];
         }
 
         delete bvh;
@@ -47,27 +21,12 @@ class Aggregate {
     PBRT_GPU void add_triangles(const TriangleMesh *mesh) {
         for (int i = 0; i < mesh->triangle_num; ++i) {
             auto triangle = new Triangle(i, mesh);
-            auto new_tail = new NodeOfShape(triangle);
-
-            tail_of_shapes->next = new_tail;
-            tail_of_shapes = new_tail;
-
-            shape_num += 1;
+            shapes.push(triangle);
         }
     }
 
     PBRT_GPU void preprocess() {
-        auto temp_shapes = new Shape const *[shape_num];
-
-        auto node = head_of_shapes->next;
-        for (int i = 0; i < shape_num; i++) {
-            temp_shapes[i] = node->shape;
-            node = node->next;
-        }
-
-        shapes = temp_shapes;
-
-        bvh = new BVH(shapes, shape_num);
+        bvh = new BVH(shapes.data(), shapes.size());
     }
 
     PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const {

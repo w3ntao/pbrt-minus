@@ -71,6 +71,8 @@ struct BVHBuildNode {
                                          const BVHPrimitive bvh_primitives[], int n_bvh_primitives,
                                          const Shape **ordered_primitives,
                                          int &n_ordered_primitives, int &node_count) {
+        // TODO: rewrite this interface with DynamicArray
+
         node_count += 1;
         auto full_bounds = bvh_primitives[0].bounds;
         for (int i = 1; i < n_bvh_primitives; ++i) {
@@ -97,6 +99,7 @@ struct BVHBuildNode {
         auto mid_val =
             (centroid_bounds.p_min[split_axis] + centroid_bounds.p_max[split_axis]) / 2.0;
 
+        // TODO: rewrite left_primitives and right_primitives with DynamicArray
         auto left_primitives = new BVHPrimitive[n_bvh_primitives];
         auto right_primitives = new BVHPrimitive[n_bvh_primitives];
 
@@ -151,6 +154,7 @@ struct alignas(32) LinearBVHNode {
 class BVH {
   public:
     PBRT_GPU explicit BVH(Shape const *const *primitives, int n_primitives) {
+        // TODO: rewrite BVH interface
         auto bvh_primitives = new BVHPrimitive[n_primitives];
         for (int idx = 0; idx < n_primitives; ++idx) {
             bvh_primitives[idx] = BVHPrimitive(idx, primitives[idx]->bounds());
@@ -175,6 +179,8 @@ class BVH {
     }
 
     PBRT_GPU ~BVH() {
+        // TODO: rewrite these array with DynamicArray
+        
         delete[] linear_bvh_nodes;
         delete[] ordered_primitives;
     }
@@ -301,6 +307,7 @@ class BVH {
         return node_offset;
     }
 
+    // TODO: rewrite these array with DynamicArray
     LinearBVHNode *linear_bvh_nodes = nullptr;
     const Shape **ordered_primitives = nullptr;
 };

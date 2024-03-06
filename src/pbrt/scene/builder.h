@@ -422,8 +422,8 @@ class SceneBuilder {
             }
 
             if (keyword == "Include") {
-                auto filename = tokens[1].value[0];
-                auto fullpath = root.size() > 0 ? root + "/" + filename : filename;
+                auto subfile = tokens[1].value[0];
+                auto fullpath = !root.empty() ? root + "/" + subfile : subfile;
                 parse_file(fullpath);
                 return;
             }
@@ -438,6 +438,12 @@ class SceneBuilder {
                 return;
             }
 
+            if (keyword == "Scale" || keyword == "Rotate") {
+                printf("\n\nwentao implementing Scale/Rotate\n\n");
+                return;
+                // exit(0);
+            }
+
             if (keyword == "Shape") {
                 world_shape(tokens);
                 return;
@@ -448,13 +454,20 @@ class SceneBuilder {
                 return;
             }
 
-            std::cout << "parse_tokens::Keyword `" << keyword << "` not implemented\n";
+            if (keyword == "AreaLightSource" || keyword == "Integrator" ||
+                keyword == "LightSource" || keyword == "Material" ||
+                keyword == "MakeNamedMaterial" || keyword == "NamedMaterial" ||
+                keyword == "ReverseOrientation") {
+                std::cout << "parse_tokens::Keyword `" << keyword << "` ignored for the moment\n";
+                return;
+            }
 
-            return;
+            std::cerr << "\nERROR: parse_tokens::Keyword `" << keyword << "` not implemented\n\n";
+            throw std::runtime_error("parse_tokens(): unknown keyword");
         }
 
         default: {
-            printf("unkown token type: `%d`\n", first_token.type);
+            printf("unknown token type: `%d`\n", first_token.type);
             throw std::runtime_error("parse_tokens() fail");
         }
         }
