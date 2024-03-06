@@ -147,10 +147,10 @@ struct alignas(ALIGNED_SIZE) LinearBVHNode {
     // interior node: xyz
 
   private:
-    [[maybe_unused]] void check_alignment() {
-        static_assert(ALIGNED_SIZE / (sizeof(bounds) + sizeof(offset) + sizeof(primitive_num) +
-                                      sizeof(axis)) ==
-                      1);
+    [[maybe_unused]] void check_alignment() const {
+        constexpr int member_variables_size =
+            sizeof(bounds) + sizeof(offset) + sizeof(primitive_num) + sizeof(axis);
+        static_assert(ALIGNED_SIZE / member_variables_size == 1);
     }
 };
 #undef ALIGNED_SIZE

@@ -9,6 +9,8 @@ struct FilterSample {
 
 class Filter {
   public:
+    PBRT_GPU virtual ~Filter() {}
+
     PBRT_GPU
     virtual FilterSample sample(Point2f u) const = 0;
 };

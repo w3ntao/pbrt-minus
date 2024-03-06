@@ -95,6 +95,16 @@ class SquareMatrix {
 
     PBRT_CPU_GPU SquareMatrix inverse() const;
 
+    PBRT_CPU_GPU SquareMatrix transpose() const {
+        SquareMatrix matrix;
+        for (int y = 0; y < N; y++) {
+            for (int x = 0; x < N; x++) {
+                matrix[y][x] = this->val[x][y];
+            }
+        }
+        return matrix;
+    }
+
     friend std::ostream &operator<<(std::ostream &stream, const SquareMatrix &t) {
         stream << "matrix " << N << "x" << N << " [\n";
         for (int i = 0; i < N; i++) {

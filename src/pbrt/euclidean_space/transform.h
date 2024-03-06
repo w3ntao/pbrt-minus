@@ -15,6 +15,36 @@ class Transform {
     }
 
     PBRT_CPU_GPU
+    static Transform rotate(double angle, double x, double y, double z) {
+        auto sin_theta = std::sin(degree_to_radian(angle));
+        auto cos_theta = std::cos(degree_to_radian(angle));
+        auto axis = Vector3f(x, y, z).normalize();
+
+        auto m = SquareMatrix<4>::identity();
+        // Compute rotation of first basis vector
+        m[0][0] = axis.x * axis.x + (1.0 - axis.x * axis.x) * cos_theta;
+        m[0][1] = axis.x * axis.y * (1.0 - cos_theta) - axis.z * sin_theta;
+        m[0][2] = axis.x * axis.z * (1.0 - cos_theta) + axis.y * sin_theta;
+        m[0][3] = 0.0;
+
+        // Compute rotations of second and third basis vectors
+        m[1][0] = axis.x * axis.y * (1.0 - cos_theta) + axis.z * sin_theta;
+        m[1][1] = axis.y * axis.y + (1.0 - axis.y * axis.y) * cos_theta;
+        m[1][2] = axis.y * axis.z * (1.0 - cos_theta) - axis.x * sin_theta;
+        m[1][3] = 0.0;
+
+        m[2][0] = axis.x * axis.z * (1.0 - cos_theta) - axis.y * sin_theta;
+        m[2][1] = axis.y * axis.z * (1.0 - cos_theta) + axis.x * sin_theta;
+        m[2][2] = axis.z * axis.z + (1.0 - axis.z * axis.z) * cos_theta;
+        m[2][3] = 0.0;
+
+        Transform t;
+        t.m = m;
+        t.inv_m = m.transpose();
+        return t;
+    }
+
+    PBRT_CPU_GPU
     static Transform scale(double x, double y, double z) {
         double data_m[4][4] = {
             {x, 0, 0, 0},

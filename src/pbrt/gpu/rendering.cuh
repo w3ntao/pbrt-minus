@@ -103,7 +103,7 @@ class Renderer {
     const Filter *filter = nullptr;
     Film *film = nullptr;
 
-    const GlobalVariable *global_varialbes = nullptr;
+    const GlobalVariable *global_variables = nullptr;
 
     PixelSensor sensor;
 
@@ -113,7 +113,7 @@ class Renderer {
         delete camera;
         delete filter;
         delete film;
-        delete global_varialbes;
+        delete global_variables;
     }
 
     PBRT_GPU void evaluate_pixel_sample(const Point2i &p_pixel, const int num_samples) {
@@ -189,7 +189,7 @@ gpu_init_global_variables(Renderer *renderer, const double *cie_lambdas, const d
     *renderer = Renderer();
     // don't new anything in constructor Renderer()
 
-    renderer->global_varialbes =
+    renderer->global_variables =
         new GlobalVariable(cie_lambdas, cie_x_value, cie_y_value, cie_z_value, cie_illum_d6500,
                            length_d65, rgb_to_spectrum_table, RGBtoSpectrumData::SRGB);
 }
@@ -200,8 +200,8 @@ __global__ void gpu_init_aggregate(Renderer *renderer) {
 
 __global__ void gpu_init_integrator(Renderer *renderer) {
 
-    auto illuminant_spectrum = renderer->global_varialbes->rgb_color_space->illuminant;
-    auto cie_y = renderer->global_varialbes->get_cie_xyz()[1];
+    auto illuminant_spectrum = renderer->global_variables->rgb_color_space->illuminant;
+    auto cie_y = renderer->global_variables->get_cie_xyz()[1];
 
     auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
 
@@ -230,8 +230,8 @@ __global__ void gpu_init_pixel_sensor_cie_1931(Renderer *renderer, const double 
         DenselySampledSpectrum::cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, cie_s0,
                                       cie_s1, cie_s2, cie_s_lambda);
 
-    auto cie_xyz = renderer->global_varialbes->get_cie_xyz();
-    const auto color_space = renderer->global_varialbes->rgb_color_space;
+    auto cie_xyz = renderer->global_variables->get_cie_xyz();
+    const auto color_space = renderer->global_variables->rgb_color_space;
 
     renderer->sensor = PixelSensor::cie_1931(
         cie_xyz, color_space, white_balance_val == 0 ? nullptr : &d_illum, imaging_ratio);
@@ -248,7 +248,7 @@ __global__ void gpu_init_pixels(Pixel *pixels, Point2i dimension) {
 
 __global__ void gpu_init_rgb_film(Renderer *renderer, Point2i dimension, Pixel *pixels) {
     renderer->film = new RGBFilm(pixels, &(renderer->sensor), dimension,
-                                 renderer->global_varialbes->rgb_color_space);
+                                 renderer->global_variables->rgb_color_space);
 }
 
 __global__ void gpu_init_camera(Renderer *renderer, const Point2i resolution,

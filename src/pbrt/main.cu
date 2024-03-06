@@ -3,19 +3,33 @@
 using namespace std;
 
 int main(int argc, const char **argv) {
-    /*
-    cudaDeviceSetLimit(cudaLimitMallocHeapSize, sizeof(RGBtoSpectrumData::RGBtoSpectrumTableGPU));
-    cudaDeviceSetLimit(cudaLimitStackSize, 1024 * 8);
+    {
+        int runtime_version;
+        cudaRuntimeGetVersion(&runtime_version);
 
-    size_t heapSize;
-    cudaDeviceGetLimit(&heapSize, cudaLimitMallocHeapSize);
+        int major = runtime_version / 1000;
+        int minor = runtime_version % 1000 / 10;
+        int patch = runtime_version % 10;
 
-    size_t stackSize;
-    cudaDeviceGetLimit(&stackSize, cudaLimitStackSize);
+        /*
+        cudaDeviceSetLimit(cudaLimitMallocHeapSize,
+        sizeof(RGBtoSpectrumData::RGBtoSpectrumTableGPU)); cudaDeviceSetLimit(cudaLimitStackSize,
+        1024 * 8);
+        */
 
-    printf("max stack size: %d\n", stackSize);
-    printf("max heap size:  %d\n", heapSize);
-    */
+        size_t heap_size;
+        cudaDeviceGetLimit(&heap_size, cudaLimitMallocHeapSize);
+
+        size_t stack_size;
+        cudaDeviceGetLimit(&stack_size, cudaLimitStackSize);
+
+        printf("CUDA info:\n");
+        printf("    runtime version: %d.%d.%d\n", major, minor, patch);
+        printf("    max stack size:  %zu\n", stack_size);
+        printf("    max heap size:   %zu\n", heap_size);
+        printf("\n");
+        fflush(stdout);
+    }
 
     const auto command_line_option = CommandLineOption(argc, argv);
     SceneBuilder::render_pbrt(command_line_option);

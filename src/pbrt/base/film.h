@@ -5,6 +5,8 @@
 
 class Film {
   public:
+    PBRT_GPU virtual ~Film() {}
+
     PBRT_GPU virtual void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
                                      const SampledWavelengths &lambda, double weight) = 0;
 

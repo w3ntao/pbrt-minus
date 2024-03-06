@@ -35,6 +35,8 @@ class GraphicsState {
 
 struct GPUconstants {
     GPUconstants() {
+        auto start = std::chrono::system_clock::now();
+
         checkCudaErrors(cudaMallocManaged((void **)&cie_lambdas_gpu, sizeof(CIE_LAMBDA_CPU)));
         checkCudaErrors(cudaMallocManaged((void **)&cie_x_value_gpu, sizeof(CIE_X_VALUE_CPU)));
         checkCudaErrors(cudaMallocManaged((void **)&cie_y_value_gpu, sizeof(CIE_Y_VALUE_CPU)));
@@ -110,6 +112,11 @@ struct GPUconstants {
         for (auto ptr : {rgb_to_spectrum_table_scale, rgb_to_spectrum_table_coefficients}) {
             checkCudaErrors(cudaFree(ptr));
         }
+
+        const std::chrono::duration<double> duration{std::chrono::system_clock::now() - start};
+        std::cout << std::fixed << std::setprecision(1) << "spectra computing took "
+                  << duration.count() << " seconds.\n"
+                  << std::flush;
     }
 
     ~GPUconstants() {
@@ -313,6 +320,32 @@ class SceneBuilder {
         }
     }
 
+    void world_rotate(const std::vector<Token> &tokens) {
+        if (tokens[0] != Token(Keyword, "Rotate")) {
+            throw std::runtime_error("expect Keyword(Rotate)");
+        }
+
+        std::vector<double> data;
+        for (int idx = 1; idx < tokens.size(); idx++) {
+            data.push_back(tokens[idx].to_number());
+        }
+
+        graphics_state.current_transform *= Transform::rotate(data[0], data[1], data[2], data[3]);
+    }
+
+    void world_scale(const std::vector<Token> &tokens) {
+        if (tokens[0] != Token(Keyword, "Scale")) {
+            throw std::runtime_error("expect Keyword(Scale)");
+        }
+
+        std::vector<double> data;
+        for (int idx = 1; idx < tokens.size(); idx++) {
+            data.push_back(tokens[idx].to_number());
+        }
+
+        graphics_state.current_transform *= Transform::scale(data[0], data[1], data[2]);
+    }
+
     void world_shape(const std::vector<Token> &tokens) {
         if (tokens[0] != Token(Keyword, "Shape")) {
             throw std::runtime_error("expect Keyword(Shape)");
@@ -433,15 +466,19 @@ class SceneBuilder {
                 return;
             }
 
+            if (keyword == "Rotate") {
+                world_rotate(tokens);
+                return;
+            }
+
             if (keyword == "Sampler") {
                 sampler_tokens = tokens;
                 return;
             }
 
-            if (keyword == "Scale" || keyword == "Rotate") {
-                printf("\n\nwentao implementing Scale/Rotate\n\n");
+            if (keyword == "Scale") {
+                world_scale(tokens);
                 return;
-                // exit(0);
             }
 
             if (keyword == "Shape") {

@@ -5,7 +5,7 @@
 
 class BoxFilter : public Filter {
   public:
-    PBRT_GPU BoxFilter(double _radius) : radius(Point2f(_radius, _radius)) {}
+    PBRT_GPU explicit BoxFilter(double _radius) : radius(Point2f(_radius, _radius)) {}
 
     PBRT_GPU
     FilterSample sample(Point2f u) const override {
