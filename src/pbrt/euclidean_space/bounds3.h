@@ -49,6 +49,11 @@ class Bounds3 {
     }
 
     PBRT_CPU_GPU
+    bool operator==(const Bounds3 &bounds) const {
+        return p_min == bounds.p_min && p_max == bounds.p_max;
+    }
+
+    PBRT_CPU_GPU
     Point3<T> operator[](uint index) const {
         switch (index) {
         case (0): {

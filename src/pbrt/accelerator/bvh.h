@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/util/stack.h"
+#include "pbrt/util/dynamic_array.h"
 #include "pbrt/euclidean_space/point3.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/base/shape.h"
@@ -11,6 +12,11 @@ struct BVHPrimitive {
     PBRT_GPU BVHPrimitive(size_t _primitive_idx, const Bounds3f &_bounds)
         : primitive_idx(_primitive_idx), bounds(_bounds),
           centroid(0.5 * (_bounds.p_min + _bounds.p_max)) {}
+
+    PBRT_GPU bool operator==(const BVHPrimitive &bvh_primitive) {
+        return primitive_idx == bvh_primitive.primitive_idx && bounds == bvh_primitive.bounds &&
+               centroid == bvh_primitive.centroid;
+    }
 
     size_t primitive_idx;
     Bounds3f bounds;
@@ -50,15 +56,16 @@ struct BVHBuildNode {
     }
 
     PBRT_GPU
-    static BVHBuildNode *closure_build_leaf(const Shape *const *primitives,
-                                            const BVHPrimitive bvh_primitives[],
-                                            int n_bvh_primitives, const Shape **ordered_primitives,
-                                            int &n_ordered_primitives, const Bounds3f &bounds) {
-        auto first_primitive_offset = n_ordered_primitives;
+    static BVHBuildNode *closure_build_leaf(const DynamicArray<const Shape *> &primitives,
+                                            const DynamicArray<BVHPrimitive> &bvh_primitives,
+                                            DynamicArray<const Shape *> &ordered_primitives,
+                                            const Bounds3f &bounds) {
+        int n_bvh_primitives = bvh_primitives.size();
+
+        auto first_primitive_offset = ordered_primitives.size();
         for (int idx = 0; idx < n_bvh_primitives; ++idx) {
             auto primitive_idx = bvh_primitives[idx].primitive_idx;
-            ordered_primitives[n_ordered_primitives] = primitives[primitive_idx];
-            n_ordered_primitives += 1;
+            ordered_primitives.push(primitives[primitive_idx]);
         }
 
         auto node = new BVHBuildNode();
@@ -67,11 +74,11 @@ struct BVHBuildNode {
     }
 
     PBRT_GPU
-    static BVHBuildNode *build_recursive(const Shape *const *primitives,
-                                         const BVHPrimitive bvh_primitives[], int n_bvh_primitives,
-                                         const Shape **ordered_primitives,
-                                         int &n_ordered_primitives, int &node_count) {
-        // TODO: rewrite this interface with DynamicArray
+    static BVHBuildNode *build_recursive(const DynamicArray<const Shape *> &primitives,
+                                         const DynamicArray<BVHPrimitive> &bvh_primitives,
+                                         DynamicArray<const Shape *> &ordered_primitives,
+                                         int &node_count) {
+        int n_bvh_primitives = bvh_primitives.size();
 
         node_count += 1;
         auto full_bounds = bvh_primitives[0].bounds;
@@ -80,8 +87,7 @@ struct BVHBuildNode {
         }
 
         if (full_bounds.surface_area() == 0.0 || n_bvh_primitives == 1) {
-            return closure_build_leaf(primitives, bvh_primitives, n_bvh_primitives,
-                                      ordered_primitives, n_ordered_primitives, full_bounds);
+            return closure_build_leaf(primitives, bvh_primitives, ordered_primitives, full_bounds);
         }
 
         auto centroid_bounds = Bounds3f::empty();
@@ -92,44 +98,34 @@ struct BVHBuildNode {
         int split_axis = centroid_bounds.max_dimension();
         if (centroid_bounds.p_min[split_axis] == centroid_bounds.p_max[split_axis]) {
             // completely overlapped
-            return closure_build_leaf(primitives, bvh_primitives, n_bvh_primitives,
-                                      ordered_primitives, n_ordered_primitives, full_bounds);
+            return closure_build_leaf(primitives, bvh_primitives, ordered_primitives, full_bounds);
         }
 
         auto mid_val =
             (centroid_bounds.p_min[split_axis] + centroid_bounds.p_max[split_axis]) / 2.0;
 
-        // TODO: rewrite left_primitives and right_primitives with DynamicArray
-        auto left_primitives = new BVHPrimitive[n_bvh_primitives];
-        auto right_primitives = new BVHPrimitive[n_bvh_primitives];
+        DynamicArray<BVHPrimitive> left_primitives;
+        DynamicArray<BVHPrimitive> right_primitives;
 
-        int n_left = 0;
-        int n_right = 0;
         for (int i = 0; i < n_bvh_primitives; ++i) {
             if (bvh_primitives[i].centroid[split_axis] <= mid_val) {
-                left_primitives[n_left] = bvh_primitives[i];
-                n_left += 1;
+                left_primitives.push(bvh_primitives[i]);
             } else {
-                right_primitives[n_right] = bvh_primitives[i];
-                n_right += 1;
+                right_primitives.push(bvh_primitives[i]);
             }
         }
 
-        if (n_left == 0 || n_right == 0) {
-            return closure_build_leaf(primitives, bvh_primitives, n_bvh_primitives,
-                                      ordered_primitives, n_ordered_primitives, full_bounds);
+        if (left_primitives.size() == 0 || right_primitives.size() == 0) {
+            return closure_build_leaf(primitives, bvh_primitives, ordered_primitives, full_bounds);
         }
 
-        auto left_child =
-            BVHBuildNode::build_recursive(primitives, left_primitives, n_left, ordered_primitives,
-                                          n_ordered_primitives, node_count);
-        delete left_primitives;
+        auto left_child = BVHBuildNode::build_recursive(primitives, left_primitives,
+                                                        ordered_primitives, node_count);
+        left_primitives.~DynamicArray();
 
-        auto right_child =
-            BVHBuildNode::build_recursive(primitives, right_primitives, n_right, ordered_primitives,
-                                          n_ordered_primitives, node_count);
-
-        delete right_primitives;
+        auto right_child = BVHBuildNode::build_recursive(primitives, right_primitives,
+                                                         ordered_primitives, node_count);
+        right_primitives.~DynamicArray();
 
         auto node = new BVHBuildNode();
         node->init_interior(split_axis, left_child, right_child);
@@ -137,8 +133,8 @@ struct BVHBuildNode {
     }
 };
 
-// LinearBVHNode Definition
-struct alignas(32) LinearBVHNode {
+#define ALIGNED_SIZE 64
+struct alignas(ALIGNED_SIZE) LinearBVHNode {
     Bounds3f bounds;
     int offset = -1;
     /*
@@ -149,25 +145,28 @@ struct alignas(32) LinearBVHNode {
     // 0 -> interior node
     uint8_t axis = 255;
     // interior node: xyz
+
+  private:
+    [[maybe_unused]] void check_alignment() {
+        static_assert(ALIGNED_SIZE / (sizeof(bounds) + sizeof(offset) + sizeof(primitive_num) +
+                                      sizeof(axis)) ==
+                      1);
+    }
 };
+#undef ALIGNED_SIZE
 
 class BVH {
   public:
-    PBRT_GPU explicit BVH(Shape const *const *primitives, int n_primitives) {
-        // TODO: rewrite BVH interface
-        auto bvh_primitives = new BVHPrimitive[n_primitives];
-        for (int idx = 0; idx < n_primitives; ++idx) {
-            bvh_primitives[idx] = BVHPrimitive(idx, primitives[idx]->bounds());
+    PBRT_GPU explicit BVH(const DynamicArray<const Shape *> &primitives) {
+        auto bvh_primitives = DynamicArray<BVHPrimitive>(primitives.size());
+        for (int idx = 0; idx < primitives.size(); ++idx) {
+            bvh_primitives.push(BVHPrimitive(idx, primitives[idx]->bounds()));
         }
 
-        ordered_primitives = new Shape const *[n_primitives];
-        int n_ordered_primitives = 0;
         int node_count = 0;
-
-        auto root =
-            BVHBuildNode::build_recursive(primitives, bvh_primitives, n_primitives,
-                                          ordered_primitives, n_ordered_primitives, node_count);
-        delete[] bvh_primitives;
+        ordered_primitives.reserve(primitives.size());
+        auto root = BVHBuildNode::build_recursive(primitives, bvh_primitives, ordered_primitives,
+                                                  node_count);
 
         linear_bvh_nodes = new LinearBVHNode[node_count];
 
@@ -175,14 +174,11 @@ class BVH {
         flatten_bvh(root, array_offset);
         delete root;
 
-        printf("BVH built: (%d primitives, %d nodes)\n", n_primitives, node_count);
+        printf("BVH built: (%d primitives, %d nodes)\n", primitives.size(), node_count);
     }
 
     PBRT_GPU ~BVH() {
-        // TODO: rewrite these array with DynamicArray
-        
         delete[] linear_bvh_nodes;
-        delete[] ordered_primitives;
     }
 
     PBRT_GPU Bounds3f bounds() const {
@@ -307,7 +303,6 @@ class BVH {
         return node_offset;
     }
 
-    // TODO: rewrite these array with DynamicArray
     LinearBVHNode *linear_bvh_nodes = nullptr;
-    const Shape **ordered_primitives = nullptr;
+    DynamicArray<const Shape *> ordered_primitives;
 };

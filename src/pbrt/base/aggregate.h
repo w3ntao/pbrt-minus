@@ -26,7 +26,7 @@ class Aggregate {
     }
 
     PBRT_GPU void preprocess() {
-        bvh = new BVH(shapes.data(), shapes.size());
+        bvh = new BVH(shapes);
     }
 
     PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const {

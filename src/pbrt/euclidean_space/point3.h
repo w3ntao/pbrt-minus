@@ -56,6 +56,10 @@ class Point3 {
         }
     }
 
+    PBRT_CPU_GPU bool operator==(const Point3 &p) const {
+        return x == p.x && y == p.y && z == p.z;
+    }
+
     PBRT_CPU_GPU Point3 operator+(const Point3 &p) const {
         return Point3(x + p.x, y + p.y, z + p.z);
     }

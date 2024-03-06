@@ -4,26 +4,42 @@
 
 template <typename T>
 class DynamicArray {
-    int used_size = 0;
-    int capacity = 0;
+    size_t used_size = 0;
+    size_t capacity = 0;
 
     T *ptr_data = nullptr;
 
   public:
-    PBRT_GPU DynamicArray() : used_size(0), capacity(0) {}
+    PBRT_GPU DynamicArray() : used_size(0), capacity(0), ptr_data(nullptr) {}
 
-    PBRT_GPU DynamicArray(const DynamicArray &array)
-        : used_size(array.used_size), capacity(array.capacity) {
-        ptr_data = new T[capacity];
-        memcpy(ptr_data, array.ptr_data, used_size);
+    PBRT_GPU explicit DynamicArray(size_t _capacity) {
+        used_size = 0;
+        capacity = _capacity;
+        ptr_data = new T[_capacity];
     }
 
     PBRT_GPU ~DynamicArray() {
+        used_size = 0;
+        capacity = 0;
         delete[] ptr_data;
+        ptr_data = nullptr;
     }
 
-    PBRT_GPU T operator[](size_t idx) const {
+    PBRT_GPU const T operator[](size_t idx) const {
         return ptr_data[idx];
+    }
+
+    PBRT_GPU void reserve(size_t _capacity) {
+        if (_capacity <= capacity) {
+            return;
+        }
+
+        auto new_data = new T[_capacity];
+        memcpy(new_data, ptr_data, sizeof(T) * used_size);
+        delete[] ptr_data;
+
+        capacity = _capacity;
+        ptr_data = new_data;
     }
 
     PBRT_GPU void push(T val) {
