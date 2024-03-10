@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iomanip>
 #include "pbrt/util/math.h"
 #include "pbrt/util/compensated_float.h"
 
@@ -110,7 +111,7 @@ class SquareMatrix {
         for (int i = 0; i < N; i++) {
             stream << "    ";
             for (int k = 0; k < N; k++) {
-                stream << t[i][k] << ", ";
+                stream << std::setprecision(6) << t[i][k] << ", ";
             }
             stream << "\n";
         }

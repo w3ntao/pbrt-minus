@@ -91,12 +91,34 @@ class Bounds3 {
         return p_max - p_min;
     }
 
+    PBRT_CPU_GPU Point3<T> centroid() const {
+        return 0.5 * (p_min + p_max);
+    }
+
+    PBRT_CPU_GPU
+    Vector3f offset(Point3f p) const {
+        Vector3f o = p - p_min;
+        if (p_max.x > p_min.x) {
+            o.x /= p_max.x - p_min.x;
+        }
+
+        if (p_max.y > p_min.y) {
+            o.y /= p_max.y - p_min.y;
+        }
+
+        if (p_max.z > p_min.z) {
+            o.z /= p_max.z - p_min.z;
+        }
+
+        return o;
+    }
+
     PBRT_CPU_GPU double surface_area() const {
         auto d = diagonal();
         return 2.0 * (d.x * d.y + d.x * d.z + d.y * d.z);
     }
 
-    PBRT_CPU_GPU int max_dimension() const {
+    PBRT_CPU_GPU int8_t max_dimension() const {
         auto d = diagonal();
         if (d.x > d.y && d.x > d.z) {
             return 0;
@@ -108,7 +130,7 @@ class Bounds3 {
     }
 
     PBRT_GPU bool fast_intersect(const Ray &ray, double ray_t_max, const Vector3f &inv_dir,
-                                 const int dir_is_neg[3]) {
+                                 const int dir_is_neg[3]) const {
         // Check for ray intersection against $x$ and $y$ slabs
 
         auto o = ray.o;

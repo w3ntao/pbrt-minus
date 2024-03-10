@@ -157,6 +157,10 @@ class Vector3 {
         *v2 = Vector3(1 + sign * sqr(x) * a, sign * b, -sign * x);
         *v3 = Vector3(b, sign + sqr(y) * a, -y);
     }
+
+    PBRT_CPU_GPU void display() const {
+        printf("(%f, %f, %f)", x, y, z);
+    }
 };
 
 using Vector3f = Vector3<double>;

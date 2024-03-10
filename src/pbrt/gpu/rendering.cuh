@@ -13,7 +13,7 @@
 #include "pbrt/spectra/rgb_color_space.h"
 #include "pbrt/spectra/sampled_wavelengths.h"
 
-#include "pbrt/accelerator/bvh.h"
+#include "pbrt/accelerator/hlbvh.h"
 
 #include "pbrt/filters/box.h"
 
@@ -27,21 +27,6 @@
 #include "pbrt/integrators/ambient_occlusion.h"
 
 #include "pbrt/samplers/independent.h"
-
-inline void _check_cuda(cudaError_t result, char const *const func, const char *const file,
-                        int const line) {
-    if (!result) {
-        return;
-    }
-
-    std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " << file << ":"
-              << line << " '" << func << "' \n";
-    // Make sure we call CUDA Device Reset before exiting
-    cudaDeviceReset();
-    exit(-1);
-}
-// limited version of checkCudaErrors from helper_cuda.h in CUDA examples
-#define checkCudaErrors(val) _check_cuda((val), #val, __FILE__, __LINE__)
 
 namespace GPU {
 class GlobalVariable {
@@ -101,6 +86,8 @@ class Renderer {
     const Filter *filter = nullptr;
     Film *film = nullptr;
 
+    HLBVH *hlbvh = nullptr;
+
     const GlobalVariable *global_variables = nullptr;
 
     PixelSensor sensor;
@@ -135,7 +122,7 @@ class Renderer {
 };
 
 template <typename T>
-__global__ void apply_transofrm(T *data, const Transform transform, int length) {
+__global__ void apply_transform(T *data, const Transform transform, int length) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= length) {
         return;
@@ -203,10 +190,12 @@ __global__ void gpu_init_integrator(Renderer *renderer) {
 
     auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
 
+    /*
     renderer->integrator = new SurfaceNormalIntegrator(
         *(renderer->global_variables->rgb_color_space), renderer->sensor);
+    */
 
-    // renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
+    renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
 }
 
 __global__ void gpu_init_filter(Renderer *renderer) {
@@ -252,21 +241,39 @@ __global__ void gpu_init_camera(Renderer *renderer, const Point2i resolution,
     renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov, 0.0);
 }
 
-__global__ void gpu_aggregate_preprocess(Renderer *renderer) {
-    renderer->aggregate->preprocess();
+__global__ void gpu_get_primitive_num(Renderer *renderer, int *num) {
+    renderer->aggregate->get_shape_num(num);
 }
 
-__global__ void gpu_add_triangle_mesh(Renderer *renderer, bool reverse_orientation,
-                                      const Point3f *points, int num_points, const int *indices,
-                                      int num_indices, const Point2f *uv, int num_uv) {
-    const TriangleMesh *mesh =
-        new TriangleMesh(reverse_orientation, indices, num_indices, points, num_points);
+__global__ void gpu_create_hlbvh(Renderer *renderer, HLBVH *hlbvh, BVHPrimitive *bvh_primitives,
+                                 MortonPrimitive *morton_primitives) {
+    renderer->aggregate->hlbvh = hlbvh;
+    renderer->aggregate->init_hlbvh(bvh_primitives, morton_primitives);
+}
+
+__global__ void gpu_hlbvh_init_bvh_primitives_and_treelets(Renderer *renderer) {
+    renderer->aggregate->hlbvh->init_bvh_primitives_and_treelets();
+}
+
+__global__ void gpu_hlbvh_compute_full_bounds(Renderer *renderer) {
+    renderer->aggregate->hlbvh->compute_bounds_of_centroids();
+}
+
+__global__ void gpu_hlbvh_compute_morton_code(Renderer *renderer) {
+    renderer->aggregate->hlbvh->compute_morton_code();
+}
+
+__global__ void gpu_hlbvh_build_treelets(Renderer *renderer) {
+    renderer->aggregate->hlbvh->build_treelets();
+}
+
+__global__ void gpu_add_triangle_mesh(Renderer *renderer, const TriangleMesh *mesh) {
     renderer->aggregate->add_triangles(mesh);
 }
 
 __global__ void gpu_free_renderer(Renderer *renderer) {
     renderer->~Renderer();
-    // renderer was never new in divice code
+    // renderer was never new in device code
     // so you have to destruct it manually
 }
 

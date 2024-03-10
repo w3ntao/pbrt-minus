@@ -4,8 +4,8 @@ add_requires("png", { system = true })
 
 target("pbrt-minus")
 set_kind("binary")
+add_cugencodes("native")
 add_cuflags("--expt-relaxed-constexpr")
-
 add_packages("png")
 
 add_includedirs("src")

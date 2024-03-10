@@ -63,7 +63,7 @@ class DynamicArray {
         used_size += 1;
     }
 
-    PBRT_GPU const T *data() const {
+    PBRT_GPU T *data() const {
         return ptr_data;
     }
 

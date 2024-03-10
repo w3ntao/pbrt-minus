@@ -15,16 +15,11 @@ struct TriangleIntersection {
 
 class Triangle : public Shape {
   public:
-    const int triangle_idx;
+    int triangle_idx;
     const TriangleMesh *mesh;
 
+    // Triangle has to be newed in GPU because it use virtual functions from Shape
     PBRT_GPU Triangle(int _idx, const TriangleMesh *_mesh) : triangle_idx(_idx), mesh(_mesh) {}
-
-    PBRT_GPU ~Triangle() override {
-        if (triangle_idx == 0) {
-            delete mesh;
-        }
-    }
 
     PBRT_GPU Bounds3f bounds() const override {
         auto points = get_points();

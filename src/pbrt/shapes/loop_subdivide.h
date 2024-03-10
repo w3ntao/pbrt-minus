@@ -186,11 +186,8 @@ class LoopSubdivide {
     std::vector<int> vertex_indices;
     std::vector<Point3f> p_limit;
 
-    // TODO: remove renderFromObject and reverseOrientation
-    static LoopSubdivide build(const Transform &renderFromObject, bool reverseOrientation,
-                               int nLevels, const std::vector<int> &vertexIndices,
+    static LoopSubdivide build(int nLevels, const std::vector<int> &vertexIndices,
                                const std::vector<Point3f> &p) {
-        // TODO: debug LoopSubdivide mismatched
         std::vector<SDVertex *> vertices;
         std::vector<SDFace *> faces;
         // Allocate _LoopSubdiv_ vertices and faces

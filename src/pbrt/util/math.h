@@ -12,7 +12,7 @@ constexpr double gamma(int n) {
 }
 
 PBRT_CPU_GPU
-static constexpr double compute_pi() {
+static double compute_pi() {
     return acos(-1);
 }
 
@@ -97,12 +97,35 @@ PBRT_CPU_GPU auto sum_of_products(Ta a, Tb b, Tc c, Td d) {
     return sum + error;
 }
 
-template <int n>
-PBRT_CPU_GPU constexpr double pow(double v) {
+template <int n, typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+PBRT_CPU_GPU constexpr T fast_powf(T v) {
     if constexpr (n < 0) {
-        return 1 / pow<-n>(v);
+        return 1 / fast_powf<-n>(v);
     }
 
-    double n2 = pow<n / 2>(v);
-    return n2 * n2 * pow<n & 1>(v);
+    double n2 = fast_powf<n / 2>(v);
+    return n2 * n2 * fast_powf<n & 1>(v);
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, uint32_t>, bool> = true>
+PBRT_CPU_GPU inline T left_shift3(T x) {
+    if (x == (1 << 10)) {
+        --x;
+    }
+
+    x = (x | (x << 16)) & 0b00000011000000000000000011111111;
+    // x = ---- --98 ---- ---- ---- ---- 7654 3210
+    x = (x | (x << 8)) & 0b00000011000000001111000000001111;
+    // x = ---- --98 ---- ---- 7654 ---- ---- 3210
+    x = (x | (x << 4)) & 0b00000011000011000011000011000011;
+    // x = ---- --98 ---- 76-- --54 ---- 32-- --10
+    x = (x | (x << 2)) & 0b00001001001001001001001001001001;
+    // x = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
+
+    return x;
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, uint32_t>, bool> = true>
+PBRT_CPU_GPU inline T encode_morton3(T x, T y, T z) {
+    return (left_shift3(z) << 2) | (left_shift3(y) << 1) | left_shift3(x);
 }

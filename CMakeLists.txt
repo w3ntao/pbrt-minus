@@ -30,6 +30,7 @@ add_executable(${PROJ_NAME}
 target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(${PROJ_NAME} PRIVATE ${PNG_LIBRARY} Threads::Threads)
 
+set_property(TARGET ${PROJ_NAME} PROPERTY CUDA_ARCHITECTURES native)
 target_compile_options(${PROJ_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
         --expt-relaxed-constexpr
         >)

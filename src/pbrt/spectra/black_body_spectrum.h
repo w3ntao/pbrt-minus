@@ -13,7 +13,7 @@ PBRT_CPU_GPU inline double Blackbody(double lambda, double T) {
     const double kb = 1.3806488e-23f;
     // Return emitted radiance for blackbody at wavelength _lambda_
     double l = lambda * 1e-9f;
-    double Le = (2 * h * c * c) / (pow<5>(l) * (std::exp((h * c) / (l * kb * T)) - 1.0));
+    double Le = (2 * h * c * c) / (fast_powf<5>(l) * (std::exp((h * c) / (l * kb * T)) - 1.0));
     return Le;
 }
 

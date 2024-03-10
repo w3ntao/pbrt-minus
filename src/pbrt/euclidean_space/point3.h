@@ -129,6 +129,10 @@ class Point3 {
         return Point3(_x, _y, _z);
     }
 
+    PBRT_CPU_GPU void display() const {
+        printf("(%f, %f, %f)", x, y, z);
+    }
+
     friend std::ostream &operator<<(std::ostream &stream, const Point3 &p) {
         stream << "Point3(" << p.x << ", " << p.y << ", " << p.z << ")";
         return stream;

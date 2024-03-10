@@ -15,11 +15,6 @@ struct CommandLineOption {
         while (idx < argc) {
             std::string argument = argv[idx];
             if (argument.size() > 2 && argument.substr(0, 2) == "--") {
-                /*
-                // TODO: add help information
-                if (argument == "--help") {}
-                */
-
                 if (argument == "--spp") {
                     samples_per_pixel = stoi(std::string(argv[idx + 1]));
                     idx += 2;

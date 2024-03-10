@@ -55,9 +55,9 @@ class DenselySampledSpectrum : public Spectrum {
         }
 
         // Convert CCT to xy
-        double x = cct <= 7000 ? -4.607f * 1e9f / pow<3>(cct) + 2.9678f * 1e6f / sqr(cct) +
+        double x = cct <= 7000 ? -4.607f * 1e9f / fast_powf<3>(cct) + 2.9678f * 1e6f / sqr(cct) +
                                      0.09911f * 1e3f / cct + 0.244063f
-                               : -2.0064f * 1e9f / pow<3>(cct) + 1.9018f * 1e6f / sqr(cct) +
+                               : -2.0064f * 1e9f / fast_powf<3>(cct) + 1.9018f * 1e6f / sqr(cct) +
                                      0.24748f * 1e3f / cct + 0.23704f;
 
         double y = -3 * x * x + 2.870f * x - 0.275f;
