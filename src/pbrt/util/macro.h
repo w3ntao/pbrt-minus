@@ -19,5 +19,6 @@ inline void _check_cuda(cudaError_t result, char const *const func, const char *
     exit(-1);
 }
 } // namespace
+
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define checkCudaErrors(val) _check_cuda((val), #val, __FILE__, __LINE__)

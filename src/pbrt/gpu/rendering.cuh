@@ -271,10 +271,32 @@ __global__ void gpu_add_triangle_mesh(Renderer *renderer, const TriangleMesh *me
     renderer->aggregate->add_triangles(mesh);
 }
 
+PBRT_GPU void add_triangles_new(const Shape **primitives_array, const TriangleMesh *mesh) {
+    for (int i = 0; i < mesh->triangle_num; ++i) {
+        primitives_array[i] = new Triangle(i, mesh);
+    }
+}
+
+__global__ void gpu_add_triangle_mesh_new(const Shape **primitives_array,
+                                          const TriangleMesh *mesh) {
+    // TODO: progress 2024/03/20 rewrite GPU resources allocation
+    add_triangles_new(primitives_array, mesh);
+}
+
 __global__ void gpu_free_renderer(Renderer *renderer) {
     renderer->~Renderer();
     // renderer was never new in device code
     // so you have to destruct it manually
+}
+
+PBRT_GPU void device_release_shapes(const Shape **shapes, int num) {
+    for (int idx = 0; idx < num; idx++) {
+        delete shapes[idx];
+    }
+}
+
+__global__ void gpu_release_shapes(const Shape **shapes, int num) {
+    device_release_shapes(shapes, num);
 }
 
 __global__ void gpu_parallel_render(Renderer *renderer, int num_samples) {

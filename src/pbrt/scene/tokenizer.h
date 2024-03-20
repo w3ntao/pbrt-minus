@@ -1,5 +1,6 @@
 #pragma once
 
+// TODO: rewrite TypeOfToken with enum class
 enum TypeOfToken {
     Illegal,
     EndOfFile,

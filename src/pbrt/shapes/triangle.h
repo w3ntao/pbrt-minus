@@ -223,8 +223,9 @@ class Triangle : public Shape {
         }
 
         if (mesh->n || mesh->s) {
+            printf("\nTriangle::interaction_from_intersection():\n");
+            printf("    mesh->n and mesh->s are not implemented\n\n");
             asm("trap;");
-            // TODO: mesh->n and mesh->s are not implemented
         }
 
         return isect;

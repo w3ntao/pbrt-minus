@@ -171,7 +171,7 @@ class SceneBuilder {
 
     GPU::Renderer *renderer = nullptr;
     GPUconstants gpu_constants;
-    std::vector<Shape *> gpu_primitives;
+    std::vector<const Shape *> gpu_primitives;
     std::vector<void *> gpu_dynamic_pointers;
 
     std::optional<Point2i> film_resolution = std::nullopt;
@@ -203,16 +203,43 @@ class SceneBuilder {
     }
 
     ~SceneBuilder() {
+        auto start = std::chrono::system_clock::now();
+
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+
         gpu_free_renderer<<<1, 1>>>(renderer);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
         checkCudaErrors(cudaFree(renderer));
 
+        if (!gpu_primitives.empty()) {
+            const Shape **device_shapes;
+            checkCudaErrors(cudaMallocManaged((void **)&device_shapes,
+                                              sizeof(Shape *) * gpu_primitives.size()));
+            cudaMemcpy(device_shapes, gpu_primitives.data(),
+                       sizeof(Shape *) * gpu_primitives.size(), cudaMemcpyHostToDevice);
+
+            GPU::gpu_release_shapes<<<1, 1>>>(device_shapes, gpu_primitives.size());
+            // TODO: make this parallel
+            // always release GPU primitives before releasing gpu_dynamic_pointers
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+
+            checkCudaErrors(cudaFree(device_shapes));
+        }
+
         for (auto ptr : gpu_dynamic_pointers) {
             checkCudaErrors(cudaFree(ptr));
         }
         checkCudaErrors(cudaGetLastError());
+
+        const std::chrono::duration<double> duration{std::chrono::system_clock::now() - start};
+
+        std::cout << std::fixed << std::setprecision(1) << "GPU resource release took "
+                  << duration.count() << " seconds.\n"
+                  << std::flush;
     }
 
     static std::vector<int> group_tokens(const std::vector<Token> &tokens) {
@@ -446,9 +473,19 @@ class SceneBuilder {
 
         gpu_add_triangle_mesh<<<1, 1>>>(renderer, gpu_mesh);
 
+        const Shape **gpu_triangles_array;
+        checkCudaErrors(cudaMallocManaged((void **)&gpu_triangles_array,
+                                          sizeof(Shape *) * gpu_mesh->triangle_num));
+        GPU::gpu_add_triangle_mesh_new<<<1, 1>>>(gpu_triangles_array, gpu_mesh);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
+        gpu_primitives.reserve(gpu_primitives.size() + gpu_mesh->triangle_num);
+        for (int idx = 0; idx < gpu_mesh->triangle_num; idx++) {
+            gpu_primitives.push_back(gpu_triangles_array[idx]);
+        }
+
+        gpu_dynamic_pointers.push_back(gpu_triangles_array);
         gpu_dynamic_pointers.push_back(gpu_indices);
         gpu_dynamic_pointers.push_back(gpu_points);
         gpu_dynamic_pointers.push_back(gpu_uv);
