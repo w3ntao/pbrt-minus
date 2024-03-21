@@ -119,6 +119,22 @@ class Renderer {
     }
 };
 
+template <typename S>
+__global__ void build_shapes(Shape *shapes, const S *concrete_shapes, int num) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num) {
+        return;
+    }
+
+    shapes[worker_idx].init(&concrete_shapes[worker_idx]);
+}
+
+__global__ void free_renderer(Renderer *renderer) {
+    renderer->~Renderer();
+    // renderer was never new in device code
+    // so you have to destruct it manually
+}
+
 template <typename T>
 __global__ void apply_transform(T *data, const Transform transform, int length) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -235,24 +251,24 @@ __global__ void gpu_init_camera(Renderer *renderer, const Point2i resolution,
     renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov, 0.0);
 }
 
-__global__ void gpu_hlbvh_init_bvh_primitives_and_treelets(Renderer *renderer) {
-    renderer->bvh->init_bvh_primitives_and_treelets();
+__global__ void hlbvh_init_bvh_primitives_and_treelets(HLBVH *bvh, Treelet *treelets) {
+    bvh->init_bvh_primitives_and_treelets(treelets);
 }
 
-__global__ void gpu_hlbvh_compute_full_bounds(Renderer *renderer) {
-    renderer->bvh->compute_bounds_of_centroids();
+__global__ void hlbvh_compute_full_bounds(HLBVH *bvh) {
+    bvh->compute_bounds_of_centroids();
 }
 
-__global__ void gpu_hlbvh_compute_morton_code(Renderer *renderer) {
-    renderer->bvh->compute_morton_code();
+__global__ void hlbvh_compute_morton_code(HLBVH *bvh) {
+    bvh->compute_morton_code();
 }
 
-__global__ void gpu_hlbvh_build_treelets(Renderer *renderer) {
-    renderer->bvh->build_treelets();
+__global__ void hlbvh_build_treelets(HLBVH *bvh, Treelet *treelets) {
+    bvh->collect_primitives_into_treelets(treelets);
 }
 
 __global__ void build_triangles(Triangle *triangles, const TriangleMesh *mesh) {
-    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= mesh->triangle_num) {
         return;
     }
@@ -260,23 +276,7 @@ __global__ void build_triangles(Triangle *triangles, const TriangleMesh *mesh) {
     triangles[worker_idx].init(worker_idx, mesh);
 }
 
-template <typename S>
-__global__ void build_shapes(Shape *shapes, const S *concrete_shapes, int num) {
-    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= num) {
-        return;
-    }
-
-    shapes[worker_idx].init(&concrete_shapes[worker_idx]);
-}
-
-__global__ void gpu_free_renderer(Renderer *renderer) {
-    renderer->~Renderer();
-    // renderer was never new in device code
-    // so you have to destruct it manually
-}
-
-__global__ void gpu_parallel_render(Renderer *renderer, int num_samples) {
+__global__ void parallel_render(Renderer *renderer, int num_samples) {
     const Camera *camera = renderer->camera;
 
     int width = camera->resolution.x;

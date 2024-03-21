@@ -54,6 +54,11 @@ class Bounds3 {
     }
 
     PBRT_CPU_GPU
+    bool operator!=(const Bounds3 &bounds) const {
+        return !(*this == bounds);
+    }
+
+    PBRT_CPU_GPU
     Point3<T> operator[](uint index) const {
         switch (index) {
         case (0): {
@@ -96,18 +101,18 @@ class Bounds3 {
     }
 
     PBRT_CPU_GPU
-    Vector3f offset(Point3f p) const {
+    Vector3f offset(const Point3f &p) const {
         Vector3f o = p - p_min;
         if (p_max.x > p_min.x) {
-            o.x /= p_max.x - p_min.x;
+            o.x /= (p_max.x - p_min.x);
         }
 
         if (p_max.y > p_min.y) {
-            o.y /= p_max.y - p_min.y;
+            o.y /= (p_max.y - p_min.y);
         }
 
         if (p_max.z > p_min.z) {
-            o.z /= p_max.z - p_min.z;
+            o.z /= (p_max.z - p_min.z);
         }
 
         return o;
