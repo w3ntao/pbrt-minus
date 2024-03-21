@@ -1,8 +1,11 @@
 #pragma once
 
-#include "pbrt/util/math.h"
-#include "pbrt/base/shape.h"
-#include "pbrt/euclidean_space/vector2.h"
+#include <optional>
+
+#include "pbrt/util/macro.h"
+#include "pbrt/base/ray.h"
+#include "pbrt/base/interaction.h"
+#include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/shapes/triangle_mesh.h"
 
 struct TriangleIntersection {
@@ -13,20 +16,21 @@ struct TriangleIntersection {
         : b0(_b0), b1(_b1), b2(_b2), t(_t) {}
 };
 
-class Triangle : public Shape {
+class Triangle {
   public:
-    int triangle_idx;
-    const TriangleMesh *mesh;
+    PBRT_CPU_GPU
+    void init(int idx, const TriangleMesh *_mesh) {
+        triangle_idx = idx;
+        mesh = _mesh;
+    }
 
-    // Triangle has to be newed in GPU because it use virtual functions from Shape
-    PBRT_GPU Triangle(int _idx, const TriangleMesh *_mesh) : triangle_idx(_idx), mesh(_mesh) {}
-
-    PBRT_GPU Bounds3f bounds() const override {
-        auto points = get_points();
+    PBRT_CPU_GPU
+    Bounds3f bounds() const {
+        const auto points = get_points();
         return Bounds3f(points.data(), 3);
     }
 
-    PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const override {
+    PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const {
         auto points = get_points();
         auto p0 = points[0];
         auto p1 = points[1];
@@ -35,8 +39,7 @@ class Triangle : public Shape {
         return intersect_triangle(ray, t_max, p0, p1, p2).has_value();
     }
 
-    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray,
-                                                        double t_max) const override {
+    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray, double t_max) const {
         auto points = get_points();
         auto p0 = points[0];
         auto p1 = points[1];
@@ -54,7 +57,10 @@ class Triangle : public Shape {
     }
 
   private:
-    PBRT_GPU
+    int triangle_idx;
+    const TriangleMesh *mesh;
+
+    PBRT_CPU_GPU
     std::array<Point3f, 3> get_points() const {
         const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
         const Point3f p0 = mesh->p[v[0]];

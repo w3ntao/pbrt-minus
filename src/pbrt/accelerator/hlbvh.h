@@ -74,8 +74,8 @@ struct BVHBuildNodeForTreelet {
 
 class HLBVH {
   public:
-    PBRT_GPU void init(const Shape **_primitives, BVHPrimitive *gpu_bvh_primitives,
-                       MortonPrimitive *gpu_morton_primitives, int _n_primitives) {
+    PBRT_CPU_GPU void init(const Shape **_primitives, BVHPrimitive *gpu_bvh_primitives,
+                           MortonPrimitive *gpu_morton_primitives, int _n_primitives) {
         primitives = _primitives;
         bvh_primitives = gpu_bvh_primitives;
         morton_primitives = gpu_morton_primitives;
@@ -361,7 +361,7 @@ class HLBVH {
         return best_intersection;
     };
 
-    const Shape **primitives = nullptr;
+    const Shape **primitives;
 
     BVHPrimitive *bvh_primitives = nullptr;
     MortonPrimitive *morton_primitives = nullptr;

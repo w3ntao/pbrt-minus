@@ -64,3 +64,12 @@ class SurfaceInteraction : public Interaction {
         return DifferentialRay(offset_ray_origin(d), d);
     }
 };
+
+// ShapeIntersection Definition
+struct ShapeIntersection {
+    SurfaceInteraction interaction;
+    double t_hit;
+
+    PBRT_CPU_GPU ShapeIntersection(const SurfaceInteraction &si, double t)
+        : interaction(si), t_hit(t) {}
+};

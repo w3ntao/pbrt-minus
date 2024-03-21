@@ -11,15 +11,15 @@ class SurfaceNormalIntegrator : public Integrator {
                                      const PixelSensor &sensor)
         : rgb_spectra(RGBAlbedoSpectrum::build_albedo_rgb(rgb_color_space)) {}
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda,
-                                const Aggregate *aggregate, Sampler &sampler) const override {
-        const auto shape_intersection = aggregate->intersect(ray);
+    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
+                                Sampler &sampler) const override {
+        const auto shape_intersection = bvh->intersect(ray, Infinity);
         if (!shape_intersection) {
             return SampledSpectrum(0);
         }
 
         const Vector3f normal =
-            shape_intersection->interation.n.to_vector3().face_forward(-ray.d).normalize();
+            shape_intersection->interaction.n.to_vector3().face_forward(-ray.d).normalize();
 
         const auto color = normal.softmax();
 

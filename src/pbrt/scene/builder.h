@@ -25,12 +25,8 @@ std::string get_dirname(const std::string &full_path) {
     throw std::runtime_error("get_dirname() fails");
 }
 
-int compute_minimum_blocks(int total_jobs, int batch) {
-    return int(std::ceil(float(total_jobs) / float(batch)));
-}
-
-int integer_divide_round_up(int dividen, int divisor) {
-    return int(std::ceil(float(dividen) / float(divisor)));
+int integer_divide_round_up(int dividend, int divisor) {
+    return int(std::ceil(float(dividend) / float(divisor)));
 }
 
 } // namespace
@@ -171,11 +167,11 @@ class SceneBuilder {
 
     GPU::Renderer *renderer = nullptr;
     GPUconstants gpu_constants;
-    std::vector<const Shape *> gpu_primitives;
     std::vector<void *> gpu_dynamic_pointers;
+    std::vector<const Shape *> gpu_primitives;
 
     std::optional<Point2i> film_resolution = std::nullopt;
-    std::string filename;
+    std::string output_filename;
     std::vector<Token> camera_tokens;
     std::vector<Token> film_tokens;
     std::vector<Token> sampler_tokens;
@@ -193,7 +189,7 @@ class SceneBuilder {
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        gpu_init_global_variables<<<1, 1>>>(
+        GPU::gpu_init_global_variables<<<1, 1>>>(
             renderer, gpu_constants.cie_lambdas_gpu, gpu_constants.cie_x_value_gpu,
             gpu_constants.cie_y_value_gpu, gpu_constants.cie_z_value_gpu,
             gpu_constants.cie_illum_d6500_gpu, sizeof(CIE_Illum_D6500) / sizeof(double),
@@ -208,27 +204,11 @@ class SceneBuilder {
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        gpu_free_renderer<<<1, 1>>>(renderer);
+        GPU::gpu_free_renderer<<<1, 1>>>(renderer);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
         checkCudaErrors(cudaFree(renderer));
-
-        if (!gpu_primitives.empty()) {
-            const Shape **device_shapes;
-            checkCudaErrors(cudaMallocManaged((void **)&device_shapes,
-                                              sizeof(Shape *) * gpu_primitives.size()));
-            cudaMemcpy(device_shapes, gpu_primitives.data(),
-                       sizeof(Shape *) * gpu_primitives.size(), cudaMemcpyHostToDevice);
-
-            GPU::gpu_release_shapes<<<1, 1>>>(device_shapes, gpu_primitives.size());
-            // TODO: make this parallel
-            // always release GPU primitives before releasing gpu_dynamic_pointers
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
-
-            checkCudaErrors(cudaFree(device_shapes));
-        }
 
         for (auto ptr : gpu_dynamic_pointers) {
             checkCudaErrors(cudaFree(ptr));
@@ -279,7 +259,8 @@ class SceneBuilder {
                 fov = _fov[0];
             }
 
-            gpu_init_camera<<<1, 1>>>(renderer, film_resolution.value(), camera_transform, fov);
+            GPU::gpu_init_camera<<<1, 1>>>(renderer, film_resolution.value(), camera_transform,
+                                           fov);
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
 
@@ -297,15 +278,15 @@ class SceneBuilder {
         auto _resolution_y = parameters.get_integer("yresolution")[0];
 
         film_resolution = Point2i(_resolution_x, _resolution_y);
-        filename = parameters.get_string("filename");
+        output_filename = parameters.get_string("filename");
 
-        gpu_init_pixel_sensor_cie_1931<<<1, 1>>>(renderer, gpu_constants.cie_s0_gpu,
-                                                 gpu_constants.cie_s1_gpu, gpu_constants.cie_s2_gpu,
-                                                 gpu_constants.cie_s_lambda_gpu);
+        GPU::gpu_init_pixel_sensor_cie_1931<<<1, 1>>>(
+            renderer, gpu_constants.cie_s0_gpu, gpu_constants.cie_s1_gpu, gpu_constants.cie_s2_gpu,
+            gpu_constants.cie_s_lambda_gpu);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        gpu_init_filter<<<1, 1>>>(renderer);
+        GPU::gpu_init_filter<<<1, 1>>>(renderer);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
@@ -322,7 +303,7 @@ class SceneBuilder {
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        gpu_init_rgb_film<<<1, 1>>>(renderer, film_resolution.value(), gpu_pixels);
+        GPU::gpu_init_rgb_film<<<1, 1>>>(renderer, film_resolution.value(), gpu_pixels);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
     }
@@ -465,31 +446,39 @@ class SceneBuilder {
                 cudaMemcpy(gpu_uv, uv.data(), sizeof(Point2f) * uv.size(), cudaMemcpyHostToDevice));
         }
 
-        TriangleMesh *gpu_mesh;
-        checkCudaErrors(cudaMallocManaged((void **)&gpu_mesh, sizeof(TriangleMesh)));
+        TriangleMesh *mesh;
+        checkCudaErrors(cudaMallocManaged((void **)&mesh, sizeof(TriangleMesh)));
+        mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, points.size());
 
-        *gpu_mesh = TriangleMesh(reverse_orientation, gpu_indices, indices.size(), gpu_points,
-                                 points.size());
+        Triangle *triangles;
+        checkCudaErrors(
+            cudaMallocManaged((void **)&triangles, sizeof(Triangle) * mesh->triangle_num));
+        Shape *shapes;
+        checkCudaErrors(cudaMallocManaged((void **)&shapes, sizeof(Shape) * mesh->triangle_num));
 
-        gpu_add_triangle_mesh<<<1, 1>>>(renderer, gpu_mesh);
+        {
+            int threads = 1024;
+            int blocks = integer_divide_round_up(mesh->triangle_num, threads);
+            GPU::build_triangles<<<blocks, threads>>>(triangles, mesh);
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
 
-        const Shape **gpu_triangles_array;
-        checkCudaErrors(cudaMallocManaged((void **)&gpu_triangles_array,
-                                          sizeof(Shape *) * gpu_mesh->triangle_num));
-        GPU::gpu_add_triangle_mesh_new<<<1, 1>>>(gpu_triangles_array, gpu_mesh);
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+            GPU::build_shapes<<<blocks, threads>>>(shapes, triangles, mesh->triangle_num);
+            // TODO: collect shapes in Builder
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
 
-        gpu_primitives.reserve(gpu_primitives.size() + gpu_mesh->triangle_num);
-        for (int idx = 0; idx < gpu_mesh->triangle_num; idx++) {
-            gpu_primitives.push_back(gpu_triangles_array[idx]);
+            for (int idx = 0; idx < mesh->triangle_num; idx++) {
+                gpu_primitives.push_back(&shapes[idx]);
+            }
         }
 
-        gpu_dynamic_pointers.push_back(gpu_triangles_array);
         gpu_dynamic_pointers.push_back(gpu_indices);
         gpu_dynamic_pointers.push_back(gpu_points);
         gpu_dynamic_pointers.push_back(gpu_uv);
-        gpu_dynamic_pointers.push_back(gpu_mesh);
+        gpu_dynamic_pointers.push_back(mesh);
+        gpu_dynamic_pointers.push_back(triangles);
+        gpu_dynamic_pointers.push_back(shapes);
     }
 
     void parse_tokens(const std::vector<Token> &tokens) {
@@ -512,11 +501,7 @@ class SceneBuilder {
             option_camera();
             option_sampler();
 
-            gpu_init_aggregate<<<1, 1>>>(renderer);
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
-
-            gpu_init_integrator<<<1, 1>>>(renderer);
+            GPU::gpu_init_integrator<<<1, 1>>>(renderer);
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
 
@@ -595,8 +580,8 @@ class SceneBuilder {
         }
     }
 
-    void parse_file(const std::string &filename) {
-        const auto all_tokens = parse_pbrt_into_token(filename);
+    void parse_file(const std::string &_filename) {
+        const auto all_tokens = parse_pbrt_into_token(_filename);
         const auto range_of_tokens = SceneBuilder::group_tokens(all_tokens);
 
         for (int range_idx = 0; range_idx < range_of_tokens.size() - 1; ++range_idx) {
@@ -610,55 +595,60 @@ class SceneBuilder {
     void preprocess() {
         auto start_bvh = std::chrono::system_clock::now();
 
-        int *gpu_shape_num;
-        checkCudaErrors(cudaMallocManaged((void **)&gpu_shape_num, sizeof(int)));
-        gpu_get_primitive_num<<<1, 1>>>(renderer, gpu_shape_num);
-        printf("shape num: %d\n", *gpu_shape_num);
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
-        gpu_dynamic_pointers.push_back(gpu_shape_num);
+        int num_primitives = gpu_primitives.size();
 
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->hlbvh), sizeof(HLBVH)));
+        printf("total primitives: %zu\n", gpu_primitives.size());
+
+        checkCudaErrors(cudaMallocManaged((void **)&(renderer->bvh), sizeof(HLBVH)));
 
         BVHPrimitive *gpu_bvh_primitives;
-        checkCudaErrors(cudaMallocManaged((void **)&gpu_bvh_primitives,
-                                          sizeof(BVHPrimitive) * (*gpu_shape_num)));
+        checkCudaErrors(
+            cudaMallocManaged((void **)&gpu_bvh_primitives, sizeof(BVHPrimitive) * num_primitives));
 
         MortonPrimitive *gpu_morton_primitives;
         checkCudaErrors(cudaMallocManaged((void **)&gpu_morton_primitives,
-                                          sizeof(MortonPrimitive) * (*gpu_shape_num)));
+                                          sizeof(MortonPrimitive) * num_primitives));
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        gpu_dynamic_pointers.push_back(renderer->hlbvh);
+        gpu_dynamic_pointers.push_back(renderer->bvh);
         gpu_dynamic_pointers.push_back(gpu_bvh_primitives);
         gpu_dynamic_pointers.push_back(gpu_morton_primitives);
 
-        gpu_create_hlbvh<<<1, 1>>>(renderer, renderer->hlbvh, gpu_bvh_primitives,
-                                   gpu_morton_primitives);
+        const Shape **gpu_primitives_array;
+        checkCudaErrors(
+            cudaMallocManaged((void **)&gpu_primitives_array, sizeof(Shape *) * num_primitives));
+        checkCudaErrors(cudaMemcpy(gpu_primitives_array, gpu_primitives.data(),
+                                   sizeof(Shape *) * num_primitives, cudaMemcpyHostToDevice));
+
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
+
+        renderer->bvh->init(gpu_primitives_array, gpu_bvh_primitives, gpu_morton_primitives,
+                            num_primitives);
+
+        gpu_dynamic_pointers.push_back(gpu_primitives_array);
 
         {
             int threads = 128;
             int blocks =
-                integer_divide_round_up(std::max(*gpu_shape_num, MAX_TREELET_NUM), threads);
-            gpu_hlbvh_init_bvh_primitives_and_treelets<<<blocks, threads>>>(renderer);
+                integer_divide_round_up(std::max(num_primitives, MAX_TREELET_NUM), threads);
+            GPU::gpu_hlbvh_init_bvh_primitives_and_treelets<<<blocks, threads>>>(renderer);
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
         }
 
-        gpu_hlbvh_compute_full_bounds<<<1, 1>>>(renderer);
+        GPU::gpu_hlbvh_compute_full_bounds<<<1, 1>>>(renderer);
         // TODO: paralellize this later
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
         {
             int batch_size = 128;
-            int total_job = std::max(*gpu_shape_num, MAX_TREELET_NUM);
+            int total_job = std::max(num_primitives, MAX_TREELET_NUM);
             int blocks = integer_divide_round_up(total_job, batch_size);
-            gpu_hlbvh_compute_morton_code<<<blocks, batch_size>>>(renderer);
+            GPU::gpu_hlbvh_compute_morton_code<<<blocks, batch_size>>>(renderer);
 
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
@@ -671,26 +661,26 @@ class SceneBuilder {
                 }
             } morton_comparator;
 
-            std::sort(renderer->hlbvh->morton_primitives,
-                      renderer->hlbvh->morton_primitives + *gpu_shape_num, morton_comparator);
+            std::sort(renderer->bvh->morton_primitives,
+                      renderer->bvh->morton_primitives + num_primitives, morton_comparator);
             // TODO: rewrite this sorting in GPU
         }
 
         // init top treelets
         {
             int threads = 64;
-            int blocks = integer_divide_round_up(*gpu_shape_num, threads);
-            gpu_hlbvh_build_treelets<<<blocks, threads>>>(renderer);
+            int blocks = integer_divide_round_up(num_primitives, threads);
+            GPU::gpu_hlbvh_build_treelets<<<blocks, threads>>>(renderer);
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
         }
 
-        auto hlbvh = renderer->hlbvh;
+        auto bvh = renderer->bvh;
         std::vector<int> treelet_indices;
         int max_primitive_num_in_a_treelet = 0;
         int primitives_counter = 0;
         for (int idx = 0; idx < MAX_TREELET_NUM; idx++) {
-            int n_primitives = hlbvh->treelets[idx].n_primitives;
+            int n_primitives = bvh->treelets[idx].n_primitives;
             if (n_primitives <= 0) {
                 continue;
             }
@@ -701,7 +691,7 @@ class SceneBuilder {
             treelet_indices.push_back(idx);
         }
 
-        assert(primitives_counter == *gpu_shape_num);
+        assert(primitives_counter == num_primitives);
 
         printf("HLBVH: %zu/%d treelets filled (max primitives in a treelet: %d)\n",
                treelet_indices.size(), MAX_TREELET_NUM, max_primitive_num_in_a_treelet);
@@ -711,10 +701,10 @@ class SceneBuilder {
             cudaMallocManaged((void **)&build_nodes_for_treelets,
                               sizeof(BVHBuildNodeForTreelet) * (2 * treelet_indices.size() + 1)));
 
-        hlbvh->build_nodes_for_treelets = build_nodes_for_treelets;
+        bvh->build_nodes_for_treelets = build_nodes_for_treelets;
         gpu_dynamic_pointers.push_back(build_nodes_for_treelets);
 
-        hlbvh->build_bvh_for_treelets();
+        bvh->build_bvh_for_treelets();
 
         const std::chrono::duration<double> duration_bvh{std::chrono::system_clock::now() -
                                                          start_bvh};
@@ -737,7 +727,7 @@ class SceneBuilder {
         dim3 blocks(film_resolution->x / thread_width + 1, film_resolution->y / thread_height + 1,
                     1);
         dim3 threads(thread_width, thread_height, 1);
-        gpu_parallel_render<<<blocks, threads>>>(renderer, samples_per_pixel.value());
+        GPU::gpu_parallel_render<<<blocks, threads>>>(renderer, samples_per_pixel.value());
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
@@ -752,17 +742,17 @@ class SceneBuilder {
         checkCudaErrors(cudaMallocManaged((void **)&output_rgb,
                                           sizeof(RGB) * film_resolution->x * film_resolution->y));
 
-        copy_gpu_pixels_to_rgb<<<blocks, threads>>>(renderer, output_rgb);
+        GPU::copy_gpu_pixels_to_rgb<<<blocks, threads>>>(renderer, output_rgb);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        GPU::writer_to_file(filename, output_rgb, film_resolution.value());
+        GPU::writer_to_file(output_filename, output_rgb, film_resolution.value());
 
         checkCudaErrors(cudaFree(output_rgb));
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        std::cout << "image saved to `" << filename << "`\n";
+        std::cout << "image saved to `" << output_filename << "`\n";
     }
 
   public:

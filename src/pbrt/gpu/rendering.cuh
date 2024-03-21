@@ -15,6 +15,8 @@
 
 #include "pbrt/accelerator/hlbvh.h"
 
+#include "pbrt/base/shape.h"
+
 #include "pbrt/filters/box.h"
 
 #include "pbrt/films/pixel_sensor.h"
@@ -22,7 +24,6 @@
 
 #include "pbrt/cameras/perspective.h"
 
-#include "pbrt/shapes/triangle.h"
 #include "pbrt/integrators/surface_normal.h"
 #include "pbrt/integrators/ambient_occlusion.h"
 
@@ -66,7 +67,7 @@ class GlobalVariable {
         asm("trap;");
     }
 
-    PBRT_GPU [[nodiscard]] std::array<const Spectrum *, 3> get_cie_xyz() const {
+    PBRT_GPU std::array<const Spectrum *, 3> get_cie_xyz() const {
         return {&cie_x, &cie_y, &cie_z};
     }
 
@@ -82,11 +83,9 @@ class Renderer {
   public:
     const Integrator *integrator = nullptr;
     const Camera *camera = nullptr;
-    Aggregate *aggregate = nullptr;
     const Filter *filter = nullptr;
     Film *film = nullptr;
-
-    HLBVH *hlbvh = nullptr;
+    HLBVH *bvh = nullptr;
 
     const GlobalVariable *global_variables = nullptr;
 
@@ -94,7 +93,6 @@ class Renderer {
 
     PBRT_GPU ~Renderer() {
         delete integrator;
-        delete aggregate;
         delete camera;
         delete filter;
         delete film;
@@ -114,7 +112,7 @@ class Renderer {
 
             auto ray = camera->generate_ray(camera_sample);
 
-            auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, aggregate, sampler);
+            auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, bvh, sampler);
 
             film->add_sample(p_pixel, radiance_l, lambda, camera_sample.filter_weight);
         }
@@ -179,10 +177,6 @@ gpu_init_global_variables(Renderer *renderer, const double *cie_lambdas, const d
                            length_d65, rgb_to_spectrum_table, RGBtoSpectrumData::SRGB);
 }
 
-__global__ void gpu_init_aggregate(Renderer *renderer) {
-    renderer->aggregate = new Aggregate();
-}
-
 __global__ void gpu_init_integrator(Renderer *renderer) {
 
     auto illuminant_spectrum = renderer->global_variables->rgb_color_space->illuminant;
@@ -241,62 +235,45 @@ __global__ void gpu_init_camera(Renderer *renderer, const Point2i resolution,
     renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov, 0.0);
 }
 
-__global__ void gpu_get_primitive_num(Renderer *renderer, int *num) {
-    renderer->aggregate->get_shape_num(num);
-}
-
-__global__ void gpu_create_hlbvh(Renderer *renderer, HLBVH *hlbvh, BVHPrimitive *bvh_primitives,
-                                 MortonPrimitive *morton_primitives) {
-    renderer->aggregate->hlbvh = hlbvh;
-    renderer->aggregate->init_hlbvh(bvh_primitives, morton_primitives);
-}
-
 __global__ void gpu_hlbvh_init_bvh_primitives_and_treelets(Renderer *renderer) {
-    renderer->aggregate->hlbvh->init_bvh_primitives_and_treelets();
+    renderer->bvh->init_bvh_primitives_and_treelets();
 }
 
 __global__ void gpu_hlbvh_compute_full_bounds(Renderer *renderer) {
-    renderer->aggregate->hlbvh->compute_bounds_of_centroids();
+    renderer->bvh->compute_bounds_of_centroids();
 }
 
 __global__ void gpu_hlbvh_compute_morton_code(Renderer *renderer) {
-    renderer->aggregate->hlbvh->compute_morton_code();
+    renderer->bvh->compute_morton_code();
 }
 
 __global__ void gpu_hlbvh_build_treelets(Renderer *renderer) {
-    renderer->aggregate->hlbvh->build_treelets();
+    renderer->bvh->build_treelets();
 }
 
-__global__ void gpu_add_triangle_mesh(Renderer *renderer, const TriangleMesh *mesh) {
-    renderer->aggregate->add_triangles(mesh);
-}
-
-PBRT_GPU void add_triangles_new(const Shape **primitives_array, const TriangleMesh *mesh) {
-    for (int i = 0; i < mesh->triangle_num; ++i) {
-        primitives_array[i] = new Triangle(i, mesh);
+__global__ void build_triangles(Triangle *triangles, const TriangleMesh *mesh) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= mesh->triangle_num) {
+        return;
     }
+
+    triangles[worker_idx].init(worker_idx, mesh);
 }
 
-__global__ void gpu_add_triangle_mesh_new(const Shape **primitives_array,
-                                          const TriangleMesh *mesh) {
-    // TODO: progress 2024/03/20 rewrite GPU resources allocation
-    add_triangles_new(primitives_array, mesh);
+template <typename S>
+__global__ void build_shapes(Shape *shapes, const S *concrete_shapes, int num) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num) {
+        return;
+    }
+
+    shapes[worker_idx].init(&concrete_shapes[worker_idx]);
 }
 
 __global__ void gpu_free_renderer(Renderer *renderer) {
     renderer->~Renderer();
     // renderer was never new in device code
     // so you have to destruct it manually
-}
-
-PBRT_GPU void device_release_shapes(const Shape **shapes, int num) {
-    for (int idx = 0; idx < num; idx++) {
-        delete shapes[idx];
-    }
-}
-
-__global__ void gpu_release_shapes(const Shape **shapes, int num) {
-    device_release_shapes(shapes, num);
 }
 
 __global__ void gpu_parallel_render(Renderer *renderer, int num_samples) {

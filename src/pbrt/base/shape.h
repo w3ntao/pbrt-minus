@@ -1,28 +1,57 @@
 #pragma once
 
-#include <optional>
+#include "pbrt/shapes/triangle.h"
 
-#include "pbrt/base/ray.h"
-#include "pbrt/base/interaction.h"
-#include "pbrt/euclidean_space/bounds3.h"
-
-// ShapeIntersection Definition
-struct ShapeIntersection {
-    SurfaceInteraction interation;
-    double t_hit;
-
-    PBRT_CPU_GPU ShapeIntersection(const SurfaceInteraction &si, double t)
-        : interation(si), t_hit(t) {}
-};
+namespace {
+enum class ShapeType { triangle };
+}
 
 class Shape {
   public:
-    PBRT_GPU virtual ~Shape() {}
+    ShapeType type;
+    void *data_ptr;
 
-    PBRT_GPU virtual Bounds3f bounds() const = 0;
+    PBRT_CPU_GPU void init(const Triangle *triangle) {
+        type = ShapeType::triangle;
+        data_ptr = (void *)triangle;
+    }
 
-    PBRT_GPU virtual bool fast_intersect(const Ray &ray, double t_max) const = 0;
+    PBRT_CPU_GPU Bounds3f bounds() const {
+        switch (type) {
+        case (ShapeType::triangle): {
+            return ((Triangle *)data_ptr)->bounds();
+        }
+        }
 
-    PBRT_GPU virtual std::optional<ShapeIntersection> intersect(const Ray &ray,
-                                                                double t_max) const = 0;
+        printf("\nShape::bounds(): not implemented for this type\n\n");
+#if defined(__CUDA_ARCH__)
+        asm("trap;");
+#else
+        throw std::runtime_error("Shape::bounds(): not implemented for this type\n");
+#endif
+    }
+
+    PBRT_GPU
+    bool fast_intersect(const Ray &ray, double t_max) const {
+        switch (type) {
+        case (ShapeType::triangle): {
+            return ((Triangle *)data_ptr)->fast_intersect(ray, t_max);
+        }
+        }
+
+        printf("\nShape::fast_intersect(): not implemented for this type\n\n");
+        asm("trap;");
+    }
+
+    PBRT_GPU
+    std::optional<ShapeIntersection> intersect(const Ray &ray, double t_max) const {
+        switch (type) {
+        case (ShapeType::triangle): {
+            return ((Triangle *)data_ptr)->intersect(ray, t_max);
+        }
+        }
+
+        printf("\nShape::intersect(): not implemented for this type\n\n");
+        asm("trap;");
+    }
 };
