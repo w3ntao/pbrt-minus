@@ -219,20 +219,41 @@ class HLBVH {
         auto split_dimension = bounds_of_centroid.max_dimension();
         auto split_val = bounds_of_centroid.centroid()[split_dimension];
 
-        if (split_val == bounds_of_centroid.p_min[split_dimension] ||
-            split_val == bounds_of_centroid.p_max[split_dimension]) {
-            // all primitives' centroids collapse into one or two points
-            // keep this leaf as it is
-
-            build_nodes[left_child_idx].init_empty_leaf();
-            build_nodes[right_child_idx].init_empty_leaf();
-
-            return;
-        }
-
         uint mid_idx = partition_morton_primitives(node.first_primitive_idx,
                                                    node.first_primitive_idx + node.num_primitives,
                                                    split_dimension, split_val);
+
+        if (DEBUGGING) {
+            bool kill_thread = false;
+
+            if (mid_idx < node.first_primitive_idx ||
+                mid_idx > node.first_primitive_idx + node.num_primitives) {
+                printf("ERROR in partitioning at node[%u]: mid_idx out of bound\n",
+                       args.build_node_idx);
+                kill_thread = true;
+            }
+
+            for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
+                if (morton_primitives[morton_idx].centroid[split_dimension] >= split_val) {
+                    printf("ERROR in partitioning (1st half) at node[%u], idx: %u\n",
+                           args.build_node_idx, morton_idx);
+                    kill_thread = true;
+                }
+            }
+
+            for (uint morton_idx = mid_idx;
+                 morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
+                if (morton_primitives[morton_idx].centroid[split_dimension] < split_val) {
+                    printf("ERROR in partitioning (2nd half) at node[%u], idx: %u\n",
+                           args.build_node_idx, morton_idx);
+                    kill_thread = true;
+                }
+            }
+
+            if (kill_thread) {
+                asm("trap;");
+            }
+        }
 
         if (mid_idx == node.first_primitive_idx ||
             mid_idx == node.first_primitive_idx + node.num_primitives) {
@@ -243,25 +264,6 @@ class HLBVH {
             build_nodes[right_child_idx].init_empty_leaf();
 
             return;
-        }
-
-        if (DEBUGGING) {
-            for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
-                if (morton_primitives[morton_idx].centroid[split_dimension] >= split_val) {
-                    printf("\nERROR in partitioning (1st half) at node[%u], idx: %u\n\n",
-                           args.build_node_idx, morton_idx);
-                    asm("trap;");
-                }
-            }
-
-            for (uint morton_idx = mid_idx;
-                 morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
-                if (morton_primitives[morton_idx].centroid[split_dimension] < split_val) {
-                    printf("\nERROR in partitioning (2nd half) at node[%u], idx: %u\n\n",
-                           args.build_node_idx, morton_idx);
-                    asm("trap;");
-                }
-            }
         }
 
         Bounds3f left_bounds;
@@ -466,8 +468,11 @@ class HLBVH {
     }
 
     PBRT_GPU
-    uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,
-                                     double split_val) {
+    uint partition_morton_primitives(const uint start, const uint end,
+                                     const uint8_t split_dimension, const double split_val) {
+        // taken and modified from
+        // https://users.cs.duke.edu/~reif/courses/alglectures/littman.lectures/lect05/node27.html
+
         uint left = start;
         uint right = end - 1;
 
@@ -487,6 +492,10 @@ class HLBVH {
                 morton_primitives[left] = morton_primitives[right];
                 morton_primitives[right] = temp;
                 continue;
+            }
+
+            if (left == start && right == start) {
+                return start;
             }
 
             return right + 1;
