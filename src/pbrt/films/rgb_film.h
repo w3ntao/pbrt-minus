@@ -27,6 +27,19 @@ class RGBFilm : public Film {
 
         auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
 
+        if (rgb.has_nan()) {
+            // TODO: progress 2024/03/28 debugging NAN in SampledSpectrum
+            printf("RGBFilm::add_sample(): pixel(%d, %d): has a NAN component\n", p_film.x,
+                   p_film.y);
+            /*
+            printf("SampledSpectrum:\n");
+            radiance_l.print();
+            printf("SampledWavelengths:\n");
+            lambda.print();
+            printf("\n");
+            */
+        }
+
         pixels[pixel_index].rgb_sum += weight * rgb;
         pixels[pixel_index].weight_sum += weight;
     }
@@ -37,6 +50,7 @@ class RGBFilm : public Film {
         if (pixels[idx].weight_sum != 0) {
             pixel_rgb /= pixels[idx].weight_sum;
         }
+        // TODO: do black dots come from non-clamped pixel?
 
         return output_rgb_from_sensor_rgb * pixel_rgb;
     }

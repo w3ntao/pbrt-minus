@@ -36,7 +36,8 @@ inline Point2f sample_uniform_disk_concentric(Point2f u) {
 PBRT_CPU_GPU
 inline Vector3f sample_cosine_hemisphere(Point2f u) {
     auto d = sample_uniform_disk_concentric(u);
-    auto z = std::sqrt(1.0 - sqr(d.x) - sqr(d.y));
+    auto z = safe_sqrt(1.0 - sqr(d.x) - sqr(d.y));
+
     return Vector3f(d.x, d.y, z);
 }
 

@@ -4,8 +4,8 @@
 
 class TriangleMesh {
   public:
-    int triangle_num = -1;
-    int points_num = -1;
+    uint triangle_num = 0;
+    uint points_num = 0;
 
     const int *vertex_indices = nullptr;
     const Point3f *p = nullptr;

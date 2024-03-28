@@ -64,7 +64,7 @@ PBRT_CPU_GPU constexpr double sqr(double v) {
 
 PBRT_CPU_GPU
 inline double safe_sqrt(double x) {
-    return std::sqrt(std::max(0., x));
+    return std::sqrt(std::max(0.0, x));
 }
 
 PBRT_CPU_GPU constexpr double evaluate_polynomial(double t, double c) {

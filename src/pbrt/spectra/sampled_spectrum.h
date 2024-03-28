@@ -15,6 +15,17 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
+    bool has_nan() const {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
+            if (isnan(values[i])) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    PBRT_CPU_GPU
     double operator[](int i) const {
         return values[i];
     }

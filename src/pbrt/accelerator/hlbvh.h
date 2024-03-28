@@ -8,13 +8,15 @@
 #include "pbrt/util/stack.h"
 
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
-const int BIT_LENGTH_TREELET_MASK = 15;
+const int BIT_LENGTH_TREELET_MASK = 18;
 const int MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_TREELET_MASK;
 
-constexpr uint MAX_TREELET_NUM = 32768;
+constexpr uint MAX_TREELET_NUM = 262144;
 /*
 2 ^ 12 = 4096
 2 ^ 15 = 32768
+2 ^ 18 = 262144
+2 ^ 21 = 2097152
 */
 
 constexpr uint32_t TREELET_MASK = (MAX_TREELET_NUM - 1) << MASK_OFFSET_BIT;
@@ -55,11 +57,12 @@ struct BVHBuildNode {
         uint first_primitive_idx; // for leaf node
         uint left_child_idx;      // for interior node
     };
-    
+
     union {
         uint num_primitives;  // for leaf node
         uint right_child_idx; // for interior node
     };
+    // TODO: delete right_child_idx after rewriting top BVH building (right_idx = left_idx + 1)
 
     /*
     uint8_t:         0 - 255
@@ -71,6 +74,7 @@ struct BVHBuildNode {
 
     PBRT_CPU_GPU
     inline bool is_leaf() const {
+        // TODO: rewrite this after rewriting top BVH building
         return axis == std::numeric_limits<uint8_t>::max();
     }
 
@@ -81,9 +85,9 @@ struct BVHBuildNode {
     }
 
     PBRT_CPU_GPU
-    void init_leaf(uint _first_primitive_offset, uint _primitive_num, const Bounds3f &_bounds) {
+    void init_leaf(uint _first_primitive_offset, uint _num_primitive, const Bounds3f &_bounds) {
         first_primitive_idx = _first_primitive_offset;
-        num_primitives = _primitive_num;
+        num_primitives = _num_primitive;
         bounds = _bounds;
         axis = std::numeric_limits<uint8_t>::max();
     }
@@ -160,7 +164,7 @@ class HLBVH {
 
         if (start == 0 ||
             morton_start != (morton_primitives[start - 1].morton_code & TREELET_MASK)) {
-            // only if the worker starts from 0 or the gap will it continue
+            // only if the worker starts from 0 or a gap will this function continue
         } else {
             return;
         }
@@ -205,15 +209,6 @@ class HLBVH {
         const auto &node = build_nodes[args.build_node_idx];
         uint left_child_idx = args.child_node_start + 0;
         uint right_child_idx = args.child_node_start + 1;
-
-        if (node.num_primitives <= MAX_PRIMITIVES_NUM_IN_LEAF) {
-            // too small to build a tree: terminate as a leaf
-
-            build_nodes[left_child_idx].init_empty_leaf();
-            build_nodes[right_child_idx].init_empty_leaf();
-
-            return;
-        }
 
         Bounds3f bounds_of_centroid;
         for (uint morton_idx = node.first_primitive_idx;
@@ -473,8 +468,8 @@ class HLBVH {
     PBRT_GPU
     uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,
                                      double split_val) {
-        int left = start;
-        int right = int(end) - 1;
+        uint left = start;
+        uint right = end - 1;
 
         while (true) {
             while (morton_primitives[right].centroid[split_dimension] >= split_val &&

@@ -17,6 +17,10 @@ class RGB {
         return RGB(std::max<double>(0, r), std::max<double>(0, g), std::max<double>(0, b));
     }
 
+    PBRT_CPU_GPU bool has_nan() const {
+        return isnan(r) || isnan(g) || isnan(b);
+    }
+
     PBRT_CPU_GPU bool operator==(const RGB &rhs) const {
         return r == rhs.r && g == rhs.g && b == rhs.b;
     }

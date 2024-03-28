@@ -105,7 +105,7 @@ class Renderer {
 
         auto sampler = IndependentSampler(pixel_index);
 
-        for (int i = 0; i < num_samples; ++i) {
+        for (uint i = 0; i < num_samples; ++i) {
             auto camera_sample = sampler.get_camera_sample(p_pixel, filter);
             auto lu = sampler.get_1d();
             auto lambda = SampledWavelengths::sample_visible(lu);
@@ -114,13 +114,18 @@ class Renderer {
 
             auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, bvh, sampler);
 
+            if (radiance_l.has_nan()) {
+                printf("evaluate_pixel_sample(): pixel(%d, %d), samples %u: has an NAN component\n",
+                       p_pixel.x, p_pixel.y, i);
+            }
+
             film->add_sample(p_pixel, radiance_l, lambda, camera_sample.filter_weight);
         }
     }
 };
 
 template <typename S>
-__global__ void build_shapes(Shape *shapes, const S *concrete_shapes, int num) {
+__global__ void build_shapes(Shape *shapes, const S *concrete_shapes, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
@@ -136,8 +141,8 @@ __global__ void free_renderer(Renderer *renderer) {
 }
 
 template <typename T>
-__global__ void apply_transform(T *data, const Transform transform, int length) {
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+__global__ void apply_transform(T *data, const Transform transform, uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= length) {
         return;
     }
@@ -160,14 +165,14 @@ __global__ void gpu_init_rgb_to_spectrum_table_coefficients(
 
     constexpr int resolution = RGBtoSpectrumData::RES;
 
-    int max_component = blockIdx.x;
-    int z = blockIdx.y;
-    int y = blockIdx.z;
+    uint max_component = blockIdx.x;
+    uint z = blockIdx.y;
+    uint y = blockIdx.z;
 
-    int x = threadIdx.x;
-    int c = threadIdx.y;
+    uint x = threadIdx.x;
+    uint c = threadIdx.y;
 
-    int idx = (((max_component * resolution + z) * resolution + y) * resolution + x) * 3 + c;
+    uint idx = (((max_component * resolution + z) * resolution + y) * resolution + x) * 3 + c;
 
     rgb_to_spectrum_data->coefficients[max_component][z][y][x][c] =
         rgb_to_spectrum_table_coefficients[idx];
@@ -319,10 +324,14 @@ void writer_to_file(const std::string &filename, const RGB *pixels_rgb, const Po
     SRGBColorEncoding srgb_encoding;
     std::vector<unsigned char> png_pixels(width * height * 4);
 
-    for (unsigned y = 0; y < height; y++) {
-        for (unsigned x = 0; x < width; x++) {
-            int index = y * width + x;
-            auto rgb = pixels_rgb[index];
+    for (uint y = 0; y < height; y++) {
+        for (uint x = 0; x < width; x++) {
+            uint index = y * width + x;
+            const auto rgb = pixels_rgb[index];
+
+            if (rgb.has_nan()) {
+                printf("writer_to_file(): pixel(%d, %d): has a NAN component\n", x, y);
+            }
 
             png_pixels[4 * index + 0] = srgb_encoding.from_linear(rgb.r);
             png_pixels[4 * index + 1] = srgb_encoding.from_linear(rgb.g);

@@ -25,8 +25,9 @@ std::string get_dirname(const std::string &full_path) {
     throw std::runtime_error("get_dirname() fails");
 }
 
-uint divide_and_ceil(uint dividend, uint divisor) {
-    return uint(std::ceil(float(dividend) / float(divisor)));
+template <typename T, std::enable_if_t<std::is_same_v<T, uint>, bool> = true>
+T divide_and_ceil(T dividend, T divisor) {
+    return T(std::ceil(float(dividend) / float(divisor)));
 }
 
 } // namespace
@@ -402,12 +403,12 @@ class SceneBuilder {
             return;
         }
 
-        if (type_of_shape == "sphere") {
-            printf("\nignore Shape::sphere for the moment\n\n");
+        if (type_of_shape == "disk" || type_of_shape == "sphere") {
+            printf("\nignore Shape::%s for the moment\n\n", type_of_shape.c_str());
             return;
         }
 
-        std::cerr << "\n\nunknown shape: `" << type_of_shape << "`\n\n\n";
+        std::cerr << "\n\nworld_shape(): unknown shape: `" << type_of_shape << "`\n\n\n";
         throw std::runtime_error("unknown shape");
     }
 
@@ -564,7 +565,7 @@ class SceneBuilder {
             if (keyword == "AreaLightSource" || keyword == "Integrator" ||
                 keyword == "LightSource" || keyword == "Material" ||
                 keyword == "MakeNamedMaterial" || keyword == "NamedMaterial" ||
-                keyword == "ReverseOrientation") {
+                keyword == "ReverseOrientation" || keyword == "Texture") {
                 std::cout << "parse_tokens::Keyword `" << keyword << "` ignored for the moment\n";
                 return;
             }
@@ -722,16 +723,9 @@ class SceneBuilder {
 
         uint max_build_node_length =
             2 * dense_treelet_indices.size() + 1 + 2 * num_total_primitives + 1;
-        // TODO: find the max number of a binary tree
-
-        // length of top BVH plus length of BVH for each treelet
-
         checkCudaErrors(cudaMallocManaged((void **)&bvh->build_nodes,
                                           sizeof(BVHBuildNode) * max_build_node_length));
-
         gpu_dynamic_pointers.push_back(bvh->build_nodes);
-
-        printf("HLBVH: pre-allocated node size: %u\n", max_build_node_length);
 
         uint top_bvh_node_num =
             bvh->build_top_bvh_for_treelets(dense_treelet_indices.size(), dense_treelets);
@@ -765,8 +759,8 @@ class SceneBuilder {
                 accumulated_offset += 2;
                 // 2 pointers for left and right child
             }
-            printf("HLBVH: building bottom BVH: depth %u, leaves' number: %u, current offset: %u\n",
-                   depth, array_length, accumulated_offset);
+            printf("HLBVH: building bottom BVH: depth %u, leaves' number: %u\n", depth,
+                   array_length);
 
             depth += 1;
             start = end;
