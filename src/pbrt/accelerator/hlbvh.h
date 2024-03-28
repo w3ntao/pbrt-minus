@@ -7,17 +7,19 @@
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/util/stack.h"
 
-constexpr int TREELET_MORTON_BITS_PER_DIMENSION = 10;
+constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
 const int BIT_LENGTH_TREELET_MASK = 15;
 const int MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_TREELET_MASK;
 
-constexpr int MAX_TREELET_NUM = 32768;
+constexpr uint MAX_TREELET_NUM = 32768;
 /*
 2 ^ 12 = 4096
 2 ^ 15 = 32768
 */
 
-const uint32_t TREELET_MASK = (MAX_TREELET_NUM - 1) << MASK_OFFSET_BIT;
+constexpr uint32_t TREELET_MASK = (MAX_TREELET_NUM - 1) << MASK_OFFSET_BIT;
+
+constexpr uint MAX_PRIMITIVES_NUM_IN_LEAF = 1;
 
 namespace {
 [[maybe_unused]] void validate_treelet_num() {
@@ -28,98 +30,119 @@ namespace {
 } // namespace
 
 struct MortonPrimitive {
-    int primitive_idx;
+    uint primitive_idx;
     uint32_t morton_code;
-};
-
-struct BVHPrimitive {
-    PBRT_GPU bool operator==(const BVHPrimitive &bvh_primitive) const {
-        return primitive_idx == bvh_primitive.primitive_idx && bounds == bvh_primitive.bounds;
-    }
-
-    size_t primitive_idx;
     Bounds3f bounds;
     Point3f centroid;
 };
 
 struct Treelet {
-    int start_idx = -1;
-    int n_primitives = 0;
+    uint first_primitive_offset;
+    uint n_primitives;
     Bounds3f bounds;
 };
 
-struct BVHBuildNodeForTreelet {
-    // TODO: rewrite BVHBuildNodeForTreelet
+struct BVHArgs {
+    uint build_node_idx;
+    uint child_node_start;
+    bool expand_leaf;
+};
+
+struct BVHBuildNode {
     Bounds3f bounds;
-    int treelet_idx;
-    int left_child;
-    int right_child;
+
+    union {
+        uint first_primitive_idx; // for leaf node
+        uint left_child_idx;      // for interior node
+    };
+    
+    union {
+        uint num_primitives;  // for leaf node
+        uint right_child_idx; // for interior node
+    };
+
+    /*
+    uint8_t:         0 - 255
+    uint16_t:        0 - 65535
+    uint (uint32_t): 0 - 4294967295
+    */
+
     uint8_t axis;
 
-    void init_leaf(int _treelet_idx, const Bounds3f &_bounds) {
-        treelet_idx = _treelet_idx;
-        bounds = _bounds;
-        axis = std::numeric_limits<uint8_t>::max();
-        left_child = -1;
-        right_child = -1;
+    PBRT_CPU_GPU
+    inline bool is_leaf() const {
+        return axis == std::numeric_limits<uint8_t>::max();
     }
 
-    void init_interior(uint8_t _axis, int _left_child, int _right_child, const Bounds3f &_bounds) {
-        axis = _axis;
-        left_child = _left_child;
-        right_child = _right_child;
-        treelet_idx = -1;
+    PBRT_CPU_GPU void init_empty_leaf() {
+        first_primitive_idx = 0;
+        num_primitives = 0;
+        axis = std::numeric_limits<uint8_t>::max();
+    }
+
+    PBRT_CPU_GPU
+    void init_leaf(uint _first_primitive_offset, uint _primitive_num, const Bounds3f &_bounds) {
+        first_primitive_idx = _first_primitive_offset;
+        num_primitives = _primitive_num;
         bounds = _bounds;
+        axis = std::numeric_limits<uint8_t>::max();
+    }
+
+    PBRT_CPU_GPU
+    void init_interior(uint8_t _axis, uint _left_child_idx, uint _right_child_offset,
+                       const Bounds3f &_bounds) {
+        left_child_idx = _left_child_idx;
+        right_child_idx = _right_child_offset;
+
+        bounds = _bounds;
+        axis = _axis;
     }
 };
 
 class HLBVH {
   public:
-    PBRT_CPU_GPU void init(const Shape **_primitives, BVHPrimitive *gpu_bvh_primitives,
-                           MortonPrimitive *gpu_morton_primitives, int _n_primitives) {
+    PBRT_CPU_GPU void init(const Shape **_primitives, MortonPrimitive *gpu_morton_primitives,
+                           uint _n_primitives) {
         primitives = _primitives;
-        bvh_primitives = gpu_bvh_primitives;
         morton_primitives = gpu_morton_primitives;
-        total_primitives = _n_primitives;
-
-        bounds_of_centroids = Bounds3f::empty();
+        num_total_primitives = _n_primitives;
     }
 
-    PBRT_GPU void init_bvh_primitives_and_treelets(Treelet *treelets) {
+    PBRT_GPU void init_morton_primitives() {
         const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-        // worker_idx should cover full range of GPU_SHAPE_NUM and MAX_TREELET_NUM
-        if (worker_idx < total_primitives) {
-            bvh_primitives[worker_idx].primitive_idx = worker_idx;
-            bvh_primitives[worker_idx].bounds = primitives[worker_idx]->bounds();
-            bvh_primitives[worker_idx].centroid = bvh_primitives[worker_idx].bounds.centroid();
-        }
-
-        if (worker_idx < MAX_TREELET_NUM) {
-            treelets[worker_idx].start_idx = -1;
-            treelets[worker_idx].n_primitives = 0;
-        }
-    }
-
-    PBRT_GPU void compute_bounds_of_centroids() {
-        // TODO: paralellize this later
-
-        bounds_of_centroids = Bounds3f::empty();
-        for (int idx = 0; idx < total_primitives; idx++) {
-            bounds_of_centroids += bvh_primitives[idx].bounds.centroid();
-        }
-    }
-
-    PBRT_GPU void compute_morton_code() {
-        const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-        constexpr int morton_scale = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
-
-        if (worker_idx >= total_primitives) {
+        if (worker_idx >= num_total_primitives) {
             return;
         }
 
+        morton_primitives[worker_idx].primitive_idx = worker_idx;
+
+        const auto _bounds = primitives[worker_idx]->bounds();
+
+        morton_primitives[worker_idx].bounds = _bounds;
+        morton_primitives[worker_idx].centroid = _bounds.centroid();
+    }
+
+    PBRT_GPU void init_treelets(Treelet *treelets) {
+        const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+        if (worker_idx >= MAX_TREELET_NUM) {
+            return;
+        }
+
+        treelets[worker_idx].first_primitive_offset = std::numeric_limits<uint>::max();
+        treelets[worker_idx].n_primitives = 0;
+    }
+
+    PBRT_GPU void compute_morton_code(const Bounds3f bounds_of_centroids) {
+        const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (worker_idx >= num_total_primitives) {
+            return;
+        }
+
+        constexpr int morton_scale = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
+
         // compute morton code for each primitive
-        morton_primitives[worker_idx].primitive_idx = bvh_primitives[worker_idx].primitive_idx;
-        auto centroid_offset = bounds_of_centroids.offset(bvh_primitives[worker_idx].centroid);
+        auto centroid_offset = bounds_of_centroids.offset(morton_primitives[worker_idx].centroid);
 
         auto scaled_offset = centroid_offset * morton_scale;
         morton_primitives[worker_idx].morton_code = encode_morton3(
@@ -127,13 +150,12 @@ class HLBVH {
     }
 
     PBRT_GPU void collect_primitives_into_treelets(Treelet *treelets) {
-        // TODO: progress 2024/03/15 building top_treelets
         const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-        if (worker_idx >= total_primitives) {
+        if (worker_idx >= num_total_primitives) {
             return;
         }
 
-        const int start = worker_idx;
+        const uint start = worker_idx;
         uint32_t morton_start = morton_primitives[start].morton_code & TREELET_MASK;
 
         if (start == 0 ||
@@ -145,12 +167,12 @@ class HLBVH {
 
         uint treelet_idx = morton_start >> MASK_OFFSET_BIT;
 
-        int start_primitive_idx = morton_primitives[start].primitive_idx;
+        uint start_primitive_idx = morton_primitives[start].primitive_idx;
         Bounds3f treelet_bounds = primitives[start_primitive_idx]->bounds();
 
-        int end = total_primitives;
+        uint end = num_total_primitives;
         // if end doesn't match anything, it will be total_primitives
-        for (int idx = start + 1; idx < total_primitives; idx++) {
+        for (uint idx = start + 1; idx < num_total_primitives; idx++) {
             uint32_t morton_end = morton_primitives[idx].morton_code & TREELET_MASK;
 
             if (morton_start != morton_end) {
@@ -159,85 +181,112 @@ class HLBVH {
                 break;
             }
 
-            // do not include the "end" in the treelet_bounds
-            int end_primitive_idx = morton_primitives[idx].primitive_idx;
-            treelet_bounds += primitives[end_primitive_idx]->bounds();
+            // exclude the "end" primitive in the treelet_bounds
+            treelet_bounds += morton_primitives[idx].bounds;
         }
 
-        treelets[treelet_idx].start_idx = start;
+        treelets[treelet_idx].first_primitive_offset = start;
         treelets[treelet_idx].n_primitives = end - start;
         treelets[treelet_idx].bounds = treelet_bounds;
     }
 
-    int recursive_build_bvh_for_treelets(const std::vector<int> &treelet_indices,
-                                         int &treelet_node_count, int level, int &max_level) {
-        max_level = std::max(level, max_level);
-
-        int current_build_node_idx = treelet_node_count;
-        treelet_node_count += 1;
-
-        if (treelet_indices.size() == 1) {
-            int treelet_idx = treelet_indices[0];
-            build_nodes_for_treelets[current_build_node_idx].init_leaf(
-                treelet_idx, filled_treelets[treelet_idx].bounds);
-            return current_build_node_idx;
+    PBRT_GPU void build_bottom_bvh(const BVHArgs *bvh_args_array, uint array_length) {
+        const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (worker_idx >= array_length) {
+            return;
         }
 
-        Bounds3f _bounds_of_centroids;
-        for (const auto treelet_idx : treelet_indices) {
-            _bounds_of_centroids += filled_treelets[treelet_idx].bounds.centroid();
+        const auto &args = bvh_args_array[worker_idx];
+
+        if (!args.expand_leaf) {
+            return;
         }
-        uint8_t split_axis = _bounds_of_centroids.max_dimension();
-        auto split_val = _bounds_of_centroids.centroid()[split_axis];
 
-        std::vector<int> left_indices;
-        std::vector<int> right_indices;
+        const auto &node = build_nodes[args.build_node_idx];
+        uint left_child_idx = args.child_node_start + 0;
+        uint right_child_idx = args.child_node_start + 1;
 
-        for (const int idx : treelet_indices) {
-            if (filled_treelets[idx].bounds.centroid()[split_axis] < split_val) {
-                left_indices.push_back(idx);
-            } else {
-                right_indices.push_back(idx);
+        if (node.num_primitives <= MAX_PRIMITIVES_NUM_IN_LEAF) {
+            // too small to build a tree: terminate as a leaf
+
+            build_nodes[left_child_idx].init_empty_leaf();
+            build_nodes[right_child_idx].init_empty_leaf();
+
+            return;
+        }
+
+        Bounds3f bounds_of_centroid;
+        for (uint morton_idx = node.first_primitive_idx;
+             morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
+            bounds_of_centroid += morton_primitives[morton_idx].centroid;
+        }
+
+        auto split_dimension = bounds_of_centroid.max_dimension();
+        auto split_val = bounds_of_centroid.centroid()[split_dimension];
+
+        if (split_val == bounds_of_centroid.p_min[split_dimension] ||
+            split_val == bounds_of_centroid.p_max[split_dimension]) {
+            // all primitives' centroids collapse into one or two points
+            // keep this leaf as it is
+
+            build_nodes[left_child_idx].init_empty_leaf();
+            build_nodes[right_child_idx].init_empty_leaf();
+
+            return;
+        }
+
+        uint mid_idx = partition_morton_primitives(node.first_primitive_idx,
+                                                   node.first_primitive_idx + node.num_primitives,
+                                                   split_dimension, split_val);
+
+        if (mid_idx == node.first_primitive_idx ||
+            mid_idx == node.first_primitive_idx + node.num_primitives) {
+            // all primitives' centroids grouped either left or right half
+            // there is no need to separate them
+
+            build_nodes[left_child_idx].init_empty_leaf();
+            build_nodes[right_child_idx].init_empty_leaf();
+
+            return;
+        }
+
+        if (DEBUGGING) {
+            for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
+                if (morton_primitives[morton_idx].centroid[split_dimension] >= split_val) {
+                    printf("\nERROR in partitioning (1st half) at node[%u], idx: %u\n\n",
+                           args.build_node_idx, morton_idx);
+                    asm("trap;");
+                }
+            }
+
+            for (uint morton_idx = mid_idx;
+                 morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
+                if (morton_primitives[morton_idx].centroid[split_dimension] < split_val) {
+                    printf("\nERROR in partitioning (2nd half) at node[%u], idx: %u\n\n",
+                           args.build_node_idx, morton_idx);
+                    asm("trap;");
+                }
             }
         }
 
-        if (left_indices.empty() || right_indices.empty()) {
-            // TODO: progress 2024/03/22: each treelet is independent
-            // TODO: progress 2024/03/22: thus they shouldn't conflict
-            // TODO: progress 2024/03/22: debug me
-            printf("ERROR: conflicted treelets centroid\n");
-            printf("ERROR: each treelets are independent that they shouldn't overlap\n");
-            exit(1);
+        Bounds3f left_bounds;
+        for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
+            left_bounds += morton_primitives[morton_idx].bounds;
         }
 
-        int left_build_node_idx = recursive_build_bvh_for_treelets(left_indices, treelet_node_count,
-                                                                   level + 1, max_level);
-        int right_build_node_idx = recursive_build_bvh_for_treelets(
-            right_indices, treelet_node_count, level + 1, max_level);
-
-        auto bounds_combined = build_nodes_for_treelets[left_build_node_idx].bounds +
-                               build_nodes_for_treelets[right_build_node_idx].bounds;
-
-        build_nodes_for_treelets[current_build_node_idx].init_interior(
-            split_axis, left_build_node_idx, right_build_node_idx, bounds_combined);
-
-        return current_build_node_idx;
-    }
-
-    void build_bvh_for_treelets(int num_filled_treelets) {
-        std::vector<int> treelet_indices;
-        for (int idx = 0; idx < num_filled_treelets; idx++) {
-            treelet_indices.push_back(idx);
+        Bounds3f right_bounds;
+        for (uint morton_idx = mid_idx; morton_idx < node.first_primitive_idx + node.num_primitives;
+             morton_idx++) {
+            right_bounds += morton_primitives[morton_idx].bounds;
         }
 
-        int treelet_node_count = 0;
-        int max_level = 0;
-        int root_idx =
-            recursive_build_bvh_for_treelets(treelet_indices, treelet_node_count, 0, max_level);
-        assert(root_idx == 0);
+        build_nodes[left_child_idx].init_leaf(node.first_primitive_idx,
+                                              mid_idx - node.first_primitive_idx, left_bounds);
+        build_nodes[right_child_idx].init_leaf(
+            mid_idx, node.num_primitives - (mid_idx - node.first_primitive_idx), right_bounds);
 
-        printf("HLBVH: %d nodes built for %zu treelets (max level: %d)\n", treelet_node_count,
-               treelet_indices.size(), max_level);
+        build_nodes[args.build_node_idx].init_interior(split_dimension, left_child_idx,
+                                                       right_child_idx, left_bounds + right_bounds);
     }
 
     PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const {
@@ -249,7 +298,7 @@ class HLBVH {
             int(inv_dir.z < 0.0),
         };
 
-        Stack<int, 128> nodes_to_visit;
+        Stack<uint, 128> nodes_to_visit;
         nodes_to_visit.push(0);
         while (true) {
             if (nodes_to_visit.empty()) {
@@ -257,16 +306,15 @@ class HLBVH {
             }
             auto current_node_idx = nodes_to_visit.pop();
 
-            const auto node = build_nodes_for_treelets[current_node_idx];
+            const auto node = build_nodes[current_node_idx];
             if (!node.bounds.fast_intersect(ray, t_max, inv_dir, dir_is_neg)) {
                 continue;
             }
 
-            if (node.treelet_idx >= 0) {
-                const auto &_treelet = filled_treelets[node.treelet_idx];
-                for (int offset = 0; offset < _treelet.n_primitives; offset++) {
-                    int morton_idx = offset + _treelet.start_idx;
-                    const int primitive_idx = morton_primitives[morton_idx].primitive_idx;
+            if (node.is_leaf()) {
+                for (uint morton_idx = node.first_primitive_idx;
+                     morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
+                    const uint primitive_idx = morton_primitives[morton_idx].primitive_idx;
                     auto const primitive = primitives[primitive_idx];
 
                     if (primitive->fast_intersect(ray, t_max)) {
@@ -277,11 +325,11 @@ class HLBVH {
             }
 
             if (dir_is_neg[node.axis] > 0) {
-                nodes_to_visit.push(node.left_child);
-                nodes_to_visit.push(node.right_child);
+                nodes_to_visit.push(node.left_child_idx);
+                nodes_to_visit.push(node.right_child_idx);
             } else {
-                nodes_to_visit.push(node.right_child);
-                nodes_to_visit.push(node.left_child);
+                nodes_to_visit.push(node.right_child_idx);
+                nodes_to_visit.push(node.left_child_idx);
             }
         }
 
@@ -300,7 +348,7 @@ class HLBVH {
             int(inv_dir.z < 0.0),
         };
 
-        Stack<int, 128> nodes_to_visit;
+        Stack<uint, 128> nodes_to_visit;
         nodes_to_visit.push(0);
 
         while (true) {
@@ -309,16 +357,15 @@ class HLBVH {
             }
             auto current_node_idx = nodes_to_visit.pop();
 
-            const auto node = build_nodes_for_treelets[current_node_idx];
+            const auto node = build_nodes[current_node_idx];
             if (!node.bounds.fast_intersect(ray, best_t, inv_dir, dir_is_neg)) {
                 continue;
             }
 
-            if (node.treelet_idx >= 0) {
-                const auto &_treelet = filled_treelets[node.treelet_idx];
-                for (int offset = 0; offset < _treelet.n_primitives; offset++) {
-                    int morton_idx = offset + _treelet.start_idx;
-                    const int primitive_idx = morton_primitives[morton_idx].primitive_idx;
+            if (node.is_leaf()) {
+                for (uint morton_idx = node.first_primitive_idx;
+                     morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
+                    const uint primitive_idx = morton_primitives[morton_idx].primitive_idx;
                     auto const primitive = primitives[primitive_idx];
 
                     auto intersection = primitive->intersect(ray, best_t);
@@ -333,27 +380,121 @@ class HLBVH {
             }
 
             if (dir_is_neg[node.axis] > 0) {
-                nodes_to_visit.push(node.left_child);
-                nodes_to_visit.push(node.right_child);
+                nodes_to_visit.push(node.left_child_idx);
+                nodes_to_visit.push(node.right_child_idx);
             } else {
-                nodes_to_visit.push(node.right_child);
-                nodes_to_visit.push(node.left_child);
+                nodes_to_visit.push(node.right_child_idx);
+                nodes_to_visit.push(node.left_child_idx);
             }
         }
 
         return best_intersection;
     };
 
+    uint build_top_bvh_for_treelets(uint num_treelets, const Treelet *treelets) {
+        std::vector<uint> treelet_indices;
+        for (uint idx = 0; idx < num_treelets; idx++) {
+            treelet_indices.push_back(idx);
+        }
+
+        uint build_node_count = 0;
+        uint max_depth = 0;
+        recursive_build_top_bvh_for_treelets(treelet_indices, treelets, build_node_count, 0,
+                                             max_depth);
+
+        printf("HLBVH: top BVH nodes: %u, max depth: %u\n", build_node_count, max_depth);
+
+        return build_node_count;
+    }
+
     const Shape **primitives;
-
-    BVHPrimitive *bvh_primitives;
     MortonPrimitive *morton_primitives;
+    BVHBuildNode *build_nodes;
+    uint num_total_primitives;
 
-    Treelet *filled_treelets;
-    BVHBuildNodeForTreelet *build_nodes_for_treelets;
+  private:
+    uint recursive_build_top_bvh_for_treelets(const std::vector<uint> &treelet_indices,
+                                              const Treelet *treelets, uint &build_node_count,
+                                              uint depth, uint &max_depth) {
+        max_depth = std::max(depth, max_depth);
 
-    int total_primitives;
-    Bounds3f bounds_of_centroids; // bounds: bounds of centroids fro all primitives
+        uint current_build_node_idx = build_node_count;
+        build_node_count += 1;
 
-    // TODO: delete bounds_of_centroids and bvh_primitives from member variables
+        if (treelet_indices.size() == 1) {
+            uint treelet_idx = treelet_indices[0];
+            const auto &current_treelet = treelets[treelet_idx];
+
+            build_nodes[current_build_node_idx].init_leaf(current_treelet.first_primitive_offset,
+                                                          current_treelet.n_primitives,
+                                                          current_treelet.bounds);
+
+            return current_build_node_idx;
+        }
+
+        Bounds3f _bounds_of_centroids;
+        for (const auto treelet_idx : treelet_indices) {
+            _bounds_of_centroids += treelets[treelet_idx].bounds.centroid();
+        }
+        uint8_t split_axis = _bounds_of_centroids.max_dimension();
+        auto split_val = _bounds_of_centroids.centroid()[split_axis];
+
+        std::vector<uint> left_indices;
+        std::vector<uint> right_indices;
+
+        for (const auto idx : treelet_indices) {
+            if (treelets[idx].bounds.centroid()[split_axis] < split_val) {
+                left_indices.push_back(idx);
+            } else {
+                right_indices.push_back(idx);
+            }
+        }
+
+        if (left_indices.empty() || right_indices.empty()) {
+            printf("ERROR: conflicted treelets centroid\n");
+            printf("ERROR: each treelets are independent that they shouldn't overlap\n");
+            exit(1);
+        }
+
+        uint left_build_node_idx = recursive_build_top_bvh_for_treelets(
+            left_indices, treelets, build_node_count, depth + 1, max_depth);
+        uint right_build_node_idx = recursive_build_top_bvh_for_treelets(
+            right_indices, treelets, build_node_count, depth + 1, max_depth);
+
+        auto bounds_combined =
+            build_nodes[left_build_node_idx].bounds + build_nodes[right_build_node_idx].bounds;
+
+        build_nodes[current_build_node_idx].init_interior(split_axis, left_build_node_idx,
+                                                          right_build_node_idx, bounds_combined);
+
+        return current_build_node_idx;
+    }
+
+    PBRT_GPU
+    uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,
+                                     double split_val) {
+        int left = start;
+        int right = int(end) - 1;
+
+        while (true) {
+            while (morton_primitives[right].centroid[split_dimension] >= split_val &&
+                   right > start) {
+                right--;
+            }
+
+            while (morton_primitives[left].centroid[split_dimension] < split_val &&
+                   left < end - 1) {
+                left++;
+            }
+
+            if (left < right) {
+                const auto temp = morton_primitives[left];
+                morton_primitives[left] = morton_primitives[right];
+                morton_primitives[right] = temp;
+                continue;
+            }
+
+            return right + 1;
+        }
+    }
 };

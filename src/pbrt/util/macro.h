@@ -22,3 +22,5 @@ inline void _check_cuda(cudaError_t result, char const *const func, const char *
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define checkCudaErrors(val) _check_cuda((val), #val, __FILE__, __LINE__)
+
+const bool DEBUGGING = false;

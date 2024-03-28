@@ -251,23 +251,28 @@ __global__ void gpu_init_camera(Renderer *renderer, const Point2i resolution,
     renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov, 0.0);
 }
 
-__global__ void hlbvh_init_bvh_primitives_and_treelets(HLBVH *bvh, Treelet *treelets) {
-    bvh->init_bvh_primitives_and_treelets(treelets);
+__global__ void hlbvh_init_morton_primitives(HLBVH *bvh) {
+    bvh->init_morton_primitives();
 }
 
-__global__ void hlbvh_compute_full_bounds(HLBVH *bvh) {
-    bvh->compute_bounds_of_centroids();
+__global__ void hlbvh_init_treelests(HLBVH *bvh, Treelet *treelets) {
+    bvh->init_treelets(treelets);
 }
 
-__global__ void hlbvh_compute_morton_code(HLBVH *bvh) {
-    bvh->compute_morton_code();
+__global__ void hlbvh_compute_morton_code(HLBVH *bvh, const Bounds3f bounds_of_centroids) {
+    bvh->compute_morton_code(bounds_of_centroids);
 }
 
 __global__ void hlbvh_build_treelets(HLBVH *bvh, Treelet *treelets) {
     bvh->collect_primitives_into_treelets(treelets);
 }
 
-__global__ void build_triangles(Triangle *triangles, const TriangleMesh *mesh) {
+__global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const BVHArgs *bvh_args_array,
+                                       uint array_length) {
+    bvh->build_bottom_bvh(bvh_args_array, array_length);
+}
+
+__global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= mesh->triangle_num) {
         return;

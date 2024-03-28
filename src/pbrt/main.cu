@@ -88,9 +88,6 @@ int main(int argc, const char **argv) {
         cudaDeviceGetLimit(&stack_size, cudaLimitStackSize);
         size_t new_stack_size = std::max(stack_size, size_t(8 * 1024));
         checkCudaErrors(cudaDeviceSetLimit(cudaLimitStackSize, new_stack_size));
-
-        // TODO: progress 2024/03/08 you need at least 128MB heap space to get killeroo working
-        // checkCudaErrors(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1 * 1024 * 1024));
     }
 
     display_system_info();

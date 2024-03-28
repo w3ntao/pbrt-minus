@@ -594,6 +594,7 @@ RGBtoSpectrumTableCPU compute_spectrum_table_data(const std::string &str_gamut) 
     }
 
     // TODO: build a thread pool in the future
+    // TODO: move spectrum computation to GPU
     const int num_of_workers = std::max(int(std::thread::hardware_concurrency()), RES);
     for (int l = 0; l < 3; ++l) {
         std::stack<int> job_list;
