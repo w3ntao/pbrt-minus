@@ -45,11 +45,11 @@ struct RGBtoSpectrumTableCPU {
     double *coefficients;
 
     RGBtoSpectrumTableCPU()
-        : z_nodes(new double[RES]), coefficients(new double[3 * 3 * RES * RES * RES]) {}
+        : z_nodes(new double[RES]), coefficients(new double[3 * RES * RES * RES * 3]) {}
 
     ~RGBtoSpectrumTableCPU() {
-        delete z_nodes;
-        delete coefficients;
+        delete[] z_nodes;
+        delete[] coefficients;
     }
 };
 
@@ -65,10 +65,11 @@ struct RGBtoSpectrumTableGPU {
         }
 
         // Find maximum component and compute remapped component values
-        int maxc = (rgb[0] > rgb[1]) ? ((rgb[0] > rgb[2]) ? 0 : 2) : ((rgb[1] > rgb[2]) ? 1 : 2);
-        double z = rgb[maxc];
-        double x = rgb[(maxc + 1) % 3] * (RES - 1) / z;
-        double y = rgb[(maxc + 2) % 3] * (RES - 1) / z;
+        int max_component =
+            (rgb[0] > rgb[1]) ? ((rgb[0] > rgb[2]) ? 0 : 2) : ((rgb[1] > rgb[2]) ? 1 : 2);
+        double z = rgb[max_component];
+        double x = rgb[(max_component + 1) % 3] * (RES - 1) / z;
+        double y = rgb[(max_component + 2) % 3] * (RES - 1) / z;
 
         // Compute integer indices and offsets for coefficient interpolation
         int xi = std::min((int)x, RES - 2);
@@ -80,11 +81,11 @@ struct RGBtoSpectrumTableGPU {
         double dz = (z - z_nodes[zi]) / (z_nodes[zi + 1] - z_nodes[zi]);
 
         // Trilinearly interpolate sigmoid polynomial coefficients _c_
-        std::array<double, 3> c;
+        double c[3];
         for (int i = 0; i < 3; ++i) {
             // Define _co_ lambda for looking up sigmoid polynomial coefficients
             auto co = [&](int _dx, int _dy, int _dz) {
-                return coefficients[maxc][zi + _dz][yi + _dy][xi + _dx][i];
+                return coefficients[max_component][zi + _dz][yi + _dy][xi + _dx][i];
             };
 
             c[i] = lerp(
@@ -513,13 +514,17 @@ void gauss_newton(const RGBtoSpectrumBuffer *data, const double rgb[3], double c
 
 void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *scale, int l) {
     const double y = j / double(RES - 1);
-    fflush(stdout);
+
+    const double c0 = CIE_LAMBDA_MIN;
+    const double c1 = 1.0 / (CIE_LAMBDA_MAX - CIE_LAMBDA_MIN);
+    const int start = RES / 5;
+
     for (int i = 0; i < RES; ++i) {
         const double x = i / double(RES - 1);
-        double coeffs[3], rgb[3];
+        double coeffs[3];
+        double rgb[3];
         memset(coeffs, 0, sizeof(double) * 3);
 
-        int start = RES / 5;
         for (int k = start; k < RES; ++k) {
             double b = scale[k];
 
@@ -529,8 +534,9 @@ void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *
 
             gauss_newton(&data, rgb, coeffs);
 
-            double c0 = 360.0, c1 = 1.0 / (830.0 - 360.0);
-            double A = coeffs[0], B = coeffs[1], C = coeffs[2];
+            double A = coeffs[0];
+            double B = coeffs[1];
+            double C = coeffs[2];
 
             int idx = ((l * RES + k) * RES + j) * RES + i;
 
@@ -549,8 +555,9 @@ void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *
 
             gauss_newton(&data, rgb, coeffs);
 
-            double c0 = 360.0, c1 = 1.0 / (830.0 - 360.0);
-            double A = coeffs[0], B = coeffs[1], C = coeffs[2];
+            double A = coeffs[0];
+            double B = coeffs[1];
+            double C = coeffs[2];
 
             int idx = ((l * RES + k) * RES + j) * RES + i;
 
@@ -563,7 +570,7 @@ void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *
 
 void single_thread_worker(double *out, std::stack<int> &job_list, std::mutex &mtx,
                           const RGBtoSpectrumBuffer &data, const double *scale, int l) {
-    for (;;) {
+    while (true) {
         mtx.lock();
         if (job_list.empty()) {
             mtx.unlock();
@@ -594,8 +601,7 @@ RGBtoSpectrumTableCPU compute_spectrum_table_data(const std::string &str_gamut) 
     }
 
     // TODO: build a thread pool in the future
-    // TODO: move spectrum computation to GPU
-    const int num_of_workers = std::max(int(std::thread::hardware_concurrency()), RES);
+    const int num_of_workers = std::min(int(std::thread::hardware_concurrency()), RES);
     for (int l = 0; l < 3; ++l) {
         std::stack<int> job_list;
         for (int y = 0; y < RES; y++) {
