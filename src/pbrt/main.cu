@@ -50,6 +50,7 @@ void display_system_info() {
         cudaGetDeviceProperties(&props, i);
         printf("    device %d: %s\n", i, props.name);
         printf("        compute capability: %d.%d\n", props.major, props.minor);
+        printf("        max threads per block: %u\n", props.maxThreadsPerBlock);
     }
 
     print_arch_global<<<1, 1>>>();

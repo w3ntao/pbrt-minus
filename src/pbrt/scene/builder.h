@@ -594,6 +594,8 @@ class SceneBuilder {
     }
 
     void preprocess() {
+        printf("\n");
+
         auto start_bvh = std::chrono::system_clock::now();
 
         uint num_total_primitives = gpu_primitives.size();
@@ -637,7 +639,7 @@ class SceneBuilder {
         {
             uint threads = 512;
             uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
-            GPU::hlbvh_init_treelests<<<blocks, threads>>>(bvh, sparse_treelets);
+            GPU::hlbvh_init_treelets<<<blocks, threads>>>(bvh, sparse_treelets);
         }
 
         checkCudaErrors(cudaGetLastError());
@@ -734,37 +736,29 @@ class SceneBuilder {
         uint start = 0;
         uint end = top_bvh_node_num;
 
+        uint *accumulated_offset;
+        checkCudaErrors(cudaMallocManaged((void **)&accumulated_offset, sizeof(uint)));
+
         uint depth = 0;
         while (end > start) {
-            // TODO: progress: 2024/03/28 move this into GPU
             const uint array_length = end - start;
 
-            BVHArgs *bvh_args_array;
+            BottomBVHArgs *bvh_args_array;
             checkCudaErrors(
-                cudaMallocManaged((void **)&bvh_args_array, sizeof(BVHArgs) * array_length));
+                cudaMallocManaged((void **)&bvh_args_array, sizeof(BottomBVHArgs) * array_length));
 
-            uint accumulated_offset = end;
-            for (uint idx = start; idx < end; idx++) {
-                const auto &node = bvh->build_nodes[idx];
+            *accumulated_offset = end;
+            GPU::init_bvh_args<<<1, 1024>>>(bvh_args_array, accumulated_offset, bvh->build_nodes,
+                                            start, end);
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
 
-                if (!node.is_leaf() || node.num_primitives <= MAX_PRIMITIVES_NUM_IN_LEAF) {
-                    bvh_args_array[idx - start].expand_leaf = false;
-                    continue;
-                }
-
-                bvh_args_array[idx - start].expand_leaf = true;
-                bvh_args_array[idx - start].build_node_idx = idx;
-                bvh_args_array[idx - start].child_node_start = accumulated_offset;
-
-                accumulated_offset += 2;
-                // 2 pointers for left and right child
-            }
             printf("HLBVH: building bottom BVH: depth %u, leaves' number: %u\n", depth,
                    array_length);
 
             depth += 1;
             start = end;
-            end = accumulated_offset;
+            end = *accumulated_offset;
 
             uint threads = 512;
             uint blocks = divide_and_ceil(array_length, threads);
@@ -775,6 +769,7 @@ class SceneBuilder {
 
             checkCudaErrors(cudaFree(bvh_args_array));
         }
+        checkCudaErrors(cudaFree(accumulated_offset));
 
         printf("HLBVH: bottom BVH max depth: %u (max primitives in a leaf: %u)\n", depth,
                MAX_PRIMITIVES_NUM_IN_LEAF);

@@ -4,6 +4,7 @@
 #include <string>
 
 #include <curand_kernel.h>
+#include <cuda/atomic>
 
 #include "ext/lodepng/lodepng.h"
 
@@ -205,12 +206,12 @@ __global__ void gpu_init_integrator(Renderer *renderer) {
 
     auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
 
-    /*
     renderer->integrator = new SurfaceNormalIntegrator(
         *(renderer->global_variables->rgb_color_space), renderer->sensor);
-    */
 
+    /*
     renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
+    */
 }
 
 __global__ void gpu_init_filter(Renderer *renderer) {
@@ -238,7 +239,7 @@ __global__ void gpu_init_pixel_sensor_cie_1931(Renderer *renderer, const double 
 }
 
 __global__ void gpu_init_pixels(Pixel *pixels, Point2i dimension) {
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= dimension.x * dimension.y) {
         return;
     }
@@ -260,7 +261,7 @@ __global__ void hlbvh_init_morton_primitives(HLBVH *bvh) {
     bvh->init_morton_primitives();
 }
 
-__global__ void hlbvh_init_treelests(HLBVH *bvh, Treelet *treelets) {
+__global__ void hlbvh_init_treelets(HLBVH *bvh, Treelet *treelets) {
     bvh->init_treelets(treelets);
 }
 
@@ -272,9 +273,56 @@ __global__ void hlbvh_build_treelets(HLBVH *bvh, Treelet *treelets) {
     bvh->collect_primitives_into_treelets(treelets);
 }
 
-__global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const BVHArgs *bvh_args_array,
+__global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const BottomBVHArgs *bvh_args_array,
                                        uint array_length) {
     bvh->build_bottom_bvh(bvh_args_array, array_length);
+}
+
+__global__ void init_bvh_args(BottomBVHArgs *bvh_args_array, uint *accumulated_offset,
+                              const BVHBuildNode *bvh_build_nodes, const uint start,
+                              const uint end) {
+    if (gridDim.x * gridDim.y * gridDim.z > 1) {
+        printf("init_bvh_args(): launching more than 1 blocks destroys inter-thread "
+               "synchronization.\n");
+        asm("trap;");
+    }
+
+    const uint worker_idx = threadIdx.x;
+
+    __shared__ cuda::atomic<uint, cuda::thread_scope_block> shared_accumulated_offset;
+    if (worker_idx == 0) {
+        shared_accumulated_offset = *accumulated_offset;
+    }
+    __syncthreads();
+
+    const uint total_jobs = end - start;
+    const uint jobs_per_worker = total_jobs / blockDim.x + 1;
+
+    for (uint job_offset = 0; job_offset < jobs_per_worker; job_offset++) {
+        const uint idx = worker_idx * jobs_per_worker + job_offset;
+        if (idx >= total_jobs) {
+            break;
+        }
+
+        const uint build_node_idx = idx + start;
+        const auto &node = bvh_build_nodes[build_node_idx];
+
+        if (!node.is_leaf() || node.num_primitives <= MAX_PRIMITIVES_NUM_IN_LEAF) {
+            bvh_args_array[idx].expand_leaf = false;
+            continue;
+        }
+
+        bvh_args_array[idx].expand_leaf = true;
+        bvh_args_array[idx].build_node_idx = build_node_idx;
+        bvh_args_array[idx].left_child_idx = shared_accumulated_offset.fetch_add(2);
+        // 2 pointers: one for left and another right child
+    }
+
+    __syncthreads();
+    if (worker_idx == 0) {
+        *accumulated_offset = shared_accumulated_offset;
+    }
+    __syncthreads();
 }
 
 __global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {

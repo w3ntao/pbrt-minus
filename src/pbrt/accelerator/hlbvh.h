@@ -44,9 +44,9 @@ struct Treelet {
     Bounds3f bounds;
 };
 
-struct BVHArgs {
+struct BottomBVHArgs {
     uint build_node_idx;
-    uint child_node_start;
+    uint left_child_idx;
     bool expand_leaf;
 };
 
@@ -194,7 +194,7 @@ class HLBVH {
         treelets[treelet_idx].bounds = treelet_bounds;
     }
 
-    PBRT_GPU void build_bottom_bvh(const BVHArgs *bvh_args_array, uint array_length) {
+    PBRT_GPU void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length) {
         const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (worker_idx >= array_length) {
             return;
@@ -207,8 +207,8 @@ class HLBVH {
         }
 
         const auto &node = build_nodes[args.build_node_idx];
-        uint left_child_idx = args.child_node_start + 0;
-        uint right_child_idx = args.child_node_start + 1;
+        uint left_child_idx = args.left_child_idx + 0;
+        uint right_child_idx = args.left_child_idx + 1;
 
         Bounds3f bounds_of_centroid;
         for (uint morton_idx = node.first_primitive_idx;
