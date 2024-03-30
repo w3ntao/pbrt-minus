@@ -23,22 +23,22 @@ class Lexer {
 
     Token parse_identifier(const std::string &identifier) {
         if (identifier == "WorldBegin") {
-            return Token(WorldBegin);
+            return Token(TokenType::WorldBegin);
         }
 
         if (identifier == "AttributeBegin") {
-            return Token(AttributeBegin);
+            return Token(TokenType::AttributeBegin);
         }
 
         if (identifier == "AttributeEnd") {
-            return Token(AttributeEnd);
+            return Token(TokenType::AttributeEnd);
         }
 
         if (identifier == "true" || identifier == "false") {
-            return Token(String, identifier);
+            return Token(TokenType::String, identifier);
         }
 
-        return Token(Keyword, identifier);
+        return Token(TokenType::Keyword, identifier);
     }
 
   public:
@@ -91,16 +91,16 @@ class Lexer {
         while (true) {
             auto token = next_token();
 
-            if (token.type == RightBracket) {
+            if (token.type == TokenType::RightBracket) {
                 break;
             }
 
-            if (token.type == Number || token.type == String) {
-                values.push_back(token.value[0]);
+            if (token.type == TokenType::Number || token.type == TokenType::String) {
+                values.push_back(token.values[0]);
                 continue;
             }
 
-            printf("unknown token type: %d\n", token.type);
+            std::cout << "Lexer::read_list(): unknown token type: " << token.type << "\n";
 
             throw std::runtime_error("Lexer::read_list() error");
         }
@@ -121,7 +121,7 @@ class Lexer {
             input.substr(last_position + 1, position - 2 - (last_position + 1));
 
         if (string_without_quote.find(' ') == std::string::npos) {
-            return Token(String, string_without_quote);
+            return Token(TokenType::String, string_without_quote);
         }
 
         std::istringstream iss(string_without_quote);
@@ -130,7 +130,7 @@ class Lexer {
         copy(std::istream_iterator<std::string>(iss), std::istream_iterator<std::string>(),
              back_inserter(split_strings));
 
-        return Token(Variable, split_strings);
+        return Token(TokenType::Variable, split_strings);
     }
 
     std::string read_identifier() {
@@ -179,19 +179,19 @@ class Lexer {
         }
 
         if (!current_char) {
-            return Token(EndOfFile);
+            return Token(TokenType::EndOfFile);
         }
 
         switch (current_char.value()) {
         case '[': {
-            auto token = Token(List, read_list());
+            auto token = Token(TokenType::List, read_list());
             read_char();
             return token;
         }
 
         case ']': {
             read_char();
-            return Token(RightBracket);
+            return Token(TokenType::RightBracket);
         }
 
         case '"': {
@@ -204,12 +204,12 @@ class Lexer {
             }
 
             if (current_char == '-' || current_char == '.' || is_digit(current_char.value())) {
-                return Token(Number, read_number());
+                return Token(TokenType::Number, read_number());
             }
 
             printf("line %d: illegal char: `%c`", line_number, current_char.value());
 
-            return Token(Illegal);
+            return Token(TokenType::Illegal);
         }
         }
     }

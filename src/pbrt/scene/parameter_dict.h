@@ -8,12 +8,12 @@ class ParameterDict {
         // e.g. { Shape "trianglemesh" }, { Camera "perspective" }
 
         for (int idx = 2; idx < tokens.size(); idx += 2) {
-            if (tokens[idx].type != Variable) {
+            if (tokens[idx].type != TokenType::Variable) {
                 throw std::runtime_error("expect token Variable");
             }
 
-            auto variable_type = tokens[idx].value[0];
-            auto variable_name = tokens[idx].value[1];
+            auto variable_type = tokens[idx].values[0];
+            auto variable_name = tokens[idx].values[1];
 
             if (variable_type == "integer") {
                 integers[variable_name] = tokens[idx + 1].to_integers();
@@ -26,7 +26,7 @@ class ParameterDict {
             }
 
             if (variable_type == "string") {
-                strings[variable_name] = tokens[idx + 1].value[0];
+                strings[variable_name] = tokens[idx + 1].values[0];
                 continue;
             }
 

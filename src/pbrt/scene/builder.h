@@ -183,8 +183,7 @@ class SceneBuilder {
     Transform render_from_world;
 
     explicit SceneBuilder(const CommandLineOption &command_line_option)
-        : samples_per_pixel(command_line_option.samples_per_pixel),
-          integrator_name(command_line_option.integrator) {
+        : samples_per_pixel(command_line_option.samples_per_pixel) {
 
         checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
         checkCudaErrors(cudaGetLastError());
@@ -223,12 +222,12 @@ class SceneBuilder {
                   << std::flush;
     }
 
-    static std::vector<int> group_tokens(const std::vector<Token> &tokens) {
-        std::vector<int> keyword_range;
+    static std::vector<uint> group_tokens(const std::vector<Token> &tokens) {
+        std::vector<uint> keyword_range;
         for (int idx = 0; idx < tokens.size(); ++idx) {
             const auto &token = tokens[idx];
-            if (token.type == WorldBegin || token.type == AttributeBegin ||
-                token.type == AttributeEnd || token.type == Keyword) {
+            if (token.type == TokenType::WorldBegin || token.type == TokenType::AttributeBegin ||
+                token.type == TokenType::AttributeEnd || token.type == TokenType::Keyword) {
                 keyword_range.push_back(idx);
             }
         }
@@ -243,7 +242,7 @@ class SceneBuilder {
 
     void option_camera() {
         auto parameters = ParameterDict(camera_tokens);
-        const auto camera_type = camera_tokens[1].value[0];
+        const auto camera_type = camera_tokens[1].values[0];
         if (camera_type == "perspective") {
             auto camera_from_world = graphics_state.current_transform;
             auto world_from_camera = camera_from_world.inverse();
@@ -324,8 +323,27 @@ class SceneBuilder {
         }
     }
 
+    void option_integrator() {
+        if (!integrator_name.has_value()) {
+            integrator_name = "ambientocclusion";
+        }
+
+        if (integrator_name == "ambientocclusion") {
+            GPU::gpu_init_integrator_ambient_occlusion<<<1, 1>>>(renderer);
+        } else if (integrator_name == "surfacenormal") {
+            GPU::gpu_init_integrator_surface_normal<<<1, 1>>>(renderer);
+        } else {
+            const std::string error =
+                "parse_tokens(): unknown Integrator name: `" + integrator_name.value() + "`";
+            throw std::runtime_error(error.c_str());
+        }
+
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+    }
+
     void parse_lookat(const std::vector<Token> &tokens) {
-        if (tokens[0] != Token(Keyword, "LookAt")) {
+        if (tokens[0] != Token(TokenType::Keyword, "LookAt")) {
             throw std::runtime_error("expect Keyword(LookAt)");
         }
 
@@ -343,7 +361,7 @@ class SceneBuilder {
     }
 
     void parse_rotate(const std::vector<Token> &tokens) {
-        if (tokens[0] != Token(Keyword, "Rotate")) {
+        if (tokens[0] != Token(TokenType::Keyword, "Rotate")) {
             throw std::runtime_error("expect Keyword(Rotate)");
         }
 
@@ -357,7 +375,7 @@ class SceneBuilder {
     }
 
     void parse_scale(const std::vector<Token> &tokens) {
-        if (tokens[0] != Token(Keyword, "Scale")) {
+        if (tokens[0] != Token(TokenType::Keyword, "Scale")) {
             throw std::runtime_error("expect Keyword(Scale)");
         }
 
@@ -370,7 +388,7 @@ class SceneBuilder {
     }
 
     void world_shape(const std::vector<Token> &tokens) {
-        if (tokens[0] != Token(Keyword, "Shape")) {
+        if (tokens[0] != Token(TokenType::Keyword, "Shape")) {
             throw std::runtime_error("expect Keyword(Shape)");
         }
 
@@ -379,7 +397,7 @@ class SceneBuilder {
 
         const auto parameters = ParameterDict(tokens);
 
-        auto type_of_shape = tokens[1].value[0];
+        auto type_of_shape = tokens[1].values[0];
         if (type_of_shape == "trianglemesh") {
             auto uv = parameters.get_point2("uv");
             auto indices = parameters.get_integer("indices");
@@ -486,25 +504,22 @@ class SceneBuilder {
         const Token &first_token = tokens[0];
 
         switch (first_token.type) {
-        case AttributeBegin: {
+        case TokenType::AttributeBegin: {
             pushed_graphics_state.push(graphics_state);
             return;
         }
 
-        case AttributeEnd: {
+        case TokenType::AttributeEnd: {
             graphics_state = pushed_graphics_state.top();
             pushed_graphics_state.pop();
             return;
         }
 
-        case WorldBegin: {
+        case TokenType::WorldBegin: {
             option_film();
             option_camera();
             option_sampler();
-
-            GPU::gpu_init_integrator<<<1, 1>>>(renderer);
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
+            option_integrator();
 
             graphics_state.current_transform = Transform::identity();
             named_coordinate_systems["world"] = graphics_state.current_transform;
@@ -512,8 +527,8 @@ class SceneBuilder {
             return;
         }
 
-        case Keyword: {
-            const auto keyword = first_token.value[0];
+        case TokenType::Keyword: {
+            const auto keyword = first_token.values[0];
 
             if (keyword == "Camera") {
                 camera_tokens = tokens;
@@ -526,9 +541,14 @@ class SceneBuilder {
             }
 
             if (keyword == "Include") {
-                auto subfile = tokens[1].value[0];
-                auto fullpath = !root.empty() ? root + "/" + subfile : subfile;
-                parse_file(fullpath);
+                auto included_file = tokens[1].values[0];
+                auto full_path = root.empty() ? included_file : root + "/" + included_file;
+                parse_file(full_path);
+                return;
+            }
+
+            if (keyword == "Integrator") {
+                integrator_name = tokens[1].values[0];
                 return;
             }
 
@@ -562,8 +582,7 @@ class SceneBuilder {
                 return;
             }
 
-            if (keyword == "AreaLightSource" || keyword == "Integrator" ||
-                keyword == "LightSource" || keyword == "Material" ||
+            if (keyword == "AreaLightSource" || keyword == "LightSource" || keyword == "Material" ||
                 keyword == "MakeNamedMaterial" || keyword == "NamedMaterial" ||
                 keyword == "ReverseOrientation" || keyword == "Texture") {
                 std::cout << "parse_tokens::Keyword `" << keyword << "` ignored for the moment\n";
@@ -575,7 +594,8 @@ class SceneBuilder {
         }
 
         default: {
-            printf("unknown token type: `%d`\n", first_token.type);
+            std::cout << "Builder::parse_tokens(): unknown token type: " << first_token.type
+                      << "\n";
             throw std::runtime_error("parse_tokens() fail");
         }
         }
@@ -585,7 +605,7 @@ class SceneBuilder {
         const auto all_tokens = parse_pbrt_into_token(_filename);
         const auto range_of_tokens = SceneBuilder::group_tokens(all_tokens);
 
-        for (int range_idx = 0; range_idx < range_of_tokens.size() - 1; ++range_idx) {
+        for (uint range_idx = 0; range_idx < range_of_tokens.size() - 1; ++range_idx) {
             auto current_tokens = std::vector(all_tokens.begin() + range_of_tokens[range_idx],
                                               all_tokens.begin() + range_of_tokens[range_idx + 1]);
 

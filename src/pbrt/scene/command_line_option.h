@@ -8,7 +8,6 @@
 struct CommandLineOption {
     std::string input_file;
     std::optional<int> samples_per_pixel;
-    std::optional<std::string> integrator;
 
     CommandLineOption(int argc, const char **argv) {
         int idx = 1;
@@ -20,13 +19,8 @@ struct CommandLineOption {
                     idx += 2;
                     continue;
                 }
-                if (argument == "--integrator") {
-                    integrator = std::string(argv[idx + 1]);
-                    idx += 2;
-                    continue;
-                }
 
-                const std::string error = "unkown arg: `" + argument + "`";
+                const std::string error = "CommandLineOption(): unknown arg: `" + argument + "`";
                 throw std::runtime_error(error.c_str());
             }
 

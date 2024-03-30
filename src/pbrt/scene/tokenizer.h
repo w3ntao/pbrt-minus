@@ -1,10 +1,10 @@
 #pragma once
 
-// TODO: rewrite TypeOfToken with enum class
-enum TypeOfToken {
+enum class TokenType {
     Illegal,
     EndOfFile,
     RightBracket,
+
     WorldBegin,
     AttributeBegin,
     AttributeEnd,
@@ -16,58 +16,83 @@ enum TypeOfToken {
     List,
 };
 
-std::string parsing_type_to_string(TypeOfToken type) {
+std::ostream &operator<<(std::ostream &stream, const TokenType type) {
     switch (type) {
-    case Illegal:
-        return "Illegal";
-    case EndOfFile:
-        return "EOF";
-    case RightBracket:
-        return "RightBracket";
-    case WorldBegin:
-        return "WorldBegin";
-    case AttributeBegin:
-        return "AttributeBegin";
-    case AttributeEnd:
-        return "AttributeEnd";
-
-    case Keyword:
-        return "Keyword";
-    case Number:
-        return "Number";
-    case String:
-        return "String";
-    case Variable:
-        return "Variable";
-    case List:
-        return "List";
+    case TokenType::Illegal: {
+        stream << "Illegal";
+        break;
+    }
+    case TokenType::EndOfFile: {
+        stream << "EOF";
+        break;
+    }
+    case TokenType::RightBracket: {
+        stream << "RightBracket";
+        break;
+    }
+    case TokenType::WorldBegin: {
+        stream << "WorldBegin";
+        break;
+    }
+    case TokenType::AttributeBegin: {
+        stream << "AttributeBegin";
+        break;
+    }
+    case TokenType::AttributeEnd: {
+        stream << "AttributeEnd";
+        break;
     }
 
-    throw std::runtime_error("parsing_type_to_string() error");
+    case TokenType::Keyword: {
+        stream << "Keyword";
+        break;
+    }
+    case TokenType::Number: {
+        stream << "Number";
+        break;
+    }
+    case TokenType::String: {
+        stream << "String";
+        break;
+    }
+    case TokenType::Variable: {
+        stream << "Variable";
+        break;
+    }
+    case TokenType::List: {
+        stream << "List";
+        break;
+    }
+    default: {
+        throw std::runtime_error("unknown TokenType");
+    }
+    }
+
+    return stream;
 }
 
 class Token {
   public:
-    TypeOfToken type;
-    std::vector<std::string> value;
+    TokenType type;
+    std::vector<std::string> values;
 
-    Token(TypeOfToken _type) : type(_type) {}
+    explicit Token(TokenType _type) : type(_type) {}
 
-    Token(TypeOfToken _type, const std::string &_value) : type(_type), value({_value}) {}
+    Token(TokenType _type, const std::string &_value) : type(_type), values({_value}) {}
 
-    Token(TypeOfToken _type, const std::vector<std::string> _value) : type(_type), value(_value) {}
+    Token(TokenType _type, const std::vector<std::string> &_value) : type(_type), values(_value) {}
 
     bool operator==(const Token &t) const {
         if (type != t.type) {
             return false;
         }
 
-        if (value.size() != t.value.size()) {
+        if (values.size() != t.values.size()) {
             return false;
         }
 
-        for (int i = 0; i < value.size(); ++i) {
-            if (value[i] != t.value[i]) {
+        for (int i = 0; i < values.size(); ++i) {
+            if (values[i] != t.values[i]) {
                 return false;
             }
         }
@@ -80,36 +105,36 @@ class Token {
     }
 
     double to_number() const {
-        if (type != Number) {
+        if (type != TokenType::Number) {
             throw std::runtime_error("you should only invoke it with type Number.");
         }
 
-        return stod(value[0]);
+        return stod(values[0]);
     }
 
     std::vector<double> to_floats() const {
-        std::vector<double> floats(value.size());
-        for (int idx = 0; idx < value.size(); idx++) {
-            floats[idx] = stod(value[idx]);
+        std::vector<double> floats(values.size());
+        for (int idx = 0; idx < values.size(); idx++) {
+            floats[idx] = stod(values[idx]);
         }
 
         return floats;
     }
 
     std::vector<int> to_integers() const {
-        std::vector<int> integers(value.size());
-        for (int idx = 0; idx < value.size(); idx++) {
-            integers[idx] = stoi(value[idx]);
+        std::vector<int> integers(values.size());
+        for (int idx = 0; idx < values.size(); idx++) {
+            integers[idx] = stoi(values[idx]);
         }
 
         return integers;
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Token &token) {
-        stream << parsing_type_to_string(token.type);
-        if (token.value.size() > 0) {
+        stream << token.type;
+        if (!token.values.empty()) {
             stream << ": { ";
-            for (const auto &x : token.value) {
+            for (const auto &x : token.values) {
                 stream << x << ", ";
             }
             stream << "}";

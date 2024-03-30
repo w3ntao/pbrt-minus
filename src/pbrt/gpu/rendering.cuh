@@ -199,17 +199,16 @@ gpu_init_global_variables(Renderer *renderer, const double *cie_lambdas, const d
                            length_d65, rgb_to_spectrum_table, RGBtoSpectrumData::SRGB);
 }
 
-__global__ void gpu_init_integrator(Renderer *renderer) {
+__global__ void gpu_init_integrator_surface_normal(Renderer *renderer) {
+    renderer->integrator = new SurfaceNormalIntegrator(
+        *(renderer->global_variables->rgb_color_space), renderer->sensor);
+}
 
+__global__ void gpu_init_integrator_ambient_occlusion(Renderer *renderer) {
     auto illuminant_spectrum = renderer->global_variables->rgb_color_space->illuminant;
     auto cie_y = renderer->global_variables->get_cie_xyz()[1];
 
     auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
-
-    /*
-    renderer->integrator = new SurfaceNormalIntegrator(
-        *(renderer->global_variables->rgb_color_space), renderer->sensor);
-    */
 
     renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
 }
