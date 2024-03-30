@@ -1,7 +1,7 @@
-#include "pbrt/scene/builder.h"
+#include <iostream>
 
-#include <algorithm>
-#include <random>
+#include "pbrt/util/thread_pool.h"
+#include "pbrt/scene/builder.h"
 
 using namespace std;
 
@@ -93,12 +93,16 @@ int main(int argc, const char **argv) {
 
     display_system_info();
 
+    thread_pool = new ThreadPool(std::thread::hardware_concurrency());
+
     const auto command_line_option = CommandLineOption(argc, argv);
     SceneBuilder::render_pbrt(command_line_option);
 
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     cudaDeviceReset();
+
+    delete thread_pool;
 
     return 0;
 }

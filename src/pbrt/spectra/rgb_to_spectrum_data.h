@@ -568,22 +568,6 @@ void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *
     }
 }
 
-void single_thread_worker(double *out, std::stack<int> &job_list, std::mutex &mtx,
-                          const RGBtoSpectrumBuffer &data, const double *scale, int l) {
-    while (true) {
-        mtx.lock();
-        if (job_list.empty()) {
-            mtx.unlock();
-            return;
-        }
-        auto j = job_list.top();
-        job_list.pop();
-        mtx.unlock();
-
-        compute(out, j, data, scale, l);
-    }
-}
-
 RGBtoSpectrumTableCPU compute_spectrum_table_data(const std::string &str_gamut) {
     if (str_gamut != "sRGB") {
         throw std::runtime_error("compute_spectrum_table_data: only sRGB is implemented");
@@ -596,29 +580,14 @@ RGBtoSpectrumTableCPU compute_spectrum_table_data(const std::string &str_gamut) 
 
     RGBtoSpectrumTableCPU result;
 
-    for (int k = 0; k < RES; ++k) {
+    for (int k = 0; k < RES; k++) {
         result.z_nodes[k] = smoothstep(smoothstep(k / double(RES - 1)));
     }
 
-    // TODO: build a thread pool in the future
-    const int num_of_workers = std::min(int(std::thread::hardware_concurrency()), RES);
     for (int l = 0; l < 3; ++l) {
-        std::stack<int> job_list;
-        for (int y = 0; y < RES; y++) {
-            job_list.push(y);
-        }
-
-        std::mutex mtx;
-        std::vector<std::thread> workers(num_of_workers);
-        for (int idx = 0; idx < num_of_workers; ++idx) {
-            workers[idx] =
-                std::thread(single_thread_worker, result.coefficients, std::ref(job_list),
-                            std::ref(mtx), std::ref(data), result.z_nodes, l);
-        }
-
-        for (auto &t : workers) {
-            t.join();
-        }
+        thread_pool->parallel_execute(0, RES, [&result, &data, l](int j) {
+            compute(result.coefficients, j, data, result.z_nodes, l);
+        });
     }
 
     return result;

@@ -206,12 +206,12 @@ __global__ void gpu_init_integrator(Renderer *renderer) {
 
     auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
 
+    /*
     renderer->integrator = new SurfaceNormalIntegrator(
         *(renderer->global_variables->rgb_color_space), renderer->sensor);
-
-    /*
-    renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
     */
+
+    renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
 }
 
 __global__ void gpu_init_filter(Renderer *renderer) {
