@@ -110,10 +110,10 @@ struct GPUconstants {
         dim3 blocks(num_component, rgb_to_spectrum_data_resolution,
                     rgb_to_spectrum_data_resolution);
         dim3 threads(rgb_to_spectrum_data_resolution, channel, 1);
-        GPU::gpu_init_rgb_to_spectrum_table_coefficients<<<blocks, threads>>>(
+        GPU::init_rgb_to_spectrum_table_coefficients<<<blocks, threads>>>(
             rgb_to_spectrum_table_gpu, rgb_to_spectrum_table_coefficients);
 
-        GPU::gpu_init_rgb_to_spectrum_table_scale<<<1, rgb_to_spectrum_data_resolution>>>(
+        GPU::init_rgb_to_spectrum_table_scale<<<1, rgb_to_spectrum_data_resolution>>>(
             rgb_to_spectrum_table_gpu, rgb_to_spectrum_table_scale);
 
         for (auto ptr : {rgb_to_spectrum_table_scale, rgb_to_spectrum_table_coefficients}) {
@@ -189,7 +189,7 @@ class SceneBuilder {
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        GPU::gpu_init_global_variables<<<1, 1>>>(
+        GPU::init_global_variables<<<1, 1>>>(
             renderer, gpu_constants.cie_lambdas_gpu, gpu_constants.cie_x_value_gpu,
             gpu_constants.cie_y_value_gpu, gpu_constants.cie_z_value_gpu,
             gpu_constants.cie_illum_d6500_gpu, sizeof(CIE_Illum_D6500) / sizeof(double),
@@ -259,8 +259,7 @@ class SceneBuilder {
                 fov = _fov[0];
             }
 
-            GPU::gpu_init_camera<<<1, 1>>>(renderer, film_resolution.value(), camera_transform,
-                                           fov);
+            GPU::init_camera<<<1, 1>>>(renderer, film_resolution.value(), camera_transform, fov);
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
 
@@ -280,13 +279,13 @@ class SceneBuilder {
         film_resolution = Point2i(_resolution_x, _resolution_y);
         output_filename = parameters.get_string("filename");
 
-        GPU::gpu_init_pixel_sensor_cie_1931<<<1, 1>>>(
+        GPU::init_pixel_sensor_cie_1931<<<1, 1>>>(
             renderer, gpu_constants.cie_s0_gpu, gpu_constants.cie_s1_gpu, gpu_constants.cie_s2_gpu,
             gpu_constants.cie_s_lambda_gpu);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        GPU::gpu_init_filter<<<1, 1>>>(renderer);
+        GPU::init_filter<<<1, 1>>>(renderer);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
@@ -297,13 +296,15 @@ class SceneBuilder {
         checkCudaErrors(cudaDeviceSynchronize());
         gpu_dynamic_pointers.push_back(gpu_pixels);
 
-        int batch = 256;
-        int total_job = film_resolution->x * film_resolution->y / 256 + 1;
-        GPU::gpu_init_pixels<<<total_job, batch>>>(gpu_pixels, film_resolution.value());
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        {
+            uint threads = 1024;
+            uint blocks = divide_and_ceil(uint(film_resolution->x * film_resolution->y), threads);
+            GPU::init_pixels<<<blocks, threads>>>(gpu_pixels, film_resolution.value());
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+        }
 
-        GPU::gpu_init_rgb_film<<<1, 1>>>(renderer, film_resolution.value(), gpu_pixels);
+        GPU::init_rgb_film<<<1, 1>>>(renderer, film_resolution.value(), gpu_pixels);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
     }
@@ -329,9 +330,9 @@ class SceneBuilder {
         }
 
         if (integrator_name == "ambientocclusion") {
-            GPU::gpu_init_integrator_ambient_occlusion<<<1, 1>>>(renderer);
+            GPU::init_integrator_ambient_occlusion<<<1, 1>>>(renderer);
         } else if (integrator_name == "surfacenormal") {
-            GPU::gpu_init_integrator_surface_normal<<<1, 1>>>(renderer);
+            GPU::init_integrator_surface_normal<<<1, 1>>>(renderer);
         } else {
             const std::string error =
                 "parse_tokens(): unknown Integrator name: `" + integrator_name.value() + "`";

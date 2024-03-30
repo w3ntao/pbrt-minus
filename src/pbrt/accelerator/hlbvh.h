@@ -8,8 +8,8 @@
 #include "pbrt/util/stack.h"
 
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
-const int BIT_LENGTH_TREELET_MASK = 18;
-const int MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_TREELET_MASK;
+const uint BIT_LENGTH_TREELET_MASK = 18;
+const uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_TREELET_MASK;
 
 constexpr uint MAX_TREELET_NUM = 262144;
 /*
@@ -26,8 +26,8 @@ constexpr uint MAX_PRIMITIVES_NUM_IN_LEAF = 1;
 namespace {
 [[maybe_unused]] void validate_treelet_num() {
     static_assert(MAX_TREELET_NUM == (1 << BIT_LENGTH_TREELET_MASK));
-    static_assert(BIT_LENGTH_TREELET_MASK > 0 && BIT_LENGTH_TREELET_MASK < 32 &&
-                  BIT_LENGTH_TREELET_MASK % 3 == 0);
+    static_assert(BIT_LENGTH_TREELET_MASK > 0 && BIT_LENGTH_TREELET_MASK < 32);
+    static_assert(BIT_LENGTH_TREELET_MASK % 3 == 0);
 }
 } // namespace
 

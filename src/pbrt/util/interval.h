@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/rounding_arithmetic.h"
+#include "pbrt/util/bit_arithmetic.h"
 #include "math.h"
 
 class Interval {

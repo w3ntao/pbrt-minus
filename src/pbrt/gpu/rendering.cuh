@@ -151,7 +151,7 @@ __global__ void apply_transform(T *data, const Transform transform, uint length)
     data[idx] = transform(data[idx]);
 }
 
-__global__ void gpu_init_rgb_to_spectrum_table_coefficients(
+__global__ void init_rgb_to_spectrum_table_coefficients(
     RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
     const double *rgb_to_spectrum_table_coefficients) {
     /*
@@ -180,17 +180,17 @@ __global__ void gpu_init_rgb_to_spectrum_table_coefficients(
 }
 
 __global__ void
-gpu_init_rgb_to_spectrum_table_scale(RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
-                                     const double *rgb_to_spectrum_table_scale) {
+init_rgb_to_spectrum_table_scale(RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
+                                 const double *rgb_to_spectrum_table_scale) {
     int idx = threadIdx.x;
     rgb_to_spectrum_data->z_nodes[idx] = rgb_to_spectrum_table_scale[idx];
 }
 
 __global__ void
-gpu_init_global_variables(Renderer *renderer, const double *cie_lambdas, const double *cie_x_value,
-                          const double *cie_y_value, const double *cie_z_value,
-                          const double *cie_illum_d6500, int length_d65,
-                          const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table) {
+init_global_variables(Renderer *renderer, const double *cie_lambdas, const double *cie_x_value,
+                      const double *cie_y_value, const double *cie_z_value,
+                      const double *cie_illum_d6500, int length_d65,
+                      const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table) {
     *renderer = Renderer();
     // don't new anything in constructor Renderer()
 
@@ -199,12 +199,12 @@ gpu_init_global_variables(Renderer *renderer, const double *cie_lambdas, const d
                            length_d65, rgb_to_spectrum_table, RGBtoSpectrumData::SRGB);
 }
 
-__global__ void gpu_init_integrator_surface_normal(Renderer *renderer) {
+__global__ void init_integrator_surface_normal(Renderer *renderer) {
     renderer->integrator = new SurfaceNormalIntegrator(
         *(renderer->global_variables->rgb_color_space), renderer->sensor);
 }
 
-__global__ void gpu_init_integrator_ambient_occlusion(Renderer *renderer) {
+__global__ void init_integrator_ambient_occlusion(Renderer *renderer) {
     auto illuminant_spectrum = renderer->global_variables->rgb_color_space->illuminant;
     auto cie_y = renderer->global_variables->get_cie_xyz()[1];
 
@@ -213,13 +213,13 @@ __global__ void gpu_init_integrator_ambient_occlusion(Renderer *renderer) {
     renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
 }
 
-__global__ void gpu_init_filter(Renderer *renderer) {
+__global__ void init_filter(Renderer *renderer) {
     renderer->filter = new BoxFilter(0.5);
 }
 
-__global__ void gpu_init_pixel_sensor_cie_1931(Renderer *renderer, const double *cie_s0,
-                                               const double *cie_s1, const double *cie_s2,
-                                               const double *cie_s_lambda) {
+__global__ void init_pixel_sensor_cie_1931(Renderer *renderer, const double *cie_s0,
+                                           const double *cie_s1, const double *cie_s2,
+                                           const double *cie_s_lambda) {
     // TODO: default value for PixelSensor, will remove later
     double iso = 100;
     double white_balance_val = 0.0;
@@ -237,7 +237,7 @@ __global__ void gpu_init_pixel_sensor_cie_1931(Renderer *renderer, const double 
         cie_xyz, color_space, white_balance_val == 0 ? nullptr : &d_illum, imaging_ratio);
 }
 
-__global__ void gpu_init_pixels(Pixel *pixels, Point2i dimension) {
+__global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= dimension.x * dimension.y) {
         return;
@@ -246,13 +246,13 @@ __global__ void gpu_init_pixels(Pixel *pixels, Point2i dimension) {
     pixels[idx] = Pixel();
 }
 
-__global__ void gpu_init_rgb_film(Renderer *renderer, Point2i dimension, Pixel *pixels) {
+__global__ void init_rgb_film(Renderer *renderer, Point2i dimension, Pixel *pixels) {
     renderer->film = new RGBFilm(pixels, &(renderer->sensor), dimension,
                                  renderer->global_variables->rgb_color_space);
 }
 
-__global__ void gpu_init_camera(Renderer *renderer, const Point2i resolution,
-                                const CameraTransform camera_transform, const double fov) {
+__global__ void init_camera(Renderer *renderer, const Point2i resolution,
+                            const CameraTransform camera_transform, const double fov) {
     renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov, 0.0);
 }
 
@@ -351,16 +351,16 @@ __global__ void parallel_render(Renderer *renderer, int num_samples) {
 __global__ void copy_gpu_pixels_to_rgb(const Renderer *renderer, RGB *output_rgb) {
     const Camera *camera = renderer->camera;
 
-    int width = camera->resolution.x;
-    int height = camera->resolution.y;
+    uint width = camera->resolution.x;
+    uint height = camera->resolution.y;
 
-    int x = threadIdx.x + blockIdx.x * blockDim.x;
-    int y = threadIdx.y + blockIdx.y * blockDim.y;
+    uint x = threadIdx.x + blockIdx.x * blockDim.x;
+    uint y = threadIdx.y + blockIdx.y * blockDim.y;
     if (x >= width || y >= height) {
         return;
     }
 
-    int flat_idx = x + y * width;
+    uint flat_idx = x + y * width;
     output_rgb[flat_idx] = renderer->film->get_pixel_rgb(Point2i(x, y));
 }
 
