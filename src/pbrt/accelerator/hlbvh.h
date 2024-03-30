@@ -58,10 +58,9 @@ struct BVHBuildNode {
         uint left_child_idx;      // for interior node
     };
 
-    union {
-        uint num_primitives;  // for leaf node
-        uint right_child_idx; // for interior node
-    };
+    uint num_primitives;  // for leaf node
+    uint right_child_idx; // for interior node
+
     // TODO: delete right_child_idx after rewriting top BVH building (right_idx = left_idx + 1)
 
     /*
@@ -74,14 +73,7 @@ struct BVHBuildNode {
 
     PBRT_CPU_GPU
     inline bool is_leaf() const {
-        // TODO: rewrite this after rewriting top BVH building
-        return axis == std::numeric_limits<uint8_t>::max();
-    }
-
-    PBRT_CPU_GPU void init_empty_leaf() {
-        first_primitive_idx = 0;
-        num_primitives = 0;
-        axis = std::numeric_limits<uint8_t>::max();
+        return num_primitives > 0;
     }
 
     PBRT_CPU_GPU
@@ -89,7 +81,6 @@ struct BVHBuildNode {
         first_primitive_idx = _first_primitive_offset;
         num_primitives = _num_primitive;
         bounds = _bounds;
-        axis = std::numeric_limits<uint8_t>::max();
     }
 
     PBRT_CPU_GPU
@@ -97,6 +88,7 @@ struct BVHBuildNode {
                        const Bounds3f &_bounds) {
         left_child_idx = _left_child_idx;
         right_child_idx = _right_child_offset;
+        num_primitives = 0;
 
         bounds = _bounds;
         axis = _axis;
@@ -260,8 +252,8 @@ class HLBVH {
             // all primitives' centroids grouped either left or right half
             // there is no need to separate them
 
-            build_nodes[left_child_idx].init_empty_leaf();
-            build_nodes[right_child_idx].init_empty_leaf();
+            build_nodes[left_child_idx].num_primitives = 0;
+            build_nodes[right_child_idx].num_primitives = 0;
 
             return;
         }
