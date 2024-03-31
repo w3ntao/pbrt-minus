@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/euclidean_space/point3.h"
+#include "pbrt/euclidean_space/point3fi.h"
 #include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/euclidean_space/normal3f.h"
 

@@ -1,0 +1,31 @@
+#pragma once
+
+#include <optional>
+
+#include "pbrt/util/macro.h"
+#include "pbrt/euclidean_space/bounds3.h"
+#include "pbrt/base/interaction.h"
+#include "pbrt/base/ray.h"
+
+class Triangle;
+
+class Shape {
+  public:
+    PBRT_CPU_GPU
+    void init(const Triangle *triangle);
+
+    PBRT_CPU_GPU
+    Bounds3f bounds() const;
+
+    PBRT_GPU
+    bool fast_intersect(const Ray &ray, double t_max) const;
+
+    PBRT_GPU
+    std::optional<ShapeIntersection> intersect(const Ray &ray, double t_max) const;
+
+  private:
+    enum class ShapeType { triangle };
+
+    ShapeType type;
+    void *data_ptr;
+};

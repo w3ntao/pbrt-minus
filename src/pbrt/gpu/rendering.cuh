@@ -16,7 +16,8 @@
 
 #include "pbrt/accelerator/hlbvh.h"
 
-#include "pbrt/base/shape.h"
+#include "pbrt/base/shape.cuh"
+#include "pbrt/shapes/triangle.cuh"
 
 #include "pbrt/filters/box.h"
 
@@ -56,7 +57,7 @@ class GlobalVariable {
         auto illum_d65 =
             PiecewiseLinearSpectrum::from_interleaved(cie_illum_d6500, length_d65, true, &cie_y);
 
-        if (gamut == RGBtoSpectrumData::SRGB) {
+        if (gamut == RGBtoSpectrumData::Gamut::srgb) {
             rgb_color_space = new RGBColorSpace(
                 Point2f(0.64, 0.33), Point2f(0.3, 0.6), Point2f(0.15, 0.06), illum_d65,
                 rgb_to_spectrum_table, std::array<const Spectrum *, 3>{&cie_x, &cie_y, &cie_z});
@@ -196,7 +197,7 @@ init_global_variables(Renderer *renderer, const double *cie_lambdas, const doubl
 
     renderer->global_variables =
         new GlobalVariable(cie_lambdas, cie_x_value, cie_y_value, cie_z_value, cie_illum_d6500,
-                           length_d65, rgb_to_spectrum_table, RGBtoSpectrumData::SRGB);
+                           length_d65, rgb_to_spectrum_table, RGBtoSpectrumData::Gamut::srgb);
 }
 
 __global__ void init_integrator_surface_normal(Renderer *renderer) {

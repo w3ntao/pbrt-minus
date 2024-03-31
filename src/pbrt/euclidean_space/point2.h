@@ -65,6 +65,10 @@ class Point2 {
         return Point2(x + v.x, y + v.y);
     }
 
+    PBRT_CPU_GPU Vector2<T> operator-(const Point2<T> &right) {
+        return Vector2<T>(x - right.x, y - right.y);
+    }
+
     PBRT_CPU_GPU Point2 operator-(const Vector2f &v) const {
         return Point2(x - v.x, y - v.y);
     }
@@ -97,8 +101,4 @@ using Point2i = Point2<int>;
 template <typename T>
 PBRT_CPU_GPU Point2<T> operator*(T factor, const Point2<T> &p) {
     return p * factor;
-}
-
-PBRT_CPU_GPU Vector2f operator-(const Point2f &left, const Point2f &right) {
-    return Vector2f(left.x - right.x, left.y - right.y);
 }

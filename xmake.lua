@@ -11,6 +11,7 @@ add_packages("png")
 add_includedirs("src")
 add_files(
         "src/pbrt/main.cu",
+        "src/pbrt/base/shape.cu",
         "src/ext/lodepng/lodepng.cpp"
 )
 target_end()

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdexcept>
+#include <array>
 
 #include "pbrt/util/utility_math.h"
 #include "pbrt/util/interval.h"

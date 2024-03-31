@@ -21,8 +21,8 @@ static constexpr double CIE_LAMBDA_MAX = 830;
 
 static constexpr int RES = 64;
 
-enum Gamut {
-    SRGB,
+enum class Gamut {
+    srgb,
     ProPhotoRGB,
     ACES2065_1,
     REC2020,
@@ -380,7 +380,7 @@ void init_tables(RGBtoSpectrumBuffer *data, Gamut gamut) {
     const double *illuminant = nullptr;
 
     switch (gamut) {
-    case SRGB: {
+    case Gamut::srgb: {
         illuminant = cie_d65;
         memcpy(data->xyz_to_rgb, xyz_to_srgb, sizeof(double) * 9);
         memcpy(data->rgb_to_xyz, srgb_to_xyz, sizeof(double) * 9);
@@ -573,7 +573,7 @@ RGBtoSpectrumTableCPU compute_spectrum_table_data(const std::string &str_gamut) 
         throw std::runtime_error("compute_spectrum_table_data: only sRGB is implemented");
     }
 
-    Gamut gamut = SRGB;
+    Gamut gamut = Gamut::srgb;
 
     RGBtoSpectrumBuffer data;
     init_tables(&data, gamut);

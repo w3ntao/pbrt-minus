@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
 if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
@@ -24,13 +24,38 @@ set(LIBRARIES ${LIBRARIES} ${PNG_LIBRARIES})
 
 add_executable(${PROJ_NAME}
         src/pbrt/main.cu
+        src/pbrt/base/shape.cu
         src/ext/lodepng/lodepng.cpp
 )
 
-target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-target_link_libraries(${PROJ_NAME} PRIVATE ${PNG_LIBRARY} Threads::Threads)
+target_include_directories(
+        ${PROJ_NAME} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
 
-set_property(TARGET ${PROJ_NAME} PROPERTY CUDA_ARCHITECTURES native)
-target_compile_options(${PROJ_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+target_link_libraries(
+        ${PROJ_NAME} PRIVATE
+        ${PNG_LIBRARY}
+        Threads::Threads
+)
+
+set_target_properties(
+        ${PROJ_NAME} PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+)
+# with CUDA_SEPARABLE_COMPILATION, member function declaration and implementation can be separate
+# https://developer.nvidia.com/blog/separate-compilation-linking-cuda-device-code/
+
+set_property(
+        TARGET ${PROJ_NAME} PROPERTY
+        CUDA_ARCHITECTURES native
+)
+# with CUDA_ARCHITECTURES native, CUDA_ARCHITECTURES is detected automatically
+# https://stackoverflow.com/questions/68223398/how-can-i-get-cmake-to-automatically-detect-the-value-for-cuda-architectures
+
+target_compile_options(
+        ${PROJ_NAME} PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:
         --expt-relaxed-constexpr
-        >)
+        >
+)

@@ -5,7 +5,7 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
 
-enum RenderingCoordinateSystem {
+enum class RenderingCoordinateSystem {
     CameraCoordSystem,
     CameraWorldCoordSystem,
     WorldCoordSystem,
@@ -20,19 +20,19 @@ struct CameraTransform {
     PBRT_CPU_GPU CameraTransform(const Transform &_world_from_camera,
                                  RenderingCoordinateSystem rendering_space) {
         switch (rendering_space) {
-        case CameraCoordSystem: {
+        case RenderingCoordinateSystem::CameraCoordSystem: {
             world_from_render = _world_from_camera;
             break;
         }
 
-        case CameraWorldCoordSystem: {
+        case RenderingCoordinateSystem::CameraWorldCoordSystem: {
             // the default option
             auto p_camera = _world_from_camera(Point3f(0, 0, 0));
             world_from_render = Transform::translate(p_camera.x, p_camera.y, p_camera.z);
             break;
         }
 
-        case WorldCoordSystem: {
+        case RenderingCoordinateSystem::WorldCoordSystem: {
             world_from_render = Transform::identity();
             break;
         }

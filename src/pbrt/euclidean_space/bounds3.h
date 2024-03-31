@@ -1,6 +1,8 @@
 #pragma once
 
 #include "pbrt/util/utility_math.h"
+#include "pbrt/euclidean_space/point3.h"
+#include "pbrt/base/ray.h"
 
 template <typename T>
 class Bounds3 {
