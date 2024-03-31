@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iomanip>
-#include "pbrt/util/math.h"
+#include "pbrt/util/utility_math.h"
 #include "pbrt/util/compensated_float.h"
 
 template <int N>
@@ -92,7 +92,51 @@ class SquareMatrix {
         return r;
     }
 
-    PBRT_CPU_GPU double determinant() const;
+    PBRT_CPU_GPU double determinant() const {
+        switch (N) {
+        case 3: {
+            const auto m = this->val;
+
+            double minor12 = difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
+            double minor02 = difference_of_products(m[1][0], m[2][2], m[1][2], m[2][0]);
+            double minor01 = difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
+
+            return std::fma(m[0][2], minor01,
+                            difference_of_products(m[0][0], minor12, m[0][1], minor02));
+        }
+        case 4: {
+            const auto m = this->val;
+
+            double s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
+            double s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
+            double s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
+
+            double s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
+            double s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
+            double s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
+
+            double c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
+            double c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
+            double c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
+
+            double c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
+            double c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
+            double c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
+
+            return difference_of_products(s0, c5, s1, c4) +
+                   difference_of_products(s2, c3, -s3, c2) + difference_of_products(s5, c0, s4, c1);
+        }
+        default: {
+            printf("determinant() not implemented for SquareMatrix<%d>\n", N);
+
+#if defined(__CUDA_ARCH__)
+            asm("trap;");
+#else
+            throw std::runtime_error("SquareMatrix<N>::determinant() not implemented");
+#endif
+        }
+        }
+    }
 
     PBRT_CPU_GPU SquareMatrix inverse() const;
 
@@ -123,52 +167,6 @@ class SquareMatrix {
   private:
     double val[N][N];
 };
-
-template <>
-PBRT_CPU_GPU double SquareMatrix<3>::determinant() const {
-    const auto m = this->val;
-
-    double minor12 = difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
-    double minor02 = difference_of_products(m[1][0], m[2][2], m[1][2], m[2][0]);
-    double minor01 = difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
-
-    return std::fma(m[0][2], minor01, difference_of_products(m[0][0], minor12, m[0][1], minor02));
-}
-
-template <>
-PBRT_CPU_GPU double SquareMatrix<4>::determinant() const {
-    const auto m = this->val;
-
-    double s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
-    double s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
-    double s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
-
-    double s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
-    double s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
-    double s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
-
-    double c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
-    double c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
-    double c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
-
-    double c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
-    double c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
-    double c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
-
-    return difference_of_products(s0, c5, s1, c4) + difference_of_products(s2, c3, -s3, c2) +
-           difference_of_products(s5, c0, s4, c1);
-}
-
-template <int N>
-PBRT_CPU_GPU double SquareMatrix<N>::determinant() const {
-    printf("inverse() not implemented for SquareMatrix<%d>\n", N);
-
-#if defined(__CUDA_ARCH__)
-    asm("trap;");
-#else
-    throw std::runtime_error("SquareMatrix<N>::inverse() not implemented");
-#endif
-}
 
 template <>
 PBRT_CPU_GPU inline SquareMatrix<3> SquareMatrix<3>::inverse() const {

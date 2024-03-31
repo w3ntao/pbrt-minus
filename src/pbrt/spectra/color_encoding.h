@@ -1,7 +1,7 @@
 #pragma once
 
 #include "xyz.h"
-#include "pbrt/util/math.h"
+#include "pbrt/util/utility_math.h"
 
 class ColorEncoding {
 

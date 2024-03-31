@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/math.h"
+#include "pbrt/util/utility_math.h"
 #include "pbrt/euclidean_space/squared_matrix.h"
 
 class RGB {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pbrt/euclidean_space/vector3.h"
-#include "pbrt/util/math.h"
+#include "pbrt/util/utility_math.h"
 
 PBRT_CPU_GPU
 inline double cosine_hemisphere_pdf(double cos_theta) {

@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "pbrt/util/math.h"
+#include "pbrt/util/utility_math.h"
 #include "pbrt/util/sampling.h"
 #include "pbrt/spectra/constants.h"
 #include "pbrt/spectra/sampled_spectrum.h"
