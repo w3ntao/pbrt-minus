@@ -1,6 +1,8 @@
 #pragma once
 
-#include "pbrt/base/spectrum.h"
+#include "pbrt/util/macro.h"
+#include "pbrt/spectra/sampled_spectrum.h"
+#include "pbrt/spectra/sampled_wavelengths.h"
 
 // Spectrum Function Declarations
 PBRT_CPU_GPU inline double Blackbody(double lambda, double T) {
@@ -13,7 +15,8 @@ PBRT_CPU_GPU inline double Blackbody(double lambda, double T) {
     const double kb = 1.3806488e-23f;
     // Return emitted radiance for blackbody at wavelength _lambda_
     double l = lambda * 1e-9f;
-    double Le = (2 * h * c * c) / (fast_powf<5>(l) * (std::exp((h * c) / (l * kb * T)) - 1.0));
+
+    double Le = (2 * h * c * c) / (std::pow(l, 5) * (std::exp((h * c) / (l * kb * T)) - 1.0));
     return Le;
 }
 

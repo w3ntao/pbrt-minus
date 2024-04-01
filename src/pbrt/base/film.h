@@ -3,6 +3,7 @@
 #include "pbrt/spectra/sampled_wavelengths.h"
 #include "pbrt/spectra/sampled_spectrum.h"
 
+/*
 class Film {
   public:
     PBRT_GPU virtual ~Film() {}
@@ -12,3 +13,4 @@ class Film {
 
     PBRT_GPU virtual RGB get_pixel_rgb(const Point2i &p) const = 0;
 };
+*/

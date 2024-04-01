@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pbrt/base/ray.h"
-#include "pbrt/base/spectrum.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
 
@@ -16,6 +15,8 @@ struct CameraTransform {
     Transform camera_from_render;
     Transform world_from_render;
     Transform render_from_world;
+
+    PBRT_CPU_GPU CameraTransform() {}
 
     PBRT_CPU_GPU CameraTransform(const Transform &_world_from_camera,
                                  RenderingCoordinateSystem rendering_space) {
@@ -62,6 +63,19 @@ struct CameraRay {
     PBRT_GPU CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum(1)) {}
 };
 
+struct CameraBase {
+    Point2i resolution;
+    CameraTransform camera_transform;
+
+    PBRT_CPU_GPU CameraBase() {}
+
+    PBRT_CPU_GPU void init(const Point2i _resolution, const CameraTransform _camera_transform) {
+        resolution = _resolution;
+        camera_transform = _camera_transform;
+    }
+};
+
+/*
 class Camera {
   public:
     Point2i resolution;
@@ -74,3 +88,4 @@ class Camera {
 
     PBRT_GPU virtual CameraRay generate_ray(const CameraSample &sample) const = 0;
 };
+*/

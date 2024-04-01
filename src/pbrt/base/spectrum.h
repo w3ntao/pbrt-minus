@@ -3,15 +3,17 @@
 #include "pbrt/spectra/sampled_wavelengths.h"
 #include "pbrt/spectra/xyz.h"
 
+class DenselySampledSpectrum;
+
 class Spectrum {
   public:
-    PBRT_GPU
-    virtual ~Spectrum() {}
+    PBRT_CPU_GPU
+    void init(const DenselySampledSpectrum *densely_sampled_spectrum);
 
-    PBRT_GPU
-    virtual double operator()(double lambda) const = 0;
+    PBRT_CPU_GPU
+    double operator()(double lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     double inner_product(const Spectrum &spectrum) const {
         double sum = 0;
         for (int lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
@@ -21,11 +23,11 @@ class Spectrum {
         return sum;
     }
 
-    PBRT_GPU
-    virtual SampledSpectrum sample(const SampledWavelengths &lambda) const = 0;
+    PBRT_CPU_GPU
+    SampledSpectrum sample(const SampledWavelengths &lambda) const;
 
-    PBRT_GPU
-    XYZ to_xyz(const std::array<const Spectrum *, 3> &cie_xyz) const {
+    PBRT_CPU_GPU
+    XYZ to_xyz(const Spectrum *cie_xyz[3]) const {
         auto x = cie_xyz[0];
         auto y = cie_xyz[1];
         auto z = cie_xyz[2];
@@ -33,7 +35,16 @@ class Spectrum {
         return XYZ(inner_product(*x), inner_product(*y), inner_product(*z)) / CIE_Y_integral;
     }
 
-    PBRT_GPU double to_photometric(const Spectrum &cie_y) const {
+    PBRT_CPU_GPU
+    double to_photometric(const Spectrum &cie_y) const {
         return inner_product(cie_y);
     }
+
+  private:
+    enum class SpectrumType {
+        densely_sampled,
+    };
+
+    SpectrumType spectrum_type;
+    void *spectrum_ptr;
 };

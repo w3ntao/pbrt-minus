@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include "pbrt/spectra/xyz.h"
 
 class SampledSpectrum {
@@ -21,7 +22,7 @@ class SampledSpectrum {
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -208,5 +209,6 @@ class SampledSpectrum {
     }
 
   private:
+    // TODO: replace std::array with raw array
     std::array<double, NSpectrumSamples> values;
 };

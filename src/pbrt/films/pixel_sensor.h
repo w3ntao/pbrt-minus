@@ -1,6 +1,5 @@
 #pragma once
 
-#include "pbrt/base/spectrum.h"
 #include "pbrt/euclidean_space/squared_matrix.h"
 #include "pbrt/spectra/rgb.h"
 #include "pbrt/spectra/rgb_color_space.h"
@@ -12,15 +11,19 @@ class PixelSensor {
         : r_bar(nullptr), g_bar(nullptr), b_bar(nullptr), imaging_ratio(0),
           xyz_from_sensor_rgb(SquareMatrix<3>()) {}
 
-    PBRT_GPU PixelSensor(const Spectrum *_r_bar, const Spectrum *_g_bar, const Spectrum *_b_bar,
-                         double _imaging_ratio, SquareMatrix<3> _xyz_from_sensor_rgb)
-        : r_bar(_r_bar), g_bar(_g_bar), b_bar(_b_bar), imaging_ratio(_imaging_ratio),
-          xyz_from_sensor_rgb(_xyz_from_sensor_rgb) {}
+    PBRT_CPU_GPU void init(const Spectrum *_r_bar, const Spectrum *_g_bar, const Spectrum *_b_bar,
+                           double _imaging_ratio, const SquareMatrix<3> _xyz_from_sensor_rgb) {
+        r_bar = _r_bar;
+        g_bar = _g_bar;
+        b_bar = _b_bar;
+        imaging_ratio = _imaging_ratio;
+        xyz_from_sensor_rgb = _xyz_from_sensor_rgb;
+    }
 
-    PBRT_GPU static PixelSensor cie_1931(const std::array<const Spectrum *, 3> &cie_xyz,
-                                         const RGBColorSpace *output_color_space,
-                                         const Spectrum *sensor_illum, double imaging_ratio) {
-        auto xyz_from_sensor_rgb = SquareMatrix<3>::identity();
+    PBRT_CPU_GPU void init_cie_1931(const Spectrum *cie_xyz[3],
+                                    const RGBColorSpace *output_color_space,
+                                    const Spectrum *sensor_illum, double imaging_ratio) {
+        xyz_from_sensor_rgb = SquareMatrix<3>::identity();
         if (sensor_illum) {
             auto source_white = sensor_illum->to_xyz(cie_xyz).xy();
             auto target_white = output_color_space->w;
@@ -28,7 +31,7 @@ class PixelSensor {
             xyz_from_sensor_rgb = white_balance(source_white, target_white);
         }
 
-        return PixelSensor(cie_xyz[0], cie_xyz[1], cie_xyz[2], imaging_ratio, xyz_from_sensor_rgb);
+        init(cie_xyz[0], cie_xyz[1], cie_xyz[2], imaging_ratio, xyz_from_sensor_rgb);
     }
 
     PBRT_GPU RGB to_sensor_rgb(const SampledSpectrum &radiance_l,

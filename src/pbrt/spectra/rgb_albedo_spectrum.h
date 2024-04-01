@@ -1,10 +1,12 @@
 #pragma once
 
 #include "pbrt/spectra/rgb_sigmoid_polynomial.h"
-#include "pbrt/base/spectrum.h"
 
-class RGBAlbedoSpectrum : public Spectrum {
+// TODO: rewrite RGBAlbedoSpectrum
+
+class RGBAlbedoSpectrum {
   public:
+    /*
     PBRT_GPU
     RGBAlbedoSpectrum(const RGBColorSpace &cs, const RGB &rgb) : rsp(cs.to_rgb_coefficients(rgb)) {}
 
@@ -17,14 +19,14 @@ class RGBAlbedoSpectrum : public Spectrum {
 
         return {r, g, b};
     }
+    */
 
-    PBRT_GPU
-    double operator()(double lambda) const override {
+    PBRT_GPU double operator()(double lambda) const {
         return rsp(lambda);
     }
 
     PBRT_GPU
-    SampledSpectrum sample(const SampledWavelengths &lambda) const override {
+    SampledSpectrum sample(const SampledWavelengths &lambda) const {
         std::array<double, NSpectrumSamples> values;
         for (int i = 0; i < NSpectrumSamples; ++i) {
             values[i] = rsp(lambda[i]);

@@ -26,6 +26,6 @@ class Shape {
   private:
     enum class ShapeType { triangle };
 
-    ShapeType type;
-    void *data_ptr;
+    ShapeType shape_type;
+    void *shape_ptr;
 };

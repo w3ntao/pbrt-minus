@@ -97,8 +97,8 @@ class SRGBColorEncoding : ColorEncoding {
     };
 };
 
-PBRT_GPU
-SquareMatrix<3> white_balance(Point2f srcWhite, Point2f targetWhite) {
+PBRT_CPU_GPU
+SquareMatrix<3> white_balance(const Point2f srcWhite, const Point2f targetWhite) {
     // Find LMS coefficients for source and target white
     const double data_LMSFromXYZ[3][3] = {
         {0.8951, 0.2664, -0.1614},

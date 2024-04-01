@@ -1,6 +1,8 @@
 #pragma once
 
+#include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/vector3.h"
+#include "pbrt/spectra/constants.h"
 #include "pbrt/util/utility_math.h"
 
 PBRT_CPU_GPU

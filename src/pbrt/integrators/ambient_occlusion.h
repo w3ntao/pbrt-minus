@@ -5,15 +5,18 @@
 #include "pbrt/util/sampling.h"
 #include "pbrt/euclidean_space/frame.h"
 
-class AmbientOcclusionIntegrator : public Integrator {
+class AmbientOcclusionIntegrator {
   public:
-    PBRT_GPU AmbientOcclusionIntegrator(const Spectrum *_illuminant_spectrum,
-                                        double _illuminant_scale)
-        : illuminant_spectrum(_illuminant_spectrum), illuminant_scale(_illuminant_scale) {}
+    PBRT_CPU_GPU void init(const Spectrum *_illuminant_spectrum, const double _illuminant_scale) {
+        illuminant_spectrum = _illuminant_spectrum;
+        illuminant_scale = _illuminant_scale;
+    }
 
     PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
-                                Sampler &sampler) const override {
+                                Sampler &sampler) const {
+
         const auto shape_intersection = bvh->intersect(ray, Infinity);
+
         if (!shape_intersection) {
             return SampledSpectrum(0);
         }

@@ -97,16 +97,6 @@ PBRT_CPU_GPU auto sum_of_products(Ta a, Tb b, Tc c, Td d) {
     return sum + error;
 }
 
-template <int n, typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
-PBRT_CPU_GPU constexpr T fast_powf(T v) {
-    if constexpr (n < 0) {
-        return 1 / fast_powf<-n>(v);
-    }
-
-    double n2 = fast_powf<n / 2>(v);
-    return n2 * n2 * fast_powf<n & 1>(v);
-}
-
 template <typename T, std::enable_if_t<std::is_same_v<T, uint32_t>, bool> = true>
 PBRT_CPU_GPU inline T left_shift3(T x) {
     if (x == (1 << 10)) {

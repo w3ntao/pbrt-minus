@@ -3,15 +3,15 @@
 
 PBRT_CPU_GPU
 void Shape::init(const Triangle *triangle) {
-    type = ShapeType::triangle;
-    data_ptr = (void *)triangle;
+    shape_type = ShapeType::triangle;
+    shape_ptr = (void *)triangle;
 }
 
 PBRT_CPU_GPU
 Bounds3f Shape::bounds() const {
-    switch (type) {
+    switch (shape_type) {
     case (ShapeType::triangle): {
-        return ((Triangle *)data_ptr)->bounds();
+        return ((Triangle *)shape_ptr)->bounds();
     }
     }
 
@@ -25,9 +25,9 @@ Bounds3f Shape::bounds() const {
 
 PBRT_GPU
 bool Shape::fast_intersect(const Ray &ray, double t_max) const {
-    switch (type) {
+    switch (shape_type) {
     case (ShapeType::triangle): {
-        return ((Triangle *)data_ptr)->fast_intersect(ray, t_max);
+        return ((Triangle *)shape_ptr)->fast_intersect(ray, t_max);
     }
     }
 
@@ -37,9 +37,9 @@ bool Shape::fast_intersect(const Ray &ray, double t_max) const {
 
 PBRT_GPU
 std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, double t_max) const {
-    switch (type) {
+    switch (shape_type) {
     case (ShapeType::triangle): {
-        return ((Triangle *)data_ptr)->intersect(ray, t_max);
+        return ((Triangle *)shape_ptr)->intersect(ray, t_max);
     }
     }
 

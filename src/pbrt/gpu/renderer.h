@@ -8,14 +8,17 @@
 
 #include "ext/lodepng/lodepng.h"
 
+#include "pbrt/base/shape.h"
+#include "pbrt/base/spectrum.h"
+
 #include "pbrt/spectra/constants.h"
 #include "pbrt/spectra/color_encoding.h"
 #include "pbrt/spectra/rgb_color_space.h"
 #include "pbrt/spectra/sampled_wavelengths.h"
+#include "pbrt/spectra/densely_sampled_spectrum.h"
 
 #include "pbrt/accelerator/hlbvh.h"
 
-#include "pbrt/base/shape.h"
 #include "pbrt/shapes/triangle.h"
 
 #include "pbrt/filters/box.h"
@@ -31,28 +34,19 @@
 #include "pbrt/samplers/independent.h"
 
 namespace GPU {
-class GlobalVariable {
-  public:
-    PBRT_GPU ~GlobalVariable() {
-        delete rgb_color_space;
-    }
 
-    PBRT_GPU
-    GlobalVariable(const double *cie_lambdas, const double *cie_x_value, const double *cie_y_value,
-                   const double *cie_z_value, const double *cie_illum_d6500, int length_d65,
-                   const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table,
-                   RGBtoSpectrumData::Gamut gamut) {
-        cie_x.init_from_pls_lambdas_values(cie_lambdas, cie_x_value, NUM_CIE_SAMPLES);
-        cie_y.init_from_pls_lambdas_values(cie_lambdas, cie_y_value, NUM_CIE_SAMPLES);
-        cie_z.init_from_pls_lambdas_values(cie_lambdas, cie_z_value, NUM_CIE_SAMPLES);
-
-        DenselySampledSpectrum illum_d65;
-        illum_d65.init_from_pls_interleaved_samples(cie_illum_d6500, length_d65, true, &cie_y);
+struct GlobalVariable {
+    PBRT_CPU_GPU
+    void init(const Spectrum *_cie_xyz[3], const Spectrum *cie_illum_d6500,
+              const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table,
+              RGBtoSpectrumData::Gamut gamut) {
+        for (uint idx = 0; idx < 3; idx++) {
+            cie_xyz[idx] = _cie_xyz[idx];
+        }
 
         if (gamut == RGBtoSpectrumData::Gamut::srgb) {
-            rgb_color_space = new RGBColorSpace(
-                Point2f(0.64, 0.33), Point2f(0.3, 0.6), Point2f(0.15, 0.06), illum_d65,
-                rgb_to_spectrum_table, std::array<const Spectrum *, 3>{&cie_x, &cie_y, &cie_z});
+            rgb_color_space->init(Point2f(0.64, 0.33), Point2f(0.3, 0.6), Point2f(0.15, 0.06),
+                                  cie_illum_d6500, rgb_to_spectrum_table, cie_xyz);
 
             return;
         }
@@ -61,40 +55,32 @@ class GlobalVariable {
         asm("trap;");
     }
 
-    PBRT_GPU std::array<const Spectrum *, 3> get_cie_xyz() const {
-        return {&cie_x, &cie_y, &cie_z};
+    PBRT_CPU_GPU void get_cie_xyz(const Spectrum *out[3]) const {
+        for (uint idx = 0; idx < 3; idx++) {
+            out[idx] = cie_xyz[idx];
+        }
     }
 
-    const RGBColorSpace *rgb_color_space = nullptr;
-
-  private:
-    DenselySampledSpectrum cie_x;
-    DenselySampledSpectrum cie_y;
-    DenselySampledSpectrum cie_z;
+    RGBColorSpace *rgb_color_space;
+    const Spectrum *cie_xyz[3];
 };
 
 class Renderer {
   public:
-    const Integrator *integrator = nullptr;
-    const Camera *camera = nullptr;
-    const Filter *filter = nullptr;
-    Film *film = nullptr;
-    HLBVH *bvh = nullptr;
+    AmbientOcclusionIntegrator *integrator;
+    PerspectiveCamera *camera;
+    BoxFilter *filter;
+    RGBFilm *film;
+    HLBVH *bvh;
 
-    const GlobalVariable *global_variables = nullptr;
+    const GlobalVariable *global_variables;
+    // TODO: move GlobalVariable* to Builder
 
     PixelSensor sensor;
+    // TODO: change PixelSensor to PixelSensor*
 
-    PBRT_GPU ~Renderer() {
-        delete integrator;
-        delete camera;
-        delete filter;
-        delete film;
-        delete global_variables;
-    }
-
-    PBRT_GPU void evaluate_pixel_sample(const Point2i &p_pixel, const int num_samples) {
-        int width = camera->resolution.x;
+    PBRT_GPU void evaluate_pixel_sample(const Point2i p_pixel, const int num_samples) {
+        int width = camera->camera_base.resolution.x;
         int pixel_index = p_pixel.y * width + p_pixel.x;
 
         auto sampler = IndependentSampler(pixel_index);
@@ -126,12 +112,6 @@ __global__ void build_shapes(Shape *shapes, const S *concrete_shapes, uint num) 
     }
 
     shapes[worker_idx].init(&concrete_shapes[worker_idx]);
-}
-
-__global__ void free_renderer(Renderer *renderer) {
-    renderer->~Renderer();
-    // renderer was never new in device code
-    // so you have to destruct it manually
 }
 
 template <typename T>
@@ -175,59 +155,39 @@ __global__ void init_rgb_to_spectrum_table_coefficients(
 __global__ void
 init_rgb_to_spectrum_table_scale(RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
                                  const double *rgb_to_spectrum_table_scale) {
-    int idx = threadIdx.x;
+    uint idx = threadIdx.x;
     rgb_to_spectrum_data->z_nodes[idx] = rgb_to_spectrum_table_scale[idx];
 }
 
-__global__ void
-init_global_variables(Renderer *renderer, const double *cie_lambdas, const double *cie_x_value,
-                      const double *cie_y_value, const double *cie_z_value,
-                      const double *cie_illum_d6500, int length_d65,
-                      const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table) {
-    *renderer = Renderer();
-    // don't new anything in constructor Renderer()
+__device__ void _init_cied_d_illuminant(DenselySampledSpectrum *d_illum, double temperature,
+                                        const double *cie_s0, const double *cie_s1,
+                                        const double *cie_s2, const double *cie_lambda) {
 
-    renderer->global_variables =
-        new GlobalVariable(cie_lambdas, cie_x_value, cie_y_value, cie_z_value, cie_illum_d6500,
-                           length_d65, rgb_to_spectrum_table, RGBtoSpectrumData::Gamut::srgb);
+    d_illum->init_cie_d(temperature, cie_s0, cie_s1, cie_s2, cie_lambda);
 }
 
-__global__ void init_integrator_surface_normal(Renderer *renderer) {
-    renderer->integrator = new SurfaceNormalIntegrator(
-        *(renderer->global_variables->rgb_color_space), renderer->sensor);
+// TODO: move init_cie_d_illuminant() to CPU
+__global__ void init_cie_d_illuminant(DenselySampledSpectrum *d_illum, double temperature,
+                                      const double *cie_s0, const double *cie_s1,
+                                      const double *cie_s2, const double *cie_lambda) {
+    _init_cied_d_illuminant(d_illum, temperature, cie_s0, cie_s1, cie_s2, cie_lambda);
 }
 
-__global__ void init_integrator_ambient_occlusion(Renderer *renderer) {
-    auto illuminant_spectrum = renderer->global_variables->rgb_color_space->illuminant;
-    auto cie_y = renderer->global_variables->get_cie_xyz()[1];
-
-    auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
-
-    renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum, illuminant_scale);
-}
-
-__global__ void init_filter(Renderer *renderer) {
-    renderer->filter = new BoxFilter(0.5);
-}
-
-__global__ void init_pixel_sensor_cie_1931(Renderer *renderer, const double *cie_s0,
-                                           const double *cie_s1, const double *cie_s2,
-                                           const double *cie_s_lambda) {
+__global__ void init_pixel_sensor_cie_1931(Renderer *renderer, const Spectrum *d_illum) {
     // TODO: default value for PixelSensor, will remove later
+    // TODO: rewrite init_pixel_sensor_cie_1931() to build it in CPU
     double iso = 100;
     double white_balance_val = 0.0;
     double exposure_time = 1.0;
     double imaging_ratio = exposure_time * iso / 100.0;
 
-    DenselySampledSpectrum d_illum;
-    d_illum.init_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, cie_s0, cie_s1,
-                       cie_s2, cie_s_lambda);
+    const Spectrum *cie_xyz[3];
+    renderer->global_variables->get_cie_xyz(cie_xyz);
 
-    auto cie_xyz = renderer->global_variables->get_cie_xyz();
     const auto color_space = renderer->global_variables->rgb_color_space;
 
-    renderer->sensor = PixelSensor::cie_1931(
-        cie_xyz, color_space, white_balance_val == 0 ? nullptr : &d_illum, imaging_ratio);
+    renderer->sensor.init_cie_1931(cie_xyz, color_space, white_balance_val == 0 ? nullptr : d_illum,
+                                   imaging_ratio);
 }
 
 __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
@@ -236,17 +196,7 @@ __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
         return;
     }
 
-    pixels[idx] = Pixel();
-}
-
-__global__ void init_rgb_film(Renderer *renderer, Point2i dimension, Pixel *pixels) {
-    renderer->film = new RGBFilm(pixels, &(renderer->sensor), dimension,
-                                 renderer->global_variables->rgb_color_space);
-}
-
-__global__ void init_camera(Renderer *renderer, const Point2i resolution,
-                            const CameraTransform camera_transform, const double fov) {
-    renderer->camera = new PerspectiveCamera(resolution, camera_transform, fov, 0.0);
+    pixels[idx].init_zero();
 }
 
 __global__ void hlbvh_init_morton_primitives(HLBVH *bvh) {
@@ -327,13 +277,13 @@ __global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh
 }
 
 __global__ void parallel_render(Renderer *renderer, int num_samples) {
-    const Camera *camera = renderer->camera;
+    const PerspectiveCamera *camera = renderer->camera;
 
-    int width = camera->resolution.x;
-    int height = camera->resolution.y;
+    uint width = camera->camera_base.resolution.x;
+    uint height = camera->camera_base.resolution.y;
 
-    int x = threadIdx.x + blockIdx.x * blockDim.x;
-    int y = threadIdx.y + blockIdx.y * blockDim.y;
+    uint x = threadIdx.x + blockIdx.x * blockDim.x;
+    uint y = threadIdx.y + blockIdx.y * blockDim.y;
     if (x >= width || y >= height) {
         return;
     }
@@ -342,10 +292,10 @@ __global__ void parallel_render(Renderer *renderer, int num_samples) {
 }
 
 __global__ void copy_gpu_pixels_to_rgb(const Renderer *renderer, RGB *output_rgb) {
-    const Camera *camera = renderer->camera;
+    const PerspectiveCamera *camera = renderer->camera;
 
-    uint width = camera->resolution.x;
-    uint height = camera->resolution.y;
+    uint width = camera->camera_base.resolution.x;
+    uint height = camera->camera_base.resolution.y;
 
     uint x = threadIdx.x + blockIdx.x * blockDim.x;
     uint y = threadIdx.y + blockIdx.y * blockDim.y;

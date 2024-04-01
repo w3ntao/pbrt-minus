@@ -55,6 +55,17 @@ class SquareMatrix {
         return {data};
     }
 
+    PBRT_CPU_GPU void print() const {
+        for (uint x = 0; x < N; x++) {
+            printf("[ ");
+            for (uint y = 0; y < N; y++) {
+                printf("%f, ", val[x][y]);
+            }
+            printf("]\n");
+        }
+        printf("\n");
+    }
+
     PBRT_CPU_GPU bool operator==(const SquareMatrix &matrix) const {
         for (int i = 0; i < N; ++i) {
             for (int k = 0; k < N; ++k) {
@@ -71,11 +82,11 @@ class SquareMatrix {
         return !(*this == matrix);
     }
 
-    PBRT_CPU_GPU const double *operator[](int i) const {
+    PBRT_CPU_GPU const double *operator[](uint i) const {
         return val[i];
     }
 
-    PBRT_CPU_GPU double *operator[](int i) {
+    PBRT_CPU_GPU double *operator[](uint i) {
         return val[i];
     }
 

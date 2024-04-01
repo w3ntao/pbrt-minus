@@ -5,14 +5,17 @@
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 #include "pbrt/films/pixel_sensor.h"
 
-class SurfaceNormalIntegrator : public Integrator {
+class SurfaceNormalIntegrator {
   public:
+    // TODO: rewrite SurfaceNormalIntegrator
+    /*
     PBRT_GPU SurfaceNormalIntegrator(const RGBColorSpace &rgb_color_space,
                                      const PixelSensor &sensor)
         : rgb_spectra(RGBAlbedoSpectrum::build_albedo_rgb(rgb_color_space)) {}
+    */
 
     PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
-                                Sampler &sampler) const override {
+                                Sampler &sampler) const {
         const auto shape_intersection = bvh->intersect(ray, Infinity);
         if (!shape_intersection) {
             return SampledSpectrum(0);
