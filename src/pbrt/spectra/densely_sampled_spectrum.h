@@ -4,6 +4,29 @@
 #include "pbrt/spectra/constants.h"
 #include "pbrt/spectra/black_body_spectrum.h"
 
+namespace {
+PBRT_CPU_GPU
+double piecewise_linear_spectrum_eval(double lambda, const double *lambdas, const double *values,
+                                      int length) {
+    if (lambda < LAMBDA_MIN || lambda > LAMBDA_MAX) {
+        return 0.0;
+    }
+
+    if (lambda < lambdas[0] && lambda >= LAMBDA_MIN) {
+        return values[0];
+    }
+
+    if (lambda > lambdas[length - 1] && lambda <= LAMBDA_MAX) {
+        return values[length - 1];
+    }
+
+    uint idx = find_interval(length, [&](int i) { return lambdas[i] <= lambda; });
+    double t = (lambda - lambdas[idx]) / (lambdas[idx + 1] - lambdas[idx]);
+
+    return lerp(t, values[idx], values[idx + 1]);
+}
+} // namespace
+
 class DenselySampledSpectrum : public Spectrum {
   public:
     PBRT_GPU DenselySampledSpectrum() {
@@ -19,39 +42,58 @@ class DenselySampledSpectrum : public Spectrum {
         }
     }
 
-    PBRT_GPU static DenselySampledSpectrum
-    from_piecewise_linear_spectrum(const double *_lambdas, const double *_values, int _length) {
-        DenselySampledSpectrum s;
-        for (int lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
-            s.values[lambda - LAMBDA_MIN] = DenselySampledSpectrum::piecewise_linear_spectrum_eval(
-                lambda, _lambdas, _values, _length);
+    PBRT_GPU void init_from_pls_lambdas_values(const double *_lambdas, const double *_values,
+                                               uint _length) {
+        for (uint lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
+            values[lambda - LAMBDA_MIN] =
+                piecewise_linear_spectrum_eval(lambda, _lambdas, _values, _length);
+        }
+    }
+
+    PBRT_GPU void init_from_pls_interleaved_samples(const double *samples, uint num_samples,
+                                                    bool normalize, const Spectrum *cie_y) {
+        if (num_samples > 2 * LAMBDA_RANGE) {
+            printf("DenselySampledSpectrum::init_from_pls_interleaved_samples(): num_samples too "
+                   "large to "
+                   "handle.");
+#if defined(__CUDA_ARCH__)
+            asm("trap;");
+#else
+            throw std::runtime_error("DenselySampledSpectrum::init_from_pls_interleaved_samples()");
+#endif
         }
 
-        return s;
+        double _lambdas[LAMBDA_RANGE];
+        double _values[LAMBDA_RANGE];
+
+        for (uint i = 0; i < num_samples / 2; ++i) {
+            _lambdas[i] = samples[i * 2];
+            _values[i] = samples[i * 2 + 1];
+        }
+
+        init_from_pls_lambdas_values(_lambdas, _values, num_samples / 2);
+
+        if (normalize) {
+            scale(CIE_Y_integral / inner_product(*cie_y));
+        }
     }
 
     template <typename F>
-    PBRT_GPU static DenselySampledSpectrum SampleFunction(F func, int lambda_min = LAMBDA_MIN,
-                                                          int lambda_max = LAMBDA_MAX) {
-        DenselySampledSpectrum s;
+    PBRT_GPU void init_with_sample_function(F func, int lambda_min = LAMBDA_MIN,
+                                            int lambda_max = LAMBDA_MAX) {
         for (int lambda = lambda_min; lambda <= lambda_max; ++lambda) {
-            s.values[lambda - lambda_min] = func(lambda);
+            values[lambda - lambda_min] = func(lambda);
         }
-
-        return s;
     }
 
-    PBRT_GPU static DenselySampledSpectrum cie_d(double temperature, const double *cie_s0,
-                                                 const double *cie_s1, const double *cie_s2,
-                                                 const double *cie_lambda) {
+    PBRT_GPU void init_cie_d(double temperature, const double *cie_s0, const double *cie_s1,
+                             const double *cie_s2, const double *cie_lambda) {
         double cct = temperature * 1.4388f / 1.4380f;
         if (cct < 4000) {
             // CIE D ill-defined, use blackbody
             BlackbodySpectrum bb = BlackbodySpectrum(cct);
-            DenselySampledSpectrum blackbody =
-                DenselySampledSpectrum::SampleFunction([=](double lambda) { return bb(lambda); });
-
-            return blackbody;
+            init_with_sample_function([=](double lambda) { return bb(lambda); });
+            return;
         }
 
         // Convert CCT to xy
@@ -72,7 +114,7 @@ class DenselySampledSpectrum : public Spectrum {
             values[i] = (cie_s0[i] + cie_s1[i] * M1 + cie_s2[i] * M2) * 0.01;
         }
 
-        return DenselySampledSpectrum::from_piecewise_linear_spectrum(cie_lambda, values, nCIES);
+        init_from_pls_lambdas_values(cie_lambda, values, nCIES);
     }
 
     PBRT_GPU
@@ -118,24 +160,11 @@ class DenselySampledSpectrum : public Spectrum {
 
     PBRT_GPU
     void scale(double s) {
-        for (double &v : values) {
-            v *= s;
+        for (uint i = 0; i < LAMBDA_RANGE; ++i) {
+            values[i] = values[i] * s;
         }
     }
 
   private:
     std::array<double, LAMBDA_RANGE> values;
-
-    PBRT_GPU
-    static double piecewise_linear_spectrum_eval(double lambda, const double *lambdas,
-                                                 const double *values, int length) {
-        if (length == 0 || lambda < lambdas[0] || lambda > lambdas[length - 1]) {
-            return 0.0;
-        }
-
-        int idx = find_interval(length, [&](int i) { return lambdas[i] <= lambda; });
-        double t = (lambda - lambdas[idx]) / (lambdas[idx + 1] - lambdas[idx]);
-
-        return lerp(t, values[idx], values[idx + 1]);
-    }
 };

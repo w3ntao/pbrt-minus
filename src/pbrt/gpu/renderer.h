@@ -10,7 +10,6 @@
 
 #include "pbrt/spectra/constants.h"
 #include "pbrt/spectra/color_encoding.h"
-#include "pbrt/spectra/piecewise_linear_spectrum.h"
 #include "pbrt/spectra/rgb_color_space.h"
 #include "pbrt/spectra/sampled_wavelengths.h"
 
@@ -43,19 +42,12 @@ class GlobalVariable {
                    const double *cie_z_value, const double *cie_illum_d6500, int length_d65,
                    const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table,
                    RGBtoSpectrumData::Gamut gamut) {
-        auto _cie_x_piecewise_linear_spectrum =
-            PiecewiseLinearSpectrum(cie_lambdas, cie_x_value, NUM_CIE_SAMPLES);
-        auto _cie_y_piecewise_linear_spectrum =
-            PiecewiseLinearSpectrum(cie_lambdas, cie_y_value, NUM_CIE_SAMPLES);
-        auto _cie_z_piecewise_linear_spectrum =
-            PiecewiseLinearSpectrum(cie_lambdas, cie_z_value, NUM_CIE_SAMPLES);
+        cie_x.init_from_pls_lambdas_values(cie_lambdas, cie_x_value, NUM_CIE_SAMPLES);
+        cie_y.init_from_pls_lambdas_values(cie_lambdas, cie_y_value, NUM_CIE_SAMPLES);
+        cie_z.init_from_pls_lambdas_values(cie_lambdas, cie_z_value, NUM_CIE_SAMPLES);
 
-        cie_x = DenselySampledSpectrum(_cie_x_piecewise_linear_spectrum);
-        cie_y = DenselySampledSpectrum(_cie_y_piecewise_linear_spectrum);
-        cie_z = DenselySampledSpectrum(_cie_z_piecewise_linear_spectrum);
-
-        auto illum_d65 =
-            PiecewiseLinearSpectrum::from_interleaved(cie_illum_d6500, length_d65, true, &cie_y);
+        DenselySampledSpectrum illum_d65;
+        illum_d65.init_from_pls_interleaved_samples(cie_illum_d6500, length_d65, true, &cie_y);
 
         if (gamut == RGBtoSpectrumData::Gamut::srgb) {
             rgb_color_space = new RGBColorSpace(
@@ -227,9 +219,9 @@ __global__ void init_pixel_sensor_cie_1931(Renderer *renderer, const double *cie
     double exposure_time = 1.0;
     double imaging_ratio = exposure_time * iso / 100.0;
 
-    auto d_illum =
-        DenselySampledSpectrum::cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, cie_s0,
-                                      cie_s1, cie_s2, cie_s_lambda);
+    DenselySampledSpectrum d_illum;
+    d_illum.init_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, cie_s0, cie_s1,
+                       cie_s2, cie_s_lambda);
 
     auto cie_xyz = renderer->global_variables->get_cie_xyz();
     const auto color_space = renderer->global_variables->rgb_color_space;
