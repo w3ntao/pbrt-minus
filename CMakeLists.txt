@@ -43,14 +43,11 @@ target_link_libraries(
 set_target_properties(
         ${PROJ_NAME} PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
+        CUDA_ARCHITECTURES native
 )
 # with CUDA_SEPARABLE_COMPILATION, member function declaration and implementation can be separate
 # https://developer.nvidia.com/blog/separate-compilation-linking-cuda-device-code/
 
-set_property(
-        TARGET ${PROJ_NAME} PROPERTY
-        CUDA_ARCHITECTURES native
-)
 # with CUDA_ARCHITECTURES native, CUDA_ARCHITECTURES is detected automatically
 # https://stackoverflow.com/questions/68223398/how-can-i-get-cmake-to-automatically-detect-the-value-for-cuda-architectures
 

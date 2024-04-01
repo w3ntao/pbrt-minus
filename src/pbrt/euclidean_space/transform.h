@@ -2,7 +2,7 @@
 
 #include "pbrt/euclidean_space/vector3fi.h"
 #include "pbrt/euclidean_space/point3fi.h"
-#include "pbrt/euclidean_space/squared_matrix.cuh"
+#include "pbrt/euclidean_space/squared_matrix.h"
 #include "pbrt/base/ray.h"
 
 class Transform {

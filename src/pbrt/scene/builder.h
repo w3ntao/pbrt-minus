@@ -13,7 +13,7 @@
 #include "pbrt/scene/parameter_dict.h"
 #include "pbrt/shapes/loop_subdivide.h"
 
-#include "pbrt/gpu/rendering.cuh"
+#include "pbrt/gpu/renderer.h"
 
 namespace {
 std::string get_dirname(const std::string &full_path) {

@@ -16,8 +16,8 @@
 
 #include "pbrt/accelerator/hlbvh.h"
 
-#include "pbrt/base/shape.cuh"
-#include "pbrt/shapes/triangle.cuh"
+#include "pbrt/base/shape.h"
+#include "pbrt/shapes/triangle.h"
 
 #include "pbrt/filters/box.h"
 

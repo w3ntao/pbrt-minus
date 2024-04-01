@@ -1,5 +1,5 @@
-#include "pbrt/base/shape.cuh"
-#include "pbrt/shapes/triangle.cuh"
+#include "pbrt/base/shape.h"
+#include "pbrt/shapes/triangle.h"
 
 PBRT_CPU_GPU
 void Shape::init(const Triangle *triangle) {
@@ -36,7 +36,7 @@ bool Shape::fast_intersect(const Ray &ray, double t_max) const {
 }
 
 PBRT_GPU
-std::optional<ShapeIntersection> Shape:: intersect(const Ray &ray, double t_max) const {
+std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, double t_max) const {
     switch (type) {
     case (ShapeType::triangle): {
         return ((Triangle *)data_ptr)->intersect(ray, t_max);

@@ -3,9 +3,9 @@
 #include <cassert>
 #include <limits>
 
-#include "pbrt/base/shape.cuh"
+#include "pbrt/base/shape.h"
 #include "pbrt/euclidean_space/bounds3.h"
-#include "pbrt/util/stack.cuh"
+#include "pbrt/util/stack.h"
 
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
 const uint BIT_LENGTH_TREELET_MASK = 18;

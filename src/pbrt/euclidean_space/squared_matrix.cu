@@ -1,4 +1,4 @@
-#include "pbrt/euclidean_space/squared_matrix.cuh"
+#include "pbrt/euclidean_space/squared_matrix.h"
 
 template <>
 PBRT_CPU_GPU double SquareMatrix<3>::determinant() const {

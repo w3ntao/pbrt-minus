@@ -8,16 +8,6 @@
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/shapes/triangle_mesh.h"
 
-namespace {
-struct TriangleIntersection {
-    double b0, b1, b2;
-    double t;
-
-    PBRT_CPU_GPU TriangleIntersection(double _b0, double _b1, double _b2, double _t)
-        : b0(_b0), b1(_b1), b2(_b2), t(_t) {}
-};
-}
-
 class Triangle {
   public:
     PBRT_CPU_GPU
@@ -59,6 +49,14 @@ class Triangle {
     }
 
   private:
+    struct TriangleIntersection {
+        double b0, b1, b2;
+        double t;
+
+        PBRT_CPU_GPU TriangleIntersection(double _b0, double _b1, double _b2, double _t)
+            : b0(_b0), b1(_b1), b2(_b2), t(_t) {}
+    };
+    
     int triangle_idx;
     const TriangleMesh *mesh;
 

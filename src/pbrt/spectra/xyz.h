@@ -2,7 +2,7 @@
 
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/point2.h"
-#include "pbrt/euclidean_space/squared_matrix.cuh"
+#include "pbrt/euclidean_space/squared_matrix.h"
 
 class XYZ {
   public:
