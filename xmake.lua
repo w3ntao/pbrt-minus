@@ -12,6 +12,7 @@ add_includedirs("src")
 add_files(
         "src/pbrt/main.cu",
         "src/pbrt/base/shape.cu",
+        "src/pbrt/euclidean_space/squared_matrix.cu",
         "src/ext/lodepng/lodepng.cpp"
 )
 target_end()

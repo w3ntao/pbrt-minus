@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pbrt/euclidean_space/point2.h"
-#include "pbrt/euclidean_space/squared_matrix.h"
+#include "pbrt/euclidean_space/squared_matrix.cuh"
 #include "pbrt/spectra/rgb.h"
 #include "pbrt/spectra/rgb_color_space.h"
 #include "pbrt/base/film.h"
