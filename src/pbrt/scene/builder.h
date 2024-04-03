@@ -234,8 +234,7 @@ class SceneBuilder {
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->camera), sizeof(PerspectiveCamera)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->film), sizeof(RGBFilm)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->filter), sizeof(BoxFilter)));
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->integrator),
-                                          sizeof(AmbientOcclusionIntegrator)));
+        checkCudaErrors(cudaMallocManaged((void **)&(renderer->integrator), sizeof(Integrator)));
         // TODO: progress 2024/04/02: cudaMallocManaged: change to their Base type
 
         for (uint idx = 0; idx < 3; idx++) {
@@ -396,21 +395,6 @@ class SceneBuilder {
         }
 
         if (integrator_name == "ambientocclusion") {
-
-            // GPU::init_integrator_ambient_occlusion<<<1, 1>>>(renderer);
-
-            /*
-
-            auto illuminant_spectrum = renderer->global_variables->rgb_color_space->illuminant;
-            auto cie_y = renderer->global_variables->get_cie_xyz()[1];
-
-            auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
-
-            renderer->integrator = new AmbientOcclusionIntegrator(illuminant_spectrum,
-    illuminant_scale);
-
-            */
-
             auto illuminant_spectrum = renderer->global_variables->rgb_color_space->illuminant;
 
             const Spectrum *cie_xyz[3];
@@ -418,16 +402,24 @@ class SceneBuilder {
             const auto cie_y = cie_xyz[1];
             auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
 
-            renderer->integrator->init(illuminant_spectrum, illuminant_scale);
-        }
+            AmbientOcclusionIntegrator *ambient_occlusion_integrator;
+            checkCudaErrors(cudaMallocManaged((void **)&ambient_occlusion_integrator,
+                                              sizeof(AmbientOcclusionIntegrator)));
+            gpu_dynamic_pointers.push_back(ambient_occlusion_integrator);
 
-        /*
-        else if (integrator_name == "surfacenormal") {
-            GPU::init_integrator_surface_normal<<<1, 1>>>(renderer);
-        }
-        */
+            ambient_occlusion_integrator->init(illuminant_spectrum, illuminant_scale);
+            renderer->integrator->init(ambient_occlusion_integrator);
 
-        else {
+        } else if (integrator_name == "surfacenormal") {
+            SurfaceNormalIntegrator *surface_normal_integrator;
+            checkCudaErrors(cudaMallocManaged((void **)&surface_normal_integrator,
+                                              sizeof(SurfaceNormalIntegrator)));
+            gpu_dynamic_pointers.push_back(surface_normal_integrator);
+
+            surface_normal_integrator->init(renderer->global_variables->rgb_color_space);
+            renderer->integrator->init(surface_normal_integrator);
+
+        } else {
             const std::string error =
                 "parse_tokens(): unknown Integrator name: `" + integrator_name.value() + "`";
             throw std::runtime_error(error.c_str());

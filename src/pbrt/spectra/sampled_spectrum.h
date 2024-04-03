@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/spectra/xyz.h"
+#include "pbrt/spectra/constants.h"
 
 class SampledSpectrum {
   public:

@@ -86,4 +86,4 @@ class ThreadPool {
     bool quit;
 };
 
-ThreadPool *thread_pool;
+static ThreadPool *thread_pool;

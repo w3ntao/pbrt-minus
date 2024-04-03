@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
+#include "pbrt/base/spectrum.h"
 #include "pbrt/spectra/rgb.h"
 #include "pbrt/spectra/rgb_sigmoid_polynomial.h"
 #include "pbrt/spectra/rgb_to_spectrum_data.h"
@@ -36,12 +37,12 @@ class RGBColorSpace {
 
         // Initialize XYZ color space conversion matrices
         XYZ c = rgb.inverse() * _whitepoint;
-        double diag_data[3] = {c[0], c[1], c[2]};
-        xyz_from_rgb = rgb * SquareMatrix<3>::diag(diag_data);
+        double diagonal_data[3] = {c[0], c[1], c[2]};
+        xyz_from_rgb = rgb * SquareMatrix<3>::diag(diagonal_data);
         rgb_from_xyz = xyz_from_rgb.inverse();
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     RGBSigmoidPolynomial to_rgb_coefficients(const RGB &rgb) const {
         return (*rgb_to_spectrum_table)(rgb.clamp_zero());
     }

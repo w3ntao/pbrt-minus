@@ -14,6 +14,10 @@ class SurfaceNormalIntegrator {
         : rgb_spectra(RGBAlbedoSpectrum::build_albedo_rgb(rgb_color_space)) {}
     */
 
+    void init(const RGBColorSpace *rgb_color_space) {
+        RGBAlbedoSpectrum::build_albedo_rgb(rgb_spectra, rgb_color_space);
+    }
+
     PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
                                 Sampler &sampler) const {
         const auto shape_intersection = bvh->intersect(ray, Infinity);
@@ -31,5 +35,5 @@ class SurfaceNormalIntegrator {
     }
 
   private:
-    std::array<RGBAlbedoSpectrum, 3> rgb_spectra;
+    RGBAlbedoSpectrum rgb_spectra[3];
 };

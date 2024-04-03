@@ -25,6 +25,8 @@ set(LIBRARIES ${LIBRARIES} ${PNG_LIBRARIES})
 add_executable(${PROJ_NAME}
         src/pbrt/main.cu
         src/pbrt/base/shape.cu
+        src/pbrt/base/integrator.cu
+        src/pbrt/base/sampler.cu
         src/pbrt/base/spectrum.cu
         src/pbrt/euclidean_space/squared_matrix.cu
         src/pbrt/spectra/densely_sampled_spectrum.cu

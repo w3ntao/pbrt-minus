@@ -67,7 +67,7 @@ struct GlobalVariable {
 
 class Renderer {
   public:
-    AmbientOcclusionIntegrator *integrator;
+    Integrator *integrator;
     PerspectiveCamera *camera;
     BoxFilter *filter;
     RGBFilm *film;

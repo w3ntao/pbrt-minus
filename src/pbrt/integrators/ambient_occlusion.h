@@ -7,7 +7,7 @@
 
 class AmbientOcclusionIntegrator {
   public:
-    PBRT_CPU_GPU void init(const Spectrum *_illuminant_spectrum, const double _illuminant_scale) {
+    void init(const Spectrum *_illuminant_spectrum, const double _illuminant_scale) {
         illuminant_spectrum = _illuminant_spectrum;
         illuminant_scale = _illuminant_scale;
     }

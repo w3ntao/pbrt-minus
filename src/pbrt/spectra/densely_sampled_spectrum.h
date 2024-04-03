@@ -13,16 +13,6 @@ double piecewise_linear_spectrum_eval(double lambda, const double *lambdas, cons
         return 0.0;
     }
 
-    // TODO: progress 2024/04/01: move this part into init_from_pls_interleaved_samples()?
-    if (lambda < lambdas[0] && lambda >= LAMBDA_MIN) {
-        return values[0];
-    }
-
-    if (lambda > lambdas[length - 1] && lambda <= LAMBDA_MAX) {
-        return values[length - 1];
-    }
-    // TODO: progress 2024/04/01: move this part into init_from_pls_interleaved_samples()?
-
     uint idx = find_interval(length, [&](uint i) { return lambdas[i] <= lambda; });
     double t = (lambda - lambdas[idx]) / (lambdas[idx + 1] - lambdas[idx]);
 

@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <limits>
+#include <vector>
 
 #include "pbrt/base/shape.h"
 #include "pbrt/euclidean_space/bounds3.h"

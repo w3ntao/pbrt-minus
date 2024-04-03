@@ -7,6 +7,7 @@
 
 #include "pbrt/spectra/rgb.h"
 #include "pbrt/spectra/rgb_sigmoid_polynomial.h"
+#include "pbrt/util/thread_pool.h"
 
 namespace RGBtoSpectrumData {
 
@@ -53,11 +54,12 @@ struct RGBtoSpectrumTableCPU {
     }
 };
 
+// TODO: directly initialize RGBtoSpectrumTableGPU on CPU?
 struct RGBtoSpectrumTableGPU {
     double z_nodes[RES];
     double coefficients[3][RES][RES][RES][3];
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     RGBSigmoidPolynomial operator()(const RGB &rgb) const {
         // Handle uniform _rgb_ values
         if (rgb[0] == rgb[1] && rgb[1] == rgb[2]) {
@@ -242,7 +244,7 @@ const double xyz_to_xyz[3][3] = {
     {0.0, 0.0, 1.0},
 };
 
-double cie_interp(const double *data, double x) {
+static double cie_interp(const double *data, double x) {
     x -= CIE_LAMBDA_MIN;
     x *= (CIE_SAMPLES - 1) / (CIE_LAMBDA_MAX - CIE_LAMBDA_MIN);
     int offset = (int)x;
@@ -259,7 +261,7 @@ double cie_interp(const double *data, double x) {
     return (1.0 - weight) * data[offset] + weight * data[offset + 1];
 }
 
-int LUPDecompose(double **A, int N, double Tol, int *P) {
+static int LUPDecompose(double **A, int N, double Tol, int *P) {
     int i, j, k, imax;
     double maxA, *ptr, absA;
 
@@ -313,7 +315,7 @@ int LUPDecompose(double **A, int N, double Tol, int *P) {
 /* INPUT: A,P filled in LUPDecompose; b - rhs vector; N - dimension
  * OUTPUT: x - solution vector of A*x=b
  */
-void LUPSolve(double **const A, const int *P, const double *b, int N, double *x) {
+static void LUPSolve(double **const A, const int *P, const double *b, int N, double *x) {
     for (int i = 0; i < N; i++) {
         x[i] = b[P[i]];
 
@@ -331,19 +333,19 @@ void LUPSolve(double **const A, const int *P, const double *b, int N, double *x)
     }
 }
 
-double sigmoid(double x) {
+static double sigmoid(double x) {
     return 0.5 * x / std::sqrt(1.0 + x * x) + 0.5;
 }
 
-double smoothstep(double x) {
+static double smoothstep(double x) {
     return x * x * (3.0 - 2.0 * x);
 }
 
-double sqr(double x) {
+static double sqr(double x) {
     return x * x;
 }
 
-void cie_lab(double *p, const RGBtoSpectrumBuffer *data) {
+static void cie_lab(double *p, const RGBtoSpectrumBuffer *data) {
     double X = 0.0;
     double Y = 0.0;
     double Z = 0.0;
@@ -371,7 +373,7 @@ void cie_lab(double *p, const RGBtoSpectrumBuffer *data) {
     p[2] = 200.0 * (f(Y / Yw) - f(Z / Zw));
 }
 
-void init_tables(RGBtoSpectrumBuffer *data, Gamut gamut) {
+static void init_tables(RGBtoSpectrumBuffer *data, Gamut gamut) {
     memset(data->rgb_tbl, 0, sizeof(data->rgb_tbl));
     memset(data->xyz_whitepoint, 0, sizeof(data->xyz_whitepoint));
 
@@ -421,8 +423,8 @@ void init_tables(RGBtoSpectrumBuffer *data, Gamut gamut) {
     }
 }
 
-void eval_residual(const RGBtoSpectrumBuffer *data, const double *coeffs, const double *rgb,
-                   double *residual) {
+static void eval_residual(const RGBtoSpectrumBuffer *data, const double *coeffs, const double *rgb,
+                          double *residual) {
     double out[3] = {0.0, 0.0, 0.0};
 
     for (int i = 0; i < CIE_FINE_SAMPLES; ++i) {
@@ -453,8 +455,8 @@ void eval_residual(const RGBtoSpectrumBuffer *data, const double *coeffs, const 
     }
 }
 
-void eval_jacobian(const RGBtoSpectrumBuffer *data, const double *coeffs, const double *rgb,
-                   double **jac) {
+static void eval_jacobian(const RGBtoSpectrumBuffer *data, const double *coeffs, const double *rgb,
+                          double **jac) {
     double r0[3], r1[3], tmp[3];
 
     for (int i = 0; i < 3; ++i) {
@@ -472,8 +474,8 @@ void eval_jacobian(const RGBtoSpectrumBuffer *data, const double *coeffs, const 
     }
 }
 
-void gauss_newton(const RGBtoSpectrumBuffer *data, const double rgb[3], double coeffs[3],
-                  int it = 15) {
+static void gauss_newton(const RGBtoSpectrumBuffer *data, const double rgb[3], double coeffs[3],
+                         int it = 15) {
     for (int i = 0; i < it; ++i) {
         double J0[3], J1[3], J2[3], *J[3] = {J0, J1, J2};
 
@@ -512,7 +514,8 @@ void gauss_newton(const RGBtoSpectrumBuffer *data, const double rgb[3], double c
     }
 }
 
-void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *scale, int l) {
+static void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *scale,
+                    int l) {
     const double y = j / double(RES - 1);
 
     const double c0 = CIE_LAMBDA_MIN;
@@ -568,7 +571,7 @@ void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *
     }
 }
 
-RGBtoSpectrumTableCPU compute_spectrum_table_data(const std::string &str_gamut) {
+static RGBtoSpectrumTableCPU compute_spectrum_table_data(const std::string &str_gamut) {
     if (str_gamut != "sRGB") {
         throw std::runtime_error("compute_spectrum_table_data: only sRGB is implemented");
     }

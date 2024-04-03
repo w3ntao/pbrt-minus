@@ -28,12 +28,7 @@ class RGBSigmoidPolynomial {
         return result;
     }
 
-    PBRT_CPU_GPU void debug() const {
-        printf("(%f, %f, %f)", c0, c1, c2);
-    }
-
   private:
-    // RGBSigmoidPolynomial Private Methods
     PBRT_CPU_GPU
     static double s(double x) {
         if (is_inf(x)) {
