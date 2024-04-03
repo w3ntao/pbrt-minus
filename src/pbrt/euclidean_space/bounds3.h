@@ -61,7 +61,7 @@ class Bounds3 {
     }
 
     PBRT_CPU_GPU
-    Point3<T> operator[](uint index) const {
+    Point3<T> operator[](uint8_t index) const {
         switch (index) {
         case (0): {
             return p_min;
@@ -125,7 +125,7 @@ class Bounds3 {
         return 2.0 * (d.x * d.y + d.x * d.z + d.y * d.z);
     }
 
-    PBRT_CPU_GPU int8_t max_dimension() const {
+    PBRT_CPU_GPU uint8_t max_dimension() const {
         auto d = diagonal();
         if (d.x > d.y && d.x > d.z) {
             return 0;

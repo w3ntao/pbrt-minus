@@ -54,18 +54,18 @@ class Bounds2 {
     }
 
     PBRT_CPU_GPU
-    int max_dimension() const {
+    uint8_t max_dimension() const {
         Vector2<T> diag = Diagonal();
         return diag.x > diag.y ? 0 : 1;
     }
 
     PBRT_CPU_GPU
-    Point2<T> operator[](int i) const {
+    Point2<T> operator[](uint8_t i) const {
         return (i == 0) ? p_min : p_max;
     }
 
     PBRT_CPU_GPU
-    Point2<T> &operator[](int i) {
+    Point2<T> &operator[](uint8_t i) {
         return (i == 0) ? p_min : p_max;
     }
 

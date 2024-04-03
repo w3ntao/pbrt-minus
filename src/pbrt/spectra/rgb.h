@@ -74,7 +74,7 @@ class RGB {
         b /= divisor;
     }
 
-    PBRT_CPU_GPU double operator[](int idx) const {
+    PBRT_CPU_GPU double operator[](uint8_t idx) const {
         switch (idx) {
         case 0: {
             return r;

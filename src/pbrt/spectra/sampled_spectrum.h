@@ -1,23 +1,27 @@
 #pragma once
 
-#include <array>
 #include "pbrt/spectra/xyz.h"
 
 class SampledSpectrum {
   public:
-    PBRT_CPU_GPU explicit SampledSpectrum(const std::array<double, NSpectrumSamples> _values)
-        : values(_values) {}
-
-    PBRT_CPU_GPU
-    explicit SampledSpectrum(double c) {
-        for (int i = 0; i < NSpectrumSamples; ++i) {
-            values[i] = c;
+    PBRT_CPU_GPU explicit SampledSpectrum(const double _values[NSpectrumSamples]) {
+        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+            values[idx] = _values[idx];
         }
     }
 
     PBRT_CPU_GPU
+    static SampledSpectrum same_value(double c) {
+        double _values[NSpectrumSamples];
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
+            _values[i] = c;
+        }
+        return SampledSpectrum(_values);
+    }
+
+    PBRT_CPU_GPU
     bool has_nan() const {
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             if (isnan(values[i])) {
                 return true;
             }
@@ -27,19 +31,20 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    double operator[](int i) const {
+    double operator[](uint8_t i) const {
         return values[i];
     }
 
     PBRT_CPU_GPU
-    double &operator[](int i) {
+    double &operator[](uint8_t i) {
         return values[i];
     }
 
     PBRT_CPU_GPU
     SampledSpectrum operator+(const SampledSpectrum &s) const {
-        std::array<double, NSpectrumSamples> sum;
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        double sum[NSpectrumSamples];
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             sum[i] = values[i] + s.values[i];
         }
 
@@ -53,8 +58,9 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator-(const SampledSpectrum &s) const {
-        std::array<double, NSpectrumSamples> difference;
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        double difference[NSpectrumSamples];
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             difference[i] = values[i] - s.values[i];
         }
 
@@ -68,8 +74,9 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator*(const SampledSpectrum &s) const {
-        std::array<double, NSpectrumSamples> product;
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        double product[NSpectrumSamples];
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             product[i] = values[i] * s.values[i];
         }
 
@@ -78,8 +85,9 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator*(double a) const {
-        std::array<double, NSpectrumSamples> product;
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        double product[NSpectrumSamples];
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             product[i] = values[i] * a;
         }
 
@@ -103,8 +111,9 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator/(const SampledSpectrum &s) const {
-        std::array<double, NSpectrumSamples> quotient;
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        double quotient[NSpectrumSamples];
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = values[i] / s.values[i];
         }
 
@@ -113,8 +122,9 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator/(double a) const {
-        std::array<double, NSpectrumSamples> quotient;
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        double quotient[NSpectrumSamples];
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = values[i] / a;
         }
 
@@ -133,8 +143,9 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator-() const {
-        std::array<double, NSpectrumSamples> ret;
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        double ret[NSpectrumSamples];
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             ret[i] = -values[i];
         }
 
@@ -153,7 +164,7 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     bool is_positive() const {
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             if (values[i] > 0) {
                 return true;
             }
@@ -165,7 +176,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     double min_component_value() const {
         double m = values[0];
-        for (int i = 1; i < NSpectrumSamples; ++i) {
+        for (uint i = 1; i < NSpectrumSamples; ++i) {
             m = std::min(m, values[i]);
         }
 
@@ -175,7 +186,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     double max_component_value() const {
         double m = values[0];
-        for (int i = 1; i < NSpectrumSamples; ++i) {
+        for (uint i = 1; i < NSpectrumSamples; ++i) {
             m = std::max(m, values[i]);
         }
         return m;
@@ -184,7 +195,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     double average() const {
         double sum = 0;
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             sum += values[i];
         }
 
@@ -193,15 +204,16 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU void print() const {
         printf("[ ");
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             printf("%f, ", values[i]);
         }
         printf("]\n");
     }
 
     PBRT_CPU_GPU SampledSpectrum safe_div(const SampledSpectrum &divisor) const {
-        std::array<double, NSpectrumSamples> quotient;
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        double quotient[NSpectrumSamples];
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = divisor[i] == 0.0 ? 0.0 : values[i] / divisor[i];
         }
 
@@ -209,6 +221,5 @@ class SampledSpectrum {
     }
 
   private:
-    // TODO: replace std::array with raw array
-    std::array<double, NSpectrumSamples> values;
+    double values[NSpectrumSamples];
 };

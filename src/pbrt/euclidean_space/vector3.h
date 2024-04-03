@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdexcept>
-#include <array>
 
 #include "pbrt/util/utility_math.h"
 #include "pbrt/util/interval.h"
@@ -15,7 +14,7 @@ class Vector3 {
 
     PBRT_CPU_GPU Vector3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {}
 
-    PBRT_CPU_GPU T &operator[](int index) {
+    PBRT_CPU_GPU T &operator[](uint8_t index) {
         switch (index) {
         case 0: {
             return x;
@@ -36,7 +35,7 @@ class Vector3 {
         }
     }
 
-    PBRT_CPU_GPU T operator[](int index) const {
+    PBRT_CPU_GPU T operator[](uint8_t index) const {
         switch (index) {
         case 0: {
             return x;
@@ -99,7 +98,7 @@ class Vector3 {
         return Vector3(x / divisor, y / divisor, z / divisor);
     }
 
-    PBRT_CPU_GPU int max_component_index() const {
+    PBRT_CPU_GPU uint max_component_index() const {
         return (x > y) ? ((x > z) ? 0 : 2) : ((y > z) ? 1 : 2);
     }
 
@@ -107,10 +106,10 @@ class Vector3 {
         return std::max({x, y, z});
     }
 
-    PBRT_CPU_GPU Vector3 permute(const std::array<int, 3> &p) const {
-        T _x = this->operator[](p[0]);
-        T _y = this->operator[](p[1]);
-        T _z = this->operator[](p[2]);
+    PBRT_CPU_GPU Vector3 permute(const uint8_t indices[3]) const {
+        T _x = this->operator[](indices[0]);
+        T _y = this->operator[](indices[1]);
+        T _z = this->operator[](indices[2]);
 
         return Vector3(_x, _y, _z);
     }

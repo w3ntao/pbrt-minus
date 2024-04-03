@@ -18,27 +18,25 @@ class Triangle {
 
     PBRT_CPU_GPU
     Bounds3f bounds() const {
-        const auto points = get_points();
-        return Bounds3f(points.data(), 3);
+        Point3f points[3];
+        get_points(points);
+
+        return Bounds3f(points, 3);
     }
 
     PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const {
-        auto points = get_points();
-        auto p0 = points[0];
-        auto p1 = points[1];
-        auto p2 = points[2];
+        Point3f points[3];
+        get_points(points);
 
-        return intersect_triangle(ray, t_max, p0, p1, p2).has_value();
+        return intersect_triangle(ray, t_max, points[0], points[1], points[2]).has_value();
     }
 
     PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray, double t_max) const {
-        auto points = get_points();
-        auto p0 = points[0];
-        auto p1 = points[1];
-        auto p2 = points[2];
+        Point3f points[3];
+        get_points(points);
 
         std::optional<TriangleIntersection> tri_intersection =
-            intersect_triangle(ray, t_max, p0, p1, p2);
+            intersect_triangle(ray, t_max, points[0], points[1], points[2]);
         if (!tri_intersection) {
             return {};
         }
@@ -56,18 +54,17 @@ class Triangle {
         PBRT_CPU_GPU TriangleIntersection(double _b0, double _b1, double _b2, double _t)
             : b0(_b0), b1(_b1), b2(_b2), t(_t) {}
     };
-    
+
     int triangle_idx;
     const TriangleMesh *mesh;
 
     PBRT_CPU_GPU
-    std::array<Point3f, 3> get_points() const {
-        const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
-        const Point3f p0 = mesh->p[v[0]];
-        const Point3f p1 = mesh->p[v[1]];
-        const Point3f p2 = mesh->p[v[2]];
 
-        return {p0, p1, p2};
+    void get_points(Point3f p[3]) const {
+        const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
+        for (uint idx = 0; idx < 3; ++idx) {
+            p[idx] = mesh->p[v[idx]];
+        }
     }
 
     PBRT_GPU std::optional<TriangleIntersection> intersect_triangle(const Ray &ray, double t_max,
@@ -86,15 +83,16 @@ class Triangle {
         Point3f p2t = p2 - ray.o.to_vector3();
 
         // Permute components of triangle vertices and ray direction
+        uint8_t kz = ray.d.abs().max_component_index();
+        uint8_t kx = (kz + 1) % 3;
+        uint8_t ky = (kz + 2) % 3;
 
-        int kz = ray.d.abs().max_component_index();
-        int kx = (kz + 1) % 3;
-        int ky = (kz + 2) % 3;
+        uint8_t permuted_idx[3] = {kx, ky, kz};
+        Vector3f d = ray.d.permute(permuted_idx);
 
-        Vector3f d = ray.d.permute({kx, ky, kz});
-        p0t = p0t.permute({kx, ky, kz});
-        p1t = p1t.permute({kx, ky, kz});
-        p2t = p2t.permute({kx, ky, kz});
+        p0t = p0t.permute(permuted_idx);
+        p1t = p1t.permute(permuted_idx);
+        p2t = p2t.permute(permuted_idx);
 
         // Apply shear transformation to translated vertex positions
         double Sx = -d.x / d.z;
@@ -179,9 +177,17 @@ class Triangle {
         // Compute triangle partial derivatives
         // Compute deltas and matrix determinant for triangle partial derivatives
         // Get triangle texture coordinates in _uv_ array
-        std::array<Point2f, 3> uv =
-            mesh->uv ? std::array<Point2f, 3>({mesh->uv[v[0]], mesh->uv[v[1]], mesh->uv[v[2]]})
-                     : std::array<Point2f, 3>({Point2f(0, 0), Point2f(1, 0), Point2f(1, 1)});
+
+        Point2f uv[3];
+        if (mesh->uv) {
+            for (uint idx = 0; idx < 3; ++idx) {
+                uv[idx] = mesh->uv[v[idx]];
+            }
+        } else {
+            uv[0] = Point2f(0, 0);
+            uv[1] = Point2f(1, 0);
+            uv[2] = Point2f(1, 1);
+        }
 
         Vector2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
         Vector3f dp02 = p0 - p2;

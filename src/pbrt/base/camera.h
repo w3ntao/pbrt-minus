@@ -58,9 +58,9 @@ struct CameraSample {
 // CameraRay Definition
 struct CameraRay {
     Ray ray;
-    SampledSpectrum weight = SampledSpectrum(1);
+    SampledSpectrum weight;
 
-    PBRT_GPU CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum(1)) {}
+    PBRT_GPU CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum::same_value(1)) {}
 };
 
 struct CameraBase {

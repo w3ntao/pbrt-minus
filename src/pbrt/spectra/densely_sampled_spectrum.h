@@ -112,7 +112,7 @@ class DenselySampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum sample(const SampledWavelengths &lambda) const {
-        std::array<double, NSpectrumSamples> sampled_values;
+        double sampled_values[NSpectrumSamples];
 
         for (int i = 0; i < NSpectrumSamples; ++i) {
             int floor = std::floor(lambda[i]);

@@ -29,7 +29,7 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    double operator[](int idx) const {
+    double operator[](uint8_t idx) const {
         switch (idx) {
         case 0: {
             return x;
@@ -51,7 +51,7 @@ class XYZ {
         }
     }
     PBRT_CPU_GPU
-    double &operator[](int idx) {
+    double &operator[](uint8_t idx) {
         switch (idx) {
         case 0: {
             return x;

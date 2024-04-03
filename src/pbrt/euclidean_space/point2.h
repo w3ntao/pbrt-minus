@@ -13,7 +13,7 @@ class Point2 {
 
     PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y){};
 
-    PBRT_CPU_GPU T &operator[](int index) {
+    PBRT_CPU_GPU T &operator[](uint8_t index) {
         switch (index) {
         case 0: {
             return x;
@@ -31,7 +31,7 @@ class Point2 {
         }
     }
 
-    PBRT_CPU_GPU T operator[](int index) const {
+    PBRT_CPU_GPU T operator[](uint8_t index) const {
         switch (index) {
         case 0: {
             return x;

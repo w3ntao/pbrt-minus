@@ -18,7 +18,7 @@ class SurfaceNormalIntegrator {
                                 Sampler &sampler) const {
         const auto shape_intersection = bvh->intersect(ray, Infinity);
         if (!shape_intersection) {
-            return SampledSpectrum(0);
+            return SampledSpectrum::same_value(0);
         }
 
         const Vector3f normal =

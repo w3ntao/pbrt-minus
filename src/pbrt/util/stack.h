@@ -5,6 +5,8 @@
 template <typename T, int Capacity>
 class Stack {
   public:
+    PBRT_GPU Stack() : size(0) {}
+
     PBRT_GPU bool empty() const {
         return size == 0;
     }
@@ -20,7 +22,7 @@ class Stack {
     }
 
     PBRT_GPU T pop() {
-        if (size <= 0) {
+        if (size == 0) {
             printf("\n\n\nERROR: Stack::pop(): no data in the stack.\n\n\n");
             asm("trap;");
         }
@@ -31,5 +33,5 @@ class Stack {
 
   private:
     T data[Capacity];
-    int size = 0;
+    uint size;
 };

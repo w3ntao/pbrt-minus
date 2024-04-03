@@ -13,7 +13,7 @@ class Point3 {
 
     PBRT_CPU_GPU Point3(T _x, T _y, T _z) : x(_x), y(_y), z(_z){};
 
-    PBRT_CPU_GPU T &operator[](int index) {
+    PBRT_CPU_GPU T &operator[](uint8_t index) {
         switch (index) {
         case 0: {
             return x;
@@ -35,7 +35,7 @@ class Point3 {
         }
     }
 
-    PBRT_CPU_GPU T operator[](int index) const {
+    PBRT_CPU_GPU T operator[](uint8_t index) const {
         switch (index) {
         case 0: {
             return x;
@@ -121,10 +121,10 @@ class Point3 {
         return Point3(std::abs(x), std::abs(y), std::abs(z));
     }
 
-    PBRT_CPU_GPU Point3 permute(const std::array<int, 3> &p) const {
-        T _x = this->operator[](p[0]);
-        T _y = this->operator[](p[1]);
-        T _z = this->operator[](p[2]);
+    PBRT_CPU_GPU Point3 permute(const uint8_t indices[3]) const {
+        T _x = this->operator[](indices[0]);
+        T _y = this->operator[](indices[1]);
+        T _z = this->operator[](indices[2]);
 
         return Point3(_x, _y, _z);
     }

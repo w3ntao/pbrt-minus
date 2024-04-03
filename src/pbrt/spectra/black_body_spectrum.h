@@ -37,7 +37,8 @@ class BlackbodySpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum sample(const SampledWavelengths &lambda) const {
-        std::array<double, NSpectrumSamples> values;
+        double values[NSpectrumSamples];
+
         for (int i = 0; i < NSpectrumSamples; ++i) {
             values[i] = Blackbody(lambda[i], T) * normalizationFactor;
         }
