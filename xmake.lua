@@ -17,6 +17,7 @@ add_files(
         "src/pbrt/base/spectrum.cu",
         "src/pbrt/euclidean_space/squared_matrix.cu",
         "src/pbrt/spectra/densely_sampled_spectrum.cu",
+        "src/pbrt/shapes/loop_subdivide.cu",
         "src/ext/lodepng/lodepng.cpp"
 )
 target_end()

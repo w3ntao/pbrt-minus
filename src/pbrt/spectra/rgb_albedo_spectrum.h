@@ -2,28 +2,8 @@
 
 #include "pbrt/spectra/rgb_sigmoid_polynomial.h"
 
-// TODO: rewrite RGBAlbedoSpectrum
-
 class RGBAlbedoSpectrum {
   public:
-    // TODO: delete these
-    /*
-    PBRT_GPU
-    RGBAlbedoSpectrum(const RGBColorSpace &cs, const RGB &rgb) : rsp(cs.to_rgb_coefficients(rgb)) {}
-
-    PBRT_GPU
-    static std::array<RGBAlbedoSpectrum, 3> build_albedo_rgb(const RGBColorSpace &cs) {
-        double val = 0.01;
-        auto r = RGBAlbedoSpectrum(cs, RGB(val, 0.0, 0.0));
-        auto g = RGBAlbedoSpectrum(cs, RGB(0.0, val, 0.0));
-        auto b = RGBAlbedoSpectrum(cs, RGB(0.0, 0.0, val));
-
-        return {r, g, b};
-    }
-    */
-
-    PBRT_CPU_GPU RGBAlbedoSpectrum() {}
-
     PBRT_CPU_GPU
     RGBAlbedoSpectrum(const RGBColorSpace *cs, const RGB &rgb)
         : rsp(cs->to_rgb_coefficients(rgb)) {}

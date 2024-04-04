@@ -8,7 +8,6 @@ class SampledWavelengths;
 class HLBVH;
 class AmbientOcclusionIntegrator;
 class SurfaceNormalIntegrator;
-// TODO: progress 2024/04/04 building SurfaceNormal
 
 class Integrator {
   public:

@@ -28,4 +28,13 @@ class Shape {
 
     ShapeType shape_type;
     void *shape_ptr;
+
+    PBRT_CPU_GPU void report_error() const {
+        printf("\nShape: this type is not implemented\n");
+#if defined(__CUDA_ARCH__)
+        asm("trap;");
+#else
+        throw std::runtime_error("Shape: this type is not implemented\n");
+#endif
+    }
 };

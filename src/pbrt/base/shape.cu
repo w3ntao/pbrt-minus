@@ -15,12 +15,7 @@ Bounds3f Shape::bounds() const {
     }
     }
 
-    printf("\nShape::bounds(): not implemented for this type\n\n");
-#if defined(__CUDA_ARCH__)
-    asm("trap;");
-#else
-    throw std::runtime_error("Shape::bounds(): not implemented for this type\n");
-#endif
+    report_error();
 }
 
 PBRT_GPU
@@ -31,8 +26,7 @@ bool Shape::fast_intersect(const Ray &ray, double t_max) const {
     }
     }
 
-    printf("\nShape::fast_intersect(): not implemented for this type\n\n");
-    asm("trap;");
+    report_error();
 }
 
 PBRT_GPU
@@ -43,6 +37,5 @@ std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, double t_max) 
     }
     }
 
-    printf("\nShape::intersect(): not implemented for this type\n\n");
-    asm("trap;");
+    report_error();
 }

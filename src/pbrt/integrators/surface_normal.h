@@ -7,13 +7,6 @@
 
 class SurfaceNormalIntegrator {
   public:
-    // TODO: rewrite SurfaceNormalIntegrator
-    /*
-    PBRT_GPU SurfaceNormalIntegrator(const RGBColorSpace &rgb_color_space,
-                                     const PixelSensor &sensor)
-        : rgb_spectra(RGBAlbedoSpectrum::build_albedo_rgb(rgb_color_space)) {}
-    */
-
     void init(const RGBColorSpace *rgb_color_space) {
         RGBAlbedoSpectrum::build_albedo_rgb(rgb_spectra, rgb_color_space);
     }

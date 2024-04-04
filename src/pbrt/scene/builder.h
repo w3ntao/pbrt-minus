@@ -500,7 +500,7 @@ class SceneBuilder {
             auto indices = parameters.get_integer("indices");
             auto points = parameters.get_point3("P");
 
-            const auto loop_subdivide_data = LoopSubdivide::build(levels, indices, points);
+            const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);
 
             add_triangle_mesh(loop_subdivide_data.p_limit, loop_subdivide_data.vertex_indices,
                               std::vector<Point2f>(), reverse_orientation, render_from_object);
