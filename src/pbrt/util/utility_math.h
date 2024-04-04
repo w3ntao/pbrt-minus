@@ -30,14 +30,14 @@ PBRT_CPU_GPU std::enable_if_t<std::is_floating_point_v<T>, bool> is_inf(T v) {
 #endif
 }
 
-PBRT_CPU_GPU
-constexpr double clamp(double x, double low, double high) {
-    return x < low ? low : (x > high ? high : x);
+template <typename T, std::enable_if_t<std::is_same_v<T, uint>, bool> = true>
+T divide_and_ceil(T dividend, T divisor) {
+    return T(std::ceil(float(dividend) / float(divisor)));
 }
 
 PBRT_CPU_GPU
-constexpr double clamp_0_1(double x) {
-    return clamp(x, 0, 1);
+constexpr double clamp(double x, double low, double high) {
+    return x < low ? low : (x > high ? high : x);
 }
 
 template <typename Predicate>

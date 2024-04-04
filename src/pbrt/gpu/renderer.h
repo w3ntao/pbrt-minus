@@ -3,11 +3,9 @@
 #include <iostream>
 #include <string>
 
-#include <curand_kernel.h>
-#include <cuda/atomic>
-
 #include "ext/lodepng/lodepng.h"
 
+#include "pbrt/base/integrator.h"
 #include "pbrt/base/shape.h"
 #include "pbrt/base/spectrum.h"
 
@@ -27,9 +25,6 @@
 #include "pbrt/films/rgb_film.h"
 
 #include "pbrt/cameras/perspective.h"
-
-#include "pbrt/integrators/surface_normal.h"
-#include "pbrt/integrators/ambient_occlusion.h"
 
 #include "pbrt/samplers/independent.h"
 
@@ -166,74 +161,6 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     }
 
     pixels[idx].init_zero();
-}
-
-__global__ void hlbvh_init_morton_primitives(HLBVH *bvh) {
-    bvh->init_morton_primitives();
-}
-
-__global__ void hlbvh_init_treelets(HLBVH *bvh, Treelet *treelets) {
-    bvh->init_treelets(treelets);
-}
-
-__global__ void hlbvh_compute_morton_code(HLBVH *bvh, const Bounds3f bounds_of_centroids) {
-    bvh->compute_morton_code(bounds_of_centroids);
-}
-
-__global__ void hlbvh_build_treelets(HLBVH *bvh, Treelet *treelets) {
-    bvh->collect_primitives_into_treelets(treelets);
-}
-
-__global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const BottomBVHArgs *bvh_args_array,
-                                       uint array_length) {
-    bvh->build_bottom_bvh(bvh_args_array, array_length);
-}
-
-__global__ void init_bvh_args(BottomBVHArgs *bvh_args_array, uint *accumulated_offset,
-                              const BVHBuildNode *bvh_build_nodes, const uint start,
-                              const uint end) {
-    if (gridDim.x * gridDim.y * gridDim.z > 1) {
-        printf("init_bvh_args(): launching more than 1 blocks destroys inter-thread "
-               "synchronization.\n");
-        asm("trap;");
-    }
-
-    const uint worker_idx = threadIdx.x;
-
-    __shared__ cuda::atomic<uint, cuda::thread_scope_block> shared_accumulated_offset;
-    if (worker_idx == 0) {
-        shared_accumulated_offset = *accumulated_offset;
-    }
-    __syncthreads();
-
-    const uint total_jobs = end - start;
-    const uint jobs_per_worker = total_jobs / blockDim.x + 1;
-
-    for (uint job_offset = 0; job_offset < jobs_per_worker; job_offset++) {
-        const uint idx = worker_idx * jobs_per_worker + job_offset;
-        if (idx >= total_jobs) {
-            break;
-        }
-
-        const uint build_node_idx = idx + start;
-        const auto &node = bvh_build_nodes[build_node_idx];
-
-        if (!node.is_leaf() || node.num_primitives <= MAX_PRIMITIVES_NUM_IN_LEAF) {
-            bvh_args_array[idx].expand_leaf = false;
-            continue;
-        }
-
-        bvh_args_array[idx].expand_leaf = true;
-        bvh_args_array[idx].build_node_idx = build_node_idx;
-        bvh_args_array[idx].left_child_idx = shared_accumulated_offset.fetch_add(2);
-        // 2 pointers: one for left and another right child
-    }
-
-    __syncthreads();
-    if (worker_idx == 0) {
-        *accumulated_offset = shared_accumulated_offset;
-    }
-    __syncthreads();
 }
 
 __global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {

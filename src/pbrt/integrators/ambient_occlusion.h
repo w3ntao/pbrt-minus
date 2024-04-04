@@ -2,6 +2,8 @@
 
 #include "pbrt/base/ray.h"
 #include "pbrt/base/integrator.h"
+#include "pbrt/base/spectrum.h"
+#include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/util/sampling.h"
 #include "pbrt/euclidean_space/frame.h"
 
