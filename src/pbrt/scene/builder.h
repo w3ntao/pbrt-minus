@@ -329,37 +329,38 @@ class SceneBuilder {
         film_resolution = Point2i(_resolution_x, _resolution_y);
         output_filename = parameters.get_string("filename");
 
-        DenselySampledSpectrum *_d_illum;
+        DenselySampledSpectrum *_d_illum_dense;
         Spectrum *d_illum;
 
-        checkCudaErrors(cudaMallocManaged((void **)&_d_illum, sizeof(DenselySampledSpectrum)));
+        checkCudaErrors(
+            cudaMallocManaged((void **)&_d_illum_dense, sizeof(DenselySampledSpectrum)));
         checkCudaErrors(cudaMallocManaged((void **)&d_illum, sizeof(Spectrum)));
 
         gpu_dynamic_pointers.push_back(d_illum);
-        gpu_dynamic_pointers.push_back(_d_illum);
+        gpu_dynamic_pointers.push_back(_d_illum_dense);
 
+        double iso = 100;
         double white_balance_val = 0.0;
-        GPU::init_cie_d_illuminant<<<1, 1>>>(
-            _d_illum, white_balance_val == 0.0 ? 6500.0 : white_balance_val,
-            gpu_constants.cie_s0_gpu, gpu_constants.cie_s1_gpu, gpu_constants.cie_s2_gpu,
-            gpu_constants.cie_s_lambda_gpu);
+        double exposure_time = 1.0;
+        double imaging_ratio = exposure_time * iso / 100.0;
 
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        _d_illum_dense->init_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val,
+                                   gpu_constants.cie_s0_gpu, gpu_constants.cie_s1_gpu,
+                                   gpu_constants.cie_s2_gpu, gpu_constants.cie_s_lambda_gpu);
 
-        d_illum->init(_d_illum);
+        d_illum->init(_d_illum_dense);
 
-        GPU::init_pixel_sensor_cie_1931<<<1, 1>>>(renderer, d_illum);
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        const Spectrum *cie_xyz[3];
+        renderer->global_variables->get_cie_xyz(cie_xyz);
+
+        renderer->sensor.init_cie_1931(cie_xyz, renderer->global_variables->rgb_color_space,
+                                       white_balance_val == 0 ? nullptr : d_illum, imaging_ratio);
 
         renderer->filter->init(0.5);
 
         Pixel *gpu_pixels;
         checkCudaErrors(cudaMallocManaged((void **)&gpu_pixels,
                                           sizeof(Pixel) * film_resolution->x * film_resolution->y));
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
         gpu_dynamic_pointers.push_back(gpu_pixels);
 
         {

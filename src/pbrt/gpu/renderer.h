@@ -105,7 +105,7 @@ class Renderer {
 };
 
 template <typename S>
-__global__ void build_shapes(Shape *shapes, const S *concrete_shapes, uint num) {
+static __global__ void build_shapes(Shape *shapes, const S *concrete_shapes, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
@@ -115,7 +115,7 @@ __global__ void build_shapes(Shape *shapes, const S *concrete_shapes, uint num) 
 }
 
 template <typename T>
-__global__ void apply_transform(T *data, const Transform transform, uint length) {
+static __global__ void apply_transform(T *data, const Transform transform, uint length) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= length) {
         return;
@@ -159,38 +159,7 @@ init_rgb_to_spectrum_table_scale(RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_t
     rgb_to_spectrum_data->z_nodes[idx] = rgb_to_spectrum_table_scale[idx];
 }
 
-__device__ void _init_cied_d_illuminant(DenselySampledSpectrum *d_illum, double temperature,
-                                        const double *cie_s0, const double *cie_s1,
-                                        const double *cie_s2, const double *cie_lambda) {
-
-    d_illum->init_cie_d(temperature, cie_s0, cie_s1, cie_s2, cie_lambda);
-}
-
-// TODO: move init_cie_d_illuminant() to CPU
-__global__ void init_cie_d_illuminant(DenselySampledSpectrum *d_illum, double temperature,
-                                      const double *cie_s0, const double *cie_s1,
-                                      const double *cie_s2, const double *cie_lambda) {
-    _init_cied_d_illuminant(d_illum, temperature, cie_s0, cie_s1, cie_s2, cie_lambda);
-}
-
-__global__ void init_pixel_sensor_cie_1931(Renderer *renderer, const Spectrum *d_illum) {
-    // TODO: default value for PixelSensor, will remove later
-    // TODO: rewrite init_pixel_sensor_cie_1931() to build it in CPU
-    double iso = 100;
-    double white_balance_val = 0.0;
-    double exposure_time = 1.0;
-    double imaging_ratio = exposure_time * iso / 100.0;
-
-    const Spectrum *cie_xyz[3];
-    renderer->global_variables->get_cie_xyz(cie_xyz);
-
-    const auto color_space = renderer->global_variables->rgb_color_space;
-
-    renderer->sensor.init_cie_1931(cie_xyz, color_space, white_balance_val == 0 ? nullptr : d_illum,
-                                   imaging_ratio);
-}
-
-__global__ void init_pixels(Pixel *pixels, Point2i dimension) {
+static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= dimension.x * dimension.y) {
         return;
