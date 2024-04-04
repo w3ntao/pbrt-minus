@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cassert>
-#include <limits>
 #include <vector>
 
 #include "pbrt/base/shape.h"
@@ -97,20 +96,10 @@ struct BVHBuildNode {
 
 class HLBVH {
   public:
-    void init(const Shape **_primitives, MortonPrimitive *gpu_morton_primitives,
-              uint _n_primitives) {
+    void init(const Shape **_primitives, MortonPrimitive *gpu_morton_primitives) {
         primitives = _primitives;
         morton_primitives = gpu_morton_primitives;
-        num_total_primitives = _n_primitives;
     }
-
-    PBRT_GPU void init_morton_primitives();
-
-    PBRT_GPU void init_treelets(Treelet *treelets);
-
-    PBRT_GPU void compute_morton_code(const Bounds3f &bounds_of_centroids);
-
-    PBRT_GPU void collect_primitives_into_treelets(Treelet *treelets);
 
     PBRT_GPU void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length);
 
@@ -124,10 +113,9 @@ class HLBVH {
     const Shape **primitives;
     MortonPrimitive *morton_primitives;
     BVHBuildNode *build_nodes;
-    uint num_total_primitives;
 
   private:
-    uint build_top_bvh_for_treelets(uint num_treelets, const Treelet *treelets);
+    uint build_top_bvh_for_treelets(uint num_dense_treelets, const Treelet *treelets);
 
     uint recursive_build_top_bvh_for_treelets(const std::vector<uint> &treelet_indices,
                                               const Treelet *treelets, uint &build_node_count,

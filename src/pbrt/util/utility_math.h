@@ -32,7 +32,11 @@ PBRT_CPU_GPU std::enable_if_t<std::is_floating_point_v<T>, bool> is_inf(T v) {
 
 template <typename T, std::enable_if_t<std::is_same_v<T, uint>, bool> = true>
 T divide_and_ceil(T dividend, T divisor) {
-    return T(std::ceil(float(dividend) / float(divisor)));
+    if (dividend % divisor == 0) {
+        return dividend / divisor;
+    }
+
+    return dividend / divisor + 1;
 }
 
 PBRT_CPU_GPU
