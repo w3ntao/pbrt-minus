@@ -5,6 +5,8 @@
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/spectra/sampled_spectrum.h"
 
+class PerspectiveCamera;
+
 enum class RenderingCoordinateSystem {
     CameraCoordSystem,
     CameraWorldCoordSystem,
@@ -52,7 +54,7 @@ struct CameraSample {
     Point2f p_lens;
     double filter_weight = 1;
 
-    PBRT_GPU CameraSample(const Point2f &_p_film, const Point2f &_p_lens, double _filter_weight)
+    PBRT_GPU CameraSample(const Point2f _p_film, const Point2f _p_lens, double _filter_weight)
         : p_film(_p_film), p_lens(_p_lens), filter_weight(_filter_weight) {}
 };
 
@@ -61,7 +63,7 @@ struct CameraRay {
     Ray ray;
     SampledSpectrum weight;
 
-    PBRT_GPU CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum::same_value(1)) {}
+    PBRT_CPU_GPU CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum::same_value(1)) {}
 };
 
 struct CameraBase {
@@ -76,17 +78,28 @@ struct CameraBase {
     }
 };
 
-/*
 class Camera {
   public:
-    Point2i resolution;
-    CameraTransform camera_transform;
+    void init(PerspectiveCamera *perspective_camera);
 
-    PBRT_GPU Camera(const Point2i &_resolution, const CameraTransform &_camera_transform)
-        : resolution(_resolution), camera_transform(_camera_transform) {}
+    PBRT_CPU_GPU const CameraBase &get_camerabase() const;
 
-    PBRT_GPU virtual ~Camera() {}
+    PBRT_CPU_GPU CameraRay generate_ray(const CameraSample &sample) const;
 
-    PBRT_GPU virtual CameraRay generate_ray(const CameraSample &sample) const = 0;
+  private:
+    enum class CameraType {
+        perspective,
+    };
+
+    void *camera_ptr;
+    CameraType camera_type;
+
+    PBRT_CPU_GPU void report_error() const {
+        printf("\nCamera: this type is not implemented\n");
+#if defined(__CUDA_ARCH__)
+        asm("trap;");
+#else
+        throw std::runtime_error("Camera: this type is not implemented\n");
+#endif
+    }
 };
-*/

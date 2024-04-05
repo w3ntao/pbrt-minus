@@ -11,10 +11,11 @@ add_packages("png")
 add_includedirs("src")
 add_files(
         "src/pbrt/main.cu",
-        "src/pbrt/base/shape.cu",
+        "src/pbrt/base/camera.cu",
+        "src/pbrt/base/filter.cu",
         "src/pbrt/base/integrator.cu",
         "src/pbrt/base/sampler.cu",
-        "src/pbrt/base/filter.cu",
+        "src/pbrt/base/shape.cu",
         "src/pbrt/base/spectrum.cu",
         "src/pbrt/accelerator/hlbvh.cu",
         "src/pbrt/euclidean_space/squared_matrix.cu",

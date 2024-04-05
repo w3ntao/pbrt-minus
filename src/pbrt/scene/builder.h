@@ -230,7 +230,7 @@ class SceneBuilder {
 
         // TODO: progress 2024/04/02: cudaMallocManaged: change to their Base type
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->bvh), sizeof(HLBVH)));
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->camera), sizeof(PerspectiveCamera)));
+        checkCudaErrors(cudaMallocManaged((void **)&(renderer->camera), sizeof(Camera)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->film), sizeof(RGBFilm)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->filter), sizeof(Filter)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->integrator), sizeof(Integrator)));
@@ -310,8 +310,15 @@ class SceneBuilder {
                 fov = _fov[0];
             }
 
-            renderer->camera->init(film_resolution.value(), camera_transform, fov, 0.0);
+            PerspectiveCamera *perspective_camera;
+            checkCudaErrors(
+                cudaMallocManaged((void **)&perspective_camera, sizeof(PerspectiveCamera)));
+            gpu_dynamic_pointers.push_back(perspective_camera);
 
+            perspective_camera->init(film_resolution.value(), camera_transform, fov, 0.0);
+
+            renderer->camera->init(perspective_camera);
+            
             return;
         }
 

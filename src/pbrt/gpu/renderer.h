@@ -5,27 +5,28 @@
 
 #include "ext/lodepng/lodepng.h"
 
+#include "pbrt/base/camera.h"
 #include "pbrt/base/filter.h"
 #include "pbrt/base/integrator.h"
 #include "pbrt/base/shape.h"
 #include "pbrt/base/spectrum.h"
+
+#include "pbrt/accelerator/hlbvh.h"
+
+#include "pbrt/cameras/perspective.h"
+
+#include "pbrt/films/pixel_sensor.h"
+#include "pbrt/films/rgb_film.h"
+
+#include "pbrt/samplers/independent.h"
+
+#include "pbrt/shapes/triangle.h"
 
 #include "pbrt/spectra/constants.h"
 #include "pbrt/spectra/color_encoding.h"
 #include "pbrt/spectra/rgb_color_space.h"
 #include "pbrt/spectra/sampled_wavelengths.h"
 #include "pbrt/spectra/densely_sampled_spectrum.h"
-
-#include "pbrt/accelerator/hlbvh.h"
-
-#include "pbrt/shapes/triangle.h"
-
-#include "pbrt/films/pixel_sensor.h"
-#include "pbrt/films/rgb_film.h"
-
-#include "pbrt/cameras/perspective.h"
-
-#include "pbrt/samplers/independent.h"
 
 namespace GPU {
 
@@ -45,8 +46,12 @@ struct GlobalVariable {
             return;
         }
 
-        printf("\nthis color space is not implemented\n\n");
+        printf("\nGlobalVariable::init(): this color space is not implemented\n\n");
+#if defined(__CUDA_ARCH__)
         asm("trap;");
+#else
+        throw std::runtime_error("GlobalVariable::init()\n");
+#endif
     }
 
     PBRT_CPU_GPU void get_cie_xyz(const Spectrum *out[3]) const {
@@ -62,19 +67,18 @@ struct GlobalVariable {
 class Renderer {
   public:
     Integrator *integrator;
-    PerspectiveCamera *camera;
+    Camera *camera;
     Filter *filter;
     RGBFilm *film;
     HLBVH *bvh;
+    // TODO: progress 2024/04/05: change PerspectiveCamera and RGBFilm to Base type
 
     const GlobalVariable *global_variables;
-    // TODO: move GlobalVariable* to Builder
 
     PixelSensor sensor;
-    // TODO: change PixelSensor to PixelSensor*
 
     PBRT_GPU void evaluate_pixel_sample(const Point2i p_pixel, const int num_samples) {
-        int width = camera->camera_base.resolution.x;
+        int width = camera->get_camerabase().resolution.x;
         int pixel_index = p_pixel.y * width + p_pixel.x;
 
         auto sampler = IndependentSampler(pixel_index);
@@ -172,10 +176,10 @@ __global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh
 }
 
 __global__ void parallel_render(Renderer *renderer, int num_samples) {
-    const PerspectiveCamera *camera = renderer->camera;
+    auto camera_base = renderer->camera->get_camerabase();
 
-    uint width = camera->camera_base.resolution.x;
-    uint height = camera->camera_base.resolution.y;
+    uint width = camera_base.resolution.x;
+    uint height = camera_base.resolution.y;
 
     uint x = threadIdx.x + blockIdx.x * blockDim.x;
     uint y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -187,10 +191,10 @@ __global__ void parallel_render(Renderer *renderer, int num_samples) {
 }
 
 __global__ void copy_gpu_pixels_to_rgb(const Renderer *renderer, RGB *output_rgb) {
-    const PerspectiveCamera *camera = renderer->camera;
+    auto camera_base = renderer->camera->get_camerabase();
 
-    uint width = camera->camera_base.resolution.x;
-    uint height = camera->camera_base.resolution.y;
+    uint width = camera_base.resolution.x;
+    uint height = camera_base.resolution.y;
 
     uint x = threadIdx.x + blockIdx.x * blockDim.x;
     uint y = threadIdx.y + blockIdx.y * blockDim.y;
