@@ -3,7 +3,7 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/base/camera.h"
 
-class BoxFilter;
+class Filter;
 
 class Sampler {
   public:
@@ -15,5 +15,5 @@ class Sampler {
 
     PBRT_GPU virtual Point2f get_pixel_2d() = 0;
 
-    PBRT_GPU CameraSample get_camera_sample(const Point2i &pPixel, const BoxFilter *filter);
+    PBRT_GPU CameraSample get_camera_sample(const Point2i &pPixel, const Filter *filter);
 };

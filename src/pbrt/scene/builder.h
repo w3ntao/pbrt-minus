@@ -7,6 +7,8 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
 
+#include "pbrt/filters/box.h"
+
 #include "pbrt/integrators/ambient_occlusion.h"
 #include "pbrt/integrators/surface_normal.h"
 
@@ -230,7 +232,7 @@ class SceneBuilder {
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->bvh), sizeof(HLBVH)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->camera), sizeof(PerspectiveCamera)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->film), sizeof(RGBFilm)));
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->filter), sizeof(BoxFilter)));
+        checkCudaErrors(cudaMallocManaged((void **)&(renderer->filter), sizeof(Filter)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->integrator), sizeof(Integrator)));
         // TODO: progress 2024/04/02: cudaMallocManaged: change to their Base type
 
@@ -317,6 +319,16 @@ class SceneBuilder {
         throw std::runtime_error("camera type not implemented");
     }
 
+    void option_filter() {
+        BoxFilter *box_filter;
+        checkCudaErrors(cudaMallocManaged((void **)&box_filter, sizeof(BoxFilter)));
+        gpu_dynamic_pointers.push_back(box_filter);
+
+        box_filter->init(0.5);
+
+        renderer->filter->init(box_filter);
+    }
+
     void option_film() {
         auto parameters = ParameterDict(film_tokens);
 
@@ -352,8 +364,6 @@ class SceneBuilder {
 
         renderer->sensor.init_cie_1931(cie_xyz, renderer->global_variables->rgb_color_space,
                                        white_balance_val == 0 ? nullptr : d_illum, imaging_ratio);
-
-        renderer->filter->init(0.5);
 
         Pixel *gpu_pixels;
         checkCudaErrors(cudaMallocManaged((void **)&gpu_pixels,
@@ -602,6 +612,7 @@ class SceneBuilder {
 
         case TokenType::WorldBegin: {
             option_film();
+            option_filter();
             option_camera();
             option_sampler();
             option_integrator();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include "pbrt/util/macro.h"
 
 static constexpr double Infinity = std::numeric_limits<double>::infinity();
@@ -58,7 +59,7 @@ PBRT_CPU_GPU size_t find_interval(size_t sz, const Predicate &pred) {
     return (size_t)clamp((ssize_t)first - 1, 0, sz - 2);
 }
 
-PBRT_CPU_GPU inline double lerp(double x, double a, double b) {
+PBRT_CPU_GPU static double lerp(double x, double a, double b) {
     return (1 - x) * a + x * b;
 }
 
@@ -67,7 +68,7 @@ PBRT_CPU_GPU constexpr double sqr(double v) {
 }
 
 PBRT_CPU_GPU
-inline double safe_sqrt(double x) {
+static double safe_sqrt(double x) {
     return std::sqrt(std::max(0.0, x));
 }
 
@@ -102,7 +103,7 @@ PBRT_CPU_GPU auto sum_of_products(Ta a, Tb b, Tc c, Td d) {
 }
 
 template <typename T, std::enable_if_t<std::is_same_v<T, uint32_t>, bool> = true>
-PBRT_CPU_GPU inline T left_shift3(T x) {
+PBRT_CPU_GPU constexpr T left_shift3(T x) {
     if (x == (1 << 10)) {
         --x;
     }
@@ -124,6 +125,6 @@ PBRT_CPU_GPU inline T left_shift3(T x) {
 }
 
 template <typename T, std::enable_if_t<std::is_same_v<T, uint32_t>, bool> = true>
-PBRT_CPU_GPU inline T encode_morton3(T x, T y, T z) {
+PBRT_CPU_GPU constexpr T encode_morton3(T x, T y, T z) {
     return (left_shift3(z) << 2) | (left_shift3(y) << 1) | left_shift3(x);
 }

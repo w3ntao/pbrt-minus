@@ -412,7 +412,8 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         } morton_comparator;
 
         std::sort(morton_primitives, morton_primitives + num_total_primitives, morton_comparator);
-        // TODO: rewrite this sorting in GPU
+        // TODO: rewrite this sorting in GPU, check CUDA samples: radixSortThrust
+        // https://github.com/NVIDIA/cuda-samples/tree/master/Samples/2_Concepts_and_Techniques/radixSortThrust
     }
 
     // init top treelets

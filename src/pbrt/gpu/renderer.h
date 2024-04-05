@@ -5,6 +5,7 @@
 
 #include "ext/lodepng/lodepng.h"
 
+#include "pbrt/base/filter.h"
 #include "pbrt/base/integrator.h"
 #include "pbrt/base/shape.h"
 #include "pbrt/base/spectrum.h"
@@ -18,8 +19,6 @@
 #include "pbrt/accelerator/hlbvh.h"
 
 #include "pbrt/shapes/triangle.h"
-
-#include "pbrt/filters/box.h"
 
 #include "pbrt/films/pixel_sensor.h"
 #include "pbrt/films/rgb_film.h"
@@ -64,7 +63,7 @@ class Renderer {
   public:
     Integrator *integrator;
     PerspectiveCamera *camera;
-    BoxFilter *filter;
+    Filter *filter;
     RGBFilm *film;
     HLBVH *bvh;
 
