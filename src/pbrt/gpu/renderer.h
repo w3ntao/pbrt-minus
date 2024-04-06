@@ -31,7 +31,6 @@
 namespace GPU {
 
 struct GlobalVariable {
-    PBRT_CPU_GPU
     void init(const Spectrum *_cie_xyz[3], const Spectrum *cie_illum_d6500,
               const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table,
               RGBtoSpectrumData::Gamut gamut) {
@@ -46,12 +45,8 @@ struct GlobalVariable {
             return;
         }
 
-        printf("\nGlobalVariable::init(): this color space is not implemented\n\n");
-#if defined(__CUDA_ARCH__)
-        asm("trap;");
-#else
-        throw std::runtime_error("GlobalVariable::init()\n");
-#endif
+        throw std::runtime_error(
+            "\nGlobalVariable::init(): this color space is not implemented\n\n");
     }
 
     PBRT_CPU_GPU void get_cie_xyz(const Spectrum *out[3]) const {

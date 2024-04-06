@@ -39,8 +39,8 @@ class GraphicsState {
     bool reverse_orientation;
 };
 
-struct GPUconstants {
-    GPUconstants() {
+struct PreComputedSpectrum {
+    PreComputedSpectrum() {
         auto start = std::chrono::system_clock::now();
 
         checkCudaErrors(cudaMallocManaged((void **)&cie_lambdas_gpu, sizeof(CIE_LAMBDA_CPU)));
@@ -70,6 +70,36 @@ struct GPUconstants {
         checkCudaErrors(cudaMemcpy(cie_s2_gpu, CIE_S2, sizeof(CIE_S2), cudaMemcpyHostToDevice));
         checkCudaErrors(cudaMemcpy(cie_s_lambda_gpu, CIE_S_lambda, sizeof(CIE_S_lambda),
                                    cudaMemcpyHostToDevice));
+
+        // TODO: delete this
+
+        for (uint idx = 0; idx < 3; idx++) {
+            checkCudaErrors(
+                cudaMallocManaged((void **)&(dense_cie_xyz[idx]), sizeof(DenselySampledSpectrum)));
+        }
+        dense_cie_xyz[0]->init_from_pls_lambdas_values(cie_lambdas_gpu, cie_x_value_gpu,
+                                                       NUM_CIE_SAMPLES);
+        dense_cie_xyz[1]->init_from_pls_lambdas_values(cie_lambdas_gpu, cie_y_value_gpu,
+                                                       NUM_CIE_SAMPLES);
+        dense_cie_xyz[2]->init_from_pls_lambdas_values(cie_lambdas_gpu, cie_z_value_gpu,
+                                                       NUM_CIE_SAMPLES);
+
+        for (uint idx = 0; idx < 3; idx++) {
+            Spectrum *temp_spectrum;
+            checkCudaErrors(cudaMallocManaged((void **)&temp_spectrum, sizeof(Spectrum)));
+            temp_spectrum->init(dense_cie_xyz[idx]);
+            cie_xyz[idx] = temp_spectrum;
+        }
+
+        checkCudaErrors(
+            cudaMallocManaged((void **)&dense_illum_d65, sizeof(DenselySampledSpectrum)));
+        checkCudaErrors(cudaMallocManaged((void **)&illum_d65, sizeof(Spectrum)));
+
+        uint length_d65 = sizeof(CIE_Illum_D6500) / sizeof(double);
+
+        dense_illum_d65->init_from_pls_interleaved_samples(cie_illum_d6500_gpu, length_d65, true,
+                                                           cie_xyz[1]);
+        illum_d65->init(dense_illum_d65);
 
         const auto rgb_spectrum_table_cpu = RGBtoSpectrumData::compute_spectrum_table_data("sRGB");
 
@@ -125,7 +155,7 @@ struct GPUconstants {
                   << std::flush;
     }
 
-    ~GPUconstants() {
+    ~PreComputedSpectrum() {
         for (auto ptr : std::vector<void *>{
                  cie_lambdas_gpu,
                  cie_x_value_gpu,
@@ -137,14 +167,32 @@ struct GPUconstants {
                  cie_s1_gpu,
                  cie_s2_gpu,
                  rgb_to_spectrum_table_gpu,
+                 dense_illum_d65,
+                 illum_d65,
              }) {
             checkCudaErrors(cudaFree(ptr));
+        }
+
+        for (uint idx = 0; idx < 3; idx++) {
+            checkCudaErrors(cudaFree(dense_cie_xyz[idx]));
+            checkCudaErrors(cudaFree((void *)cie_xyz[idx]));
         }
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
     }
 
+    double *cie_s_lambda_gpu = nullptr;
+    double *cie_s0_gpu = nullptr;
+    double *cie_s1_gpu = nullptr;
+    double *cie_s2_gpu = nullptr;
+
+    const Spectrum *cie_xyz[3] = {nullptr};
+    Spectrum *illum_d65 = nullptr;
+
+    RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table_gpu = nullptr;
+
+  private:
     double *cie_lambdas_gpu = nullptr;
     double *cie_x_value_gpu = nullptr;
     double *cie_y_value_gpu = nullptr;
@@ -152,12 +200,8 @@ struct GPUconstants {
 
     double *cie_illum_d6500_gpu = nullptr;
 
-    double *cie_s_lambda_gpu = nullptr;
-    double *cie_s0_gpu = nullptr;
-    double *cie_s1_gpu = nullptr;
-    double *cie_s2_gpu = nullptr;
-
-    RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table_gpu = nullptr;
+    DenselySampledSpectrum *dense_cie_xyz[3] = {nullptr};
+    DenselySampledSpectrum *dense_illum_d65 = nullptr;
 };
 
 class SceneBuilder {
@@ -167,7 +211,7 @@ class SceneBuilder {
 
     GPU::Renderer *renderer = nullptr;
 
-    GPUconstants gpu_constants;
+    PreComputedSpectrum pre_computed_spectrum;
     std::vector<void *> gpu_dynamic_pointers;
     std::vector<const Shape *> gpu_primitives;
 
@@ -191,38 +235,8 @@ class SceneBuilder {
         checkCudaErrors(cudaMallocManaged((void **)&(global_variables->rgb_color_space),
                                           sizeof(RGBColorSpace)));
 
-        DenselySampledSpectrum *_illum_d65;
-        checkCudaErrors(cudaMallocManaged((void **)&_illum_d65, sizeof(DenselySampledSpectrum)));
-
-        Spectrum *illum_d65;
-        checkCudaErrors(cudaMallocManaged((void **)&illum_d65, sizeof(Spectrum)));
-
-        DenselySampledSpectrum *_cie_xyz[3];
-        Spectrum *cie_xyz[3];
-        for (uint idx = 0; idx < 3; idx++) {
-            checkCudaErrors(
-                cudaMallocManaged((void **)&(_cie_xyz[idx]), sizeof(DenselySampledSpectrum)));
-
-            checkCudaErrors(cudaMallocManaged((void **)&(cie_xyz[idx]), sizeof(Spectrum)));
-        }
-        _cie_xyz[0]->init_from_pls_lambdas_values(gpu_constants.cie_lambdas_gpu,
-                                                  gpu_constants.cie_x_value_gpu, NUM_CIE_SAMPLES);
-        _cie_xyz[1]->init_from_pls_lambdas_values(gpu_constants.cie_lambdas_gpu,
-                                                  gpu_constants.cie_y_value_gpu, NUM_CIE_SAMPLES);
-        _cie_xyz[2]->init_from_pls_lambdas_values(gpu_constants.cie_lambdas_gpu,
-                                                  gpu_constants.cie_z_value_gpu, NUM_CIE_SAMPLES);
-        for (uint idx = 0; idx < 3; idx++) {
-            cie_xyz[idx]->init(_cie_xyz[idx]);
-        }
-
-        uint length_d65 = sizeof(CIE_Illum_D6500) / sizeof(double);
-
-        _illum_d65->init_from_pls_interleaved_samples(gpu_constants.cie_illum_d6500_gpu, length_d65,
-                                                      true, cie_xyz[1]);
-        illum_d65->init(_illum_d65);
-
-        const Spectrum *const_cie_xyz[3] = {cie_xyz[0], cie_xyz[1], cie_xyz[2]};
-        global_variables->init(const_cie_xyz, illum_d65, gpu_constants.rgb_to_spectrum_table_gpu,
+        global_variables->init(pre_computed_spectrum.cie_xyz, pre_computed_spectrum.illum_d65,
+                               pre_computed_spectrum.rgb_to_spectrum_table_gpu,
                                RGBtoSpectrumData::Gamut::srgb);
 
         checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
@@ -234,16 +248,8 @@ class SceneBuilder {
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->filter), sizeof(Filter)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->integrator), sizeof(Integrator)));
 
-        for (uint idx = 0; idx < 3; idx++) {
-            gpu_dynamic_pointers.push_back(_cie_xyz[idx]);
-            gpu_dynamic_pointers.push_back(cie_xyz[idx]);
-        }
-
         gpu_dynamic_pointers.push_back(global_variables);
         gpu_dynamic_pointers.push_back(global_variables->rgb_color_space);
-
-        gpu_dynamic_pointers.push_back(_illum_d65);
-        gpu_dynamic_pointers.push_back(illum_d65);
 
         gpu_dynamic_pointers.push_back(renderer);
         gpu_dynamic_pointers.push_back(renderer->bvh);
@@ -358,9 +364,10 @@ class SceneBuilder {
         double exposure_time = 1.0;
         double imaging_ratio = exposure_time * iso / 100.0;
 
-        _d_illum_dense->init_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val,
-                                   gpu_constants.cie_s0_gpu, gpu_constants.cie_s1_gpu,
-                                   gpu_constants.cie_s2_gpu, gpu_constants.cie_s_lambda_gpu);
+        _d_illum_dense->init_cie_d(
+            white_balance_val == 0.0 ? 6500.0 : white_balance_val, pre_computed_spectrum.cie_s0_gpu,
+            pre_computed_spectrum.cie_s1_gpu, pre_computed_spectrum.cie_s2_gpu,
+            pre_computed_spectrum.cie_s_lambda_gpu);
 
         d_illum->init(_d_illum_dense);
 
