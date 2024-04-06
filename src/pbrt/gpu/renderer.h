@@ -32,13 +32,13 @@ namespace GPU {
 
 struct GlobalVariable {
     void init(const Spectrum *_cie_xyz[3], const Spectrum *cie_illum_d6500,
-              const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table,
+              const RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_table,
               RGBtoSpectrumData::Gamut gamut) {
         for (uint idx = 0; idx < 3; idx++) {
             cie_xyz[idx] = _cie_xyz[idx];
         }
 
-        if (gamut == RGBtoSpectrumData::Gamut::srgb) {
+        if (gamut == RGBtoSpectrumData::Gamut::sRGB) {
             rgb_color_space->init(Point2f(0.64, 0.33), Point2f(0.3, 0.6), Point2f(0.15, 0.06),
                                   cie_illum_d6500, rgb_to_spectrum_table, cie_xyz);
 
@@ -116,9 +116,9 @@ static __global__ void apply_transform(T *data, const Transform transform, uint 
     data[idx] = transform(data[idx]);
 }
 
-__global__ void init_rgb_to_spectrum_table_coefficients(
-    RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
-    const double *rgb_to_spectrum_table_coefficients) {
+__global__ void
+init_rgb_to_spectrum_table_coefficients(RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_data,
+                                        const double *rgb_to_spectrum_table_coefficients) {
     /*
      * max thread size: 1024
      * total dimension: 3 * 64 * 64 * 64 * 3
@@ -145,7 +145,7 @@ __global__ void init_rgb_to_spectrum_table_coefficients(
 }
 
 __global__ void
-init_rgb_to_spectrum_table_scale(RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_data,
+init_rgb_to_spectrum_table_scale(RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_data,
                                  const double *rgb_to_spectrum_table_scale) {
     uint idx = threadIdx.x;
     rgb_to_spectrum_data->z_nodes[idx] = rgb_to_spectrum_table_scale[idx];

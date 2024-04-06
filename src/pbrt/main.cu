@@ -93,16 +93,12 @@ int main(int argc, const char **argv) {
 
     display_system_info();
 
-    thread_pool = new ThreadPool(std::thread::hardware_concurrency());
-
     const auto command_line_option = CommandLineOption(argc, argv);
     SceneBuilder::render_pbrt(command_line_option);
 
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     cudaDeviceReset();
-
-    delete thread_pool;
-
+    
     return 0;
 }

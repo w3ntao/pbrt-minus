@@ -8,8 +8,9 @@
 
 class ThreadPool {
   public:
-    explicit ThreadPool(size_t num_threads) : quit(false), num_active_jobs(0) {
-        // Creating worker threads
+    explicit ThreadPool() : quit(false), num_active_jobs(0) {
+        size_t num_threads = std::thread::hardware_concurrency();
+
         for (size_t i = 0; i < num_threads; ++i) {
             threads.emplace_back([this] {
                 while (true) {
@@ -85,5 +86,3 @@ class ThreadPool {
 
     bool quit;
 };
-
-static ThreadPool *thread_pool;

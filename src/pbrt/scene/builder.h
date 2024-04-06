@@ -40,7 +40,7 @@ class GraphicsState {
 };
 
 struct PreComputedSpectrum {
-    PreComputedSpectrum() {
+    PreComputedSpectrum(ThreadPool &thread_pool) {
         auto start = std::chrono::system_clock::now();
 
         checkCudaErrors(cudaMallocManaged((void **)&cie_lambdas_gpu, sizeof(CIE_LAMBDA_CPU)));
@@ -71,8 +71,6 @@ struct PreComputedSpectrum {
         checkCudaErrors(cudaMemcpy(cie_s_lambda_gpu, CIE_S_lambda, sizeof(CIE_S_lambda),
                                    cudaMemcpyHostToDevice));
 
-        // TODO: delete this
-
         for (uint idx = 0; idx < 3; idx++) {
             checkCudaErrors(
                 cudaMallocManaged((void **)&(dense_cie_xyz[idx]), sizeof(DenselySampledSpectrum)));
@@ -101,53 +99,10 @@ struct PreComputedSpectrum {
                                                            cie_xyz[1]);
         illum_d65->init(dense_illum_d65);
 
-        const auto rgb_spectrum_table_cpu = RGBtoSpectrumData::compute_spectrum_table_data("sRGB");
+        checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table,
+                                          sizeof(RGBtoSpectrumData::RGBtoSpectrumTable)));
 
-        double *rgb_to_spectrum_table_scale;
-        double *rgb_to_spectrum_table_coefficients;
-
-        int scale_size = sizeof(double) * RGBtoSpectrumData::RES;
-        int coeffs_size = sizeof(double) * 3 * 3 * RGBtoSpectrumData::RES * RGBtoSpectrumData::RES *
-                          RGBtoSpectrumData::RES;
-
-        checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table_scale, scale_size));
-        checkCudaErrors(
-            cudaMallocManaged((void **)&rgb_to_spectrum_table_coefficients, coeffs_size));
-
-        checkCudaErrors(cudaMemcpy(rgb_to_spectrum_table_scale, rgb_spectrum_table_cpu.z_nodes,
-                                   scale_size, cudaMemcpyHostToDevice));
-        checkCudaErrors(cudaMemcpy(rgb_to_spectrum_table_coefficients,
-                                   rgb_spectrum_table_cpu.coefficients, coeffs_size,
-                                   cudaMemcpyHostToDevice));
-
-        checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table_gpu,
-                                          sizeof(RGBtoSpectrumData::RGBtoSpectrumTableGPU)));
-
-        const int num_component = 3;
-        const int rgb_to_spectrum_data_resolution = RGBtoSpectrumData::RES;
-        const int channel = 3;
-
-        /*
-         * max thread size: 1024
-         * total dimension: 3 * 64 * 64 * 64 * 3
-         * 3: blocks.x
-         * 64: blocks.y
-         * 64: blocks.z
-         * 64: threads.x
-         * 3:  threads.y
-         */
-        dim3 blocks(num_component, rgb_to_spectrum_data_resolution,
-                    rgb_to_spectrum_data_resolution);
-        dim3 threads(rgb_to_spectrum_data_resolution, channel, 1);
-        GPU::init_rgb_to_spectrum_table_coefficients<<<blocks, threads>>>(
-            rgb_to_spectrum_table_gpu, rgb_to_spectrum_table_coefficients);
-
-        GPU::init_rgb_to_spectrum_table_scale<<<1, rgb_to_spectrum_data_resolution>>>(
-            rgb_to_spectrum_table_gpu, rgb_to_spectrum_table_scale);
-
-        for (auto ptr : {rgb_to_spectrum_table_scale, rgb_to_spectrum_table_coefficients}) {
-            checkCudaErrors(cudaFree(ptr));
-        }
+        rgb_to_spectrum_table->init("sRGB", thread_pool);
 
         const std::chrono::duration<double> duration{std::chrono::system_clock::now() - start};
         std::cout << std::fixed << std::setprecision(1) << "spectra computing took "
@@ -166,7 +121,7 @@ struct PreComputedSpectrum {
                  cie_s0_gpu,
                  cie_s1_gpu,
                  cie_s2_gpu,
-                 rgb_to_spectrum_table_gpu,
+                 rgb_to_spectrum_table,
                  dense_illum_d65,
                  illum_d65,
              }) {
@@ -190,7 +145,7 @@ struct PreComputedSpectrum {
     const Spectrum *cie_xyz[3] = {nullptr};
     Spectrum *illum_d65 = nullptr;
 
-    RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table_gpu = nullptr;
+    RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_table = nullptr;
 
   private:
     double *cie_lambdas_gpu = nullptr;
@@ -205,7 +160,11 @@ struct PreComputedSpectrum {
 };
 
 class SceneBuilder {
+  private:
+    ThreadPool thread_pool;
     std::string root;
+
+  public:
     std::optional<int> samples_per_pixel;
     std::optional<std::string> integrator_name;
 
@@ -227,7 +186,8 @@ class SceneBuilder {
     Transform render_from_world;
 
     explicit SceneBuilder(const CommandLineOption &command_line_option)
-        : samples_per_pixel(command_line_option.samples_per_pixel) {
+        : samples_per_pixel(command_line_option.samples_per_pixel),
+          pre_computed_spectrum(PreComputedSpectrum(thread_pool)) {
 
         GPU::GlobalVariable *global_variables;
         checkCudaErrors(cudaMallocManaged((void **)&global_variables, sizeof(GPU::GlobalVariable)));
@@ -236,8 +196,8 @@ class SceneBuilder {
                                           sizeof(RGBColorSpace)));
 
         global_variables->init(pre_computed_spectrum.cie_xyz, pre_computed_spectrum.illum_d65,
-                               pre_computed_spectrum.rgb_to_spectrum_table_gpu,
-                               RGBtoSpectrumData::Gamut::srgb);
+                               pre_computed_spectrum.rgb_to_spectrum_table,
+                               RGBtoSpectrumData::Gamut::sRGB);
 
         checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
         renderer->global_variables = global_variables;

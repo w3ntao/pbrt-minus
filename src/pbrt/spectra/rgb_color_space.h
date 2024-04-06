@@ -10,7 +10,7 @@ class RGBColorSpace {
   public:
     PBRT_CPU_GPU
     void init(const Point2f _r, const Point2f _g, const Point2f _b, const Spectrum *_illuminant,
-              const RGBtoSpectrumData::RGBtoSpectrumTableGPU *_rgb_to_spectrum_table,
+              const RGBtoSpectrumData::RGBtoSpectrumTable *_rgb_to_spectrum_table,
               const Spectrum *cie_xyz[3]) {
         r = _r;
         g = _g;
@@ -56,5 +56,5 @@ class RGBColorSpace {
     const Spectrum *illuminant;
     SquareMatrix<3> xyz_from_rgb;
     SquareMatrix<3> rgb_from_xyz;
-    const RGBtoSpectrumData::RGBtoSpectrumTableGPU *rgb_to_spectrum_table;
+    const RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_table;
 };
