@@ -94,7 +94,8 @@ class Camera {
     void *camera_ptr;
     CameraType camera_type;
 
-    PBRT_CPU_GPU void report_error() const {
+    PBRT_CPU_GPU
+    void report_error() const {
         printf("\nCamera: this type is not implemented\n");
 #if defined(__CUDA_ARCH__)
         asm("trap;");

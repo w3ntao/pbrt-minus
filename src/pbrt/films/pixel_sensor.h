@@ -7,10 +7,6 @@
 
 class PixelSensor {
   public:
-    PBRT_GPU PixelSensor()
-        : r_bar(nullptr), g_bar(nullptr), b_bar(nullptr), imaging_ratio(0),
-          xyz_from_sensor_rgb(SquareMatrix<3>()) {}
-
     PBRT_CPU_GPU void init(const Spectrum *_r_bar, const Spectrum *_g_bar, const Spectrum *_b_bar,
                            double _imaging_ratio, const SquareMatrix<3> _xyz_from_sensor_rgb) {
         r_bar = _r_bar;
@@ -34,8 +30,8 @@ class PixelSensor {
         init(cie_xyz[0], cie_xyz[1], cie_xyz[2], imaging_ratio, xyz_from_sensor_rgb);
     }
 
-    PBRT_GPU RGB to_sensor_rgb(const SampledSpectrum &radiance_l,
-                               const SampledWavelengths &lambda) const {
+    PBRT_CPU_GPU RGB to_sensor_rgb(const SampledSpectrum &radiance_l,
+                                   const SampledWavelengths &lambda) const {
         const auto spectrum = radiance_l.safe_div(lambda.pdf_as_sampled_spectrum());
 
         return imaging_ratio * RGB((r_bar->sample(lambda) * spectrum).average(),

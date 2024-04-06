@@ -69,9 +69,8 @@ class Renderer {
     Integrator *integrator;
     Camera *camera;
     Filter *filter;
-    RGBFilm *film;
+    Film *film;
     HLBVH *bvh;
-    // TODO: progress 2024/04/05: change PerspectiveCamera and RGBFilm to Base type
 
     const GlobalVariable *global_variables;
 

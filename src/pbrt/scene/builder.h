@@ -228,13 +228,11 @@ class SceneBuilder {
         checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
         renderer->global_variables = global_variables;
 
-        // TODO: progress 2024/04/02: cudaMallocManaged: change to their Base type
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->bvh), sizeof(HLBVH)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->camera), sizeof(Camera)));
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->film), sizeof(RGBFilm)));
+        checkCudaErrors(cudaMallocManaged((void **)&(renderer->film), sizeof(Film)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->filter), sizeof(Filter)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->integrator), sizeof(Integrator)));
-        // TODO: progress 2024/04/02: cudaMallocManaged: change to their Base type
 
         for (uint idx = 0; idx < 3; idx++) {
             gpu_dynamic_pointers.push_back(_cie_xyz[idx]);
@@ -318,7 +316,7 @@ class SceneBuilder {
             perspective_camera->init(film_resolution.value(), camera_transform, fov, 0.0);
 
             renderer->camera->init(perspective_camera);
-            
+
             return;
         }
 
@@ -385,8 +383,14 @@ class SceneBuilder {
             checkCudaErrors(cudaDeviceSynchronize());
         }
 
-        renderer->film->init(gpu_pixels, &(renderer->sensor), film_resolution.value(),
-                             renderer->global_variables->rgb_color_space);
+        RGBFilm *rgb_film;
+        checkCudaErrors(cudaMallocManaged((void **)&rgb_film, sizeof(RGBFilm)));
+        gpu_dynamic_pointers.push_back(rgb_film);
+
+        rgb_film->init(gpu_pixels, &(renderer->sensor), film_resolution.value(),
+                       renderer->global_variables->rgb_color_space);
+
+        renderer->film->init(rgb_film);
     }
 
     void option_sampler() {

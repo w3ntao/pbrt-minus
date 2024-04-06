@@ -25,6 +25,7 @@ set(LIBRARIES ${LIBRARIES} ${PNG_LIBRARIES})
 add_executable(${PROJ_NAME}
         src/pbrt/main.cu
         src/pbrt/base/camera.cu
+        src/pbrt/base/film.cu
         src/pbrt/base/filter.cu
         src/pbrt/base/integrator.cu
         src/pbrt/base/sampler.cu

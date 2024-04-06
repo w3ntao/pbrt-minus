@@ -12,6 +12,7 @@ add_includedirs("src")
 add_files(
         "src/pbrt/main.cu",
         "src/pbrt/base/camera.cu",
+        "src/pbrt/base/film.cu",
         "src/pbrt/base/filter.cu",
         "src/pbrt/base/integrator.cu",
         "src/pbrt/base/sampler.cu",
