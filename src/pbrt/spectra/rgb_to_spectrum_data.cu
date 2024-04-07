@@ -404,17 +404,21 @@ void RGBtoSpectrumTable::init(const std::string &str_gamut, ThreadPool &thread_p
 
     Gamut gamut = Gamut::sRGB;
 
-    RGBtoSpectrumBuffer data;
-    init_tables(&data, gamut);
+    RGBtoSpectrumBuffer rgb_to_spectrum_buffer;
+    init_tables(&rgb_to_spectrum_buffer, gamut);
 
     for (int k = 0; k < RES; k++) {
-        this->z_nodes[k] = smoothstep(smoothstep(k / double(RES - 1)));
+        this->z_nodes[k] = smoothstep(smoothstep(double(k) / double(RES - 1)));
     }
 
+    auto coefficients_ptr = (double *)this->coefficients;
+    auto z_nodes_ptr = this->z_nodes;
+
     for (int l = 0; l < 3; ++l) {
-        thread_pool.parallel_execute(0, RES, [this, &data, l](int j) {
-            compute((double *)this->coefficients, j, data, this->z_nodes, l);
-        });
+        thread_pool.parallel_execute(
+            0, RES, [coefficients_ptr, z_nodes_ptr, &rgb_to_spectrum_buffer, l](int j) {
+                compute(coefficients_ptr, j, rgb_to_spectrum_buffer, z_nodes_ptr, l);
+            });
     }
 }
 } // namespace RGBtoSpectrumData

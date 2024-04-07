@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
+# CUDA_ARCHITECTURES native is available in CMake since 3.24
 
 if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
@@ -55,10 +56,10 @@ set_target_properties(
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_ARCHITECTURES native
 )
-# with CUDA_SEPARABLE_COMPILATION, member function declaration and implementation can be separate
+# CUDA_SEPARABLE_COMPILATION ON: member function declaration and implementation can be separate
 # https://developer.nvidia.com/blog/separate-compilation-linking-cuda-device-code/
 
-# with CUDA_ARCHITECTURES native, CUDA_ARCHITECTURES is detected automatically
+# CUDA_ARCHITECTURES native: CUDA_ARCHITECTURES is detected automatically
 # https://stackoverflow.com/questions/68223398/how-can-i-get-cmake-to-automatically-detect-the-value-for-cuda-architectures
 
 target_compile_options(

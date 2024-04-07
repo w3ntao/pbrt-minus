@@ -8,7 +8,7 @@
 
 class ThreadPool {
   public:
-    explicit ThreadPool() : quit(false), num_active_jobs(0) {
+    ThreadPool() : quit(false), num_active_jobs(0) {
         size_t num_threads = std::thread::hardware_concurrency();
 
         for (size_t i = 0; i < num_threads; ++i) {
