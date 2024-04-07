@@ -11,10 +11,10 @@ double DenselySampledSpectrum::inner_product(const Spectrum &spectrum) const {
     return sum;
 }
 
-PBRT_CPU_GPU void DenselySampledSpectrum::init_from_pls_interleaved_samples(const double *samples,
-                                                                            uint num_samples,
-                                                                            bool normalize,
-                                                                            const Spectrum *cie_y) {
+PBRT_CPU_GPU
+void DenselySampledSpectrum::init_from_pls_interleaved_samples(const double *samples,
+                                                               uint num_samples, bool normalize,
+                                                               const Spectrum *cie_y) {
     if (num_samples % 2 != 0 || num_samples / 2 + 2 > LAMBDA_RANGE) {
         printf("DenselySampledSpectrum::init_from_pls_interleaved_samples(): "
                "illegal num_samples");
@@ -54,4 +54,36 @@ PBRT_CPU_GPU void DenselySampledSpectrum::init_from_pls_interleaved_samples(cons
     if (normalize) {
         scale(CIE_Y_integral / inner_product(*cie_y));
     }
+}
+PBRT_CPU_GPU
+void DenselySampledSpectrum::init_cie_d(double temperature, const double *cie_s0,
+                                        const double *cie_s1, const double *cie_s2,
+                                        const double *cie_lambda) {
+    double cct = temperature * 1.4388f / 1.4380f;
+    if (cct < 4000) {
+        // CIE D ill-defined, use blackbody
+        BlackbodySpectrum bb = BlackbodySpectrum(cct);
+        init_with_sample_function([=](double lambda) { return bb(lambda); });
+        return;
+    }
+
+    // Convert CCT to xy
+    double x = cct <= 7000 ? -4.607f * 1e9f / std::pow(cct, 3) + 2.9678f * 1e6f / sqr(cct) +
+                                 0.09911f * 1e3f / cct + 0.244063f
+                           : -2.0064f * 1e9f / std::pow(cct, 3) + 1.9018f * 1e6f / sqr(cct) +
+                                 0.24748f * 1e3f / cct + 0.23704f;
+
+    double y = -3 * x * x + 2.870f * x - 0.275f;
+
+    // Interpolate D spectrum
+    double M = 0.0241f + 0.2562f * x - 0.7341f * y;
+    double M1 = (-1.3515f - 1.7703f * x + 5.9114f * y) / M;
+    double M2 = (0.0300f - 31.4424f * x + 30.0717f * y) / M;
+
+    double _values[nCIES];
+    for (int i = 0; i < nCIES; ++i) {
+        _values[i] = (cie_s0[i] + cie_s1[i] * M1 + cie_s2[i] * M2) * 0.01;
+    }
+
+    init_from_pls_lambdas_values(cie_lambda, _values, nCIES);
 }

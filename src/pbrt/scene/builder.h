@@ -55,10 +55,10 @@ struct PreComputedSpectrum {
                                                        NUM_CIE_SAMPLES);
 
         for (uint idx = 0; idx < 3; idx++) {
-            Spectrum *temp_spectrum;
-            checkCudaErrors(cudaMallocManaged((void **)&temp_spectrum, sizeof(Spectrum)));
-            temp_spectrum->init(dense_cie_xyz[idx]);
-            cie_xyz[idx] = temp_spectrum;
+            Spectrum *_spectrum;
+            checkCudaErrors(cudaMallocManaged((void **)&_spectrum, sizeof(Spectrum)));
+            _spectrum->init(dense_cie_xyz[idx]);
+            cie_xyz[idx] = _spectrum;
         }
 
         checkCudaErrors(
@@ -72,7 +72,6 @@ struct PreComputedSpectrum {
 
         checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table,
                                           sizeof(RGBtoSpectrumData::RGBtoSpectrumTable)));
-
         rgb_to_spectrum_table->init("sRGB", thread_pool);
 
         const std::chrono::duration<double> duration{std::chrono::system_clock::now() - start};
@@ -96,7 +95,6 @@ struct PreComputedSpectrum {
         }
 
         checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
     }
 
     const Spectrum *cie_xyz[3] = {nullptr};
@@ -171,9 +169,6 @@ class SceneBuilder {
 
     ~SceneBuilder() {
         auto start = std::chrono::system_clock::now();
-
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
 
         for (auto ptr : gpu_dynamic_pointers) {
             checkCudaErrors(cudaFree(ptr));
@@ -358,9 +353,6 @@ class SceneBuilder {
                 "parse_tokens(): unknown Integrator name: `" + integrator_name.value() + "`";
             throw std::runtime_error(error.c_str());
         }
-
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
     }
 
     void parse_lookat(const std::vector<Token> &tokens) {
@@ -504,7 +496,6 @@ class SceneBuilder {
             checkCudaErrors(cudaDeviceSynchronize());
 
             GPU::build_shapes<<<blocks, threads>>>(shapes, triangles, mesh->triangle_num);
-
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
 
@@ -650,12 +641,11 @@ class SceneBuilder {
                   << " image (samples per pixel: " << samples_per_pixel.value() << ") ";
         std::cout << "in " << thread_width << "x" << thread_height << " blocks.\n" << std::flush;
 
-        dim3 blocks(film_resolution->x / thread_width + 1, film_resolution->y / thread_height + 1,
-                    1);
+        dim3 blocks(divide_and_ceil(uint(film_resolution->x), uint(thread_width)),
+                    divide_and_ceil(uint(film_resolution->y), uint(thread_height)), 1);
         dim3 threads(thread_width, thread_height, 1);
 
         GPU::parallel_render<<<blocks, threads>>>(renderer, samples_per_pixel.value());
-
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 

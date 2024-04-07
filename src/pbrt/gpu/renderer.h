@@ -116,41 +116,6 @@ static __global__ void apply_transform(T *data, const Transform transform, uint 
     data[idx] = transform(data[idx]);
 }
 
-__global__ void
-init_rgb_to_spectrum_table_coefficients(RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_data,
-                                        const double *rgb_to_spectrum_table_coefficients) {
-    /*
-     * max thread size: 1024
-     * total dimension: 3 * 64 * 64 * 64 * 3
-     * 3: blocks.x
-     * 64: blocks.y
-     * 64: blocks.z
-     * 64: threads.x
-     * 3:  threads.y
-     */
-
-    constexpr int resolution = RGBtoSpectrumData::RES;
-
-    uint max_component = blockIdx.x;
-    uint z = blockIdx.y;
-    uint y = blockIdx.z;
-
-    uint x = threadIdx.x;
-    uint c = threadIdx.y;
-
-    uint idx = (((max_component * resolution + z) * resolution + y) * resolution + x) * 3 + c;
-
-    rgb_to_spectrum_data->coefficients[max_component][z][y][x][c] =
-        rgb_to_spectrum_table_coefficients[idx];
-}
-
-__global__ void
-init_rgb_to_spectrum_table_scale(RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_data,
-                                 const double *rgb_to_spectrum_table_scale) {
-    uint idx = threadIdx.x;
-    rgb_to_spectrum_data->z_nodes[idx] = rgb_to_spectrum_table_scale[idx];
-}
-
 static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= dimension.x * dimension.y) {
@@ -200,6 +165,7 @@ __global__ void copy_gpu_pixels_to_rgb(const Renderer *renderer, RGB *output_rgb
     output_rgb[flat_idx] = renderer->film->get_pixel_rgb(Point2i(x, y));
 }
 
+// TODO: move writer_to_file() into Film
 void writer_to_file(const std::string &filename, const RGB *pixels_rgb, const Point2i &resolution) {
     int width = resolution.x;
     int height = resolution.y;

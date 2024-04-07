@@ -1,14 +1,14 @@
 #pragma once
 
-static constexpr uint LAMBDA_MIN = 360;
-static constexpr uint LAMBDA_MAX = 830;
-static constexpr uint LAMBDA_RANGE = LAMBDA_MAX - LAMBDA_MIN + 1;
+constexpr uint LAMBDA_MIN = 360;
+constexpr uint LAMBDA_MAX = 830;
+constexpr uint LAMBDA_RANGE = LAMBDA_MAX - LAMBDA_MIN + 1;
 
-static constexpr uint NSpectrumSamples = 4;
+constexpr uint NSpectrumSamples = 4;
 
-static constexpr double CIE_Y_integral = 106.856895;
+constexpr double CIE_Y_integral = 106.856895;
 
-static constexpr uint NUM_CIE_SAMPLES = 471;
+constexpr uint NUM_CIE_SAMPLES = 471;
 
 // clang-format off
 constexpr double CIE_X_VALUE_CPU[NUM_CIE_SAMPLES] = {

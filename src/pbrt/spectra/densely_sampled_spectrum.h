@@ -5,21 +5,6 @@
 
 class Spectrum;
 
-namespace {
-PBRT_CPU_GPU
-double piecewise_linear_spectrum_eval(double lambda, const double *lambdas, const double *values,
-                                      uint length) {
-    if (lambda < LAMBDA_MIN || lambda > LAMBDA_MAX) {
-        return 0.0;
-    }
-
-    uint idx = find_interval(length, [&](uint i) { return lambdas[i] <= lambda; });
-    double t = (lambda - lambdas[idx]) / (lambdas[idx + 1] - lambdas[idx]);
-
-    return lerp(t, values[idx], values[idx + 1]);
-}
-} // namespace
-
 class DenselySampledSpectrum {
   public:
     PBRT_CPU_GPU
@@ -47,35 +32,7 @@ class DenselySampledSpectrum {
 
     PBRT_CPU_GPU
     void init_cie_d(double temperature, const double *cie_s0, const double *cie_s1,
-                    const double *cie_s2, const double *cie_lambda) {
-        double cct = temperature * 1.4388f / 1.4380f;
-        if (cct < 4000) {
-            // CIE D ill-defined, use blackbody
-            BlackbodySpectrum bb = BlackbodySpectrum(cct);
-            init_with_sample_function([=](double lambda) { return bb(lambda); });
-            return;
-        }
-
-        // Convert CCT to xy
-        double x = cct <= 7000 ? -4.607f * 1e9f / std::pow(cct, 3) + 2.9678f * 1e6f / sqr(cct) +
-                                     0.09911f * 1e3f / cct + 0.244063f
-                               : -2.0064f * 1e9f / std::pow(cct, 3) + 1.9018f * 1e6f / sqr(cct) +
-                                     0.24748f * 1e3f / cct + 0.23704f;
-
-        double y = -3 * x * x + 2.870f * x - 0.275f;
-
-        // Interpolate D spectrum
-        double M = 0.0241f + 0.2562f * x - 0.7341f * y;
-        double M1 = (-1.3515f - 1.7703f * x + 5.9114f * y) / M;
-        double M2 = (0.0300f - 31.4424f * x + 30.0717f * y) / M;
-
-        double _values[nCIES];
-        for (int i = 0; i < nCIES; ++i) {
-            _values[i] = (cie_s0[i] + cie_s1[i] * M1 + cie_s2[i] * M2) * 0.01;
-        }
-
-        init_from_pls_lambdas_values(cie_lambda, _values, nCIES);
-    }
+                    const double *cie_s2, const double *cie_lambda);
 
     PBRT_CPU_GPU
     bool operator==(const DenselySampledSpectrum &_spectrum) const {
@@ -104,7 +61,7 @@ class DenselySampledSpectrum {
     SampledSpectrum sample(const SampledWavelengths &lambda) const {
         double sampled_values[NSpectrumSamples];
 
-        for (int i = 0; i < NSpectrumSamples; ++i) {
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
             int floor = std::floor(lambda[i]);
             int ceil = std::ceil(lambda[i]);
             if (floor < LAMBDA_MIN || ceil > LAMBDA_MAX) {
@@ -127,4 +84,17 @@ class DenselySampledSpectrum {
 
   private:
     double values[LAMBDA_RANGE];
+
+    PBRT_CPU_GPU
+    double piecewise_linear_spectrum_eval(double lambda, const double *lambdas,
+                                          const double *_values, uint length) {
+        if (lambda < LAMBDA_MIN || lambda > LAMBDA_MAX) {
+            return 0.0;
+        }
+
+        uint idx = find_interval(length, [&](uint i) { return lambdas[i] <= lambda; });
+        double t = (lambda - lambdas[idx]) / (lambdas[idx + 1] - lambdas[idx]);
+
+        return lerp(t, _values[idx], _values[idx + 1]);
+    }
 };

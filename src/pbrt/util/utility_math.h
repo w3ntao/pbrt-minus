@@ -3,9 +3,9 @@
 #include <limits>
 #include "pbrt/util/macro.h"
 
-static constexpr double Infinity = std::numeric_limits<double>::infinity();
+constexpr double Infinity = std::numeric_limits<double>::infinity();
 
-static constexpr double MachineEpsilon = std::numeric_limits<double>::epsilon() * 0.5;
+constexpr double MachineEpsilon = std::numeric_limits<double>::epsilon() * 0.5;
 
 PBRT_CPU_GPU
 constexpr double gamma(int n) {
@@ -59,11 +59,13 @@ PBRT_CPU_GPU size_t find_interval(size_t sz, const Predicate &pred) {
     return (size_t)clamp((ssize_t)first - 1, 0, sz - 2);
 }
 
-PBRT_CPU_GPU static double lerp(double x, double a, double b) {
+PBRT_CPU_GPU
+constexpr double lerp(double x, double a, double b) {
     return (1 - x) * a + x * b;
 }
 
-PBRT_CPU_GPU constexpr double sqr(double v) {
+PBRT_CPU_GPU
+constexpr double sqr(double v) {
     return v * v;
 }
 
