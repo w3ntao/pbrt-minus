@@ -6,6 +6,8 @@
 
 #include "pbrt/util/stack.h"
 
+__device__ int global_offset_counter;
+
 __global__ void hlbvh_init_morton_primitives(MortonPrimitive *morton_primitives,
                                              const Shape **primitives, uint num_primitives) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -98,51 +100,26 @@ __global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const BottomBVHArgs *bvh_args
     bvh->build_bottom_bvh(bvh_args_array, array_length);
 }
 
-__global__ void init_bvh_args(BottomBVHArgs *bvh_args_array, uint *accumulated_offset,
-                              const BVHBuildNode *bvh_build_nodes, const uint start,
-                              const uint end) {
-    if (gridDim.x * gridDim.y * gridDim.z > 1) {
-        printf("init_bvh_args(): launching more than 1 blocks destroys inter-thread "
-               "synchronization.\n");
-        asm("trap;");
-    }
-
-    const uint worker_idx = threadIdx.x;
-
-    __shared__ cuda::atomic<uint, cuda::thread_scope_block> shared_accumulated_offset;
-    if (worker_idx == 0) {
-        shared_accumulated_offset = *accumulated_offset;
-    }
-    __syncthreads();
-
+__global__ void init_bvh_args(BottomBVHArgs *bvh_args_array, const BVHBuildNode *bvh_build_nodes,
+                              const uint start, const uint end) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     const uint total_jobs = end - start;
-    const uint jobs_per_worker = total_jobs / blockDim.x + 1;
-
-    for (uint job_offset = 0; job_offset < jobs_per_worker; job_offset++) {
-        const uint idx = worker_idx * jobs_per_worker + job_offset;
-        if (idx >= total_jobs) {
-            break;
-        }
-
-        const uint build_node_idx = idx + start;
-        const auto &node = bvh_build_nodes[build_node_idx];
-
-        if (!node.is_leaf() || node.num_primitives <= MAX_PRIMITIVES_NUM_IN_LEAF) {
-            bvh_args_array[idx].expand_leaf = false;
-            continue;
-        }
-
-        bvh_args_array[idx].expand_leaf = true;
-        bvh_args_array[idx].build_node_idx = build_node_idx;
-        bvh_args_array[idx].left_child_idx = shared_accumulated_offset.fetch_add(2);
-        // 2 pointers: one for left and another right child
+    if (worker_idx >= total_jobs) {
+        return;
     }
 
-    __syncthreads();
-    if (worker_idx == 0) {
-        *accumulated_offset = shared_accumulated_offset;
+    const uint build_node_idx = worker_idx + start;
+    const auto &node = bvh_build_nodes[build_node_idx];
+
+    if (!node.is_leaf() || node.num_primitives <= MAX_PRIMITIVES_NUM_IN_LEAF) {
+        bvh_args_array[worker_idx].expand_leaf = false;
+        return;
     }
-    __syncthreads();
+
+    bvh_args_array[worker_idx].expand_leaf = true;
+    bvh_args_array[worker_idx].build_node_idx = build_node_idx;
+    bvh_args_array[worker_idx].left_child_idx = atomicAdd(&global_offset_counter, 2);
+    // 2 pointers: one for left and another right child
 }
 
 PBRT_GPU void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length) {
@@ -343,7 +320,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
                       const std::vector<const Shape *> &gpu_primitives) {
     printf("\n");
 
-    auto start_bvh = std::chrono::system_clock::now();
+    auto start_top_bvh = std::chrono::system_clock::now();
 
     uint num_total_primitives = gpu_primitives.size();
 
@@ -443,12 +420,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
             max_primitive_num_in_a_treelet =
                 std::max(max_primitive_num_in_a_treelet, current_treelet_primitives_num);
             dense_treelet_indices.push_back(idx);
-
-            continue;
-            printf("treelet[%u]: %u\n", dense_treelet_indices.size() - 1,
-                   current_treelet_primitives_num);
         }
-        printf("\n");
 
         assert(primitives_counter == num_total_primitives);
         printf("HLBVH: %zu/%d treelets filled (max primitives in a treelet: %d)\n",
@@ -463,8 +435,6 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         int sparse_idx = dense_treelet_indices[idx];
         checkCudaErrors(cudaMemcpy(&dense_treelets[idx], &sparse_treelets[sparse_idx],
                                    sizeof(Treelet), cudaMemcpyDeviceToDevice));
-
-        // printf("treelet[%d], num_primitives: %d\n", idx, dense_treelets[idx].n_primitives);
     }
     checkCudaErrors(cudaFree(sparse_treelets));
 
@@ -478,13 +448,13 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         build_top_bvh_for_treelets(dense_treelet_indices.size(), dense_treelets);
     checkCudaErrors(cudaFree(dense_treelets));
 
-    uint start = 0;
-    uint end = top_bvh_node_num;
+    auto start_bottom_bvh = std::chrono::system_clock::now();
 
-    uint *accumulated_offset;
-    checkCudaErrors(cudaMallocManaged((void **)&accumulated_offset, sizeof(uint)));
+    int start = 0;
+    int end = top_bvh_node_num;
+    checkCudaErrors(cudaMemcpyToSymbol(global_offset_counter, &end, sizeof(int)));
 
-    uint depth = 0;
+    int depth = 0;
     while (end > start) {
         const uint array_length = end - start;
 
@@ -492,16 +462,23 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         checkCudaErrors(
             cudaMallocManaged((void **)&bvh_args_array, sizeof(BottomBVHArgs) * array_length));
 
-        *accumulated_offset = end;
-        init_bvh_args<<<1, 1024>>>(bvh_args_array, accumulated_offset, build_nodes, start, end);
+        {
+            uint threads = 1024;
+            uint blocks = divide_and_ceil(uint(end - start), threads);
+            init_bvh_args<<<blocks, threads>>>(bvh_args_array, build_nodes, start, end);
+        }
+
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        printf("HLBVH: building bottom BVH: depth %u, leaves' number: %u\n", depth, array_length);
+        if (DEBUGGING) {
+            printf("HLBVH: building bottom BVH: depth %u, leaves' number: %u\n", depth,
+                   array_length);
+        }
 
         depth += 1;
         start = end;
-        end = *accumulated_offset;
+        checkCudaErrors(cudaMemcpyFromSymbol(&end, global_offset_counter, sizeof(int)));
 
         uint threads = 512;
         uint blocks = divide_and_ceil(array_length, threads);
@@ -512,15 +489,20 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
 
         checkCudaErrors(cudaFree(bvh_args_array));
     }
-    checkCudaErrors(cudaFree(accumulated_offset));
 
     printf("HLBVH: bottom BVH max depth: %u (max primitives in a leaf: %u)\n", depth,
            MAX_PRIMITIVES_NUM_IN_LEAF);
     printf("HLBVH: total nodes: %u/%u\n", end, max_build_node_length);
 
-    const std::chrono::duration<double> duration_bvh{std::chrono::system_clock::now() - start_bvh};
+    const std::chrono::duration<double> duration_top_bvh{start_bottom_bvh - start_top_bvh};
+
+    const std::chrono::duration<double> duration_bottom_bvh{std::chrono::system_clock::now() -
+                                                            start_bottom_bvh};
+
     std::cout << std::fixed << std::setprecision(2) << "BVH constructing took "
-              << duration_bvh.count() << " seconds.\n"
+              << (duration_top_bvh.count() + duration_bottom_bvh.count()) << " seconds "
+              << "(top: " << duration_top_bvh.count() << ", bottom: " << duration_bottom_bvh.count()
+              << ")\n"
               << std::flush;
 }
 
