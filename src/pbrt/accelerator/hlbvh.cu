@@ -6,8 +6,6 @@
 
 #include "pbrt/util/stack.h"
 
-__device__ int global_offset_counter;
-
 __global__ void hlbvh_init_morton_primitives(MortonPrimitive *morton_primitives,
                                              const Shape **primitives, uint num_primitives) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -101,7 +99,7 @@ __global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const BottomBVHArgs *bvh_args
 }
 
 __global__ void init_bvh_args(BottomBVHArgs *bvh_args_array, const BVHBuildNode *bvh_build_nodes,
-                              const uint start, const uint end) {
+                              int *shared_offset, const uint start, const uint end) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     const uint total_jobs = end - start;
     if (worker_idx >= total_jobs) {
@@ -118,7 +116,7 @@ __global__ void init_bvh_args(BottomBVHArgs *bvh_args_array, const BVHBuildNode 
 
     bvh_args_array[worker_idx].expand_leaf = true;
     bvh_args_array[worker_idx].build_node_idx = build_node_idx;
-    bvh_args_array[worker_idx].left_child_idx = atomicAdd(&global_offset_counter, 2);
+    bvh_args_array[worker_idx].left_child_idx = atomicAdd(shared_offset, 2);
     // 2 pointers: one for left and another right child
 }
 
@@ -452,7 +450,10 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
 
     int start = 0;
     int end = top_bvh_node_num;
-    checkCudaErrors(cudaMemcpyToSymbol(global_offset_counter, &end, sizeof(int)));
+
+    int *shared_offset;
+    checkCudaErrors(cudaMallocManaged(&shared_offset, sizeof(int)));
+    *shared_offset = end;
 
     int depth = 0;
     while (end > start) {
@@ -465,7 +466,8 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         {
             uint threads = 1024;
             uint blocks = divide_and_ceil(uint(end - start), threads);
-            init_bvh_args<<<blocks, threads>>>(bvh_args_array, build_nodes, start, end);
+            init_bvh_args<<<blocks, threads>>>(bvh_args_array, build_nodes, shared_offset, start,
+                                               end);
         }
 
         checkCudaErrors(cudaGetLastError());
@@ -478,7 +480,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
 
         depth += 1;
         start = end;
-        checkCudaErrors(cudaMemcpyFromSymbol(&end, global_offset_counter, sizeof(int)));
+        end = *shared_offset;
 
         uint threads = 512;
         uint blocks = divide_and_ceil(array_length, threads);
@@ -489,6 +491,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
 
         checkCudaErrors(cudaFree(bvh_args_array));
     }
+    checkCudaErrors(cudaFree(shared_offset));
 
     printf("HLBVH: bottom BVH max depth: %u (max primitives in a leaf: %u)\n", depth,
            MAX_PRIMITIVES_NUM_IN_LEAF);
