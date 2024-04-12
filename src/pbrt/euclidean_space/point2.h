@@ -90,12 +90,12 @@ class Point2 {
         return stream;
     }
 
-    PBRT_CPU_GPU Point2<double> to_point2f() const {
-        return Point2<double>(double(x), double(y));
+    PBRT_CPU_GPU Point2<FloatType> to_point2f() const {
+        return Point2<FloatType>(FloatType(x), FloatType(y));
     }
 };
 
-using Point2f = Point2<double>;
+using Point2f = Point2<FloatType>;
 using Point2i = Point2<int>;
 
 template <typename T>

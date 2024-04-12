@@ -29,4 +29,4 @@ class Vector2 {
     }
 };
 
-using Vector2f = Vector2<double>;
+using Vector2f = Vector2<FloatType>;

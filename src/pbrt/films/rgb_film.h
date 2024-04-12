@@ -9,7 +9,7 @@
 
 struct Pixel {
     RGB rgb_sum;
-    double weight_sum;
+    FloatType weight_sum;
 
     PBRT_CPU_GPU
     void init_zero() {
@@ -31,7 +31,7 @@ class RGBFilm {
 
     PBRT_CPU_GPU
     void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
-                    const SampledWavelengths &lambda, double weight) {
+                    const SampledWavelengths &lambda, FloatType weight) {
         int pixel_index = p_film.y * resolution.x + p_film.x;
 
         auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);

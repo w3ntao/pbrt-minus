@@ -14,7 +14,7 @@ class Ray {
 
     PBRT_CPU_GPU Ray(Point3f _o, Vector3f _d) : o(_o), d(_d) {}
 
-    PBRT_CPU_GPU Point3f at(double t) const {
+    PBRT_CPU_GPU Point3f at(FloatType t) const {
         return o + t * d;
     }
 
@@ -22,7 +22,7 @@ class Ray {
     PBRT_CPU_GPU static Point3f offset_ray_origin(const Point3fi &pi, const Normal3f &n,
                                                   const Vector3f &w) {
         // Find vector _offset_ to corner of error bounds and compute initial _po_
-        double d = n.abs().dot(pi.error());
+        FloatType d = n.abs().dot(pi.error());
         auto offset = d * n.to_vector3();
         if (n.dot(w) < 0.0) {
             offset = -offset;

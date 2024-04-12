@@ -12,7 +12,7 @@ class Film {
 
     PBRT_CPU_GPU
     void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
-                    const SampledWavelengths &lambda, double weight);
+                    const SampledWavelengths &lambda, FloatType weight);
 
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i &p) const;

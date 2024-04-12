@@ -9,7 +9,7 @@ class Sampler {
   public:
     PBRT_GPU virtual ~Sampler() {}
 
-    PBRT_GPU virtual double get_1d() = 0;
+    PBRT_GPU virtual FloatType get_1d() = 0;
 
     PBRT_GPU virtual Point2f get_2d() = 0;
 

@@ -1,42 +1,42 @@
 #include "pbrt/euclidean_space/squared_matrix.h"
 
 template <>
-PBRT_CPU_GPU double SquareMatrix<3>::determinant() const {
+PBRT_CPU_GPU FloatType SquareMatrix<3>::determinant() const {
     const auto m = this->val;
 
-    double minor12 = difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
-    double minor02 = difference_of_products(m[1][0], m[2][2], m[1][2], m[2][0]);
-    double minor01 = difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
+    FloatType minor12 = difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
+    FloatType minor02 = difference_of_products(m[1][0], m[2][2], m[1][2], m[2][0]);
+    FloatType minor01 = difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
 
     return std::fma(m[0][2], minor01, difference_of_products(m[0][0], minor12, m[0][1], minor02));
 }
 
 template <>
-PBRT_CPU_GPU double SquareMatrix<4>::determinant() const {
+PBRT_CPU_GPU FloatType SquareMatrix<4>::determinant() const {
     const auto m = this->val;
 
-    double s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
-    double s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
-    double s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
+    FloatType s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
+    FloatType s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
+    FloatType s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
 
-    double s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
-    double s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
-    double s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
+    FloatType s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
+    FloatType s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
+    FloatType s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
 
-    double c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
-    double c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
-    double c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
+    FloatType c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
+    FloatType c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
+    FloatType c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
 
-    double c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
-    double c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
-    double c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
+    FloatType c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
+    FloatType c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
+    FloatType c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
 
     return difference_of_products(s0, c5, s1, c4) + difference_of_products(s2, c3, -s3, c2) +
            difference_of_products(s5, c0, s4, c1);
 }
 
 template <uint N>
-PBRT_CPU_GPU double SquareMatrix<N>::determinant() const {
+PBRT_CPU_GPU FloatType SquareMatrix<N>::determinant() const {
     printf("determinant() not implemented for SquareMatrix<%d>\n", N);
 
 #if defined(__CUDA_ARCH__)
@@ -48,7 +48,7 @@ PBRT_CPU_GPU double SquareMatrix<N>::determinant() const {
 
 template <>
 PBRT_CPU_GPU SquareMatrix<3> SquareMatrix<3>::inverse() const {
-    const double det = determinant();
+    const FloatType det = determinant();
     if (det == 0.0) {
         printf("can't inverse a singular matrix\n");
 #if defined(__CUDA_ARCH__)
@@ -58,11 +58,11 @@ PBRT_CPU_GPU SquareMatrix<3> SquareMatrix<3>::inverse() const {
 #endif
     }
 
-    const double inv_det = 1.0 / det;
+    const FloatType inv_det = 1.0 / det;
 
     const auto m = this->val;
 
-    double r[3][3];
+    FloatType r[3][3];
     r[0][0] = inv_det * difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
     r[1][0] = inv_det * difference_of_products(m[1][2], m[2][0], m[1][0], m[2][2]);
     r[2][0] = inv_det * difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
@@ -93,23 +93,23 @@ Via: https://github.com/google/ion/blob/master/ion/math/matrixutils.cc,
 
     const auto m = this->val;
 
-    double s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
-    double s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
-    double s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
+    FloatType s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
+    FloatType s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
+    FloatType s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
 
-    double s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
-    double s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
-    double s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
+    FloatType s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
+    FloatType s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
+    FloatType s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
 
-    double c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
-    double c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
-    double c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
+    FloatType c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
+    FloatType c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
+    FloatType c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
 
-    double c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
-    double c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
-    double c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
+    FloatType c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
+    FloatType c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
+    FloatType c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
 
-    double determinant = inner_product(s0, c5, -s1, c4, s2, c3, s3, c2, s5, c0, -s4, c1);
+    FloatType determinant = inner_product(s0, c5, -s1, c4, s2, c3, s3, c2, s5, c0, -s4, c1);
     if (determinant == 0) {
         printf("can't inverse a singular matrix\n");
 #if defined(__CUDA_ARCH__)
@@ -118,9 +118,9 @@ Via: https://github.com/google/ion/blob/master/ion/math/matrixutils.cc,
         throw std::runtime_error("singular matrix");
 #endif
     }
-    double s = 1.0 / determinant;
+    FloatType s = 1.0 / determinant;
 
-    double inv[4][4] = {{
+    FloatType inv[4][4] = {{
                             s * inner_product(m[1][1], c5, m[1][3], c3, -m[1][2], c4),
                             s * inner_product(-m[0][1], c5, m[0][2], c4, -m[0][3], c3),
                             s * inner_product(m[3][1], s5, m[3][3], s3, -m[3][2], s4),

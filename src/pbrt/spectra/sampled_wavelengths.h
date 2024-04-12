@@ -15,8 +15,8 @@ class SampledWavelengths {
         }
     }
 
-    PBRT_CPU_GPU SampledWavelengths(const double _lambda[NSpectrumSamples],
-                                    const double _pdf[NSpectrumSamples]) {
+    PBRT_CPU_GPU SampledWavelengths(const FloatType _lambda[NSpectrumSamples],
+                                    const FloatType _pdf[NSpectrumSamples]) {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             lambda[idx] = _lambda[idx];
             pdf[idx] = _pdf[idx];
@@ -24,15 +24,15 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
-    static SampledWavelengths SampleUniform(double u, double lambda_min = LAMBDA_MIN,
-                                            double lambda_max = LAMBDA_MAX) {
-        double _lambda[NSpectrumSamples];
+    static SampledWavelengths SampleUniform(FloatType u, FloatType lambda_min = LAMBDA_MIN,
+                                            FloatType lambda_max = LAMBDA_MAX) {
+        FloatType _lambda[NSpectrumSamples];
 
         // Sample first wavelength using _u_
         _lambda[0] = lerp(u, lambda_min, lambda_max);
 
         // Initialize _lambda_ for remaining wavelengths
-        double delta = (lambda_max - lambda_min) / NSpectrumSamples;
+        FloatType delta = (lambda_max - lambda_min) / NSpectrumSamples;
         for (uint i = 1; i < NSpectrumSamples; ++i) {
             _lambda[i] = _lambda[i - 1] + delta;
             if (_lambda[i] > lambda_max) {
@@ -40,7 +40,7 @@ class SampledWavelengths {
             }
         }
 
-        double _pdf[NSpectrumSamples];
+        FloatType _pdf[NSpectrumSamples];
         // Compute PDF for sampled wavelengths
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             _pdf[i] = 1 / (lambda_max - lambda_min);
@@ -50,13 +50,13 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
-    static SampledWavelengths sample_visible(double _u) {
-        double _lambda[NSpectrumSamples];
-        double _pdf[NSpectrumSamples];
+    static SampledWavelengths sample_visible(FloatType _u) {
+        FloatType _lambda[NSpectrumSamples];
+        FloatType _pdf[NSpectrumSamples];
 
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             // Compute _up_ for $i$th wavelength sample
-            double u_prime = _u + double(i) / NSpectrumSamples;
+            FloatType u_prime = _u + FloatType(i) / NSpectrumSamples;
             if (u_prime > 1) {
                 u_prime -= 1;
             }
@@ -88,18 +88,18 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
-    double operator[](uint i) const {
+    FloatType operator[](uint i) const {
         return lambda[i];
     }
 
     PBRT_CPU_GPU
-    double &operator[](uint i) {
+    FloatType &operator[](uint i) {
         return lambda[i];
     }
 
     PBRT_CPU_GPU
     SampledSpectrum pdf_as_sampled_spectrum() const {
-        double _pdf[NSpectrumSamples];
+        FloatType _pdf[NSpectrumSamples];
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             _pdf[idx] = pdf[idx];
         }
@@ -145,6 +145,6 @@ class SampledWavelengths {
     }
 
   private:
-    double lambda[NSpectrumSamples];
-    double pdf[NSpectrumSamples];
+    FloatType lambda[NSpectrumSamples];
+    FloatType pdf[NSpectrumSamples];
 };

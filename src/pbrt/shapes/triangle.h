@@ -24,14 +24,14 @@ class Triangle {
         return Bounds3f(points, 3);
     }
 
-    PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const {
+    PBRT_GPU bool fast_intersect(const Ray &ray, FloatType t_max) const {
         Point3f points[3];
         get_points(points);
 
         return intersect_triangle(ray, t_max, points[0], points[1], points[2]).has_value();
     }
 
-    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray, double t_max) const {
+    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const {
         Point3f points[3];
         get_points(points);
 
@@ -48,10 +48,10 @@ class Triangle {
 
   private:
     struct TriangleIntersection {
-        double b0, b1, b2;
-        double t;
+        FloatType b0, b1, b2;
+        FloatType t;
 
-        PBRT_CPU_GPU TriangleIntersection(double _b0, double _b1, double _b2, double _t)
+        PBRT_CPU_GPU TriangleIntersection(FloatType _b0, FloatType _b1, FloatType _b2, FloatType _t)
             : b0(_b0), b1(_b1), b2(_b2), t(_t) {}
     };
 
@@ -67,7 +67,7 @@ class Triangle {
         }
     }
 
-    PBRT_GPU std::optional<TriangleIntersection> intersect_triangle(const Ray &ray, double t_max,
+    PBRT_GPU std::optional<TriangleIntersection> intersect_triangle(const Ray &ray, FloatType t_max,
                                                                     const Point3f &p0,
                                                                     const Point3f &p1,
                                                                     const Point3f &p2) const {
@@ -95,9 +95,9 @@ class Triangle {
         p2t = p2t.permute(permuted_idx);
 
         // Apply shear transformation to translated vertex positions
-        double Sx = -d.x / d.z;
-        double Sy = -d.y / d.z;
-        double Sz = 1 / d.z;
+        FloatType Sx = -d.x / d.z;
+        FloatType Sy = -d.y / d.z;
+        FloatType Sz = 1 / d.z;
         p0t.x += Sx * p0t.z;
         p0t.y += Sy * p0t.z;
         p1t.x += Sx * p1t.z;
@@ -106,16 +106,30 @@ class Triangle {
         p2t.y += Sy * p2t.z;
 
         // Compute edge function coefficients _e0_, _e1_, and _e2_
-        double e0 = difference_of_products(p1t.x, p2t.y, p1t.y, p2t.x);
-        double e1 = difference_of_products(p2t.x, p0t.y, p2t.y, p0t.x);
-        double e2 = difference_of_products(p0t.x, p1t.y, p0t.y, p1t.x);
+        FloatType e0 = difference_of_products(p1t.x, p2t.y, p1t.y, p2t.x);
+        FloatType e1 = difference_of_products(p2t.x, p0t.y, p2t.y, p0t.x);
+        FloatType e2 = difference_of_products(p0t.x, p1t.y, p0t.y, p1t.x);
+
+        // Fall back to FloatType-precision test at triangle edges
+        if (sizeof(FloatType) == sizeof(float) && (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f)) {
+            FloatType p2txp1ty = (FloatType)p2t.x * (FloatType)p1t.y;
+            FloatType p2typ1tx = (FloatType)p2t.y * (FloatType)p1t.x;
+            e0 = (float)(p2typ1tx - p2txp1ty);
+            FloatType p0txp2ty = (FloatType)p0t.x * (FloatType)p2t.y;
+            FloatType p0typ2tx = (FloatType)p0t.y * (FloatType)p2t.x;
+            e1 = (float)(p0typ2tx - p0txp2ty);
+            FloatType p1txp0ty = (FloatType)p1t.x * (FloatType)p0t.y;
+            FloatType p1typ0tx = (FloatType)p1t.y * (FloatType)p0t.x;
+            e2 = (float)(p1typ0tx - p1txp0ty);
+        }
+
 
         // Perform triangle edge and determinant tests
         if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0)) {
             return {};
         }
 
-        double det = e0 + e1 + e2;
+        FloatType det = e0 + e1 + e2;
         if (det == 0) {
             return {};
         }
@@ -124,7 +138,7 @@ class Triangle {
         p0t.z *= Sz;
         p1t.z *= Sz;
         p2t.z *= Sz;
-        double tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
+        FloatType tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
         if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
             return {};
         }
@@ -134,30 +148,30 @@ class Triangle {
         }
 
         // Compute barycentric coordinates and $t$ value for triangle intersection
-        double invDet = 1 / det;
-        double b0 = e0 * invDet, b1 = e1 * invDet, b2 = e2 * invDet;
-        double t = tScaled * invDet;
+        FloatType invDet = 1 / det;
+        FloatType b0 = e0 * invDet, b1 = e1 * invDet, b2 = e2 * invDet;
+        FloatType t = tScaled * invDet;
 
         // Ensure that computed triangle $t$ is conservatively greater than zero
         // Compute $\delta_z$ term for triangle $t$ error bounds
-        // double maxZt = MaxComponentValue(Abs(Vector3f(p0t.z, p1t.z, p2t.z)));
+        // FloatType maxZt = MaxComponentValue(Abs(Vector3f(p0t.z, p1t.z, p2t.z)));
 
-        double maxZt = Vector3f(p0t.z, p1t.z, p2t.z).abs().max_component_value();
-        double deltaZ = gamma(3) * maxZt;
+        FloatType maxZt = Vector3f(p0t.z, p1t.z, p2t.z).abs().max_component_value();
+        FloatType deltaZ = gamma(3) * maxZt;
 
         // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
-        double maxXt = Vector3f(p0t.x, p1t.x, p2t.x).abs().max_component_value();
-        double maxYt = Vector3f(p0t.y, p1t.y, p2t.y).abs().max_component_value();
+        FloatType maxXt = Vector3f(p0t.x, p1t.x, p2t.x).abs().max_component_value();
+        FloatType maxYt = Vector3f(p0t.y, p1t.y, p2t.y).abs().max_component_value();
 
-        double deltaX = gamma(5) * (maxXt + maxZt);
-        double deltaY = gamma(5) * (maxYt + maxZt);
+        FloatType deltaX = gamma(5) * (maxXt + maxZt);
+        FloatType deltaY = gamma(5) * (maxYt + maxZt);
 
         // Compute $\delta_e$ term for triangle $t$ error bounds
-        double deltaE = 2 * (gamma(2) * maxXt * maxYt + deltaY * maxXt + deltaX * maxYt);
+        FloatType deltaE = 2 * (gamma(2) * maxXt * maxYt + deltaY * maxXt + deltaX * maxYt);
 
         // Compute $\delta_t$ term for triangle $t$ error bounds and check _t_
-        double maxE = Vector3f(e0, e1, e2).abs().max_component_value();
-        double deltaT =
+        FloatType maxE = Vector3f(e0, e1, e2).abs().max_component_value();
+        FloatType deltaT =
             3 * (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) * std::abs(invDet);
         if (t <= deltaT) {
             return {};
@@ -192,13 +206,13 @@ class Triangle {
         Vector2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
         Vector3f dp02 = p0 - p2;
         Vector3f dp12 = p1 - p2;
-        double determinant = difference_of_products(duv02[0], duv12[1], duv02[1], duv12[0]);
+        FloatType determinant = difference_of_products(duv02[0], duv12[1], duv02[1], duv12[0]);
 
         Vector3f dpdu, dpdv;
         bool degenerateUV = std::abs(determinant) < 1e-9f;
         if (!degenerateUV) {
             // Compute triangle $\dpdu$ and $\dpdv$ via matrix inversion
-            double invdet = 1 / determinant;
+            FloatType invdet = 1 / determinant;
             dpdu = difference_of_products(duv12[1], dp02, duv02[1], dp12) * invdet;
             dpdv = difference_of_products(duv02[0], dp12, duv12[0], dp02) * invdet;
         }

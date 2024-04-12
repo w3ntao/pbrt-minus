@@ -19,7 +19,7 @@ Bounds3f Shape::bounds() const {
 }
 
 PBRT_GPU
-bool Shape::fast_intersect(const Ray &ray, double t_max) const {
+bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
     switch (shape_type) {
     case (ShapeType::triangle): {
         return ((Triangle *)shape_ptr)->fast_intersect(ray, t_max);
@@ -30,7 +30,7 @@ bool Shape::fast_intersect(const Ray &ray, double t_max) const {
 }
 
 PBRT_GPU
-std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, double t_max) const {
+std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
     switch (shape_type) {
     case (ShapeType::triangle): {
         return ((Triangle *)shape_ptr)->intersect(ray, t_max);

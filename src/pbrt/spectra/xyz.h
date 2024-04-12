@@ -7,10 +7,10 @@
 class XYZ {
   public:
     PBRT_CPU_GPU
-    XYZ(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
+    XYZ(FloatType _x, FloatType _y, FloatType _z) : x(_x), y(_y), z(_z) {}
 
     PBRT_CPU_GPU
-    static XYZ from_xyY(const Point2f &xy, double Y = 1) {
+    static XYZ from_xyY(const Point2f &xy, FloatType Y = 1) {
         if (xy.y == 0) {
             return {0, 0, 0};
         }
@@ -29,7 +29,7 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    double operator[](uint8_t idx) const {
+    FloatType operator[](uint8_t idx) const {
         switch (idx) {
         case 0: {
             return x;
@@ -51,7 +51,7 @@ class XYZ {
         }
     }
     PBRT_CPU_GPU
-    double &operator[](uint8_t idx) {
+    FloatType &operator[](uint8_t idx) {
         switch (idx) {
         case 0: {
             return x;
@@ -99,12 +99,12 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    XYZ operator*(double a) const {
+    XYZ operator*(FloatType a) const {
         return {a * x, a * y, a * z};
     }
 
     PBRT_CPU_GPU
-    friend XYZ operator*(double a, const XYZ &s) {
+    friend XYZ operator*(FloatType a, const XYZ &s) {
         return s * a;
     }
 
@@ -121,7 +121,7 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    void operator*=(double a) {
+    void operator*=(FloatType a) {
         *this = *this * a;
     }
 
@@ -131,7 +131,7 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    XYZ operator/(double a) const {
+    XYZ operator/(FloatType a) const {
         return {x / a, y / a, z / a};
     }
 
@@ -141,7 +141,7 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    void operator/=(double a) {
+    void operator/=(FloatType a) {
         *this = *this / a;
     }
 
@@ -156,7 +156,7 @@ class XYZ {
     }
 
     // XYZ Public Members
-    double x;
-    double y;
-    double z;
+    FloatType x;
+    FloatType y;
+    FloatType z;
 };

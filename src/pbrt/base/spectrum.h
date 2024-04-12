@@ -11,11 +11,11 @@ class Spectrum {
     void init(const DenselySampledSpectrum *densely_sampled_spectrum);
 
     PBRT_CPU_GPU
-    double operator()(double lambda) const;
+    FloatType operator()(FloatType lambda) const;
 
     PBRT_CPU_GPU
-    double inner_product(const Spectrum &spectrum) const {
-        double sum = 0;
+    FloatType inner_product(const Spectrum &spectrum) const {
+        FloatType sum = 0;
         for (int lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
             sum += (*this)(lambda)*spectrum(lambda);
         }
@@ -36,7 +36,7 @@ class Spectrum {
     }
 
     PBRT_CPU_GPU
-    double to_photometric(const Spectrum &cie_y) const {
+    FloatType to_photometric(const Spectrum &cie_y) const {
         return inner_product(cie_y);
     }
 

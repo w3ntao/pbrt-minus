@@ -120,7 +120,7 @@ class Bounds3 {
         return o;
     }
 
-    PBRT_CPU_GPU double surface_area() const {
+    PBRT_CPU_GPU FloatType surface_area() const {
         auto d = diagonal();
         return 2.0 * (d.x * d.y + d.x * d.z + d.y * d.z);
     }
@@ -136,7 +136,7 @@ class Bounds3 {
         return 2;
     }
 
-    PBRT_GPU bool fast_intersect(const Ray &ray, double ray_t_max, const Vector3f &inv_dir,
+    PBRT_GPU bool fast_intersect(const Ray &ray, FloatType ray_t_max, const Vector3f &inv_dir,
                                  const int dir_is_neg[3]) const {
         // Check for ray intersection against $x$ and $y$ slabs
 
@@ -189,4 +189,4 @@ class Bounds3 {
     Point3<T> p_min, p_max;
 };
 
-using Bounds3f = Bounds3<double>;
+using Bounds3f = Bounds3<FloatType>;

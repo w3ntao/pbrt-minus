@@ -120,7 +120,7 @@ inline int SDVertex::valence() {
     }
 }
 
-inline double beta(int valence) {
+inline FloatType beta(int valence) {
     if (valence == 3) {
         return 3.f / 16.f;
     } else {
@@ -128,11 +128,11 @@ inline double beta(int valence) {
     }
 }
 
-inline double loopGamma(int valence) {
+inline FloatType loopGamma(int valence) {
     return 1.f / (valence + 3.f / (8.f * beta(valence)));
 }
 
-static Point3f weightOneRing(SDVertex *vert, double beta) {
+static Point3f weightOneRing(SDVertex *vert, FloatType beta) {
     // Put _vert_ one-ring in _pRing_
     int valence = vert->valence();
     auto pRing = std::vector<Point3f>(valence);
@@ -167,7 +167,7 @@ void SDVertex::oneRing(Point3f *p) {
     }
 }
 
-static Point3f weightBoundary(SDVertex *vert, double beta) {
+static Point3f weightBoundary(SDVertex *vert, FloatType beta) {
     // Put _vert_ one-ring in _pRing_
     int valence = vert->valence();
     auto pRing = std::vector<Point3f>(valence);
@@ -403,10 +403,10 @@ LoopSubdivide::LoopSubdivide(int nLevels, const std::vector<int> &vertexIndices,
                 T = (-1 * pRing[0] + 2 * pRing[1] + 2 * pRing[2] + -1 * pRing[3] + -2 * vertex->p)
                         .to_vector3();
             else {
-                double theta = compute_pi() / float(valence - 1);
+                FloatType theta = compute_pi() / float(valence - 1);
                 T = (std::sin(theta) * (pRing[0] + pRing[valence - 1])).to_vector3();
                 for (int k = 1; k < valence - 1; ++k) {
-                    double wt = (2 * std::cos(theta) - 2) * std::sin((k)*theta);
+                    FloatType wt = (2 * std::cos(theta) - 2) * std::sin((k)*theta);
                     T += (wt * pRing[k]).to_vector3();
                 }
                 T = -T;

@@ -10,6 +10,8 @@ if (NOT CMAKE_CUDA_COMPILER)
     # required by CLion
 endif ()
 
+message("CUDA compiler: ${CMAKE_CUDA_COMPILER}")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -17,7 +19,11 @@ set(PROJ_NAME "pbrt-minus")
 
 project(${PROJ_NAME} LANGUAGES CUDA CXX)
 
+enable_language(CUDA)
+include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
+
 find_package(Threads REQUIRED)
+
 find_package(PNG REQUIRED)
 include_directories(${PNG_INCLUDE_DIRS})
 add_definitions(${PNG_DEFINITIONS})

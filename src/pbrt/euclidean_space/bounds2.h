@@ -99,4 +99,4 @@ class Bounds2 {
     Point2<T> p_min, p_max;
 };
 
-using Bounds2f = Bounds2<double>;
+using Bounds2f = Bounds2<FloatType>;

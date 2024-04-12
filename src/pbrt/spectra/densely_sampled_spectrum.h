@@ -8,10 +8,10 @@ class Spectrum;
 class DenselySampledSpectrum {
   public:
     PBRT_CPU_GPU
-    double inner_product(const Spectrum &spectrum) const;
+    FloatType inner_product(const Spectrum &spectrum) const;
 
     PBRT_CPU_GPU
-    void init_from_pls_lambdas_values(const double *_lambdas, const double *_values, uint _length) {
+    void init_from_pls_lambdas_values(const FloatType *_lambdas, const FloatType *_values, uint _length) {
         for (uint lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
             values[lambda - LAMBDA_MIN] =
                 piecewise_linear_spectrum_eval(lambda, _lambdas, _values, _length);
@@ -19,7 +19,7 @@ class DenselySampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    void init_from_pls_interleaved_samples(const double *samples, uint num_samples, bool normalize,
+    void init_from_pls_interleaved_samples(const FloatType *samples, uint num_samples, bool normalize,
                                            const Spectrum *cie_y);
 
     template <typename F>
@@ -31,8 +31,8 @@ class DenselySampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    void init_cie_d(double temperature, const double *cie_s0, const double *cie_s1,
-                    const double *cie_s2, const double *cie_lambda);
+    void init_cie_d(FloatType temperature, const FloatType *cie_s0, const FloatType *cie_s1,
+                    const FloatType *cie_s2, const FloatType *cie_lambda);
 
     PBRT_CPU_GPU
     bool operator==(const DenselySampledSpectrum &_spectrum) const {
@@ -46,7 +46,7 @@ class DenselySampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    double operator()(double lambda) const {
+    FloatType operator()(FloatType lambda) const {
         const int floor = std::floor(lambda);
         const int ceil = std::ceil(lambda);
 
@@ -59,7 +59,7 @@ class DenselySampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum sample(const SampledWavelengths &lambda) const {
-        double sampled_values[NSpectrumSamples];
+        FloatType sampled_values[NSpectrumSamples];
 
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             int floor = std::floor(lambda[i]);
@@ -76,24 +76,24 @@ class DenselySampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    void scale(double s) {
+    void scale(FloatType s) {
         for (uint i = 0; i < LAMBDA_RANGE; ++i) {
             values[i] = values[i] * s;
         }
     }
 
   private:
-    double values[LAMBDA_RANGE];
+    FloatType values[LAMBDA_RANGE];
 
     PBRT_CPU_GPU
-    double piecewise_linear_spectrum_eval(double lambda, const double *lambdas,
-                                          const double *_values, uint length) {
+    FloatType piecewise_linear_spectrum_eval(FloatType lambda, const FloatType *lambdas,
+                                          const FloatType *_values, uint length) {
         if (lambda < LAMBDA_MIN || lambda > LAMBDA_MAX) {
             return 0.0;
         }
 
         uint idx = find_interval(length, [&](uint i) { return lambdas[i] <= lambda; });
-        double t = (lambda - lambdas[idx]) / (lambdas[idx + 1] - lambdas[idx]);
+        FloatType t = (lambda - lambdas[idx]) / (lambdas[idx + 1] - lambdas[idx]);
 
         return lerp(t, _values[idx], _values[idx + 1]);
     }

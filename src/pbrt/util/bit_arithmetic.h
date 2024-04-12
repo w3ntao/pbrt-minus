@@ -16,12 +16,30 @@ bit_cast(const From &src) noexcept {
     return dst;
 }
 
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU uint32_t float_to_bits(T f) {
+#if defined(__CUDA_ARCH__)
+    return __float_as_uint(f);
+#else
+    return bit_cast<uint32_t>(f);
+#endif
+}
+
 template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
 PBRT_CPU_GPU uint64_t float_to_bits(T f) {
 #if defined(__CUDA_ARCH__)
     return __double_as_longlong(f);
 #else
     return bit_cast<uint64_t>(f);
+#endif
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, uint32_t>, bool> = true>
+PBRT_CPU_GPU inline float bits_to_float(T ui) {
+#if defined(__CUDA_ARCH__)
+    return __uint_as_float(ui);
+#else
+    return bit_cast<float>(ui);
 #endif
 }
 
@@ -32,6 +50,26 @@ PBRT_CPU_GPU double bits_to_float(T ui) {
 #else
     return bit_cast<double>(ui);
 #endif
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T next_float_up(T v) {
+    if (std::isinf(v) && v > 0.0) {
+        return v;
+    }
+
+    if (v == -0.0) {
+        v = 0.0;
+    }
+
+    uint32_t ui = float_to_bits(v);
+    if (v >= 0.0) {
+        ++ui;
+    } else {
+        --ui;
+    }
+
+    return bits_to_float(ui);
 }
 
 template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
@@ -49,6 +87,27 @@ PBRT_CPU_GPU T next_float_up(T v) {
         ++ui;
     } else {
         --ui;
+    }
+
+    return bits_to_float(ui);
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T next_float_down(T v) {
+    // Handle infinity and positive zero
+    if (std::isinf(v) && v < 0.0) {
+        return v;
+    }
+
+    if (v == 0.0) {
+        v = -0.0;
+    }
+
+    uint32_t ui = float_to_bits(v);
+    if (v > 0) {
+        --ui;
+    } else {
+        ++ui;
     }
 
     return bits_to_float(ui);
@@ -75,12 +134,30 @@ PBRT_CPU_GPU T next_float_down(T v) {
     return bits_to_float(ui);
 }
 
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T add_round_up(T a, T b) {
+#if defined(__CUDA_ARCH__)
+    return __fadd_ru(a, b);
+#else
+    return next_float_up(a + b);
+#endif
+}
+
 template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
 PBRT_CPU_GPU T add_round_up(T a, T b) {
 #if defined(__CUDA_ARCH__)
     return __dadd_ru(a, b);
 #else
     return next_float_up(a + b);
+#endif
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T add_round_down(T a, T b) {
+#if defined(__CUDA_ARCH__)
+    return __fadd_rd(a, b);
+#else
+    return next_float_down(a + b);
 #endif
 }
 
@@ -93,14 +170,23 @@ PBRT_CPU_GPU T add_round_down(T a, T b) {
 #endif
 }
 
-template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+template <typename T>
 PBRT_CPU_GPU T sub_round_up(T a, T b) {
     return add_round_up(a, -b);
 }
 
-template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+template <typename T>
 PBRT_CPU_GPU T sub_round_down(T a, T b) {
     return add_round_down(a, -b);
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T mul_round_up(T a, T b) {
+#if defined(__CUDA_ARCH__)
+    return __fmul_ru(a, b);
+#else
+    return next_float_up(a * b);
+#endif
 }
 
 template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
@@ -109,6 +195,15 @@ PBRT_CPU_GPU T mul_round_up(T a, T b) {
     return __dmul_ru(a, b);
 #else
     return next_float_up(a * b);
+#endif
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T mul_round_down(T a, T b) {
+#if defined(__CUDA_ARCH__)
+    return __fmul_rd(a, b);
+#else
+    return next_float_down(a * b);
 #endif
 }
 
@@ -121,12 +216,30 @@ PBRT_CPU_GPU T mul_round_down(T a, T b) {
 #endif
 }
 
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T div_round_up(T a, T b) {
+#if defined(__CUDA_ARCH__)
+    return __fdiv_ru(a, b);
+#else
+    return next_float_up(a / b);
+#endif
+}
+
 template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
 PBRT_CPU_GPU T div_round_up(T a, T b) {
 #if defined(__CUDA_ARCH__)
     return __ddiv_ru(a, b);
 #else
     return next_float_up(a / b);
+#endif
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T div_round_down(T a, T b) {
+#if defined(__CUDA_ARCH__)
+    return __fdiv_rd(a, b);
+#else
+    return next_float_down(a / b);
 #endif
 }
 
@@ -139,12 +252,30 @@ PBRT_CPU_GPU T div_round_down(T a, T b) {
 #endif
 }
 
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T sqrt_round_up(T a) {
+#if defined(__CUDA_ARCH__)
+    return __fsqrt_ru(a);
+#else
+    return next_float_up(std::sqrt(a));
+#endif
+}
+
 template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
 PBRT_CPU_GPU T sqrt_round_up(T a) {
 #if defined(__CUDA_ARCH__)
     return __dsqrt_ru(a);
 #else
     return next_float_up(std::sqrt(a));
+#endif
+}
+
+template <typename T, std::enable_if_t<std::is_same_v<T, float>, bool> = true>
+PBRT_CPU_GPU T sqrt_round_down(T a) {
+#if defined(__CUDA_ARCH__)
+    return __fsqrt_rd(a);
+#else
+    return next_float_down(std::sqrt(a));
 #endif
 }
 

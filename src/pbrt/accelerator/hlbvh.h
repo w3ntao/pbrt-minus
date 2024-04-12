@@ -103,9 +103,9 @@ class HLBVH {
 
     PBRT_GPU void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length);
 
-    PBRT_GPU bool fast_intersect(const Ray &ray, double t_max) const;
+    PBRT_GPU bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
-    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray, double t_max) const;
+    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
     void build_bvh(std::vector<void *> &gpu_dynamic_pointers,
                    const std::vector<const Shape *> &gpu_primitives);
@@ -122,5 +122,5 @@ class HLBVH {
                                               uint depth, uint &max_depth);
     PBRT_GPU
     uint partition_morton_primitives(const uint start, const uint end,
-                                     const uint8_t split_dimension, const double split_val);
+                                     const uint8_t split_dimension, const FloatType split_val);
 };

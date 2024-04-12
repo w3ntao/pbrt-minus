@@ -6,20 +6,20 @@
 
 class Interval {
   public:
-    double low;
-    double high;
+    FloatType low;
+    FloatType high;
 
     PBRT_CPU_GPU
     Interval() : low(NAN), high(NAN) {}
 
     PBRT_CPU_GPU
-    explicit Interval(double v) : low(v), high(v) {}
+    explicit Interval(FloatType v) : low(v), high(v) {}
 
     PBRT_CPU_GPU
-    Interval(double low, double high) : low(std::min(low, high)), high(std::max(low, high)) {}
+    Interval(FloatType low, FloatType high) : low(std::min(low, high)), high(std::max(low, high)) {}
 
     PBRT_CPU_GPU
-    static Interval from_value_and_error(double v, double err) {
+    static Interval from_value_and_error(FloatType v, FloatType err) {
         Interval i;
         if (err == 0) {
             i.low = v;
@@ -32,32 +32,32 @@ class Interval {
     }
 
     PBRT_CPU_GPU
-    double midpoint() const {
+    FloatType midpoint() const {
         return (low + high) / 2;
     }
 
     PBRT_CPU_GPU
-    explicit operator double() const {
+    explicit operator FloatType() const {
         return midpoint();
     }
 
     PBRT_CPU_GPU
-    double width() const {
+    FloatType width() const {
         return high - low;
     }
 
     PBRT_CPU_GPU
-    bool exactly(double v) const {
+    bool exactly(FloatType v) const {
         return low == v && high == v;
     }
 
     PBRT_CPU_GPU
-    bool operator==(double v) const {
+    bool operator==(FloatType v) const {
         return exactly(v);
     }
 
     PBRT_CPU_GPU
-    bool cover(double v) const {
+    bool cover(FloatType v) const {
         return v >= low && v <= high;
     }
 
@@ -66,17 +66,17 @@ class Interval {
         return {add_round_down(low, i.low), add_round_up(high, i.high)};
     }
 
-    PBRT_CPU_GPU Interval operator+(double f) const {
+    PBRT_CPU_GPU Interval operator+(FloatType f) const {
         return (*this) + Interval(f);
     }
 
     PBRT_CPU_GPU
-    void operator+=(double f) {
+    void operator+=(FloatType f) {
         (*this) = (*this) + f;
     }
 
     PBRT_CPU_GPU
-    Interval operator*(double f) const {
+    Interval operator*(FloatType f) const {
         return f > 0.0 ? Interval(mul_round_down(f, low), mul_round_up(f, high))
                        : Interval(mul_round_down(f, high), mul_round_up(f, low));
     }
@@ -90,9 +90,9 @@ class Interval {
             return Interval(-Infinity, Infinity);
         }
 
-        double lowQuot[4] = {div_round_down(low, i.low), div_round_down(high, i.low),
+        FloatType lowQuot[4] = {div_round_down(low, i.low), div_round_down(high, i.low),
                              div_round_down(low, i.high), div_round_down(high, i.high)};
-        double highQuot[4] = {div_round_up(low, i.low), div_round_up(high, i.low),
+        FloatType highQuot[4] = {div_round_up(low, i.low), div_round_up(high, i.low),
                               div_round_up(low, i.high), div_round_up(high, i.high)};
         return {std::min({lowQuot[0], lowQuot[1], lowQuot[2], lowQuot[3]}),
                 std::max({highQuot[0], highQuot[1], highQuot[2], highQuot[3]})};
@@ -101,8 +101,8 @@ class Interval {
 
 PBRT_GPU
 inline Interval sqr(Interval i) {
-    double abs_low = std::abs(i.low);
-    double abas_high = std::abs(i.high);
+    FloatType abs_low = std::abs(i.low);
+    FloatType abas_high = std::abs(i.high);
     if (abs_low > abas_high) {
         std::swap(abs_low, abas_high);
     }
@@ -115,11 +115,11 @@ inline Interval sqr(Interval i) {
 }
 
 PBRT_CPU_GPU
-inline Interval operator*(double f, const Interval &i) {
+inline Interval operator*(FloatType f, const Interval &i) {
     return i * f;
 }
 
 PBRT_CPU_GPU
-inline Interval operator+(double f, const Interval &i) {
+inline Interval operator+(FloatType f, const Interval &i) {
     return i + f;
 }

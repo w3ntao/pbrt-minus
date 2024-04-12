@@ -16,7 +16,7 @@ class SquareMatrix {
     }
 
     PBRT_CPU_GPU
-    SquareMatrix(const double data[N][N]) {
+    SquareMatrix(const FloatType data[N][N]) {
         for (int i = 0; i < N; ++i) {
             for (int k = 0; k < N; ++k) {
                 val[i][k] = data[i][k];
@@ -33,12 +33,12 @@ class SquareMatrix {
     }
 
     PBRT_CPU_GPU static SquareMatrix zero() {
-        double data[N][N] = {0.0};
+        FloatType data[N][N] = {0.0};
         return SquareMatrix(data);
     }
 
-    PBRT_CPU_GPU static SquareMatrix diag(const double data[N]) {
-        double m[N][N] = {0.0};
+    PBRT_CPU_GPU static SquareMatrix diag(const FloatType data[N]) {
+        FloatType m[N][N] = {0.0};
         for (int i = 0; i < N; i++) {
             m[i][i] = data[i];
         }
@@ -47,7 +47,7 @@ class SquareMatrix {
     }
 
     PBRT_CPU_GPU static SquareMatrix identity() {
-        double data[N][N] = {0.0};
+        FloatType data[N][N] = {0.0};
         for (int i = 0; i < N; i++) {
             data[i][i] = 1.0;
         }
@@ -82,11 +82,11 @@ class SquareMatrix {
         return !(*this == matrix);
     }
 
-    PBRT_CPU_GPU const double *operator[](uint i) const {
+    PBRT_CPU_GPU const FloatType *operator[](uint i) const {
         return val[i];
     }
 
-    PBRT_CPU_GPU double *operator[](uint i) {
+    PBRT_CPU_GPU FloatType *operator[](uint i) {
         return val[i];
     }
 
@@ -104,7 +104,7 @@ class SquareMatrix {
     }
 
     PBRT_CPU_GPU
-    double determinant() const;
+    FloatType determinant() const;
 
     PBRT_CPU_GPU
     SquareMatrix inverse() const;
@@ -135,5 +135,5 @@ class SquareMatrix {
     }
 
   private:
-    double val[N][N];
+    FloatType val[N][N];
 };

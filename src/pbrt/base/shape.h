@@ -18,10 +18,10 @@ class Shape {
     Bounds3f bounds() const;
 
     PBRT_GPU
-    bool fast_intersect(const Ray &ray, double t_max) const;
+    bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
-    std::optional<ShapeIntersection> intersect(const Ray &ray, double t_max) const;
+    std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
   private:
     enum class ShapeType { triangle };

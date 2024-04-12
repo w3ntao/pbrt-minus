@@ -74,7 +74,7 @@ struct PreComputedSpectrum {
                                           sizeof(RGBtoSpectrumData::RGBtoSpectrumTable)));
         rgb_to_spectrum_table->init("sRGB", thread_pool);
 
-        const std::chrono::duration<double> duration{std::chrono::system_clock::now() - start};
+        const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
         std::cout << std::fixed << std::setprecision(1) << "spectra computing took "
                   << duration.count() << " seconds.\n"
                   << std::flush;
@@ -175,7 +175,7 @@ class SceneBuilder {
         }
         checkCudaErrors(cudaGetLastError());
 
-        const std::chrono::duration<double> duration{std::chrono::system_clock::now() - start};
+        const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
 
         std::cout << std::fixed << std::setprecision(1) << "GPU resource release took "
                   << duration.count() << " seconds.\n"
@@ -214,7 +214,7 @@ class SceneBuilder {
 
             render_from_world = camera_transform.render_from_world;
 
-            double fov = 90;
+            FloatType fov = 90;
             if (const auto _fov = parameters.get_float("fov"); !_fov.empty()) {
                 fov = _fov[0];
             }
@@ -264,10 +264,10 @@ class SceneBuilder {
         gpu_dynamic_pointers.push_back(d_illum);
         gpu_dynamic_pointers.push_back(_d_illum_dense);
 
-        double iso = 100;
-        double white_balance_val = 0.0;
-        double exposure_time = 1.0;
-        double imaging_ratio = exposure_time * iso / 100.0;
+        FloatType iso = 100;
+        FloatType white_balance_val = 0.0;
+        FloatType exposure_time = 1.0;
+        FloatType imaging_ratio = exposure_time * iso / 100.0;
 
         _d_illum_dense->init_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, CIE_S0,
                                    CIE_S1, CIE_S2, CIE_S_lambda);
@@ -360,7 +360,7 @@ class SceneBuilder {
             throw std::runtime_error("expect Keyword(LookAt)");
         }
 
-        std::vector<double> data;
+        std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
             data.push_back(tokens[idx].to_number());
         }
@@ -378,7 +378,7 @@ class SceneBuilder {
             throw std::runtime_error("expect Keyword(Rotate)");
         }
 
-        std::vector<double> data;
+        std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
             data.push_back(tokens[idx].to_number());
         }
@@ -392,7 +392,7 @@ class SceneBuilder {
             throw std::runtime_error("expect Keyword(Scale)");
         }
 
-        std::vector<double> data;
+        std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
             data.push_back(tokens[idx].to_number());
         }
@@ -444,7 +444,7 @@ class SceneBuilder {
     }
 
     void world_translate(const std::vector<Token> &tokens) {
-        std::vector<double> data;
+        std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
             data.push_back(tokens[idx].to_number());
         }
@@ -649,7 +649,7 @@ class SceneBuilder {
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
-        const std::chrono::duration<double> duration_rendering{std::chrono::system_clock::now() -
+        const std::chrono::duration<FloatType> duration_rendering{std::chrono::system_clock::now() -
                                                                start_rendering};
 
         std::cout << std::fixed << std::setprecision(1) << "rendering took "

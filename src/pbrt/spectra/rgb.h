@@ -5,16 +5,16 @@
 
 class RGB {
   public:
-    double r, g, b;
+    FloatType r, g, b;
 
     PBRT_CPU_GPU RGB() : r(0.0), g(0.0), b(0.0) {}
 
-    PBRT_CPU_GPU RGB(double x) : r(x), g(x), b(x) {}
+    PBRT_CPU_GPU RGB(FloatType x) : r(x), g(x), b(x) {}
 
-    PBRT_CPU_GPU RGB(double _r, double _g, double _b) : r(_r), g(_g), b(_b) {}
+    PBRT_CPU_GPU RGB(FloatType _r, FloatType _g, FloatType _b) : r(_r), g(_g), b(_b) {}
 
     PBRT_CPU_GPU RGB clamp_zero() const {
-        return RGB(std::max<double>(0, r), std::max<double>(0, g), std::max<double>(0, b));
+        return RGB(std::max<FloatType>(0, r), std::max<FloatType>(0, g), std::max<FloatType>(0, b));
     }
 
     PBRT_CPU_GPU bool has_nan() const {
@@ -41,7 +41,7 @@ class RGB {
         return RGB(r * right.r, g * right.g, b * right.b);
     }
 
-    PBRT_CPU_GPU RGB operator*(double scalar) const {
+    PBRT_CPU_GPU RGB operator*(FloatType scalar) const {
         return RGB(r * scalar, g * scalar, b * scalar);
     }
 
@@ -52,7 +52,7 @@ class RGB {
                    inner_product(m[2][0], rgb.r, m[2][1], rgb.g, m[2][2], rgb.b));
     }
 
-    PBRT_CPU_GPU RGB operator/(double divisor) const {
+    PBRT_CPU_GPU RGB operator/(FloatType divisor) const {
         return RGB(r / divisor, g / divisor, b / divisor);
     }
 
@@ -68,13 +68,13 @@ class RGB {
         b *= c.b;
     }
 
-    PBRT_CPU_GPU void operator/=(double divisor) {
+    PBRT_CPU_GPU void operator/=(FloatType divisor) {
         r /= divisor;
         g /= divisor;
         b /= divisor;
     }
 
-    PBRT_CPU_GPU double operator[](uint8_t idx) const {
+    PBRT_CPU_GPU FloatType operator[](uint8_t idx) const {
         switch (idx) {
         case 0: {
             return r;
@@ -98,6 +98,6 @@ class RGB {
     }
 };
 
-PBRT_CPU_GPU inline RGB operator*(double scalar, const RGB &c) {
+PBRT_CPU_GPU inline RGB operator*(FloatType scalar, const RGB &c) {
     return RGB(c.r * scalar, c.g * scalar, c.b * scalar);
 }

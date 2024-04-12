@@ -86,7 +86,7 @@ class Vector3 {
         return v * factor;
     }
 
-    PBRT_CPU_GPU Vector3 operator*=(double v) {
+    PBRT_CPU_GPU Vector3 operator*=(FloatType v) {
         this->x += v;
         this->y += v;
         this->z += v;
@@ -149,9 +149,9 @@ class Vector3 {
     }
 
     PBRT_CPU_GPU void coordinate_system(Vector3 *v2, Vector3 *v3) const {
-        double sign = std::copysign(1.0, z);
-        double a = -1.0 / (sign + z);
-        double b = x * y * a;
+        FloatType sign = std::copysign(1.0, z);
+        FloatType a = -1.0 / (sign + z);
+        FloatType b = x * y * a;
         *v2 = Vector3(1 + sign * sqr(x) * a, sign * b, -sign * x);
         *v3 = Vector3(b, sign + sqr(y) * a, -y);
     }
@@ -161,12 +161,12 @@ class Vector3 {
     }
 };
 
-using Vector3f = Vector3<double>;
+using Vector3f = Vector3<FloatType>;
 
-PBRT_CPU_GPU inline Vector3f FMA(double a, const Vector3f &b, const Vector3f &c) {
+PBRT_CPU_GPU inline Vector3f FMA(FloatType a, const Vector3f &b, const Vector3f &c) {
     return {FMA(a, b.x, c.x), FMA(a, b.y, c.y), FMA(a, b.z, c.z)};
 }
 
-PBRT_CPU_GPU inline Vector3f FMA(const Vector3f &a, double b, const Vector3f &c) {
+PBRT_CPU_GPU inline Vector3f FMA(const Vector3f &a, FloatType b, const Vector3f &c) {
     return FMA(b, a, c);
 }

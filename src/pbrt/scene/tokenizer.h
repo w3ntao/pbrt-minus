@@ -104,7 +104,7 @@ class Token {
         return !(*this == t);
     }
 
-    double to_number() const {
+    FloatType to_number() const {
         if (type != TokenType::Number) {
             throw std::runtime_error("you should only invoke it with type Number.");
         }
@@ -112,8 +112,8 @@ class Token {
         return stod(values[0]);
     }
 
-    std::vector<double> to_floats() const {
-        std::vector<double> floats(values.size());
+    std::vector<FloatType> to_floats() const {
+        std::vector<FloatType> floats(values.size());
         for (int idx = 0; idx < values.size(); idx++) {
             floats[idx] = stod(values[idx]);
         }

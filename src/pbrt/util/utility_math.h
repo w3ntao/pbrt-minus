@@ -3,22 +3,22 @@
 #include <limits>
 #include "pbrt/util/macro.h"
 
-constexpr double Infinity = std::numeric_limits<double>::infinity();
+constexpr FloatType Infinity = std::numeric_limits<FloatType>::infinity();
 
-constexpr double MachineEpsilon = std::numeric_limits<double>::epsilon() * 0.5;
+constexpr FloatType MachineEpsilon = std::numeric_limits<FloatType>::epsilon() * 0.5;
 
 PBRT_CPU_GPU
-constexpr double gamma(int n) {
+constexpr FloatType gamma(int n) {
     return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
 }
 
 PBRT_CPU_GPU
-static double compute_pi() {
+static FloatType compute_pi() {
     return acos(-1);
 }
 
 PBRT_CPU_GPU
-static double degree_to_radian(double degree) {
+static FloatType degree_to_radian(FloatType degree) {
     return compute_pi() / 180.0 * degree;
 }
 
@@ -41,7 +41,7 @@ T divide_and_ceil(T dividend, T divisor) {
 }
 
 PBRT_CPU_GPU
-constexpr double clamp(double x, double low, double high) {
+constexpr FloatType clamp(FloatType x, FloatType low, FloatType high) {
     return x < low ? low : (x > high ? high : x);
 }
 
@@ -60,30 +60,30 @@ PBRT_CPU_GPU size_t find_interval(size_t sz, const Predicate &pred) {
 }
 
 PBRT_CPU_GPU
-constexpr double lerp(double x, double a, double b) {
+constexpr FloatType lerp(FloatType x, FloatType a, FloatType b) {
     return (1 - x) * a + x * b;
 }
 
 PBRT_CPU_GPU
-constexpr double sqr(double v) {
+constexpr FloatType sqr(FloatType v) {
     return v * v;
 }
 
 PBRT_CPU_GPU
-static double safe_sqrt(double x) {
-    return std::sqrt(std::max(0.0, x));
+static FloatType safe_sqrt(FloatType x) {
+    return std::sqrt(std::max(FloatType(0.0), x));
 }
 
-PBRT_CPU_GPU constexpr double evaluate_polynomial(double t, double c) {
+PBRT_CPU_GPU constexpr FloatType evaluate_polynomial(FloatType t, FloatType c) {
     return c;
 }
 
 template <typename... Args>
-PBRT_CPU_GPU constexpr double evaluate_polynomial(double t, double c, Args... cRemaining) {
+PBRT_CPU_GPU constexpr FloatType evaluate_polynomial(FloatType t, FloatType c, Args... cRemaining) {
     return std::fma(t, evaluate_polynomial(t, cRemaining...), c);
 }
 
-template <typename T, std::enable_if_t<std::is_same_v<T, double>, bool> = true>
+template <typename T, std::enable_if_t<std::is_same_v<T, FloatType>, bool> = true>
 PBRT_CPU_GPU T FMA(T a, T b, T c) {
     return std::fma(a, b, c);
 }

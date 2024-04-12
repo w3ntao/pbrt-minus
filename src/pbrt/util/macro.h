@@ -5,6 +5,8 @@
 #define PBRT_CPU_GPU __host__ __device__
 #define PBRT_GPU __device__
 
+using FloatType = float;
+
 namespace {
 inline void _check_cuda(cudaError_t result, char const *const func, const char *const file,
                         int const line) {

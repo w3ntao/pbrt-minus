@@ -8,7 +8,7 @@ void Film::init(RGBFilm *rgb_film) {
 
 PBRT_CPU_GPU
 void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
-                      const SampledWavelengths &lambda, double weight) {
+                      const SampledWavelengths &lambda, FloatType weight) {
     switch (film_type) {
     case (FilmType::rgb): {
         return ((RGBFilm *)film_ptr)->add_sample(p_film, radiance_l, lambda, weight);

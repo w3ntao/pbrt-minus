@@ -139,4 +139,4 @@ class Point3 {
     }
 };
 
-using Point3f = Point3<double>;
+using Point3f = Point3<FloatType>;

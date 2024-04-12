@@ -5,12 +5,12 @@
 
 class PerspectiveCamera {
   public:
-    void init(const Point2i resolution, const CameraTransform camera_transform, double fov,
-              double _lens_radius) {
+    void init(const Point2i resolution, const CameraTransform camera_transform, FloatType fov,
+              FloatType _lens_radius) {
         camera_base.init(resolution, camera_transform);
         lens_radius = _lens_radius;
 
-        auto frame_aspect_ratio = double(resolution.x) / double(resolution.y);
+        auto frame_aspect_ratio = FloatType(resolution.x) / FloatType(resolution.y);
 
         auto screen_window =
             frame_aspect_ratio > 1.0
@@ -70,5 +70,5 @@ class PerspectiveCamera {
     Vector3f dx_camera;
     Vector3f dy_camera;
 
-    double lens_radius;
+    FloatType lens_radius;
 };

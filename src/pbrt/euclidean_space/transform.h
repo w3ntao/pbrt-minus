@@ -15,7 +15,7 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    static Transform rotate(double angle, double x, double y, double z) {
+    static Transform rotate(FloatType angle, FloatType x, FloatType y, FloatType z) {
         auto sin_theta = std::sin(degree_to_radian(angle));
         auto cos_theta = std::cos(degree_to_radian(angle));
         auto axis = Vector3f(x, y, z).normalize();
@@ -45,33 +45,33 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    static Transform scale(double x, double y, double z) {
-        double data_m[4][4] = {
+    static Transform scale(FloatType x, FloatType y, FloatType z) {
+        FloatType data_m[4][4] = {
             {x, 0, 0, 0},
             {0, y, 0, 0},
             {0, 0, z, 0},
             {0, 0, 0, 1},
         };
 
-        double data_m_inv[4][4] = {
-            {1.0 / x, 0, 0, 0},
-            {0, 1.0 / y, 0, 0},
-            {0, 0, 1.0 / z, 0},
+        FloatType data_m_inv[4][4] = {
+            {FloatType(1.0) / x, 0, 0, 0},
+            {0, FloatType(1.0) / y, 0, 0},
+            {0, 0, FloatType(1.0) / z, 0},
             {0, 0, 0, 1},
         };
 
         return Transform(SquareMatrix(data_m), SquareMatrix(data_m_inv));
     }
 
-    PBRT_CPU_GPU static Transform translate(double x, double y, double z) {
-        const double data_m[4][4] = {
+    PBRT_CPU_GPU static Transform translate(FloatType x, FloatType y, FloatType z) {
+        const FloatType data_m[4][4] = {
             {1, 0, 0, x},
             {0, 1, 0, y},
             {0, 0, 1, z},
             {0, 0, 0, 1},
         };
 
-        const double data_inv_m[4][4] = {
+        const FloatType data_inv_m[4][4] = {
             {1, 0, 0, -x},
             {0, 1, 0, -y},
             {0, 0, 1, -z},
@@ -82,8 +82,8 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    static Transform perspective(double fov, double z_near, double z_far) {
-        double data_persp[4][4] = {
+    static Transform perspective(FloatType fov, FloatType z_near, FloatType z_far) {
+        FloatType data_persp[4][4] = {
             {1.0, 0.0, 0.0, 0.0},
             {0.0, 1.0, 0.0, 0.0},
             {0.0, 0.0, z_far / (z_far - z_near), -z_far * z_near / (z_far - z_near)},
@@ -191,9 +191,9 @@ class Transform {
     }
 
     PBRT_CPU_GPU Vector3fi operator()(const Vector3fi &v) const {
-        double x = double(v.x);
-        double y = double(v.y);
-        double z = double(v.z);
+        FloatType x = FloatType(v.x);
+        FloatType y = FloatType(v.y);
+        FloatType z = FloatType(v.z);
         Vector3f vOutError;
         if (v.IsExact()) {
             vOutError.x =
@@ -218,9 +218,9 @@ class Transform {
                 gamma(3) * (std::abs(m[2][0] * x) + std::abs(m[2][1] * y) + std::abs(m[2][2] * z));
         }
 
-        double xp = m[0][0] * x + m[0][1] * y + m[0][2] * z;
-        double yp = m[1][0] * x + m[1][1] * y + m[1][2] * z;
-        double zp = m[2][0] * x + m[2][1] * y + m[2][2] * z;
+        FloatType xp = m[0][0] * x + m[0][1] * y + m[0][2] * z;
+        FloatType yp = m[1][0] * x + m[1][1] * y + m[1][2] * z;
+        FloatType zp = m[2][0] * x + m[2][1] * y + m[2][2] * z;
 
         return Vector3fi(Vector3f(xp, yp, zp), vOutError);
     }
@@ -232,13 +232,13 @@ class Transform {
                           m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z);
     }
 
-    PBRT_CPU_GPU Ray operator()(const Ray &r, double *tMax = nullptr) const {
+    PBRT_CPU_GPU Ray operator()(const Ray &r, FloatType *tMax = nullptr) const {
         Point3fi o = (*this)(Point3fi(r.o));
         Vector3f d = (*this)(r.d);
 
         // Offset ray origin to edge of error bounds and compute _tMax_
-        if (double lengthSquared = d.squared_length(); lengthSquared > 0) {
-            double dt = d.abs().dot(o.error()) / lengthSquared;
+        if (FloatType lengthSquared = d.squared_length(); lengthSquared > 0) {
+            FloatType dt = d.abs().dot(o.error()) / lengthSquared;
             o += d * dt;
             if (tMax) {
                 *tMax -= dt;

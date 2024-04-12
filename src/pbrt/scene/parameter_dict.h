@@ -75,7 +75,7 @@ class ParameterDict {
         return integers.at(key);
     }
 
-    std::vector<double> get_float(const std::string &key) const {
+    std::vector<FloatType> get_float(const std::string &key) const {
         if (floats.find(key) == floats.end()) {
             return {};
         }
@@ -130,7 +130,7 @@ class ParameterDict {
     std::map<std::string, std::vector<Point3f>> point3s;
     std::map<std::string, std::vector<Normal3f>> normals;
     std::map<std::string, std::vector<int>> integers;
-    std::map<std::string, std::vector<double>> floats;
+    std::map<std::string, std::vector<FloatType>> floats;
     std::map<std::string, std::string> strings;
 
     template <typename T>

@@ -2,8 +2,8 @@
 #include "pbrt/base/spectrum.h"
 
 PBRT_CPU_GPU
-double DenselySampledSpectrum::inner_product(const Spectrum &spectrum) const {
-    double sum = 0;
+FloatType DenselySampledSpectrum::inner_product(const Spectrum &spectrum) const {
+    FloatType sum = 0;
     for (int lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
         sum += (*this)(lambda)*spectrum(lambda);
     }
@@ -12,7 +12,7 @@ double DenselySampledSpectrum::inner_product(const Spectrum &spectrum) const {
 }
 
 PBRT_CPU_GPU
-void DenselySampledSpectrum::init_from_pls_interleaved_samples(const double *samples,
+void DenselySampledSpectrum::init_from_pls_interleaved_samples(const FloatType *samples,
                                                                uint num_samples, bool normalize,
                                                                const Spectrum *cie_y) {
     if (num_samples % 2 != 0 || num_samples / 2 + 2 > LAMBDA_RANGE) {
@@ -25,8 +25,8 @@ void DenselySampledSpectrum::init_from_pls_interleaved_samples(const double *sam
 #endif
     }
 
-    double _lambdas[LAMBDA_RANGE];
-    double _values[LAMBDA_RANGE];
+    FloatType _lambdas[LAMBDA_RANGE];
+    FloatType _values[LAMBDA_RANGE];
 
     uint offset = 0;
 
@@ -56,31 +56,31 @@ void DenselySampledSpectrum::init_from_pls_interleaved_samples(const double *sam
     }
 }
 PBRT_CPU_GPU
-void DenselySampledSpectrum::init_cie_d(double temperature, const double *cie_s0,
-                                        const double *cie_s1, const double *cie_s2,
-                                        const double *cie_lambda) {
-    double cct = temperature * 1.4388f / 1.4380f;
+void DenselySampledSpectrum::init_cie_d(FloatType temperature, const FloatType *cie_s0,
+                                        const FloatType *cie_s1, const FloatType *cie_s2,
+                                        const FloatType *cie_lambda) {
+    FloatType cct = temperature * 1.4388f / 1.4380f;
     if (cct < 4000) {
         // CIE D ill-defined, use blackbody
         BlackbodySpectrum bb = BlackbodySpectrum(cct);
-        init_with_sample_function([=](double lambda) { return bb(lambda); });
+        init_with_sample_function([=](FloatType lambda) { return bb(lambda); });
         return;
     }
 
     // Convert CCT to xy
-    double x = cct <= 7000 ? -4.607f * 1e9f / std::pow(cct, 3) + 2.9678f * 1e6f / sqr(cct) +
+    FloatType x = cct <= 7000 ? -4.607f * 1e9f / std::pow(cct, 3) + 2.9678f * 1e6f / sqr(cct) +
                                  0.09911f * 1e3f / cct + 0.244063f
                            : -2.0064f * 1e9f / std::pow(cct, 3) + 1.9018f * 1e6f / sqr(cct) +
                                  0.24748f * 1e3f / cct + 0.23704f;
 
-    double y = -3 * x * x + 2.870f * x - 0.275f;
+    FloatType y = -3 * x * x + 2.870f * x - 0.275f;
 
     // Interpolate D spectrum
-    double M = 0.0241f + 0.2562f * x - 0.7341f * y;
-    double M1 = (-1.3515f - 1.7703f * x + 5.9114f * y) / M;
-    double M2 = (0.0300f - 31.4424f * x + 30.0717f * y) / M;
+    FloatType M = 0.0241f + 0.2562f * x - 0.7341f * y;
+    FloatType M1 = (-1.3515f - 1.7703f * x + 5.9114f * y) / M;
+    FloatType M2 = (0.0300f - 31.4424f * x + 30.0717f * y) / M;
 
-    double _values[nCIES];
+    FloatType _values[nCIES];
     for (int i = 0; i < nCIES; ++i) {
         _values[i] = (cie_s0[i] + cie_s1[i] * M1 + cie_s2[i] * M2) * 0.01;
     }

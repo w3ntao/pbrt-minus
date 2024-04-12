@@ -27,7 +27,7 @@ class RGBColorSpace {
         auto xyz_g = XYZ::from_xyY(_g);
         auto xyz_b = XYZ::from_xyY(_b);
 
-        double array[3][3] = {
+        FloatType array[3][3] = {
             {xyz_r.x, xyz_g.x, xyz_b.x},
             {xyz_r.y, xyz_g.y, xyz_b.y},
             {xyz_r.z, xyz_g.z, xyz_b.z},
@@ -37,7 +37,7 @@ class RGBColorSpace {
 
         // Initialize XYZ color space conversion matrices
         XYZ c = rgb.inverse() * _whitepoint;
-        double diagonal_data[3] = {c[0], c[1], c[2]};
+        FloatType diagonal_data[3] = {c[0], c[1], c[2]};
         xyz_from_rgb = rgb * SquareMatrix<3>::diag(diagonal_data);
         rgb_from_xyz = xyz_from_rgb.inverse();
     }

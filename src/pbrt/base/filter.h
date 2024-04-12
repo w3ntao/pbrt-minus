@@ -7,9 +7,9 @@ class BoxFilter;
 
 struct FilterSample {
     Point2f p;
-    double weight;
+    FloatType weight;
 
-    PBRT_CPU_GPU FilterSample(const Point2f _p, double _weight) : p(_p), weight(_weight) {}
+    PBRT_CPU_GPU FilterSample(const Point2f _p, FloatType _weight) : p(_p), weight(_weight) {}
 };
 
 class Filter {

@@ -6,13 +6,13 @@
 
 class Normal3f {
   public:
-    double x;
-    double y;
-    double z;
+    FloatType x;
+    FloatType y;
+    FloatType z;
 
     PBRT_CPU_GPU Normal3f() : x(NAN), y(NAN), z(NAN) {}
 
-    PBRT_CPU_GPU Normal3f(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
+    PBRT_CPU_GPU Normal3f(FloatType _x, FloatType _y, FloatType _z) : x(_x), y(_y), z(_z) {}
 
     PBRT_CPU_GPU explicit Normal3f(const Vector3f &v) : x(v.x), y(v.y), z(v.z) {}
 
@@ -32,7 +32,7 @@ class Normal3f {
         return Normal3f(-x, -y, -z);
     }
 
-    PBRT_CPU_GPU Normal3f operator*=(double factor) {
+    PBRT_CPU_GPU Normal3f operator*=(FloatType factor) {
         x *= factor;
         y *= factor;
         z *= factor;
@@ -43,7 +43,7 @@ class Normal3f {
         return Normal3f(std::abs(x), std::abs(y), std::abs(z));
     }
 
-    PBRT_CPU_GPU double dot(const Vector3f &v) const {
+    PBRT_CPU_GPU FloatType dot(const Vector3f &v) const {
         return FMA(x, v.x, sum_of_products(y, v.y, z, v.z));
     }
 };

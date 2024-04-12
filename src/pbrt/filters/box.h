@@ -6,7 +6,7 @@
 
 class BoxFilter {
   public:
-    void init(double _radius) {
+    void init(FloatType _radius) {
         radius = Point2f(_radius, _radius);
     }
 

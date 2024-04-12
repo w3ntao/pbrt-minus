@@ -30,10 +30,10 @@ class SurfaceInteraction : public Interaction {
     int faceIndex = 0;
 
     Vector3f dpdx, dpdy;
-    double dudx = NAN;
-    double dvdx = NAN;
-    double dudy = NAN;
-    double dvdy = NAN;
+    FloatType dudx = NAN;
+    FloatType dvdx = NAN;
+    FloatType dudy = NAN;
+    FloatType dvdy = NAN;
 
     PBRT_CPU_GPU
     explicit SurfaceInteraction(const Point3fi &pi, const Point2f &uv, const Vector3f &wo,
@@ -68,8 +68,8 @@ class SurfaceInteraction : public Interaction {
 // ShapeIntersection Definition
 struct ShapeIntersection {
     SurfaceInteraction interaction;
-    double t_hit;
+    FloatType t_hit;
 
-    PBRT_CPU_GPU ShapeIntersection(const SurfaceInteraction &si, double t)
+    PBRT_CPU_GPU ShapeIntersection(const SurfaceInteraction &si, FloatType t)
         : interaction(si), t_hit(t) {}
 };

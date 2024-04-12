@@ -8,7 +8,7 @@ void Spectrum::init(const DenselySampledSpectrum *densely_sampled_spectrum) {
 }
 
 PBRT_CPU_GPU
-double Spectrum::operator()(double lambda) const {
+FloatType Spectrum::operator()(FloatType lambda) const {
     switch (spectrum_type) {
     case (SpectrumType::densely_sampled): {
         return ((DenselySampledSpectrum *)spectrum_ptr)->operator()(lambda);
