@@ -398,6 +398,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
 
         hlbvh_collect_primitives_into_treelets<<<blocks, threads>>>(
             sparse_treelets, morton_primitives, primitives, num_total_primitives);
+        // TODO: rewrite this part into 2 kernel functions: find gap fist, and fill primitives
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
     }
@@ -500,7 +501,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
     const std::chrono::duration<FloatType> duration_top_bvh{start_bottom_bvh - start_top_bvh};
 
     const std::chrono::duration<FloatType> duration_bottom_bvh{std::chrono::system_clock::now() -
-                                                            start_bottom_bvh};
+                                                               start_bottom_bvh};
 
     std::cout << std::fixed << std::setprecision(2) << "BVH constructing took "
               << (duration_top_bvh.count() + duration_bottom_bvh.count()) << " seconds "

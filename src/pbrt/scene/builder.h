@@ -3,6 +3,7 @@
 #include <stack>
 #include <map>
 #include <chrono>
+#include <filesystem>
 
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
@@ -254,6 +255,11 @@ class SceneBuilder {
         film_resolution = Point2i(_resolution_x, _resolution_y);
         output_filename = parameters.get_string("filename");
 
+        if (std::filesystem::path p(output_filename); p.extension() != ".png") {
+            printf("output filename extension: only PNG is supported for the moment\n");
+            output_filename = p.replace_extension(".png").filename();
+        }
+
         DenselySampledSpectrum *_d_illum_dense;
         Spectrum *d_illum;
 
@@ -288,6 +294,7 @@ class SceneBuilder {
         {
             uint threads = 1024;
             uint blocks = divide_and_ceil(uint(film_resolution->x * film_resolution->y), threads);
+
             GPU::init_pixels<<<blocks, threads>>>(gpu_pixels, film_resolution.value());
             checkCudaErrors(cudaGetLastError());
             checkCudaErrors(cudaDeviceSynchronize());
@@ -320,6 +327,13 @@ class SceneBuilder {
 
     void option_integrator() {
         if (!integrator_name.has_value()) {
+            printf("Integrator not set, changed to AmbientOcclusion\n");
+            integrator_name = "ambientocclusion";
+        }
+
+        if (integrator_name == "volpath") {
+            printf("Integrator `%s` not implemented, changed to AmbientOcclusion\n",
+                   integrator_name->c_str());
             integrator_name = "ambientocclusion";
         }
 
@@ -650,7 +664,7 @@ class SceneBuilder {
         checkCudaErrors(cudaDeviceSynchronize());
 
         const std::chrono::duration<FloatType> duration_rendering{std::chrono::system_clock::now() -
-                                                               start_rendering};
+                                                                  start_rendering};
 
         std::cout << std::fixed << std::setprecision(1) << "rendering took "
                   << duration_rendering.count() << " seconds.\n"
@@ -683,6 +697,11 @@ class SceneBuilder {
         auto builder = SceneBuilder(command_line_option);
 
         auto input_file = command_line_option.input_file;
+
+        if (std::filesystem::path p(input_file); p.extension() != ".pbrt") {
+            printf("ERROR: input file `%s` not ended with `.pbrt`\n", input_file.c_str());
+            exit(1);
+        }
 
         builder.root = get_dirname(input_file);
 

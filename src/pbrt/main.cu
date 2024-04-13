@@ -99,6 +99,6 @@ int main(int argc, const char **argv) {
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     cudaDeviceReset();
-    
+
     return 0;
 }
