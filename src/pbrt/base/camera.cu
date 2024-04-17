@@ -6,14 +6,15 @@ void Camera::init(PerspectiveCamera *perspective_camera) {
     camera_type = CameraType::perspective;
 }
 
-PBRT_CPU_GPU const CameraBase &Camera::get_camerabase() const {
+PBRT_CPU_GPU const CameraBase *Camera::get_camerabase() const {
     switch (camera_type) {
     case (CameraType::perspective): {
-        return ((PerspectiveCamera *)camera_ptr)->camera_base;
+        return &((PerspectiveCamera *)camera_ptr)->camera_base;
     }
     }
 
     report_error();
+    return nullptr;
 }
 
 PBRT_CPU_GPU CameraRay Camera::generate_ray(const CameraSample &sample) const {
@@ -24,4 +25,5 @@ PBRT_CPU_GPU CameraRay Camera::generate_ray(const CameraSample &sample) const {
     }
 
     report_error();
+    return {};
 }

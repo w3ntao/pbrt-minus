@@ -5,6 +5,12 @@
 
 class SampledSpectrum {
   public:
+    PBRT_CPU_GPU SampledSpectrum() {
+        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+            values[idx] = NAN;
+        }
+    }
+
     PBRT_CPU_GPU explicit SampledSpectrum(const FloatType _values[NSpectrumSamples]) {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             values[idx] = _values[idx];

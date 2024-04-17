@@ -15,7 +15,7 @@ const double srgb_to_xyz[3][3] = {
     {0.019334, 0.119193, 0.950227},
 };
 
-const double xyz_to_xyz[3][3] = {
+[[maybe_unused]] const double xyz_to_xyz[3][3] = {
     {1.0, 0.0, 0.0},
     {0.0, 1.0, 0.0},
     {0.0, 0.0, 1.0},

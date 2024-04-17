@@ -9,6 +9,11 @@ struct FilterSample {
     Point2f p;
     FloatType weight;
 
+    PBRT_CPU_GPU FilterSample() {
+        p = Point2f(NAN, NAN);
+        weight = NAN;
+    }
+
     PBRT_CPU_GPU FilterSample(const Point2f _p, FloatType _weight) : p(_p), weight(_weight) {}
 };
 

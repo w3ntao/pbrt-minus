@@ -70,7 +70,7 @@ class Renderer {
     PixelSensor sensor;
 
     PBRT_GPU void evaluate_pixel_sample(const Point2i p_pixel, const int num_samples) {
-        int width = camera->get_camerabase().resolution.x;
+        int width = camera->get_camerabase()->resolution.x;
         int pixel_index = p_pixel.y * width + p_pixel.x;
 
         auto sampler = IndependentSampler(pixel_index);
@@ -135,8 +135,8 @@ __global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh
 __global__ void parallel_render(Renderer *renderer, int num_samples) {
     auto camera_base = renderer->camera->get_camerabase();
 
-    uint width = camera_base.resolution.x;
-    uint height = camera_base.resolution.y;
+    uint width = camera_base->resolution.x;
+    uint height = camera_base->resolution.y;
 
     uint x = threadIdx.x + blockIdx.x * blockDim.x;
     uint y = threadIdx.y + blockIdx.y * blockDim.y;

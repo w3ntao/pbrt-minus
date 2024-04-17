@@ -9,9 +9,9 @@ class Point2 {
   public:
     T x, y;
 
-    PBRT_CPU_GPU Point2(){};
+    PBRT_CPU_GPU Point2() {};
 
-    PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y){};
+    PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y) {};
 
     PBRT_CPU_GPU T &operator[](uint8_t index) {
         switch (index) {

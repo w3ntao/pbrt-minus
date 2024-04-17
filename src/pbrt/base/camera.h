@@ -63,6 +63,10 @@ struct CameraRay {
     Ray ray;
     SampledSpectrum weight;
 
+    PBRT_CPU_GPU CameraRay() {
+        weight = SampledSpectrum::same_value(NAN);
+    }
+
     PBRT_CPU_GPU CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum::same_value(1)) {}
 };
 
@@ -82,7 +86,7 @@ class Camera {
   public:
     void init(PerspectiveCamera *perspective_camera);
 
-    PBRT_CPU_GPU const CameraBase &get_camerabase() const;
+    PBRT_CPU_GPU const CameraBase *get_camerabase() const;
 
     PBRT_CPU_GPU CameraRay generate_ray(const CameraSample &sample) const;
 
