@@ -18,6 +18,7 @@
 #include "pbrt/scene/parser.h"
 #include "pbrt/scene/parameter_dict.h"
 #include "pbrt/shapes/loop_subdivide.h"
+#include "pbrt/shapes/tri_quad_mesh.h"
 
 #include "pbrt/gpu/renderer.h"
 
@@ -112,6 +113,10 @@ class SceneBuilder {
   private:
     ThreadPool thread_pool;
     std::string root;
+
+    std::string get_file_full_path(const std::string &relative_path) const {
+        return root.empty() ? relative_path : root + "/" + relative_path;
+    }
 
   public:
     std::optional<int> samples_per_pixel;
@@ -215,10 +220,7 @@ class SceneBuilder {
 
             render_from_world = camera_transform.render_from_world;
 
-            FloatType fov = 90;
-            if (const auto _fov = parameters.get_float("fov"); !_fov.empty()) {
-                fov = _fov[0];
-            }
+            FloatType fov = parameters.get_float("fov", 90);
 
             PerspectiveCamera *perspective_camera;
             checkCudaErrors(
@@ -331,7 +333,7 @@ class SceneBuilder {
             integrator_name = "ambientocclusion";
         }
 
-        if (integrator_name == "volpath") {
+        if (integrator_name == "simplepath" || integrator_name == "volpath") {
             printf("Integrator `%s` not implemented, changed to AmbientOcclusion\n",
                    integrator_name->c_str());
             integrator_name = "ambientocclusion";
@@ -435,6 +437,24 @@ class SceneBuilder {
             return;
         }
 
+        if (type_of_shape == "plymesh") {
+            auto file_path = get_file_full_path(parameters.get_string("filename"));
+            auto ply_mesh = TriQuadMesh::read_ply(file_path);
+
+            // TODO: displacement texture is not implemented here
+            if (!ply_mesh.triIndices.empty()) {
+                add_triangle_mesh(ply_mesh.p, ply_mesh.triIndices, ply_mesh.uv, reverse_orientation,
+                                  render_from_object);
+            }
+
+            if (!ply_mesh.quadIndices.empty()) {
+                throw std::runtime_error(
+                    "\nworld_shape()::plymesh: quadIndices not implemented\n\n");
+            }
+
+            return;
+        }
+
         if (type_of_shape == "loopsubdiv") {
             auto levels = parameters.get_integer("levels")[0];
             auto indices = parameters.get_integer("indices");
@@ -444,7 +464,6 @@ class SceneBuilder {
 
             add_triangle_mesh(loop_subdivide_data.p_limit, loop_subdivide_data.vertex_indices,
                               std::vector<Point2f>(), reverse_orientation, render_from_object);
-
             return;
         }
 
@@ -457,11 +476,35 @@ class SceneBuilder {
         throw std::runtime_error("unknown shape");
     }
 
+    void world_transform(const std::vector<Token> &tokens) {
+        if (tokens[0] != Token(TokenType::Keyword, "Transform")) {
+            throw std::runtime_error("expect Keyword(Transform)");
+        }
+
+        std::vector<FloatType> data(16);
+        for (uint idx = 0; idx < tokens[1].values.size(); idx++) {
+            data[idx] = stod(tokens[1].values[idx]);
+        }
+
+        FloatType transform_data[4][4];
+        for (uint y = 0; y < 4; y++) {
+            for (uint x = 0; x < 4; x++) {
+                transform_data[y][x] = data[y * 4 + x];
+            }
+        }
+
+        auto transform_matrix = SquareMatrix<4>(transform_data);
+
+        graphics_state.current_transform = transform_matrix.transpose();
+    }
+
     void world_translate(const std::vector<Token> &tokens) {
         std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
             data.push_back(tokens[idx].to_number());
         }
+
+        assert(data.size() == 16);
 
         graphics_state.current_transform *= Transform::translate(data[0], data[1], data[2]);
     }
@@ -569,8 +612,7 @@ class SceneBuilder {
 
             if (keyword == "Include") {
                 auto included_file = tokens[1].values[0];
-                auto full_path = root.empty() ? included_file : root + "/" + included_file;
-                parse_file(full_path);
+                parse_file(get_file_full_path(included_file));
                 return;
             }
 
@@ -604,6 +646,11 @@ class SceneBuilder {
                 return;
             }
 
+            if (keyword == "Transform") {
+                world_transform(tokens);
+                return;
+            }
+
             if (keyword == "Translate") {
                 world_translate(tokens);
                 return;
@@ -611,7 +658,8 @@ class SceneBuilder {
 
             if (keyword == "AreaLightSource" || keyword == "LightSource" || keyword == "Material" ||
                 keyword == "MakeNamedMaterial" || keyword == "NamedMaterial" ||
-                keyword == "ReverseOrientation" || keyword == "Texture") {
+                keyword == "PixelFilter" || keyword == "ReverseOrientation" ||
+                keyword == "Texture") {
                 std::cout << "parse_tokens::Keyword `" << keyword << "` ignored for the moment\n";
                 return;
             }
@@ -674,7 +722,8 @@ class SceneBuilder {
          * // TODO: delete me
         RGB *output_rgb;
         checkCudaErrors(cudaMallocManaged((void **)&output_rgb,
-                                          sizeof(RGB) * film_resolution->x * film_resolution->y));
+                                          sizeof(RGB) * film_resolution->x *
+        film_resolution->y));
 
         GPU::copy_gpu_pixels_to_rgb<<<blocks, threads>>>(renderer, output_rgb);
         checkCudaErrors(cudaGetLastError());

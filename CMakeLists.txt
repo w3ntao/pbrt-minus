@@ -19,6 +19,8 @@ set(PROJ_NAME "pbrt-minus")
 
 project(${PROJ_NAME} LANGUAGES CUDA CXX)
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/ext)
+
 enable_language(CUDA)
 include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 
@@ -27,7 +29,6 @@ find_package(Threads REQUIRED)
 find_package(PNG REQUIRED)
 include_directories(${PNG_INCLUDE_DIRS})
 add_definitions(${PNG_DEFINITIONS})
-set(LIBRARIES ${LIBRARIES} ${PNG_LIBRARIES})
 
 add_executable(${PROJ_NAME}
         src/pbrt/main.cu
@@ -41,20 +42,24 @@ add_executable(${PROJ_NAME}
         src/pbrt/accelerator/hlbvh.cu
         src/pbrt/euclidean_space/squared_matrix.cu
         src/pbrt/shapes/loop_subdivide.cu
+        src/pbrt/shapes/tri_quad_mesh.cu
         src/pbrt/spectra/densely_sampled_spectrum.cu
         src/pbrt/spectra/rgb_to_spectrum_data.cu
         src/ext/lodepng/lodepng.cpp
+        src/ext/rply/rply.cpp
 )
 
 target_include_directories(
         ${PROJ_NAME} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        ${ZLIB_INCLUDE_DIRS}
 )
 
 target_link_libraries(
         ${PROJ_NAME} PRIVATE
-        ${PNG_LIBRARY}
         Threads::Threads
+        ${PNG_LIBRARY}
+        ${ZLIB_LIBRARIES}
 )
 
 set_target_properties(

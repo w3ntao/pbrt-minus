@@ -9,6 +9,10 @@ add_cuflags("--expt-relaxed-constexpr")
 add_packages("png")
 
 add_includedirs("src")
+add_includedirs("${ZLIB_INCLUDE_DIRS}")
+
+-- TODO: currently this script is broken because it doesn't deal with src/ext/zlib
+
 add_files(
         "src/pbrt/main.cu",
         "src/pbrt/base/camera.cu",
@@ -23,6 +27,7 @@ add_files(
         "src/pbrt/shapes/loop_subdivide.cu",
         "src/pbrt/spectra/densely_sampled_spectrum.cu",
         "src/pbrt/spectra/rgb_to_spectrum_data.cu",
-        "src/ext/lodepng/lodepng.cpp"
+        "src/ext/lodepng/lodepng.cpp",
+        "src/ext/rply/rply.cpp"
 )
 target_end()

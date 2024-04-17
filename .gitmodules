@@ -1,3 +1,10 @@
 [submodule "src/ext/lodepng"]
-	path = src/ext/lodepng
-	url = https://github.com/w3ntao/lodepng.git
+path = src/ext/lodepng
+url = https://github.com/w3ntao/lodepng.git
+
+[submodule "src/ext/rply"]
+path = src/ext/rply
+url = https://github.com/w3ntao/rply.git
+[submodule "src/ext/zlib"]
+	path = src/ext/zlib
+	url = https://github.com/w3ntao/zlib.git

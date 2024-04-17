@@ -75,12 +75,12 @@ class ParameterDict {
         return integers.at(key);
     }
 
-    std::vector<FloatType> get_float(const std::string &key) const {
+    FloatType get_float(const std::string &key, FloatType default_val) const {
         if (floats.find(key) == floats.end()) {
-            return {};
+            return default_val;
         }
 
-        return floats.at(key);
+        return floats.at(key)[0];
     }
 
     std::string get_string(const std::string &key) const {
