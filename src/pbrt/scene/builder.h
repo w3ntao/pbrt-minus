@@ -670,6 +670,8 @@ class SceneBuilder {
                   << duration_rendering.count() << " seconds.\n"
                   << std::flush;
 
+        /*
+         * // TODO: delete me
         RGB *output_rgb;
         checkCudaErrors(cudaMallocManaged((void **)&output_rgb,
                                           sizeof(RGB) * film_resolution->x * film_resolution->y));
@@ -677,10 +679,12 @@ class SceneBuilder {
         GPU::copy_gpu_pixels_to_rgb<<<blocks, threads>>>(renderer, output_rgb);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
-
         GPU::writer_to_file(output_filename, output_rgb, film_resolution.value());
-
         checkCudaErrors(cudaFree(output_rgb));
+        */
+
+        renderer->film->write_to_png(output_filename, film_resolution.value());
+
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 

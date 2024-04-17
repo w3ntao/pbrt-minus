@@ -3,8 +3,6 @@
 #include <iostream>
 #include <string>
 
-#include "ext/lodepng/lodepng.h"
-
 #include "pbrt/base/camera.h"
 #include "pbrt/base/filter.h"
 #include "pbrt/base/integrator.h"
@@ -147,54 +145,5 @@ __global__ void parallel_render(Renderer *renderer, int num_samples) {
     }
 
     renderer->evaluate_pixel_sample(Point2i(x, y), num_samples);
-}
-
-__global__ void copy_gpu_pixels_to_rgb(const Renderer *renderer, RGB *output_rgb) {
-    auto camera_base = renderer->camera->get_camerabase();
-
-    uint width = camera_base.resolution.x;
-    uint height = camera_base.resolution.y;
-
-    uint x = threadIdx.x + blockIdx.x * blockDim.x;
-    uint y = threadIdx.y + blockIdx.y * blockDim.y;
-    if (x >= width || y >= height) {
-        return;
-    }
-
-    uint flat_idx = x + y * width;
-    output_rgb[flat_idx] = renderer->film->get_pixel_rgb(Point2i(x, y));
-}
-
-// TODO: move writer_to_file() into Film
-void writer_to_file(const std::string &filename, const RGB *pixels_rgb, const Point2i &resolution) {
-    int width = resolution.x;
-    int height = resolution.y;
-
-    SRGBColorEncoding srgb_encoding;
-    std::vector<unsigned char> png_pixels(width * height * 4);
-
-    for (uint y = 0; y < height; y++) {
-        for (uint x = 0; x < width; x++) {
-            uint index = y * width + x;
-            const auto rgb = pixels_rgb[index];
-
-            if (rgb.has_nan()) {
-                printf("writer_to_file(): pixel(%d, %d): has a NAN component\n", x, y);
-            }
-
-            png_pixels[4 * index + 0] = srgb_encoding.from_linear(rgb.r);
-            png_pixels[4 * index + 1] = srgb_encoding.from_linear(rgb.g);
-            png_pixels[4 * index + 2] = srgb_encoding.from_linear(rgb.b);
-            png_pixels[4 * index + 3] = 255;
-        }
-    }
-
-    // Encode the image
-    // if there's an error, display it
-    if (unsigned error = lodepng::encode(filename, png_pixels, width, height); error) {
-        std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error)
-                  << std::endl;
-        throw std::runtime_error("lodepng::encode() fail");
-    }
 }
 } // namespace GPU

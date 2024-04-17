@@ -16,6 +16,7 @@ Bounds3f Shape::bounds() const {
     }
 
     report_error();
+    return {};
 }
 
 PBRT_GPU
@@ -27,6 +28,7 @@ bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
     }
 
     report_error();
+    return false;
 }
 
 PBRT_GPU
@@ -38,4 +40,5 @@ std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_ma
     }
 
     report_error();
+    return {};
 }

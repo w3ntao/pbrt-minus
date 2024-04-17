@@ -17,6 +17,8 @@ class Film {
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i &p) const;
 
+    void write_to_png(const std::string &filename, const Point2i &resolution) const;
+
   private:
     enum class FilmType { rgb };
 
