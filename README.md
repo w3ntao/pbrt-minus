@@ -5,10 +5,9 @@ A simpler, less performant physically based GPU ray tracer rewritten from PBRT-v
 ## requisite
 
 * C++ >= 17
-* CUDA (compute capability >=7.5)
-* CMake or [Xmake](https://xmake.io/)
-* PNG
-  library ([for Debian](https://packages.debian.org/search?keywords=libpng-dev), [for Arch](https://archlinux.org/packages/extra/x86_64/libpng/))
+* CUDA (compute capability >= 7.5)
+* CMake (>= 3.24)
+* PNG library ([for Debian](https://packages.debian.org/search?keywords=libpng-dev), [for Arch](https://archlinux.org/packages/extra/x86_64/libpng/))
 
 ## build
 
@@ -26,18 +25,11 @@ $ git clone --recursive https://github.com/w3ntao/pbrt-minus.git
 $ mkdir build
 $ cd build
 $ cmake ..
-$ make -j16
+$ make -j
 ```
 
 You should find executable at `pbrt-minus/build/pbrt-minus`
 
-### build with Xmake
-
-```
-$ xmake
-```
-
-You should find executable at `pbrt-minus/build/linux/x86_64/release/pbrt-minus`
 
 ### preview
 
@@ -59,3 +51,7 @@ scenes: https://github.com/w3ntao/pbrt-minus-scenes \
 ![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/lte-orb-rough-glass-ao-1024.png)
 
 ![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/lte-orb-rough-glass-sn-1024.png)
+
+![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/ganesha-ao-1024.png)
+
+![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/ganesha-sn-1024.png)
