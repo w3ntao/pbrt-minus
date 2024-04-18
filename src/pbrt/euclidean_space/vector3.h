@@ -10,7 +10,7 @@ class Vector3 {
   public:
     T x, y, z;
 
-    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN){};
+    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN) {};
 
     PBRT_CPU_GPU Vector3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {}
 
@@ -154,6 +154,15 @@ class Vector3 {
         FloatType b = x * y * a;
         *v2 = Vector3(1 + sign * sqr(x) * a, sign * b, -sign * x);
         *v3 = Vector3(b, sign + sqr(y) * a, -y);
+    }
+
+    PBRT_GPU
+    bool same_hemisphere(const Vector3 &wp) const {
+        return z * wp.z > 0;
+    }
+
+    PBRT_CPU_GPU FloatType abs_cos_theta() const {
+        return std::abs(z);
     }
 
     PBRT_CPU_GPU void display() const {

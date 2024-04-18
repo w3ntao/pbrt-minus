@@ -5,22 +5,37 @@
 #include <chrono>
 #include <filesystem>
 
+#include "pbrt/base/material.h"
+#include "pbrt/base/primitive.h"
+
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
 
 #include "pbrt/filters/box.h"
 
+#include "pbrt/gpu/renderer.h"
+
 #include "pbrt/integrators/ambient_occlusion.h"
 #include "pbrt/integrators/surface_normal.h"
+#include "pbrt/integrators/random_walk.h"
 
-#include "pbrt/spectra/rgb_to_spectrum_data.h"
+#include "pbrt/lights/diffuse_area_light.h"
+
+#include "pbrt/materials/diffuse_material.h"
+
+#include "pbrt/primitives/simple_primitives.h"
+#include "pbrt/primitives/geometric_primitive.h"
+
+#include "pbrt/spectrum_util/rgb_to_spectrum_data.h"
+#include "pbrt/spectra/const_spectrum.h"
+
 #include "pbrt/scene/command_line_option.h"
 #include "pbrt/scene/parser.h"
 #include "pbrt/scene/parameter_dict.h"
 #include "pbrt/shapes/loop_subdivide.h"
 #include "pbrt/shapes/tri_quad_mesh.h"
 
-#include "pbrt/gpu/renderer.h"
+#include "pbrt/textures/spectrum_constant_texture.h"
 
 namespace {
 std::string get_dirname(const std::string &full_path) {
@@ -33,12 +48,24 @@ std::string get_dirname(const std::string &full_path) {
 }
 } // namespace
 
+struct AreaLightEntity {
+    std::string name;
+    ParameterDict parameters;
+
+    AreaLightEntity(const std::string &_name, const ParameterDict &_parameters)
+        : name(_name), parameters(_parameters) {}
+};
+
 class GraphicsState {
   public:
     GraphicsState() : current_transform(Transform::identity()), reverse_orientation(false) {}
 
     Transform current_transform;
-    bool reverse_orientation;
+    bool reverse_orientation = false;
+    DiffuseMaterial *current_material = nullptr;
+    // TODO: change DiffuseMaterial to Material
+
+    std::optional<AreaLightEntity> area_light_entity;
 };
 
 struct PreComputedSpectrum {
@@ -114,7 +141,7 @@ class SceneBuilder {
     ThreadPool thread_pool;
     std::string root;
 
-    std::string get_file_full_path(const std::string &relative_path) const {
+    [[nodiscard]] std::string get_file_full_path(const std::string &relative_path) const {
         return root.empty() ? relative_path : root + "/" + relative_path;
     }
 
@@ -126,7 +153,8 @@ class SceneBuilder {
 
     PreComputedSpectrum pre_computed_spectrum;
     std::vector<void *> gpu_dynamic_pointers;
-    std::vector<const Shape *> gpu_primitives;
+    std::vector<const Primitive *> gpu_primitives;
+    //  TODO: change SimplePrimitive to Primitive
 
     std::optional<Point2i> film_resolution = std::nullopt;
     std::string output_filename;
@@ -154,13 +182,13 @@ class SceneBuilder {
                                RGBtoSpectrumData::Gamut::sRGB);
 
         checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
-        renderer->global_variables = global_variables;
-
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->bvh), sizeof(HLBVH)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->camera), sizeof(Camera)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->film), sizeof(Film)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->filter), sizeof(Filter)));
         checkCudaErrors(cudaMallocManaged((void **)&(renderer->integrator), sizeof(Integrator)));
+
+        renderer->global_variables = global_variables;
 
         gpu_dynamic_pointers.push_back(global_variables);
         gpu_dynamic_pointers.push_back(global_variables->rgb_color_space);
@@ -171,6 +199,28 @@ class SceneBuilder {
         gpu_dynamic_pointers.push_back(renderer->film);
         gpu_dynamic_pointers.push_back(renderer->filter);
         gpu_dynamic_pointers.push_back(renderer->integrator);
+
+        ConstantSpectrum *constant_grey;
+        Spectrum *spectrum_grey;
+        SpectrumConstantTexture *texture_grey;
+        DiffuseMaterial *default_material;
+
+        checkCudaErrors(cudaMallocManaged((void **)&constant_grey, sizeof(ConstantSpectrum)));
+        checkCudaErrors(cudaMallocManaged((void **)&spectrum_grey, sizeof(Spectrum)));
+        checkCudaErrors(cudaMallocManaged((void **)&texture_grey, sizeof(SpectrumConstantTexture)));
+        checkCudaErrors(cudaMallocManaged((void **)&default_material, sizeof(DiffuseMaterial)));
+
+        constant_grey->init(0.5);
+        spectrum_grey->init(constant_grey);
+        texture_grey->init(spectrum_grey);
+        default_material->init(texture_grey);
+
+        graphics_state.current_material = default_material;
+
+        gpu_dynamic_pointers.push_back(constant_grey);
+        gpu_dynamic_pointers.push_back(spectrum_grey);
+        gpu_dynamic_pointers.push_back(texture_grey);
+        gpu_dynamic_pointers.push_back(default_material);
     }
 
     ~SceneBuilder() {
@@ -228,9 +278,7 @@ class SceneBuilder {
             gpu_dynamic_pointers.push_back(perspective_camera);
 
             perspective_camera->init(film_resolution.value(), camera_transform, fov, 0.0);
-
             renderer->camera->init(perspective_camera);
-
             return;
         }
 
@@ -244,7 +292,6 @@ class SceneBuilder {
         gpu_dynamic_pointers.push_back(box_filter);
 
         box_filter->init(0.5);
-
         renderer->filter->init(box_filter);
     }
 
@@ -364,6 +411,15 @@ class SceneBuilder {
             surface_normal_integrator->init(renderer->global_variables->rgb_color_space);
             renderer->integrator->init(surface_normal_integrator);
 
+        } else if (integrator_name == "randomwalk") {
+            RandomWalkIntegrator *random_walk_integrator;
+            checkCudaErrors(
+                cudaMallocManaged((void **)&random_walk_integrator, sizeof(RandomWalkIntegrator)));
+            gpu_dynamic_pointers.push_back(random_walk_integrator);
+
+            random_walk_integrator->init(renderer->camera, 5);
+            renderer->integrator->init(random_walk_integrator);
+
         } else {
             const std::string error =
                 "parse_tokens(): unknown Integrator name: `" + integrator_name.value() + "`";
@@ -378,7 +434,7 @@ class SceneBuilder {
 
         std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
-            data.push_back(tokens[idx].to_number());
+            data.push_back(tokens[idx].to_float());
         }
 
         auto position = Point3f(data[0], data[1], data[2]);
@@ -389,6 +445,51 @@ class SceneBuilder {
             graphics_state.current_transform * Transform::lookat(position, look, up);
     }
 
+    void parse_material(const std::vector<Token> &tokens) {
+        if (tokens[0] != Token(TokenType::Keyword, "Material")) {
+            throw std::runtime_error("expect Keyword(Material)");
+        }
+
+        const auto parameters = ParameterDict(tokens);
+        auto type_of_material = tokens[1].values[0];
+
+        if (type_of_material == "diffuse") {
+            auto key = "reflectance";
+
+            // TODO: if "reflectance" in texture
+
+            auto reflectance = parameters.get_rgb(key, std::nullopt);
+            RGBAlbedoSpectrum *_reflectance_spectrum;
+            Spectrum *reflectance_spectrum;
+            SpectrumConstantTexture *spectrum_constant_texture;
+            DiffuseMaterial *diffuse_material;
+
+            checkCudaErrors(
+                cudaMallocManaged((void **)&_reflectance_spectrum, sizeof(RGBAlbedoSpectrum)));
+            checkCudaErrors(cudaMallocManaged((void **)&reflectance_spectrum, sizeof(Spectrum)));
+            checkCudaErrors(cudaMallocManaged((void **)&spectrum_constant_texture,
+                                              sizeof(SpectrumConstantTexture)));
+            checkCudaErrors(cudaMallocManaged((void **)&diffuse_material, sizeof(DiffuseMaterial)));
+
+            _reflectance_spectrum->init(renderer->global_variables->rgb_color_space, reflectance);
+            reflectance_spectrum->init(_reflectance_spectrum);
+            spectrum_constant_texture->init(reflectance_spectrum);
+            diffuse_material->init(spectrum_constant_texture);
+
+            gpu_dynamic_pointers.push_back(_reflectance_spectrum);
+            gpu_dynamic_pointers.push_back(reflectance_spectrum);
+            gpu_dynamic_pointers.push_back(spectrum_constant_texture);
+            gpu_dynamic_pointers.push_back(diffuse_material);
+
+            graphics_state.current_material = diffuse_material;
+            return;
+        }
+
+        const std::string error =
+            "parse_material(): unknown Material name: `" + type_of_material + "`";
+        throw std::runtime_error(error.c_str());
+    }
+
     void parse_rotate(const std::vector<Token> &tokens) {
         if (tokens[0] != Token(TokenType::Keyword, "Rotate")) {
             throw std::runtime_error("expect Keyword(Rotate)");
@@ -396,7 +497,7 @@ class SceneBuilder {
 
         std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
-            data.push_back(tokens[idx].to_number());
+            data.push_back(tokens[idx].to_float());
         }
 
         graphics_state.current_transform = graphics_state.current_transform *
@@ -410,19 +511,30 @@ class SceneBuilder {
 
         std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
-            data.push_back(tokens[idx].to_number());
+            data.push_back(tokens[idx].to_float());
         }
 
         graphics_state.current_transform *= Transform::scale(data[0], data[1], data[2]);
+    }
+
+    void world_area_light_source(const std::vector<Token> &tokens) {
+        if (tokens[0] != Token(TokenType::Keyword, "AreaLightSource")) {
+            throw std::runtime_error("expect Keyword(AreaLightSource)");
+        }
+
+        if (tokens[1] != Token(TokenType::String, "diffuse")) {
+            throw std::runtime_error(
+                "world_area_light_source: only `diffuse` supported at the moment");
+        }
+
+        graphics_state.area_light_entity =
+            AreaLightEntity(tokens[1].values[0], ParameterDict(tokens));
     }
 
     void world_shape(const std::vector<Token> &tokens) {
         if (tokens[0] != Token(TokenType::Keyword, "Shape")) {
             throw std::runtime_error("expect Keyword(Shape)");
         }
-
-        auto render_from_object = get_render_from_object();
-        bool reverse_orientation = graphics_state.reverse_orientation;
 
         const auto parameters = ParameterDict(tokens);
 
@@ -432,7 +544,7 @@ class SceneBuilder {
             auto indices = parameters.get_integer("indices");
             auto points = parameters.get_point3("P");
 
-            add_triangle_mesh(points, indices, uv, reverse_orientation, render_from_object);
+            add_triangle_mesh(points, indices, uv);
 
             return;
         }
@@ -443,8 +555,7 @@ class SceneBuilder {
 
             // TODO: displacement texture is not implemented here
             if (!ply_mesh.triIndices.empty()) {
-                add_triangle_mesh(ply_mesh.p, ply_mesh.triIndices, ply_mesh.uv, reverse_orientation,
-                                  render_from_object);
+                add_triangle_mesh(ply_mesh.p, ply_mesh.triIndices, ply_mesh.uv);
             }
 
             if (!ply_mesh.quadIndices.empty()) {
@@ -463,7 +574,7 @@ class SceneBuilder {
             const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);
 
             add_triangle_mesh(loop_subdivide_data.p_limit, loop_subdivide_data.vertex_indices,
-                              std::vector<Point2f>(), reverse_orientation, render_from_object);
+                              std::vector<Point2f>());
             return;
         }
 
@@ -501,7 +612,7 @@ class SceneBuilder {
     void world_translate(const std::vector<Token> &tokens) {
         std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
-            data.push_back(tokens[idx].to_number());
+            data.push_back(tokens[idx].to_float());
         }
 
         assert(data.size() == 16);
@@ -510,8 +621,10 @@ class SceneBuilder {
     }
 
     void add_triangle_mesh(const std::vector<Point3f> &points, const std::vector<int> &indices,
-                           const std::vector<Point2f> &uv, bool reverse_orientation,
-                           const Transform &render_from_object) {
+                           const std::vector<Point2f> &uv) {
+        const auto render_from_object = get_render_from_object();
+        const bool reverse_orientation = graphics_state.reverse_orientation;
+
         Point3f *gpu_points;
         checkCudaErrors(cudaMallocManaged((void **)&gpu_points, sizeof(Point3f) * points.size()));
         checkCudaErrors(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
@@ -533,37 +646,98 @@ class SceneBuilder {
             checkCudaErrors(cudaMallocManaged((void **)&gpu_uv, sizeof(Point2f) * uv.size()));
             checkCudaErrors(
                 cudaMemcpy(gpu_uv, uv.data(), sizeof(Point2f) * uv.size(), cudaMemcpyHostToDevice));
+            gpu_dynamic_pointers.push_back(gpu_uv);
         }
 
         TriangleMesh *mesh;
         checkCudaErrors(cudaMallocManaged((void **)&mesh, sizeof(TriangleMesh)));
         mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, points.size());
 
+        uint num_triangles = mesh->triangles_num;
         Triangle *triangles;
-        checkCudaErrors(
-            cudaMallocManaged((void **)&triangles, sizeof(Triangle) * mesh->triangle_num));
+        checkCudaErrors(cudaMallocManaged((void **)&triangles, sizeof(Triangle) * num_triangles));
         Shape *shapes;
-        checkCudaErrors(cudaMallocManaged((void **)&shapes, sizeof(Shape) * mesh->triangle_num));
+        checkCudaErrors(cudaMallocManaged((void **)&shapes, sizeof(Shape) * num_triangles));
 
         {
             uint threads = 1024;
-            uint blocks = divide_and_ceil(mesh->triangle_num, threads);
+            uint blocks = divide_and_ceil(num_triangles, threads);
+
             GPU::init_triangles_from_mesh<<<blocks, threads>>>(triangles, mesh);
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
 
-            GPU::build_shapes<<<blocks, threads>>>(shapes, triangles, mesh->triangle_num);
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
+            GPU::init_shapes<<<blocks, threads>>>(shapes, triangles, num_triangles);
 
-            for (int idx = 0; idx < mesh->triangle_num; idx++) {
-                gpu_primitives.push_back(&shapes[idx]);
+            if (!graphics_state.area_light_entity) {
+                SimplePrimitive *simple_primitives;
+                checkCudaErrors(cudaMallocManaged((void **)&simple_primitives,
+                                                  sizeof(SimplePrimitive) * num_triangles));
+                Primitive *primitives;
+                checkCudaErrors(
+                    cudaMallocManaged((void **)&primitives, sizeof(Primitive) * num_triangles));
+
+                GPU::init_simple_primitives<<<blocks, threads>>>(
+                    simple_primitives, shapes, graphics_state.current_material, num_triangles);
+                GPU::init_primitives<<<blocks, threads>>>(primitives, simple_primitives,
+                                                          num_triangles);
+                checkCudaErrors(cudaGetLastError());
+                checkCudaErrors(cudaDeviceSynchronize());
+
+                gpu_primitives.reserve(gpu_primitives.size() + num_triangles);
+                for (uint idx = 0; idx < num_triangles; idx++) {
+                    gpu_primitives.push_back(&primitives[idx]);
+                }
+
+                gpu_dynamic_pointers.push_back(simple_primitives);
+                gpu_dynamic_pointers.push_back(primitives);
+
+            } else {
+                // build light
+                DiffuseAreaLight *diffuse_area_lights;
+                checkCudaErrors(cudaMallocManaged((void **)&diffuse_area_lights,
+                                                  sizeof(DiffuseAreaLight) * num_triangles));
+
+                GeometricPrimitive *geometric_primitives;
+                checkCudaErrors(cudaMallocManaged((void **)&geometric_primitives,
+                                                  sizeof(GeometricPrimitive) * num_triangles));
+
+                const Spectrum *cie_xyz[3];
+                renderer->global_variables->get_cie_xyz(cie_xyz);
+
+                auto cie_y = cie_xyz[1];
+
+                for (uint idx = 0; idx < num_triangles; idx++) {
+                    // TODO: rewrite this to GPU batch process init()?
+                    diffuse_area_lights[idx].init(
+                        render_from_object, graphics_state.area_light_entity->parameters,
+                        &shapes[idx], *(renderer->global_variables->rgb_color_space), *cie_y);
+
+                    geometric_primitives[idx].init(&shapes[idx], graphics_state.current_material,
+                                                   &diffuse_area_lights[idx]);
+                }
+
+                Primitive *primitives;
+                checkCudaErrors(
+                    cudaMallocManaged((void **)&primitives, sizeof(Primitive) * num_triangles));
+
+                GPU::init_primitives<<<blocks, threads>>>(primitives, geometric_primitives,
+                                                          num_triangles);
+                checkCudaErrors(cudaGetLastError());
+                checkCudaErrors(cudaDeviceSynchronize());
+
+                gpu_primitives.reserve(gpu_primitives.size() + num_triangles);
+                for (uint idx = 0; idx < num_triangles; idx++) {
+                    gpu_primitives.push_back(&primitives[idx]);
+                }
+                // TODO: rewrite gpu_primitives to Primitives
+
+                gpu_dynamic_pointers.push_back(diffuse_area_lights);
+                gpu_dynamic_pointers.push_back(geometric_primitives);
+                gpu_dynamic_pointers.push_back(primitives);
             }
         }
 
         gpu_dynamic_pointers.push_back(gpu_indices);
         gpu_dynamic_pointers.push_back(gpu_points);
-        gpu_dynamic_pointers.push_back(gpu_uv);
         gpu_dynamic_pointers.push_back(mesh);
         gpu_dynamic_pointers.push_back(triangles);
         gpu_dynamic_pointers.push_back(shapes);
@@ -600,6 +774,11 @@ class SceneBuilder {
         case TokenType::Keyword: {
             const auto keyword = first_token.values[0];
 
+            if (keyword == "AreaLightSource") {
+                world_area_light_source(tokens);
+                return;
+            }
+
             if (keyword == "Camera") {
                 camera_tokens = tokens;
                 return;
@@ -623,6 +802,11 @@ class SceneBuilder {
 
             if (keyword == "LookAt") {
                 parse_lookat(tokens);
+                return;
+            }
+
+            if (keyword == "Material") {
+                parse_material(tokens);
                 return;
             }
 
@@ -656,10 +840,9 @@ class SceneBuilder {
                 return;
             }
 
-            if (keyword == "AreaLightSource" || keyword == "LightSource" || keyword == "Material" ||
-                keyword == "MakeNamedMaterial" || keyword == "NamedMaterial" ||
-                keyword == "PixelFilter" || keyword == "ReverseOrientation" ||
-                keyword == "Texture") {
+            if (keyword == "LightSource" || keyword == "MakeNamedMaterial" ||
+                keyword == "NamedMaterial" || keyword == "PixelFilter" ||
+                keyword == "ReverseOrientation" || keyword == "Texture") {
                 std::cout << "parse_tokens::Keyword `" << keyword << "` ignored for the moment\n";
                 return;
             }
@@ -718,20 +901,6 @@ class SceneBuilder {
                   << duration_rendering.count() << " seconds.\n"
                   << std::flush;
 
-        /*
-         * // TODO: delete me
-        RGB *output_rgb;
-        checkCudaErrors(cudaMallocManaged((void **)&output_rgb,
-                                          sizeof(RGB) * film_resolution->x *
-        film_resolution->y));
-
-        GPU::copy_gpu_pixels_to_rgb<<<blocks, threads>>>(renderer, output_rgb);
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
-        GPU::writer_to_file(output_filename, output_rgb, film_resolution.value());
-        checkCudaErrors(cudaFree(output_rgb));
-        */
-
         renderer->film->write_to_png(output_filename, film_resolution.value());
 
         checkCudaErrors(cudaGetLastError());
@@ -759,6 +928,8 @@ class SceneBuilder {
         builder.root = get_dirname(input_file);
 
         builder.parse_file(input_file);
+
+        // TODO: decouple renderer from builder
 
         builder.preprocess();
 

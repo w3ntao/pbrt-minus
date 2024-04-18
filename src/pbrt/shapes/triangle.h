@@ -24,6 +24,14 @@ class Triangle {
         return Bounds3f(points, 3);
     }
 
+    PBRT_CPU_GPU
+    FloatType area() const {
+        Point3f p[3];
+        get_points(p);
+
+        return (p[1] - p[0]).cross((p[2] - p[0])).length() * 0.5;
+    }
+
     PBRT_GPU bool fast_intersect(const Ray &ray, FloatType t_max) const {
         Point3f points[3];
         get_points(points);
@@ -122,7 +130,6 @@ class Triangle {
             FloatType p1typ0tx = (FloatType)p1t.y * (FloatType)p0t.x;
             e2 = (float)(p1typ0tx - p1txp0ty);
         }
-
 
         // Perform triangle edge and determinant tests
         if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0)) {

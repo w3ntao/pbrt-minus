@@ -16,7 +16,7 @@ enum class TokenType {
     List,
 };
 
-std::ostream &operator<<(std::ostream &stream, const TokenType type) {
+static std::ostream &operator<<(std::ostream &stream, const TokenType type) {
     switch (type) {
     case TokenType::Illegal: {
         stream << "Illegal";
@@ -104,7 +104,7 @@ class Token {
         return !(*this == t);
     }
 
-    FloatType to_number() const {
+    FloatType to_float() const {
         if (type != TokenType::Number) {
             throw std::runtime_error("you should only invoke it with type Number.");
         }

@@ -4,7 +4,7 @@
 
 class TriangleMesh {
   public:
-    uint triangle_num = 0;
+    uint triangles_num = 0;
     uint points_num = 0;
 
     const int *vertex_indices = nullptr;
@@ -18,10 +18,10 @@ class TriangleMesh {
     bool transformSwapsHandedness = false;
 
     PBRT_CPU_GPU
-    void init(bool _reverse_orientation, const int *_vertex_indices, int num_indices,
-              const Point3f *_points, int num_points) {
+    void init(bool _reverse_orientation, const int *_vertex_indices, uint num_indices,
+              const Point3f *_points, uint num_points) {
         reverse_orientation = _reverse_orientation;
-        triangle_num = num_indices / 3;
+        triangles_num = num_indices / 3;
         points_num = num_points;
         vertex_indices = _vertex_indices;
         p = _points;

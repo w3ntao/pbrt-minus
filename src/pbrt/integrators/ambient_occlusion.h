@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pbrt/base/ray.h"
-#include "pbrt/base/integrator.h"
 #include "pbrt/base/spectrum.h"
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/util/sampling.h"

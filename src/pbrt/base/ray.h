@@ -52,5 +52,5 @@ class DifferentialRay : public Ray {
     Vector3f rxDirection;
     Vector3f ryDirection;
 
-    PBRT_GPU DifferentialRay(Point3f o, Vector3f d) : Ray(o, d) {}
+    PBRT_GPU DifferentialRay(Point3f o, Vector3f d) : Ray(o, d), hasDifferentials(false) {}
 };

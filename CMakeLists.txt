@@ -32,19 +32,31 @@ add_definitions(${PNG_DEFINITIONS})
 
 add_executable(${PROJ_NAME}
         src/pbrt/main.cu
+
+        src/pbrt/base/bsdf.cu
+        src/pbrt/base/bxdf.cu
         src/pbrt/base/camera.cu
         src/pbrt/base/film.cu
         src/pbrt/base/filter.cu
         src/pbrt/base/integrator.cu
+        src/pbrt/base/interaction.cu
+        src/pbrt/base/primitive.cu
         src/pbrt/base/sampler.cu
         src/pbrt/base/shape.cu
         src/pbrt/base/spectrum.cu
         src/pbrt/accelerator/hlbvh.cu
         src/pbrt/euclidean_space/squared_matrix.cu
+        src/pbrt/integrators/random_walk.cu
+        src/pbrt/lights/diffuse_area_light.cu
+        src/pbrt/materials/diffuse_material.cu
+        src/pbrt/primitives/geometric_primitive.cu
         src/pbrt/shapes/loop_subdivide.cu
         src/pbrt/shapes/tri_quad_mesh.cu
         src/pbrt/spectra/densely_sampled_spectrum.cu
-        src/pbrt/spectra/rgb_to_spectrum_data.cu
+        src/pbrt/spectra/rgb_illuminant_spectrum.cu
+        src/pbrt/spectra/rgb_albedo_spectrum.cu
+        src/pbrt/spectrum_util/rgb_to_spectrum_data.cu
+
         src/ext/lodepng/lodepng.cpp
         src/ext/rply/rply.cpp
 )
@@ -64,8 +76,9 @@ target_link_libraries(
 
 set_target_properties(
         ${PROJ_NAME} PROPERTIES
-        CUDA_SEPARABLE_COMPILATION ON
         CUDA_ARCHITECTURES native
+        CUDA_SEPARABLE_COMPILATION ON
+        CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
 # CUDA_SEPARABLE_COMPILATION ON: member function declaration and implementation can be separate
 # https://developer.nvidia.com/blog/separate-compilation-linking-cuda-device-code/

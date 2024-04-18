@@ -3,7 +3,7 @@
 #include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
-#include "pbrt/spectra/sampled_spectrum.h"
+#include "pbrt/spectrum_util/sampled_spectrum.h"
 
 class PerspectiveCamera;
 
@@ -74,11 +74,47 @@ struct CameraBase {
     Point2i resolution;
     CameraTransform camera_transform;
 
+    Vector3f minPosDifferentialX, minPosDifferentialY;
+    Vector3f minDirDifferentialX, minDirDifferentialY;
+
     PBRT_CPU_GPU CameraBase() {}
 
     PBRT_CPU_GPU void init(const Point2i _resolution, const CameraTransform _camera_transform) {
         resolution = _resolution;
         camera_transform = _camera_transform;
+    }
+
+    PBRT_CPU_GPU
+    void approximate_dp_dxy(const Point3f p, const Normal3f n, const uint samples_per_pixel,
+                            Vector3f *dpdx, Vector3f *dpdy) const {
+        auto p_camera = camera_transform.camera_from_render(p);
+        auto DownZFromCamera =
+            Transform::rotate_from_to(p_camera.to_vector3().normalize(), Vector3f(0, 0, 1));
+
+        Point3f pDownZ = DownZFromCamera(p_camera);
+
+        Normal3f nDownZ =
+            Normal3f(DownZFromCamera(camera_transform.camera_from_render(n.to_vector3())));
+        FloatType d = nDownZ.z * pDownZ.z;
+
+        // Find intersection points for approximated camera differential rays
+        Ray xRay(Point3f(0, 0, 0) + minPosDifferentialX, Vector3f(0, 0, 1) + minDirDifferentialX);
+
+        FloatType tx = -(nDownZ.dot(xRay.o.to_vector3()) - d) / nDownZ.dot(xRay.d);
+        Ray yRay(Point3f(0, 0, 0) + minPosDifferentialY, Vector3f(0, 0, 1) + minDirDifferentialY);
+
+        FloatType ty = -(nDownZ.dot(yRay.o.to_vector3()) - d) / nDownZ.dot(yRay.d);
+        Point3f px = xRay.at(tx);
+        Point3f py = yRay.at(ty);
+
+        // Estimate $\dpdx$ and $\dpdy$ in tangent plane at intersection point
+        FloatType sppScale =
+            std::max<FloatType>(0.125, 1.0 / std::sqrt((FloatType)samples_per_pixel));
+
+        *dpdx = sppScale *
+                camera_transform.render_from_camera(DownZFromCamera.ApplyInverse(px - pDownZ));
+        *dpdy = sppScale *
+                camera_transform.render_from_camera(DownZFromCamera.ApplyInverse(py - pDownZ));
     }
 };
 
@@ -89,6 +125,12 @@ class Camera {
     PBRT_CPU_GPU const CameraBase *get_camerabase() const;
 
     PBRT_CPU_GPU CameraRay generate_ray(const CameraSample &sample) const;
+
+    PBRT_CPU_GPU
+    void approximate_dp_dxy(const Point3f p, const Normal3f n, uint samples_per_pixel,
+                            Vector3f *dpdx, Vector3f *dpdy) const {
+        get_camerabase()->approximate_dp_dxy(p, n, samples_per_pixel, dpdx, dpdy);
+    }
 
   private:
     enum class CameraType {

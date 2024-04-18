@@ -5,7 +5,7 @@ A simpler, less performant physically based GPU ray tracer rewritten from PBRT-v
 ## requisite
 
 * C++ >= 17
-* CUDA (compute capability >= 7.5)
+* CUDA (compute capability >= 7.5, runtime version >= 11)
 * CMake (>= 3.24)
 * PNG library ([for Debian](https://packages.debian.org/search?keywords=libpng-dev), [for Arch](https://archlinux.org/packages/extra/x86_64/libpng/))
 
@@ -13,7 +13,7 @@ A simpler, less performant physically based GPU ray tracer rewritten from PBRT-v
 
 ### clone repository
 
-clone this repository with its submodule:
+clone this repository with its submodules:
 
 ```
 $ git clone --recursive https://github.com/w3ntao/pbrt-minus.git
@@ -34,7 +34,7 @@ You should find executable at `pbrt-minus/build/pbrt-minus`
 ### preview
 
 scenes: https://github.com/w3ntao/pbrt-minus-scenes \
-(currently most available scenes are borrowed from https://github.com/mmp/pbrt-v4-scenes)
+(currently most scenes are borrowed from https://github.com/mmp/pbrt-v4-scenes)
 
 ![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/cornell-box-ao-1024.png)
 

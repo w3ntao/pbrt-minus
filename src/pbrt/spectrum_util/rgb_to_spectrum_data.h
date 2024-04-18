@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/spectra/rgb.h"
-#include "pbrt/spectra/rgb_sigmoid_polynomial.h"
+#include "rgb.h"
+#include "rgb_sigmoid_polynomial.h"
 
 class ThreadPool;
 

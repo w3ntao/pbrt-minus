@@ -9,7 +9,7 @@ constexpr FloatType MachineEpsilon = std::numeric_limits<FloatType>::epsilon() *
 
 PBRT_CPU_GPU
 constexpr FloatType gamma(int n) {
-    return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
+    return (FloatType(n) * MachineEpsilon) / (FloatType(1.0) - FloatType(n) * MachineEpsilon);
 }
 
 PBRT_CPU_GPU

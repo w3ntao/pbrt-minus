@@ -46,4 +46,9 @@ class Normal3f {
     PBRT_CPU_GPU FloatType dot(const Vector3f &v) const {
         return FMA(x, v.x, sum_of_products(y, v.y, z, v.z));
     }
+
+    friend std::ostream &operator<<(std::ostream &stream, const Normal3f &n) {
+        stream << "Normal3(" << n.x << ", " << n.y << ", " << n.z << ")";
+        return stream;
+    }
 };

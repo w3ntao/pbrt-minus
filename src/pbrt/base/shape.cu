@@ -19,6 +19,18 @@ Bounds3f Shape::bounds() const {
     return {};
 }
 
+PBRT_CPU_GPU
+FloatType Shape::area() const {
+    switch (shape_type) {
+    case (ShapeType::triangle): {
+        return ((Triangle *)shape_ptr)->area();
+    }
+    }
+
+    report_error();
+    return NAN;
+}
+
 PBRT_GPU
 bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
     switch (shape_type) {

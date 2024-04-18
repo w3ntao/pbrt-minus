@@ -1,8 +1,8 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
-#include "pbrt/spectra/sampled_spectrum.h"
-#include "pbrt/spectra/sampled_wavelengths.h"
+#include "sampled_spectrum.h"
+#include "sampled_wavelengths.h"
 
 // Spectrum Function Declarations
 PBRT_CPU_GPU inline FloatType Blackbody(FloatType lambda, FloatType T) {

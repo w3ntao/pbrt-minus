@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "pbrt/base/shape.h"
+#include "pbrt/base/primitive.h"
 #include "pbrt/euclidean_space/bounds3.h"
 
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
@@ -96,7 +97,7 @@ struct BVHBuildNode {
 
 class HLBVH {
   public:
-    void init(const Shape **_primitives, MortonPrimitive *gpu_morton_primitives) {
+    void init(const Primitive **_primitives, MortonPrimitive *gpu_morton_primitives) {
         primitives = _primitives;
         morton_primitives = gpu_morton_primitives;
     }
@@ -108,9 +109,12 @@ class HLBVH {
     PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
     void build_bvh(std::vector<void *> &gpu_dynamic_pointers,
-                   const std::vector<const Shape *> &gpu_primitives);
+                   const std::vector<const Primitive *> &gpu_primitives);
+    // TODO: change SimplePrimitive to Primitives
 
-    const Shape **primitives;
+    const Primitive **primitives;
+    // TODO: change SimplePrimitive to Primitives
+
     MortonPrimitive *morton_primitives;
     BVHBuildNode *build_nodes;
 
@@ -121,6 +125,6 @@ class HLBVH {
                                               const Treelet *treelets, uint &build_node_count,
                                               uint depth, uint &max_depth);
     PBRT_GPU
-    uint partition_morton_primitives(const uint start, const uint end,
-                                     const uint8_t split_dimension, const FloatType split_val);
+    uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,
+                                     FloatType split_val);
 };

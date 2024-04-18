@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/spectra/sampled_wavelengths.h"
-#include "pbrt/spectra/sampled_spectrum.h"
-#include "pbrt/spectra/rgb.h"
+#include "pbrt/spectrum_util/sampled_wavelengths.h"
+#include "pbrt/spectrum_util/sampled_spectrum.h"
+#include "pbrt/spectrum_util/rgb.h"
 
 class RGBFilm;
 

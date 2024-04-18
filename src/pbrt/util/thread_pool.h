@@ -9,9 +9,9 @@
 class ThreadPool {
   public:
     ThreadPool() : quit(false), num_active_jobs(0) {
-        size_t num_threads = std::thread::hardware_concurrency();
+        uint num_threads = std::thread::hardware_concurrency();
 
-        for (size_t i = 0; i < num_threads; ++i) {
+        for (uint i = 0; i < num_threads; ++i) {
             threads.emplace_back([this] {
                 while (true) {
                     std::function<void()> next_job;
@@ -42,6 +42,8 @@ class ThreadPool {
                 }
             });
         }
+
+        printf("thread pool with %u threads initialized\n", num_threads);
     }
 
     ~ThreadPool() {

@@ -12,6 +12,13 @@ FloatType DenselySampledSpectrum::inner_product(const Spectrum &spectrum) const 
 }
 
 PBRT_CPU_GPU
+void DenselySampledSpectrum::init_from_spectrum(const Spectrum &spectrum) {
+    for (int lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
+        values[lambda - LAMBDA_MIN] = spectrum(lambda);
+    }
+}
+
+PBRT_CPU_GPU
 void DenselySampledSpectrum::init_from_pls_interleaved_samples(const FloatType *samples,
                                                                uint num_samples, bool normalize,
                                                                const Spectrum *cie_y) {
@@ -69,9 +76,9 @@ void DenselySampledSpectrum::init_cie_d(FloatType temperature, const FloatType *
 
     // Convert CCT to xy
     FloatType x = cct <= 7000 ? -4.607f * 1e9f / std::pow(cct, 3) + 2.9678f * 1e6f / sqr(cct) +
-                                 0.09911f * 1e3f / cct + 0.244063f
-                           : -2.0064f * 1e9f / std::pow(cct, 3) + 1.9018f * 1e6f / sqr(cct) +
-                                 0.24748f * 1e3f / cct + 0.23704f;
+                                    0.09911f * 1e3f / cct + 0.244063f
+                              : -2.0064f * 1e9f / std::pow(cct, 3) + 1.9018f * 1e6f / sqr(cct) +
+                                    0.24748f * 1e3f / cct + 0.23704f;
 
     FloatType y = -3 * x * x + 2.870f * x - 0.275f;
 

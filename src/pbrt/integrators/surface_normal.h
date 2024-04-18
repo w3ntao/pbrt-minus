@@ -1,18 +1,20 @@
 #pragma once
 
 #include "pbrt/base/ray.h"
-#include "pbrt/base/integrator.h"
 #include "pbrt/base/spectrum.h"
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/euclidean_space/frame.h"
-#include "pbrt/spectra/rgb_color_space.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 #include "pbrt/util/sampling.h"
 
 class SurfaceNormalIntegrator {
   public:
     void init(const RGBColorSpace *rgb_color_space) {
-        RGBAlbedoSpectrum::build_albedo_rgb(rgb_spectra, rgb_color_space);
+        auto scale = 0.01;
+        rgb_spectra[0].init(rgb_color_space, RGB(scale, 0, 0));
+        rgb_spectra[1].init(rgb_color_space, RGB(0, scale, 0));
+        rgb_spectra[2].init(rgb_color_space, RGB(0, 0, scale));
     }
 
     PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "pbrt/spectrum_util/constants.h"
+#include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/utility_math.h"
 #include "pbrt/util/sampling.h"
-#include "pbrt/spectra/constants.h"
-#include "pbrt/spectra/sampled_spectrum.h"
 
 // SampledWavelengths Definitions
 class SampledWavelengths {

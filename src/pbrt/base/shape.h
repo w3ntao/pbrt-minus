@@ -17,6 +17,9 @@ class Shape {
     PBRT_CPU_GPU
     Bounds3f bounds() const;
 
+    PBRT_CPU_GPU
+    FloatType area() const;
+
     PBRT_GPU
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 

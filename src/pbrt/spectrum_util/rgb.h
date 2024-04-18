@@ -21,6 +21,10 @@ class RGB {
         return isnan(r) || isnan(g) || isnan(b);
     }
 
+    PBRT_CPU_GPU FloatType max_component() const {
+        return std::max(std::max(r, g), b);
+    }
+
     PBRT_CPU_GPU bool operator==(const RGB &rhs) const {
         return r == rhs.r && g == rhs.g && b == rhs.b;
     }
@@ -96,8 +100,14 @@ class RGB {
         }
         }
     }
-};
 
-PBRT_CPU_GPU inline RGB operator*(FloatType scalar, const RGB &c) {
-    return RGB(c.r * scalar, c.g * scalar, c.b * scalar);
-}
+    PBRT_CPU_GPU
+    friend RGB operator*(FloatType scalar, const RGB &c) {
+        return RGB(c.r * scalar, c.g * scalar, c.b * scalar);
+    }
+
+    friend std::ostream &operator<<(std::ostream &stream, const RGB &rgb) {
+        stream << "RGB(" << rgb.r << ", " << rgb.g << ", " << rgb.b << ")";
+        return stream;
+    }
+};

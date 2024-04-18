@@ -96,6 +96,36 @@ class Transform {
         return scale(inv_tan_ang, inv_tan_ang, 1.0) * Transform(persp);
     }
 
+    PBRT_CPU_GPU
+    static Transform rotate_from_to(const Vector3f from, const Vector3f to) {
+        // Compute intermediate vector for vector reflection
+        const FloatType threshold = 0.72;
+        Vector3f refl;
+        if (std::abs(from.x) < threshold && std::abs(to.x) < threshold) {
+            refl = Vector3f(1, 0, 0);
+        } else if (std::abs(from.y) < threshold && std::abs(to.y) < threshold) {
+            refl = Vector3f(0, 1, 0);
+        } else {
+            refl = Vector3f(0, 0, 1);
+        }
+
+        // Initialize matrix _r_ for rotation
+        Vector3f u = refl - from;
+        Vector3f v = refl - to;
+
+        SquareMatrix<4> r;
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                // Initialize matrix element _r[i][j]_
+                r[i][j] = ((i == j) ? 1.0 : 0.0) - 2.0 / u.dot(u) * u[i] * u[j] -
+                          2 / v.dot(v) * v[i] * v[j] +
+                          4 * u.dot(v) / (u.dot(u) * v.dot(v)) * v[i] * u[j];
+            }
+        }
+
+        return Transform(r, r.transpose());
+    }
+
     static Transform lookat(const Point3f &position, const Point3f &look, const Vector3f &up) {
         auto world_from_camera = SquareMatrix<4>::zero();
         world_from_camera[0][3] = position.x;
@@ -246,6 +276,17 @@ class Transform {
         }
 
         return Ray(o.to_point3f(), d);
+    }
+
+    template <typename T>
+    PBRT_CPU_GPU Vector3<T> ApplyInverse(Vector3<T> v) const {
+        T x = v.x;
+        T y = v.y;
+        T z = v.z;
+
+        return Vector3<T>(inv_m[0][0] * x + inv_m[0][1] * y + inv_m[0][2] * z,
+                          inv_m[1][0] * x + inv_m[1][1] * y + inv_m[1][2] * z,
+                          inv_m[2][0] * x + inv_m[2][1] * y + inv_m[2][2] * z);
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Transform &transform) {

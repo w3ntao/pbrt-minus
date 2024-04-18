@@ -1,9 +1,12 @@
 #pragma once
 
-#include "pbrt/spectra/sampled_wavelengths.h"
-#include "pbrt/spectra/xyz.h"
+#include "pbrt/spectrum_util/sampled_wavelengths.h"
+#include "pbrt/spectrum_util/xyz.h"
 
 class DenselySampledSpectrum;
+class ConstantSpectrum;
+class RGBIlluminantSpectrum;
+class RGBAlbedoSpectrum;
 
 class Spectrum {
   public:
@@ -11,7 +14,15 @@ class Spectrum {
     void init(const DenselySampledSpectrum *densely_sampled_spectrum);
 
     PBRT_CPU_GPU
-    FloatType operator()(FloatType lambda) const;
+    void init(const ConstantSpectrum *constant_spectrum);
+
+    PBRT_CPU_GPU
+    void init(const RGBIlluminantSpectrum *rgb_illuminant_spectrum);
+
+    PBRT_CPU_GPU
+    void init(const RGBAlbedoSpectrum *rgb_albedo_spectrum);
+
+    PBRT_CPU_GPU FloatType operator()(FloatType lambda) const;
 
     PBRT_CPU_GPU
     FloatType inner_product(const Spectrum &spectrum) const {
@@ -42,9 +53,24 @@ class Spectrum {
 
   private:
     enum class SpectrumType {
-        densely_sampled,
+        densely_sampled_spectrum,
+        constant_spectrum,
+        rgb_illuminant_spectrum,
+        rgb_albedo_spectrum,
     };
 
     SpectrumType spectrum_type;
     void *spectrum_ptr;
+
+    PBRT_CPU_GPU
+    void report_error() const {
+        const char *error_msg = "\nSpectrum: not implemented for this type\n\n";
+
+        printf("%s", error_msg);
+#if defined(__CUDA_ARCH__)
+        asm("trap;");
+#else
+        throw std::runtime_error(error_msg);
+#endif
+    }
 };

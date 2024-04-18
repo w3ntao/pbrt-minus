@@ -2,9 +2,9 @@
 
 #include "pbrt/util/macro.h"
 #include "pbrt/base/spectrum.h"
-#include "pbrt/spectra/rgb.h"
-#include "pbrt/spectra/rgb_sigmoid_polynomial.h"
-#include "pbrt/spectra/rgb_to_spectrum_data.h"
+#include "rgb.h"
+#include "rgb_sigmoid_polynomial.h"
+#include "rgb_to_spectrum_data.h"
 
 class RGBColorSpace {
   public:

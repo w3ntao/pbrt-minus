@@ -1,13 +1,19 @@
 #pragma once
 
-#include "pbrt/spectra/xyz.h"
-#include "pbrt/spectra/constants.h"
+#include "xyz.h"
+#include "constants.h"
 
 class SampledSpectrum {
   public:
     PBRT_CPU_GPU SampledSpectrum() {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             values[idx] = NAN;
+        }
+    }
+
+    PBRT_CPU_GPU SampledSpectrum(const SampledSpectrum &s) {
+        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+            values[idx] = s.values[idx];
         }
     }
 
@@ -35,6 +41,15 @@ class SampledSpectrum {
         }
 
         return false;
+    }
+
+    PBRT_CPU_GPU SampledSpectrum clamp(FloatType low, FloatType high) const {
+        FloatType _values[NSpectrumSamples];
+        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+            _values[idx] = ::clamp(values[idx], low, high);
+        }
+
+        return SampledSpectrum(_values);
     }
 
     PBRT_CPU_GPU
@@ -167,6 +182,17 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     bool operator!=(const SampledSpectrum &s) const {
         return values != s.values;
+    }
+
+    PBRT_CPU_GPU
+    bool is_nonzero() const {
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
+            if (values[i] != 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     PBRT_CPU_GPU

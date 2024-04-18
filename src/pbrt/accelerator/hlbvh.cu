@@ -9,7 +9,7 @@
 constexpr int MORTON_SCALE = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
 
 __global__ void hlbvh_init_morton_primitives(MortonPrimitive *morton_primitives,
-                                             const Shape **primitives, uint num_primitives) {
+                                             const Primitive **primitives, uint num_primitives) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_primitives) {
         return;
@@ -52,7 +52,7 @@ __global__ void hlbvh_compute_morton_code(MortonPrimitive *morton_primitives,
 
 __global__ void hlbvh_collect_primitives_into_treelets(Treelet *treelets,
                                                        const MortonPrimitive *morton_primitives,
-                                                       const Shape **primitives,
+                                                       const Primitive **primitives,
                                                        uint num_total_primitives) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_total_primitives) {
@@ -315,7 +315,7 @@ PBRT_GPU std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray, Float
 };
 
 void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
-                      const std::vector<const Shape *> &gpu_primitives) {
+                      const std::vector<const Primitive *> &gpu_primitives) {
     printf("\n");
 
     auto start_top_bvh = std::chrono::system_clock::now();
@@ -331,11 +331,11 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
-    const Shape **gpu_primitives_array;
-    checkCudaErrors(
-        cudaMallocManaged((void **)&gpu_primitives_array, sizeof(Shape *) * num_total_primitives));
+    const Primitive **gpu_primitives_array;
+    checkCudaErrors(cudaMallocManaged((void **)&gpu_primitives_array,
+                                      sizeof(Primitive *) * num_total_primitives));
     checkCudaErrors(cudaMemcpy(gpu_primitives_array, gpu_primitives.data(),
-                               sizeof(Shape *) * num_total_primitives, cudaMemcpyHostToDevice));
+                               sizeof(Primitive *) * num_total_primitives, cudaMemcpyHostToDevice));
 
     Treelet *sparse_treelets;
     checkCudaErrors(

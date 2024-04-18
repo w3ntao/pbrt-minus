@@ -16,14 +16,19 @@
 #include "pbrt/films/pixel_sensor.h"
 #include "pbrt/films/rgb_film.h"
 
+#include "pbrt/lights/diffuse_area_light.h"
+
+#include "pbrt/primitives/simple_primitives.h"
+#include "pbrt/primitives/geometric_primitive.h"
+
 #include "pbrt/samplers/independent.h"
 
 #include "pbrt/shapes/triangle.h"
 
-#include "pbrt/spectra/constants.h"
-#include "pbrt/spectra/color_encoding.h"
-#include "pbrt/spectra/rgb_color_space.h"
-#include "pbrt/spectra/sampled_wavelengths.h"
+#include "pbrt/spectrum_util/constants.h"
+#include "pbrt/spectrum_util/color_encoding.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
+#include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/spectra/densely_sampled_spectrum.h"
 
 namespace GPU {
@@ -94,14 +99,44 @@ class Renderer {
     }
 };
 
+__global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= mesh->triangles_num) {
+        return;
+    }
+
+    triangles[worker_idx].init(worker_idx, mesh);
+}
+
 template <typename S>
-static __global__ void build_shapes(Shape *shapes, const S *concrete_shapes, uint num) {
+static __global__ void init_shapes(Shape *shapes, const S *concrete_shapes, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
     }
 
     shapes[worker_idx].init(&concrete_shapes[worker_idx]);
+}
+
+static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives,
+                                              const Shape *shapes, const DiffuseMaterial *material,
+                                              uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    simple_primitives[idx].init(&shapes[idx], material);
+}
+
+template <typename T>
+static __global__ void init_primitives(Primitive *primitives, T *_primitives, uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    primitives[idx].init(&_primitives[idx]);
 }
 
 template <typename T>
@@ -121,15 +156,6 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     }
 
     pixels[idx].init_zero();
-}
-
-__global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= mesh->triangle_num) {
-        return;
-    }
-
-    triangles[worker_idx].init(worker_idx, mesh);
 }
 
 __global__ void parallel_render(Renderer *renderer, int num_samples) {

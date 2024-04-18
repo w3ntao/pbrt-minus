@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/spectra/constants.h"
-#include "pbrt/spectra/black_body_spectrum.h"
+#include "pbrt/spectrum_util/constants.h"
+#include "pbrt/spectrum_util/black_body_spectrum.h"
 
 class Spectrum;
 
@@ -11,7 +11,11 @@ class DenselySampledSpectrum {
     FloatType inner_product(const Spectrum &spectrum) const;
 
     PBRT_CPU_GPU
-    void init_from_pls_lambdas_values(const FloatType *_lambdas, const FloatType *_values, uint _length) {
+    void init_from_spectrum(const Spectrum &spectrum);
+
+    PBRT_CPU_GPU
+    void init_from_pls_lambdas_values(const FloatType *_lambdas, const FloatType *_values,
+                                      uint _length) {
         for (uint lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
             values[lambda - LAMBDA_MIN] =
                 piecewise_linear_spectrum_eval(lambda, _lambdas, _values, _length);
@@ -19,8 +23,8 @@ class DenselySampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    void init_from_pls_interleaved_samples(const FloatType *samples, uint num_samples, bool normalize,
-                                           const Spectrum *cie_y);
+    void init_from_pls_interleaved_samples(const FloatType *samples, uint num_samples,
+                                           bool normalize, const Spectrum *cie_y);
 
     template <typename F>
     PBRT_CPU_GPU void init_with_sample_function(F func, uint lambda_min = LAMBDA_MIN,
@@ -87,7 +91,7 @@ class DenselySampledSpectrum {
 
     PBRT_CPU_GPU
     FloatType piecewise_linear_spectrum_eval(FloatType lambda, const FloatType *lambdas,
-                                          const FloatType *_values, uint length) {
+                                             const FloatType *_values, uint length) {
         if (lambda < LAMBDA_MIN || lambda > LAMBDA_MAX) {
             return 0.0;
         }

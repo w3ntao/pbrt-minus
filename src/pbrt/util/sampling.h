@@ -2,7 +2,7 @@
 
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/vector3.h"
-#include "pbrt/spectra/constants.h"
+#include "pbrt/spectrum_util/constants.h"
 #include "pbrt/util/utility_math.h"
 
 PBRT_CPU_GPU
@@ -33,6 +33,16 @@ inline Point2f sample_uniform_disk_concentric(Point2f u) {
     }
 
     return r * Point2f(std::cos(theta), std::sin(theta));
+}
+
+PBRT_CPU_GPU
+inline Vector3f sample_uniform_sphere(Point2f u) {
+    FloatType z = 1 - 2 * u[0];
+    FloatType r = safe_sqrt(1 - sqr(z));
+
+    FloatType phi = 2 * compute_pi() * u[1];
+
+    return {r * std::cos(phi), r * std::sin(phi), z};
 }
 
 PBRT_CPU_GPU

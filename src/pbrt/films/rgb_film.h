@@ -4,8 +4,8 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/squared_matrix.h"
 #include "pbrt/films/pixel_sensor.h"
-#include "pbrt/spectra/rgb.h"
-#include "pbrt/spectra/rgb_color_space.h"
+#include "pbrt/spectrum_util/rgb.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
 
 struct Pixel {
     RGB rgb_sum;
