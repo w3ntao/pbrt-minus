@@ -110,10 +110,8 @@ class HLBVH {
 
     void build_bvh(std::vector<void *> &gpu_dynamic_pointers,
                    const std::vector<const Primitive *> &gpu_primitives);
-    // TODO: change SimplePrimitive to Primitives
 
     const Primitive **primitives;
-    // TODO: change SimplePrimitive to Primitives
 
     MortonPrimitive *morton_primitives;
     BVHBuildNode *build_nodes;

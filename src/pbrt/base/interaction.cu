@@ -5,11 +5,9 @@
 
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
-
-#include "pbrt/materials/diffuse_material.h"
-// TODO: change DiffuseMaterial to Material
 #include "pbrt/lights/diffuse_area_light.h"
+
+#include "pbrt/spectrum_util/sampled_wavelengths.h"
 
 PBRT_GPU
 void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *camera,
@@ -52,7 +50,7 @@ void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *cam
 }
 
 PBRT_GPU
-void SurfaceInteraction::set_intersection_properties(const DiffuseMaterial *_material,
+void SurfaceInteraction::set_intersection_properties(const Material *_material,
                                                      const DiffuseAreaLight *_area_light) {
     material = _material;
     area_light = _area_light;

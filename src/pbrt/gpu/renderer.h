@@ -92,7 +92,7 @@ static __global__ void init_shapes(Shape *shapes, const S *concrete_shapes, uint
 }
 
 static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives,
-                                              const Shape *shapes, const DiffuseMaterial *material,
+                                              const Shape *shapes, const Material *material,
                                               uint length) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= length) {

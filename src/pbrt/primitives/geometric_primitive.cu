@@ -5,10 +5,10 @@
 #include "pbrt/lights/diffuse_area_light.h"
 
 PBRT_CPU_GPU
-void GeometricPrimitive::init(const Shape *_shape_ptr, const DiffuseMaterial *_diffuse_material,
+void GeometricPrimitive::init(const Shape *_shape_ptr, const Material *_material,
                               const DiffuseAreaLight *_area_light) {
     shape_ptr = _shape_ptr;
-    diffuse_material = _diffuse_material;
+    material = _material;
     area_light = _area_light;
 }
 
@@ -30,6 +30,6 @@ std::optional<ShapeIntersection> GeometricPrimitive::intersect(const Ray &ray,
         return {};
     }
 
-    si->interaction.set_intersection_properties(diffuse_material, area_light);
+    si->interaction.set_intersection_properties(material, area_light);
     return si;
 }

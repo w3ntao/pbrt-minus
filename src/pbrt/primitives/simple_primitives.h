@@ -2,14 +2,13 @@
 
 #include "pbrt/base/shape.h"
 #include "pbrt/base/material.h"
-#include "pbrt/materials/diffuse_material.h"
 
 class SimplePrimitive {
   public:
     PBRT_CPU_GPU
-    void init(const Shape *_shape_ptr, const DiffuseMaterial *_diffuse_material) {
+    void init(const Shape *_shape_ptr, const Material *_material) {
         shape_ptr = _shape_ptr;
-        diffuse_material = _diffuse_material;
+        material = _material;
     }
 
     PBRT_CPU_GPU
@@ -29,13 +28,11 @@ class SimplePrimitive {
             return {};
         }
 
-        si->interaction.set_intersection_properties(diffuse_material, nullptr);
+        si->interaction.set_intersection_properties(material, nullptr);
         return si;
     }
 
   private:
     const Shape *shape_ptr;
-
-    // TODO: progress 2024/04/19: generalize this material
-    const DiffuseMaterial *diffuse_material;
+    const Material *material;
 };

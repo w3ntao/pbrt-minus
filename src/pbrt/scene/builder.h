@@ -62,8 +62,7 @@ class GraphicsState {
 
     Transform current_transform;
     bool reverse_orientation = false;
-    DiffuseMaterial *current_material = nullptr;
-    // TODO: change DiffuseMaterial to Material
+    Material *current_material = nullptr;
 
     std::optional<AreaLightEntity> area_light_entity;
 };
@@ -203,39 +202,36 @@ class SceneBuilder {
         ConstantSpectrum *constant_grey;
         Spectrum *spectrum_grey;
         SpectrumConstantTexture *texture_grey;
-        DiffuseMaterial *default_material;
+        DiffuseMaterial *default_diffuse_material;
+        Material *default_material;
 
         checkCudaErrors(cudaMallocManaged((void **)&constant_grey, sizeof(ConstantSpectrum)));
         checkCudaErrors(cudaMallocManaged((void **)&spectrum_grey, sizeof(Spectrum)));
         checkCudaErrors(cudaMallocManaged((void **)&texture_grey, sizeof(SpectrumConstantTexture)));
-        checkCudaErrors(cudaMallocManaged((void **)&default_material, sizeof(DiffuseMaterial)));
+        checkCudaErrors(
+            cudaMallocManaged((void **)&default_diffuse_material, sizeof(DiffuseMaterial)));
+        checkCudaErrors(cudaMallocManaged((void **)&default_material, sizeof(Material)));
 
         constant_grey->init(0.5);
         spectrum_grey->init(constant_grey);
         texture_grey->init(spectrum_grey);
-        default_material->init(texture_grey);
+        default_diffuse_material->init(texture_grey);
+        default_material->init(default_diffuse_material);
 
         graphics_state.current_material = default_material;
 
         gpu_dynamic_pointers.push_back(constant_grey);
         gpu_dynamic_pointers.push_back(spectrum_grey);
         gpu_dynamic_pointers.push_back(texture_grey);
+        gpu_dynamic_pointers.push_back(default_diffuse_material);
         gpu_dynamic_pointers.push_back(default_material);
     }
 
     ~SceneBuilder() {
-        auto start = std::chrono::system_clock::now();
-
         for (auto ptr : gpu_dynamic_pointers) {
             checkCudaErrors(cudaFree(ptr));
         }
         checkCudaErrors(cudaGetLastError());
-
-        const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
-
-        std::cout << std::fixed << std::setprecision(1) << "GPU resource release took "
-                  << duration.count() << " seconds.\n"
-                  << std::flush;
     }
 
     static std::vector<uint> group_tokens(const std::vector<Token> &tokens) {
@@ -463,6 +459,7 @@ class SceneBuilder {
             Spectrum *reflectance_spectrum;
             SpectrumConstantTexture *spectrum_constant_texture;
             DiffuseMaterial *diffuse_material;
+            Material *material;
 
             checkCudaErrors(
                 cudaMallocManaged((void **)&_reflectance_spectrum, sizeof(RGBAlbedoSpectrum)));
@@ -470,18 +467,21 @@ class SceneBuilder {
             checkCudaErrors(cudaMallocManaged((void **)&spectrum_constant_texture,
                                               sizeof(SpectrumConstantTexture)));
             checkCudaErrors(cudaMallocManaged((void **)&diffuse_material, sizeof(DiffuseMaterial)));
+            checkCudaErrors(cudaMallocManaged((void **)&material, sizeof(Material)));
 
             _reflectance_spectrum->init(renderer->global_variables->rgb_color_space, reflectance);
             reflectance_spectrum->init(_reflectance_spectrum);
             spectrum_constant_texture->init(reflectance_spectrum);
             diffuse_material->init(spectrum_constant_texture);
+            material->init(diffuse_material);
 
             gpu_dynamic_pointers.push_back(_reflectance_spectrum);
             gpu_dynamic_pointers.push_back(reflectance_spectrum);
             gpu_dynamic_pointers.push_back(spectrum_constant_texture);
             gpu_dynamic_pointers.push_back(diffuse_material);
+            gpu_dynamic_pointers.push_back(material);
 
-            graphics_state.current_material = diffuse_material;
+            graphics_state.current_material = material;
             return;
         }
 
@@ -700,11 +700,6 @@ class SceneBuilder {
                 checkCudaErrors(cudaMallocManaged((void **)&geometric_primitives,
                                                   sizeof(GeometricPrimitive) * num_triangles));
 
-                const Spectrum *cie_xyz[3];
-                renderer->global_variables->get_cie_xyz(cie_xyz);
-
-                auto cie_y = cie_xyz[1];
-
                 for (uint idx = 0; idx < num_triangles; idx++) {
                     // TODO: rewrite this to GPU batch process init()?
                     diffuse_area_lights[idx].init(render_from_object,
@@ -728,7 +723,6 @@ class SceneBuilder {
                 for (uint idx = 0; idx < num_triangles; idx++) {
                     gpu_primitives.push_back(&primitives[idx]);
                 }
-                // TODO: rewrite gpu_primitives to Primitives
 
                 gpu_dynamic_pointers.push_back(diffuse_area_lights);
                 gpu_dynamic_pointers.push_back(geometric_primitives);
