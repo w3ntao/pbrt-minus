@@ -2,10 +2,10 @@
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 
-void RGBIlluminantSpectrum::init(const RGB &rgb, const RGBColorSpace &rgb_color_space) {
-    illuminant = rgb_color_space.illuminant;
+void RGBIlluminantSpectrum::init(const RGB &rgb, const RGBColorSpace *rgb_color_space) {
+    illuminant = rgb_color_space->illuminant;
     scale = 2.0 * rgb.max_component();
-    rsp = rgb_color_space.to_rgb_coefficients(scale > 0.0 ? rgb / scale : RGB(0.0, 0.0, 0.0));
+    rsp = rgb_color_space->to_rgb_coefficients(scale > 0.0 ? rgb / scale : RGB(0.0, 0.0, 0.0));
 }
 
 PBRT_CPU_GPU

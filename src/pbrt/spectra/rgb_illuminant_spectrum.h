@@ -9,7 +9,7 @@ class RGBColorSpace;
 
 class RGBIlluminantSpectrum {
   public:
-    void init(const RGB &rgb, const RGBColorSpace &rgb_color_space);
+    void init(const RGB &rgb, const RGBColorSpace *rgb_color_space);
 
     PBRT_CPU_GPU
     FloatType operator()(FloatType lambda) const;

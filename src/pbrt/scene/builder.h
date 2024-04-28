@@ -707,9 +707,9 @@ class SceneBuilder {
 
                 for (uint idx = 0; idx < num_triangles; idx++) {
                     // TODO: rewrite this to GPU batch process init()?
-                    diffuse_area_lights[idx].init(
-                        render_from_object, graphics_state.area_light_entity->parameters,
-                        &shapes[idx], *(renderer->global_variables->rgb_color_space), *cie_y);
+                    diffuse_area_lights[idx].init(render_from_object,
+                                                  graphics_state.area_light_entity->parameters,
+                                                  &shapes[idx], renderer->global_variables);
 
                     geometric_primitives[idx].init(&shapes[idx], graphics_state.current_material,
                                                    &diffuse_area_lights[idx]);

@@ -3,18 +3,17 @@
 #include "pbrt/base/shape.h"
 #include "pbrt/base/spectrum.h"
 
+#include "pbrt/gpu/global_variable.h"
+
 #include "pbrt/scene/parameter_dict.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 
 void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterDict &parameters,
-                            const Shape *_shape, const RGBColorSpace &rgb_color_space,
-                            const Spectrum &cie_y) {
-    // TODO: merge RGBColorSpace and Spectrum cie_y into 1 GlobalVariable
-    
+                            const Shape *_shape, const GPU::GlobalVariable *global_variable) {
     auto rgb_l = parameters.get_rgb("L", std::nullopt);
 
     RGBIlluminantSpectrum rgb_illuminant_spectrum_l;
-    rgb_illuminant_spectrum_l.init(rgb_l, rgb_color_space);
+    rgb_illuminant_spectrum_l.init(rgb_l, global_variable->rgb_color_space);
 
     scale = parameters.get_float("scale", std::optional(1.0));
     two_sided = parameters.get_bool("twosided", std::optional(false));
@@ -23,7 +22,8 @@ void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterD
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
     }
 
-    scale /= rgb_illuminant_spectrum_l.to_photometric(cie_y);
+    const auto cie_y = global_variable->cie_xyz[1];
+    scale /= rgb_illuminant_spectrum_l.to_photometric(*cie_y);
 
     auto phi_v = parameters.get_float("power", std::optional(-1.0));
     if (phi_v > 0.0) {
@@ -40,8 +40,6 @@ void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterD
     spectrum_l.init(&rgb_illuminant_spectrum_l);
 
     l_emit.init_from_spectrum(spectrum_l);
-
-    printf("wentao: implementing DiffuseAreaLight::init()\n\n");
 }
 
 PBRT_GPU

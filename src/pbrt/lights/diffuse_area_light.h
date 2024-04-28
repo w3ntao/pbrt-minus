@@ -8,10 +8,14 @@ class RGBColorSpace;
 class Spectrum;
 class Shape;
 
+namespace GPU {
+class GlobalVariable;
+}
+
 class DiffuseAreaLight {
   public:
     void init(const Transform &render_from_light, const ParameterDict &parameters,
-              const Shape *_shape, const RGBColorSpace &rgb_color_space, const Spectrum &cie_y);
+              const Shape *_shape, const GPU::GlobalVariable *global_variable);
 
     PBRT_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
