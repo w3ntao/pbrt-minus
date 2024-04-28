@@ -8,10 +8,10 @@ struct DiffuseBxDF {
   public:
     PBRT_GPU DiffuseBxDF() : r(SampledSpectrum::same_value(NAN)) {}
 
-    PBRT_GPU explicit DiffuseBxDF(const SampledSpectrum &_r) : r(_r) {}
-
-    PBRT_GPU explicit DiffuseBxDF(const DiffuseBxDF &diffuse_bxdf) {
-        printf("duang duang\n");
+    PBRT_GPU DiffuseBxDF(const SampledSpectrum &_r) {
+        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+            r[idx] = _r[idx];
+        }
     }
 
     PBRT_GPU
@@ -59,6 +59,6 @@ struct DiffuseBxDF {
         return cosine_hemisphere_pdf(wi.abs_cos_theta());
     }
 
-    // private:
+  private:
     SampledSpectrum r;
 };

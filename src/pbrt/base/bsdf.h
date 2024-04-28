@@ -1,31 +1,26 @@
 #pragma once
 
+#include "pbrt/base/bxdf.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/frame.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/base/bxdf.h"
-#include "pbrt/bxdfs/diffuse_bxdf.h"
 
-class BxDF;
 class DiffuseBxDF;
 
 class BSDF {
   public:
-    PBRT_GPU void init(const Normal3f &ns, const Vector3f &dpdus);
+    PBRT_GPU void init_frame(const Normal3f &ns, const Vector3f &dpdus);
+
+    PBRT_GPU void init_bxdf(const DiffuseBxDF *diffuse_bxdf);
 
     PBRT_GPU
     SampledSpectrum f(const Vector3f &woRender, const Vector3f &wiRender,
                       TransportMode mode = TransportMode::Radiance) const;
 
-    enum class BxDFType {
-        null,
-        diffuse_bxdf,
-    };
-
-    Frame shading_frame;
-
-    BxDFType bxdf_type;
-    DiffuseBxDF diffuse_bxdf;
+    PBRT_GPU
+    bool has_null_bxdf() const {
+        return bxdf.has_type_null();
+    }
 
   private:
     PBRT_CPU_GPU
@@ -49,4 +44,7 @@ class BSDF {
         throw std::runtime_error(error_msg);
 #endif
     }
+
+    Frame shading_frame;
+    BxDF bxdf;
 };

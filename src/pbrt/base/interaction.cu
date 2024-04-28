@@ -59,16 +59,18 @@ void SurfaceInteraction::set_intersection_properties(const DiffuseMaterial *_mat
 }
 
 PBRT_GPU
-void SurfaceInteraction::get_diffuse_bsdf(BSDF &bsdf, const Ray &ray, SampledWavelengths &lambda,
-                                          const Camera *camera, Sampler &sampler) {
+void SurfaceInteraction::init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,
+                                           SampledWavelengths &lambda, const Camera *camera,
+                                           Sampler &sampler) {
     auto material_eval_context = MaterialEvalContext(*this);
-    bsdf.init(material_eval_context.ns, material_eval_context.dpdus);
+    bsdf.init_frame(material_eval_context.ns, material_eval_context.dpdus);
 
-    material->get_diffuse_bsdf(bsdf, material_eval_context, lambda);
+    diffuse_bxdf = material->get_diffuse_bsdf(material_eval_context, lambda);
+    bsdf.init_bxdf(&diffuse_bxdf);
 }
 
 PBRT_GPU
-SampledSpectrum SurfaceInteraction::le(Vector3f w, const SampledWavelengths &lambda) const {
+SampledSpectrum SurfaceInteraction::le(const Vector3f w, const SampledWavelengths &lambda) const {
     if (area_light == nullptr) {
         return SampledSpectrum::same_value(0.0);
     }

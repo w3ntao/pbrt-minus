@@ -87,10 +87,10 @@ class SurfaceInteraction : public Interaction {
     PBRT_GPU
     void set_intersection_properties(const DiffuseMaterial *_material,
                                      const DiffuseAreaLight *_area_light);
-    
+
     PBRT_GPU
-    void get_diffuse_bsdf(BSDF &bsdf, const Ray &ray, SampledWavelengths &lambda,
-                          const Camera *camera, Sampler &sampler);
+    void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,
+                           SampledWavelengths &lambda, const Camera *camera, Sampler &sampler);
 
     PBRT_GPU SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
 };

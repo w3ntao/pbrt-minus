@@ -126,10 +126,10 @@ struct BSDFSample {
 class BxDF {
   public:
     PBRT_GPU
-    BxDF(DiffuseBxDF *diffuse_bxdf);
+    BxDF() : bxdf_type(BxDFType::null), bxdf_ptr(nullptr) {}
 
     PBRT_GPU
-    ~BxDF();
+    void init(const DiffuseBxDF *diffuse_bxdf);
 
     PBRT_GPU
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;
@@ -143,6 +143,11 @@ class BxDF {
     FloatType pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 
+    PBRT_GPU
+    bool has_type_null() const {
+        return bxdf_type == BxDFType::null;
+    }
+
   private:
     PBRT_CPU_GPU
     void report_error() const {
@@ -155,9 +160,10 @@ class BxDF {
     }
 
     enum class BxDFType {
+        null,
         diffuse_bxdf,
     };
 
     BxDFType bxdf_type;
-    void *bxdf_ptr;
+    const void *bxdf_ptr;
 };

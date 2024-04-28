@@ -2,23 +2,9 @@
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 
 PBRT_GPU
-BxDF::BxDF(DiffuseBxDF *diffuse_bxdf) {
+void BxDF::init(const DiffuseBxDF *diffuse_bxdf) {
     bxdf_type = BxDFType::diffuse_bxdf;
     bxdf_ptr = diffuse_bxdf;
-}
-
-PBRT_GPU
-BxDF::~BxDF() {
-    return;
-    // TODO: progress 2024/04/26:  bug here
-
-    switch (bxdf_type) {
-    case (BxDFType::diffuse_bxdf): {
-        delete (DiffuseBxDF *)bxdf_ptr;
-        return;
-    }
-    }
-    report_error();
 }
 
 PBRT_GPU

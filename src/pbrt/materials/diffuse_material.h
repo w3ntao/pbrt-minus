@@ -13,10 +13,8 @@ class DiffuseMaterial {
     void init(const SpectrumConstantTexture *_reflectance);
 
     PBRT_GPU
-    void get_diffuse_bsdf(BSDF &bsdf, const MaterialEvalContext &ctx,
-                          SampledWavelengths &lambda) const;
+    DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
-    // TODO: make this private
-  public:
+  private:
     const SpectrumConstantTexture *reflectance = nullptr;
 };
