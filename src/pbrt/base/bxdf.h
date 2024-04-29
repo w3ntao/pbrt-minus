@@ -149,16 +149,6 @@ class BxDF {
     }
 
   private:
-    PBRT_CPU_GPU
-    void report_error() const {
-        printf("\nBxDF: this type is not implemented\n");
-#if defined(__CUDA_ARCH__)
-        asm("trap;");
-#else
-        throw std::runtime_error("BxDF: this type is not implemented\n");
-#endif
-    }
-
     enum class BxDFType {
         null,
         diffuse_bxdf,

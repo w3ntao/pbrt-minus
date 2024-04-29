@@ -33,13 +33,4 @@ class Primitive {
 
     PrimitiveType primitive_type;
     void *primitive_ptr;
-
-    PBRT_CPU_GPU void report_error() const {
-        printf("\nPrimitive: this type is not implemented\n");
-#if defined(__CUDA_ARCH__)
-        asm("trap;");
-#else
-        throw std::runtime_error("Primitive: this type is not implemented\n");
-#endif
-    }
 };

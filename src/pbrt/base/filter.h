@@ -29,13 +29,4 @@ class Filter {
 
     void *filter_ptr;
     FilterType filter_type;
-
-    PBRT_CPU_GPU void report_error() const {
-        printf("\nFilter: this type is not implemented\n");
-#if defined(__CUDA_ARCH__)
-        asm("trap;");
-#else
-        throw std::runtime_error("Filter: this type is not implemented\n");
-#endif
-    }
 };

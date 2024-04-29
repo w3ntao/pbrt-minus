@@ -30,13 +30,4 @@ class Integrator {
 
     IntegratorType integrator_type;
     const void *integrator_ptr;
-
-    PBRT_CPU_GPU void report_error() const {
-        printf("\nIntegrator: this type is not implemented\n");
-#if defined(__CUDA_ARCH__)
-        asm("trap;");
-#else
-        throw std::runtime_error("Integrator: this type is not implemented\n");
-#endif
-    }
 };

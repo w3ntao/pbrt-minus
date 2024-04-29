@@ -61,16 +61,4 @@ class Spectrum {
 
     SpectrumType spectrum_type;
     void *spectrum_ptr;
-
-    PBRT_CPU_GPU
-    void report_error() const {
-        const char *error_msg = "\nSpectrum: not implemented for this type\n\n";
-
-        printf("%s", error_msg);
-#if defined(__CUDA_ARCH__)
-        asm("trap;");
-#else
-        throw std::runtime_error(error_msg);
-#endif
-    }
 };

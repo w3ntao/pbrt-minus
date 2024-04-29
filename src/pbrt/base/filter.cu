@@ -14,6 +14,6 @@ FilterSample Filter::sample(Point2f u) const {
     }
     }
 
-    report_error();
+    report_function_error_and_exit(__func__);
     return {};
 }

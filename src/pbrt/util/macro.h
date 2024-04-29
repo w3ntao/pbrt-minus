@@ -28,4 +28,14 @@ inline void _check_cuda(cudaError_t error_code, char const *const func, const ch
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define checkCudaErrors(val) _check_cuda((val), #val, __FILE__, __LINE__)
 
+PBRT_CPU_GPU
+static void report_function_error_and_exit(const char *func_name) {
+#if defined(__CUDA_ARCH__)
+    printf("\nerror at `%s()`\n\n", func_name);
+    asm("trap;");
+#else
+    throw std::runtime_error("\nerror at `" + std::string(func_name) + "()`\n\n");
+#endif
+}
+
 static const bool DEBUGGING = true;

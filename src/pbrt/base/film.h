@@ -24,14 +24,4 @@ class Film {
 
     void *film_ptr;
     FilmType film_type;
-
-    PBRT_CPU_GPU
-    void report_error() const {
-        printf("\nFilm: this type is not implemented\n");
-#if defined(__CUDA_ARCH__)
-        asm("trap;");
-#else
-        throw std::runtime_error("Film: this type is not implemented\n");
-#endif
-    }
 };

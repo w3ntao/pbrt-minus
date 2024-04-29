@@ -27,8 +27,6 @@ class GeometricPrimitive {
 
   private:
     const Shape *shape_ptr;
-
-    // TODO: progress 2024/04/19: generalize this material
     const Material *material;
     const DiffuseAreaLight *area_light;
 };

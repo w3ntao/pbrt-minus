@@ -39,16 +39,4 @@ class Material {
 
     void *material_ptr;
     MaterialType material_type;
-
-    PBRT_CPU_GPU
-    void report_error() const {
-        const char *error_msg = "\nMaterial: this type is not implemented\n\n";
-
-        printf("%s", error_msg);
-#if defined(__CUDA_ARCH__)
-        asm("trap;");
-#else
-        throw std::runtime_error(error_msg);
-#endif
-    }
 };

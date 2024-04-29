@@ -153,7 +153,6 @@ class SceneBuilder {
     PreComputedSpectrum pre_computed_spectrum;
     std::vector<void *> gpu_dynamic_pointers;
     std::vector<const Primitive *> gpu_primitives;
-    //  TODO: change SimplePrimitive to Primitive
 
     std::optional<Point2i> film_resolution = std::nullopt;
     std::string output_filename;
@@ -701,7 +700,6 @@ class SceneBuilder {
                                                   sizeof(GeometricPrimitive) * num_triangles));
 
                 for (uint idx = 0; idx < num_triangles; idx++) {
-                    // TODO: rewrite this to GPU batch process init()?
                     diffuse_area_lights[idx].init(render_from_object,
                                                   graphics_state.area_light_entity->parameters,
                                                   &shapes[idx], renderer->global_variables);

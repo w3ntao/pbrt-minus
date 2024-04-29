@@ -15,7 +15,7 @@ Bounds3f Shape::bounds() const {
     }
     }
 
-    report_error();
+    report_function_error_and_exit(__func__);
     return {};
 }
 
@@ -27,7 +27,7 @@ FloatType Shape::area() const {
     }
     }
 
-    report_error();
+    report_function_error_and_exit(__func__);
     return NAN;
 }
 
@@ -39,7 +39,7 @@ bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
     }
     }
 
-    report_error();
+    report_function_error_and_exit(__func__);
     return false;
 }
 
@@ -51,6 +51,6 @@ std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_ma
     }
     }
 
-    report_error();
+    report_function_error_and_exit(__func__);
     return {};
 }
