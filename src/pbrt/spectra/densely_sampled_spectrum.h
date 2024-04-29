@@ -8,10 +8,10 @@ class Spectrum;
 class DenselySampledSpectrum {
   public:
     PBRT_CPU_GPU
-    FloatType inner_product(const Spectrum &spectrum) const;
+    FloatType inner_product(const Spectrum *spectrum) const;
 
     PBRT_CPU_GPU
-    void init_from_spectrum(const Spectrum &spectrum);
+    void init_from_spectrum(const Spectrum *spectrum);
 
     PBRT_CPU_GPU
     void init_from_pls_lambdas_values(const FloatType *_lambdas, const FloatType *_values,

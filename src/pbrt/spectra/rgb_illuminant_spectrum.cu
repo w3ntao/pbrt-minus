@@ -25,10 +25,10 @@ SampledSpectrum RGBIlluminantSpectrum::sample(const SampledWavelengths &lambda) 
 }
 
 PBRT_CPU_GPU
-FloatType RGBIlluminantSpectrum::inner_product(const Spectrum &spectrum) const {
+FloatType RGBIlluminantSpectrum::inner_product(const Spectrum *spectrum) const {
     FloatType sum = 0;
     for (int lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
-        sum += (*this)(lambda)*spectrum(lambda);
+        sum += (*this)(lambda) * (*spectrum)(lambda);
     }
 
     return sum;

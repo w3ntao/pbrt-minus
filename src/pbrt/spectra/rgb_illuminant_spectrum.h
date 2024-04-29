@@ -18,7 +18,7 @@ class RGBIlluminantSpectrum {
     SampledSpectrum sample(const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    FloatType to_photometric(const Spectrum &cie_y) const {
+    FloatType to_photometric(const Spectrum *cie_y) const {
         return inner_product(cie_y);
     }
 
@@ -28,5 +28,5 @@ class RGBIlluminantSpectrum {
     const Spectrum *illuminant;
 
     PBRT_CPU_GPU
-    FloatType inner_product(const Spectrum &spectrum) const;
+    FloatType inner_product(const Spectrum *spectrum) const;
 };

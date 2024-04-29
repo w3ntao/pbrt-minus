@@ -406,7 +406,7 @@ class SceneBuilder {
             const Spectrum *cie_xyz[3];
             renderer->global_variables->get_cie_xyz(cie_xyz);
             const auto cie_y = cie_xyz[1];
-            auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(*cie_y);
+            auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(cie_y);
 
             AmbientOcclusionIntegrator *ambient_occlusion_integrator;
             checkCudaErrors(cudaMallocManaged((void **)&ambient_occlusion_integrator,

@@ -23,7 +23,7 @@ void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterD
     }
 
     const auto cie_y = global_variable->cie_xyz[1];
-    scale /= rgb_illuminant_spectrum_l.to_photometric(*cie_y);
+    scale /= rgb_illuminant_spectrum_l.to_photometric(cie_y);
 
     auto phi_v = parameters.get_float("power", std::optional(-1.0));
     if (phi_v > 0.0) {
@@ -39,7 +39,7 @@ void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterD
     Spectrum spectrum_l;
     spectrum_l.init(&rgb_illuminant_spectrum_l);
 
-    l_emit.init_from_spectrum(spectrum_l);
+    l_emit.init_from_spectrum(&spectrum_l);
 }
 
 PBRT_GPU
