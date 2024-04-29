@@ -14,6 +14,9 @@ class Sampler {
     PBRT_GPU
     void start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension);
 
+    PBRT_CPU_GPU
+    uint get_samples_per_pixel() const;
+
     PBRT_GPU FloatType get_1d();
 
     PBRT_GPU Point2f get_2d();

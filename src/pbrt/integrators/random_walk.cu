@@ -37,10 +37,7 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWave
     auto fcos = SampledSpectrum::same_value(NAN);
     BSDF bsdf;
     Vector3f wp(NAN, NAN, NAN);
-
-    isect.compute_differentials(ray, camera, 4);
-    // TODO: get samples_per_pixel from sampler
-
+    
     bool material_type_is_diffuse = true;
     if (material_type_is_diffuse) {
         DiffuseBxDF diffuse_bxdf;

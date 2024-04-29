@@ -56,9 +56,6 @@ class Renderer {
         auto sampler = &samplers[pixel_index];
         sampler->start_pixel_sample(pixel_index, 0, 0);
 
-        // auto sampler = IndependentSampler(pixel_index);
-        //  TODO: progress 2024/04/29 replace IndependentSampler with NewIndependentSampler
-
         for (uint i = 0; i < num_samples; ++i) {
             auto camera_sample = sampler->get_camera_sample(p_pixel, filter);
             auto lu = sampler->get_1d();
@@ -67,10 +64,10 @@ class Renderer {
             auto ray = camera->generate_ray(camera_sample);
 
             auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, bvh, sampler);
-
+            
             if (radiance_l.has_nan()) {
-                printf("evaluate_pixel_sample(): pixel(%d, %d), samples %u: has an NAN component\n",
-                       p_pixel.x, p_pixel.y, i);
+                printf("%s(): pixel(%d, %d), samples %u: has NAN\n", __func__, p_pixel.x, p_pixel.y,
+                       i);
             }
 
             film->add_sample(p_pixel, radiance_l, lambda, camera_sample.filter_weight);
@@ -116,6 +113,16 @@ static __global__ void init_primitives(Primitive *primitives, T *_primitives, ui
     }
 
     primitives[idx].init(&_primitives[idx]);
+}
+
+static __global__ void init_independent_samplers(IndependentSampler *samplers,
+                                                 uint samples_per_pixel, uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    samplers[idx].init(samples_per_pixel);
 }
 
 template <typename T>

@@ -2,6 +2,7 @@
 
 #include "pbrt/base/camera.h"
 #include "pbrt/base/material.h"
+#include "pbrt/base/sampler.h"
 
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 
@@ -60,6 +61,8 @@ PBRT_GPU
 void SurfaceInteraction::init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,
                                            SampledWavelengths &lambda, const Camera *camera,
                                            Sampler *sampler) {
+    compute_differentials(ray, camera, sampler->get_samples_per_pixel());
+
     auto material_eval_context = MaterialEvalContext(*this);
     bsdf.init_frame(material_eval_context.ns, material_eval_context.dpdus);
 

@@ -19,6 +19,18 @@ void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension
     report_function_error_and_exit(__func__);
 }
 
+PBRT_CPU_GPU
+uint Sampler::get_samples_per_pixel() const {
+    switch (sampler_type) {
+    case (SamplerType::independent_sampler): {
+        return ((IndependentSampler *)sampler_ptr)->get_samples_per_pixel();
+    }
+    }
+
+    report_function_error_and_exit(__func__);
+    return 0;
+}
+
 PBRT_GPU
 FloatType Sampler::get_1d() {
     switch (sampler_type) {
@@ -28,6 +40,7 @@ FloatType Sampler::get_1d() {
     }
 
     report_function_error_and_exit(__func__);
+    return NAN;
 }
 
 PBRT_GPU

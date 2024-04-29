@@ -380,6 +380,10 @@ class SceneBuilder {
         {
             uint threads = 1024;
             uint blocks = divide_and_ceil(total_pixel_num, threads);
+
+            GPU::init_independent_samplers<<<blocks, threads>>>(
+                independent_samplers, samples_per_pixel.value(), total_pixel_num);
+
             GPU::init_samplers<<<blocks, threads>>>(renderer->samplers, independent_samplers,
                                                     total_pixel_num);
         }
