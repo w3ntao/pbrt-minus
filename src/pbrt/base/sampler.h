@@ -4,16 +4,30 @@
 #include "pbrt/base/camera.h"
 
 class Filter;
+class IndependentSampler;
 
 class Sampler {
   public:
-    PBRT_GPU virtual ~Sampler() {}
+    PBRT_CPU_GPU
+    void init(IndependentSampler *independent_sampler);
 
-    PBRT_GPU virtual FloatType get_1d() = 0;
+    PBRT_GPU
+    void start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension);
 
-    PBRT_GPU virtual Point2f get_2d() = 0;
+    PBRT_GPU FloatType get_1d();
 
-    PBRT_GPU virtual Point2f get_pixel_2d() = 0;
+    PBRT_GPU Point2f get_2d();
 
-    PBRT_GPU CameraSample get_camera_sample(const Point2i &pPixel, const Filter *filter);
+    PBRT_GPU Point2f get_pixel_2d();
+
+    PBRT_GPU
+    CameraSample get_camera_sample(Point2i pPixel, const Filter *filter);
+
+  private:
+    enum class SamplerType {
+        independent_sampler,
+    };
+
+    SamplerType sampler_type;
+    void *sampler_ptr;
 };

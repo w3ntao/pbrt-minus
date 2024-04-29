@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/base/ray.h"
+#include "pbrt/base/sampler.h"
 #include "pbrt/base/spectrum.h"
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/util/sampling.h"
@@ -14,7 +15,7 @@ class AmbientOcclusionIntegrator {
     }
 
     PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
-                                Sampler &sampler) const {
+                                Sampler *sampler) const {
 
         const auto shape_intersection = bvh->intersect(ray, Infinity);
 
@@ -26,7 +27,7 @@ class AmbientOcclusionIntegrator {
 
         auto normal = isect.n.to_vector3().face_forward(-ray.d);
 
-        auto u = sampler.get_2d();
+        auto u = sampler->get_2d();
         auto local_wi = sample_cosine_hemisphere(u);
         auto pdf = cosine_hemisphere_pdf(std::abs(local_wi.z));
 

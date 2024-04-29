@@ -59,7 +59,7 @@ void SurfaceInteraction::set_intersection_properties(const Material *_material,
 PBRT_GPU
 void SurfaceInteraction::init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,
                                            SampledWavelengths &lambda, const Camera *camera,
-                                           Sampler &sampler) {
+                                           Sampler *sampler) {
     auto material_eval_context = MaterialEvalContext(*this);
     bsdf.init_frame(material_eval_context.ns, material_eval_context.dpdus);
 

@@ -367,6 +367,25 @@ class SceneBuilder {
                 // default samples per pixel
             }
         }
+
+        uint total_pixel_num = film_resolution->x * film_resolution->y;
+
+        IndependentSampler *independent_samplers;
+
+        checkCudaErrors(
+            cudaMallocManaged((void **)&(renderer->samplers), sizeof(Sampler) * total_pixel_num));
+        checkCudaErrors(cudaMallocManaged((void **)&independent_samplers,
+                                          sizeof(IndependentSampler) * total_pixel_num));
+
+        {
+            uint threads = 1024;
+            uint blocks = divide_and_ceil(total_pixel_num, threads);
+            GPU::init_samplers<<<blocks, threads>>>(renderer->samplers, independent_samplers,
+                                                    total_pixel_num);
+        }
+
+        gpu_dynamic_pointers.push_back(renderer->samplers);
+        gpu_dynamic_pointers.push_back(independent_samplers);
     }
 
     void option_integrator() {

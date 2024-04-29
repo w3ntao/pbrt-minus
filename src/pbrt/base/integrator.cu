@@ -1,4 +1,6 @@
 #include "pbrt/base/integrator.h"
+
+#include "pbrt/base/sampler.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
@@ -24,7 +26,7 @@ void Integrator::init(const RandomWalkIntegrator *random_walk_integrator) {
 
 PBRT_GPU
 SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
-                               Sampler &sampler) const {
+                               Sampler *sampler) const {
     switch (integrator_type) {
     case (IntegratorType::surface_normal): {
         return ((SurfaceNormalIntegrator *)integrator_ptr)->li(ray, lambda, bvh, sampler);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/base/ray.h"
+#include "pbrt/base/sampler.h"
 #include "pbrt/base/spectrum.h"
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/euclidean_space/frame.h"
@@ -18,7 +19,7 @@ class SurfaceNormalIntegrator {
     }
 
     PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
-                                Sampler &sampler) const {
+                                Sampler *sampler) const {
         const auto shape_intersection = bvh->intersect(ray, Infinity);
         if (!shape_intersection) {
             return SampledSpectrum::same_value(0);

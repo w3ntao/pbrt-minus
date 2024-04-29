@@ -1,6 +1,5 @@
 #pragma once
 
-#include "pbrt/base/sampler.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 
 class Ray;
@@ -9,6 +8,7 @@ class HLBVH;
 class AmbientOcclusionIntegrator;
 class SurfaceNormalIntegrator;
 class RandomWalkIntegrator;
+class Sampler;
 
 class Integrator {
   public:
@@ -19,7 +19,7 @@ class Integrator {
     void init(const RandomWalkIntegrator *random_walk_integrator);
 
     PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
-                                Sampler &sampler) const;
+                                Sampler *sampler) const;
 
   private:
     enum class IntegratorType {

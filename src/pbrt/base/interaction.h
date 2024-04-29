@@ -90,7 +90,7 @@ class SurfaceInteraction : public Interaction {
 
     PBRT_GPU
     void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,
-                           SampledWavelengths &lambda, const Camera *camera, Sampler &sampler);
+                           SampledWavelengths &lambda, const Camera *camera, Sampler *sampler);
 
     PBRT_GPU SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
 };
