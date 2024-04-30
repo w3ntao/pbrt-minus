@@ -1,7 +1,7 @@
 #include "pbrt/base/camera.h"
 #include "pbrt/cameras/perspective.h"
 
-void Camera::init(PerspectiveCamera *perspective_camera) {
+void Camera::init(const PerspectiveCamera *perspective_camera) {
     camera_ptr = perspective_camera;
     camera_type = Type::perspective;
 }

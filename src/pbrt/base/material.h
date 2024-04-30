@@ -42,6 +42,6 @@ class Material {
     }
 
   private:
-    void *material_ptr;
+    const void *material_ptr;
     Type material_type;
 };

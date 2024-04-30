@@ -3,7 +3,7 @@
 
 void Light::init(const DiffuseAreaLight *diffuse_area_light) {
     light_type = Type::diffuse_area_light;
-    light_ptr = (void *)diffuse_area_light;
+    light_ptr = diffuse_area_light;
 }
 
 PBRT_GPU

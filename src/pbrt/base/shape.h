@@ -32,5 +32,5 @@ class Shape {
 
   private:
     Type shape_type;
-    void *shape_ptr;
+    const void *shape_ptr;
 };

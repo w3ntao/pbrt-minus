@@ -60,5 +60,5 @@ class Spectrum {
 
   private:
     Type spectrum_type;
-    void *spectrum_ptr;
+    const void *spectrum_ptr;
 };

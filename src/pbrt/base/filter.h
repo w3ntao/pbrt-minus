@@ -23,12 +23,12 @@ class Filter {
         box,
     };
 
-    void init(BoxFilter *box_filter);
+    void init(const BoxFilter *box_filter);
 
     PBRT_CPU_GPU
     FilterSample sample(Point2f u) const;
 
   private:
-    void *filter_ptr;
+    const void *filter_ptr;
     Type filter_type;
 };

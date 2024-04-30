@@ -3,7 +3,7 @@
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 
 void Material::init(const DiffuseMaterial *diffuse_material) {
-    material_ptr = (void *)diffuse_material;
+    material_ptr = diffuse_material;
     material_type = Type::diffuse_material;
 }
 

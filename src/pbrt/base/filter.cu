@@ -1,7 +1,7 @@
 #include "pbrt/base/filter.h"
 #include "pbrt/filters/box.h"
 
-void Filter::init(BoxFilter *box_filter) {
+void Filter::init(const BoxFilter *box_filter) {
     filter_ptr = box_filter;
     filter_type = Type::box;
 }

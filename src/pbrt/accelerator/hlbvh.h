@@ -111,11 +111,6 @@ class HLBVH {
     void build_bvh(std::vector<void *> &gpu_dynamic_pointers,
                    const std::vector<const Primitive *> &gpu_primitives);
 
-    const Primitive **primitives;
-
-    MortonPrimitive *morton_primitives;
-    BVHBuildNode *build_nodes;
-
   private:
     uint build_top_bvh_for_treelets(uint num_dense_treelets, const Treelet *treelets);
 
@@ -125,4 +120,9 @@ class HLBVH {
     PBRT_GPU
     uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,
                                      FloatType split_val);
+
+    const Primitive **primitives;
+
+    MortonPrimitive *morton_primitives;
+    BVHBuildNode *build_nodes;
 };

@@ -8,25 +8,25 @@
 PBRT_CPU_GPU
 void Spectrum::init(const DenselySampledSpectrum *densely_sampled_spectrum) {
     spectrum_type = Type::densely_sampled_spectrum;
-    spectrum_ptr = (void *)densely_sampled_spectrum;
+    spectrum_ptr = densely_sampled_spectrum;
 }
 
 PBRT_CPU_GPU
 void Spectrum::init(const ConstantSpectrum *constant_spectrum) {
     spectrum_type = Type::constant_spectrum;
-    spectrum_ptr = (void *)constant_spectrum;
+    spectrum_ptr = constant_spectrum;
 }
 
 PBRT_CPU_GPU
 void Spectrum::init(const RGBIlluminantSpectrum *rgb_illuminant_spectrum) {
     spectrum_type = Type::rgb_illuminant_spectrum;
-    spectrum_ptr = (void *)rgb_illuminant_spectrum;
+    spectrum_ptr = rgb_illuminant_spectrum;
 }
 
 PBRT_CPU_GPU
 void Spectrum::init(const RGBAlbedoSpectrum *rgb_albedo_spectrum) {
     spectrum_type = Type::rgb_albedo_spectrum;
-    spectrum_ptr = (void *)rgb_albedo_spectrum;
+    spectrum_ptr = rgb_albedo_spectrum;
 }
 
 PBRT_CPU_GPU

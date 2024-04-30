@@ -4,7 +4,7 @@
 PBRT_CPU_GPU
 void Shape::init(const Triangle *triangle) {
     shape_type = Type::triangle;
-    shape_ptr = (void *)triangle;
+    shape_ptr = triangle;
 }
 
 PBRT_CPU_GPU

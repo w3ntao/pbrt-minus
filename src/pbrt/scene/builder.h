@@ -873,16 +873,13 @@ class SceneBuilder {
                 return;
             }
 
-            std::cerr << "\nERROR: parse_tokens::Keyword `" << keyword << "` not implemented\n\n";
-            throw std::runtime_error("parse_tokens(): unknown keyword");
+            auto error_msg = "\nERROR: parse_tokens(): `" + keyword + "` not implemented\n\n";
+            throw std::runtime_error(error_msg);
+        }
         }
 
-        default: {
-            std::cout << "Builder::parse_tokens(): unknown token type: " << first_token.type
-                      << "\n";
-            throw std::runtime_error("parse_tokens() fail");
-        }
-        }
+        std::cerr << "Builder::parse_tokens(): unknown token type: " << first_token << "\n";
+        throw std::runtime_error("parse_tokens() fail");
     }
 
     void parse_file(const std::string &_filename) {

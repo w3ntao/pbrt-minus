@@ -3,13 +3,13 @@
 #include "pbrt/primitives/geometric_primitive.h"
 
 PBRT_CPU_GPU
-void Primitive::init(SimplePrimitive *simple_primitive) {
+void Primitive::init(const SimplePrimitive *simple_primitive) {
     primitive_type = Type::simple_primitive;
     primitive_ptr = simple_primitive;
 }
 
 PBRT_CPU_GPU
-void Primitive::init(GeometricPrimitive *geometric_primitive) {
+void Primitive::init(const GeometricPrimitive *geometric_primitive) {
     primitive_type = Type::geometric_primitive;
     primitive_ptr = geometric_primitive;
 }

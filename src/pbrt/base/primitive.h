@@ -16,10 +16,10 @@ class Primitive {
     };
 
     PBRT_CPU_GPU
-    void init(SimplePrimitive *simple_primitive);
+    void init(const SimplePrimitive *simple_primitive);
 
     PBRT_CPU_GPU
-    void init(GeometricPrimitive *geometric_primitive);
+    void init(const GeometricPrimitive *geometric_primitive);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const;
@@ -32,5 +32,5 @@ class Primitive {
 
   private:
     Type primitive_type;
-    void *primitive_ptr;
+    const void *primitive_ptr;
 };

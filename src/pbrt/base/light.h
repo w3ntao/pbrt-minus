@@ -36,5 +36,5 @@ class Light {
 
   private:
     Type light_type;
-    void *light_ptr;
+    const void *light_ptr;
 };
