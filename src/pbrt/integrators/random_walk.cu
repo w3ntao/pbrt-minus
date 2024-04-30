@@ -33,7 +33,7 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWave
     BSDF bsdf;
     Vector3f wp(NAN, NAN, NAN);
 
-    if (isect.material->get_material_type() == Material::MaterialType::diffuse_material) {
+    if (isect.material->get_material_type() == Material::Type::diffuse_material) {
         DiffuseBxDF diffuse_bxdf;
         isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, camera, sampler);
 

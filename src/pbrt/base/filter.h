@@ -19,14 +19,16 @@ struct FilterSample {
 
 class Filter {
   public:
+    enum class Type {
+        box,
+    };
+
     void init(BoxFilter *box_filter);
 
     PBRT_CPU_GPU
     FilterSample sample(Point2f u) const;
 
   private:
-    enum class FilterType { box };
-
     void *filter_ptr;
-    FilterType filter_type;
+    Type filter_type;
 };

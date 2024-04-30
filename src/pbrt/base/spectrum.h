@@ -10,6 +10,13 @@ class RGBAlbedoSpectrum;
 
 class Spectrum {
   public:
+    enum class Type {
+        densely_sampled_spectrum,
+        constant_spectrum,
+        rgb_illuminant_spectrum,
+        rgb_albedo_spectrum,
+    };
+
     PBRT_CPU_GPU
     void init(const DenselySampledSpectrum *densely_sampled_spectrum);
 
@@ -52,13 +59,6 @@ class Spectrum {
     }
 
   private:
-    enum class SpectrumType {
-        densely_sampled_spectrum,
-        constant_spectrum,
-        rgb_illuminant_spectrum,
-        rgb_albedo_spectrum,
-    };
-
-    SpectrumType spectrum_type;
+    Type spectrum_type;
     void *spectrum_ptr;
 };

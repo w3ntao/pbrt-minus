@@ -20,13 +20,13 @@ class DiffuseAreaLight;
 
 class Light {
   public:
-    enum class _LightType {
+    enum class Type {
         diffuse_area_light,
     };
 
     void init(const DiffuseAreaLight *diffuse_area_light);
 
-    PBRT_CPU_GPU _LightType get_light_type() const {
+    PBRT_CPU_GPU Type get_light_type() const {
         return light_type;
     }
 
@@ -35,6 +35,6 @@ class Light {
                       const SampledWavelengths &lambda) const;
 
   private:
-    _LightType light_type;
+    Type light_type;
     void *light_ptr;
 };

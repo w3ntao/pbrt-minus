@@ -8,6 +8,10 @@ class IndependentSampler;
 
 class Sampler {
   public:
+    enum class Type {
+        independent_sampler,
+    };
+
     PBRT_CPU_GPU
     void init(IndependentSampler *independent_sampler);
 
@@ -27,10 +31,6 @@ class Sampler {
     CameraSample get_camera_sample(Point2i pPixel, const Filter *filter);
 
   private:
-    enum class SamplerType {
-        independent_sampler,
-    };
-
-    SamplerType sampler_type;
+    Type sampler_type;
     void *sampler_ptr;
 };

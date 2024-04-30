@@ -10,6 +10,11 @@ class GeometricPrimitive;
 
 class Primitive {
   public:
+    enum class Type {
+        simple_primitive,
+        geometric_primitive,
+    };
+
     PBRT_CPU_GPU
     void init(SimplePrimitive *simple_primitive);
 
@@ -26,11 +31,6 @@ class Primitive {
     std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
   private:
-    enum class PrimitiveType {
-        simple_primitive,
-        geometric_primitive,
-    };
-
-    PrimitiveType primitive_type;
+    Type primitive_type;
     void *primitive_ptr;
 };

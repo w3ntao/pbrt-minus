@@ -11,6 +11,10 @@ class Triangle;
 
 class Shape {
   public:
+    enum class Type {
+        triangle,
+    };
+
     PBRT_CPU_GPU
     void init(const Triangle *triangle);
 
@@ -27,8 +31,6 @@ class Shape {
     std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
   private:
-    enum class ShapeType { triangle };
-
-    ShapeType shape_type;
+    Type shape_type;
     void *shape_ptr;
 };

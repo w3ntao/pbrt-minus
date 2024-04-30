@@ -8,6 +8,10 @@ class RGBFilm;
 
 class Film {
   public:
+    enum class Type {
+        rgb,
+    };
+
     void init(RGBFilm *rgb_film);
 
     PBRT_CPU_GPU
@@ -20,8 +24,6 @@ class Film {
     void write_to_png(const std::string &filename, const Point2i &resolution) const;
 
   private:
-    enum class FilmType { rgb };
-
     void *film_ptr;
-    FilmType film_type;
+    Type film_type;
 };

@@ -12,6 +12,12 @@ class Sampler;
 
 class Integrator {
   public:
+    enum class Type {
+        surface_normal,
+        ambient_occlusion,
+        random_walk,
+    };
+
     void init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator);
 
     void init(const SurfaceNormalIntegrator *surface_normal_integrator);
@@ -22,12 +28,6 @@ class Integrator {
                                 Sampler *sampler) const;
 
   private:
-    enum class IntegratorType {
-        surface_normal,
-        ambient_occlusion,
-        random_walk,
-    };
-
-    IntegratorType integrator_type;
+    Type integrator_type;
     const void *integrator_ptr;
 };

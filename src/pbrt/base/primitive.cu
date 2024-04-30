@@ -4,24 +4,24 @@
 
 PBRT_CPU_GPU
 void Primitive::init(SimplePrimitive *simple_primitive) {
-    primitive_type = PrimitiveType::simple_primitive;
+    primitive_type = Type::simple_primitive;
     primitive_ptr = simple_primitive;
 }
 
 PBRT_CPU_GPU
 void Primitive::init(GeometricPrimitive *geometric_primitive) {
-    primitive_type = PrimitiveType::geometric_primitive;
+    primitive_type = Type::geometric_primitive;
     primitive_ptr = geometric_primitive;
 }
 
 PBRT_CPU_GPU
 Bounds3f Primitive::bounds() const {
     switch (primitive_type) {
-    case (PrimitiveType::simple_primitive): {
+    case (Type::simple_primitive): {
         return ((SimplePrimitive *)primitive_ptr)->bounds();
     }
 
-    case (PrimitiveType::geometric_primitive): {
+    case (Type::geometric_primitive): {
         return ((GeometricPrimitive *)primitive_ptr)->bounds();
     }
     }
@@ -33,11 +33,11 @@ Bounds3f Primitive::bounds() const {
 PBRT_GPU
 bool Primitive::fast_intersect(const Ray &ray, FloatType t_max) const {
     switch (primitive_type) {
-    case (PrimitiveType::simple_primitive): {
+    case (Type::simple_primitive): {
         return ((SimplePrimitive *)primitive_ptr)->fast_intersect(ray, t_max);
     }
 
-    case (PrimitiveType::geometric_primitive): {
+    case (Type::geometric_primitive): {
         return ((GeometricPrimitive *)primitive_ptr)->fast_intersect(ray, t_max);
     }
     }
@@ -49,11 +49,11 @@ bool Primitive::fast_intersect(const Ray &ray, FloatType t_max) const {
 PBRT_GPU
 std::optional<ShapeIntersection> Primitive::intersect(const Ray &ray, FloatType t_max) const {
     switch (primitive_type) {
-    case (PrimitiveType::simple_primitive): {
+    case (Type::simple_primitive): {
         return ((SimplePrimitive *)primitive_ptr)->intersect(ray, t_max);
     }
 
-    case (PrimitiveType::geometric_primitive): {
+    case (Type::geometric_primitive): {
         return ((GeometricPrimitive *)primitive_ptr)->intersect(ray, t_max);
     }
     }

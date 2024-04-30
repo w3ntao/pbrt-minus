@@ -125,8 +125,13 @@ struct BSDFSample {
 
 class BxDF {
   public:
+    enum class Type {
+        null,
+        diffuse_bxdf,
+    };
+    
     PBRT_GPU
-    BxDF() : bxdf_type(BxDFType::null), bxdf_ptr(nullptr) {}
+    BxDF() : bxdf_type(Type::null), bxdf_ptr(nullptr) {}
 
     PBRT_GPU
     void init(const DiffuseBxDF *diffuse_bxdf);
@@ -145,15 +150,10 @@ class BxDF {
 
     PBRT_GPU
     bool has_type_null() const {
-        return bxdf_type == BxDFType::null;
+        return bxdf_type == Type::null;
     }
 
   private:
-    enum class BxDFType {
-        null,
-        diffuse_bxdf,
-    };
-
-    BxDFType bxdf_type;
+    Type bxdf_type;
     const void *bxdf_ptr;
 };

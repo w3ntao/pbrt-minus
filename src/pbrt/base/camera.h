@@ -120,6 +120,10 @@ struct CameraBase {
 
 class Camera {
   public:
+    enum class Type {
+        perspective,
+    };
+    
     void init(PerspectiveCamera *perspective_camera);
 
     PBRT_CPU_GPU const CameraBase *get_camerabase() const;
@@ -133,10 +137,6 @@ class Camera {
     }
 
   private:
-    enum class CameraType {
-        perspective,
-    };
-
     void *camera_ptr;
-    CameraType camera_type;
+    Type camera_type;
 };

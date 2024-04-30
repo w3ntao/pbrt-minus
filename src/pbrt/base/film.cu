@@ -7,14 +7,14 @@
 
 void Film::init(RGBFilm *rgb_film) {
     film_ptr = rgb_film;
-    film_type = FilmType::rgb;
+    film_type = Type::rgb;
 }
 
 PBRT_CPU_GPU
 void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
                       const SampledWavelengths &lambda, FloatType weight) {
     switch (film_type) {
-    case (FilmType::rgb): {
+    case (Type::rgb): {
         return ((RGBFilm *)film_ptr)->add_sample(p_film, radiance_l, lambda, weight);
     }
     }
@@ -25,7 +25,7 @@ void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
 PBRT_CPU_GPU
 RGB Film::get_pixel_rgb(const Point2i &p) const {
     switch (film_type) {
-    case (FilmType::rgb): {
+    case (Type::rgb): {
         return ((RGBFilm *)film_ptr)->get_pixel_rgb(p);
     }
     }
