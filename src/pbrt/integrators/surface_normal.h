@@ -5,22 +5,24 @@
 #include "pbrt/base/spectrum.h"
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/euclidean_space/frame.h"
+#include "pbrt/integrators/integrator_base.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 #include "pbrt/util/sampling.h"
 
 class SurfaceNormalIntegrator {
   public:
-    void init(const RGBColorSpace *rgb_color_space) {
+    void init(const IntegratorBase *_base, const RGBColorSpace *rgb_color_space) {
+        base = _base;
+
         auto scale = 0.01;
         rgb_spectra[0].init(rgb_color_space, RGB(scale, 0, 0));
         rgb_spectra[1].init(rgb_color_space, RGB(0, scale, 0));
         rgb_spectra[2].init(rgb_color_space, RGB(0, 0, scale));
     }
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
-                                Sampler *sampler) const {
-        const auto shape_intersection = bvh->intersect(ray, Infinity);
+    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda) const {
+        const auto shape_intersection = base->bvh->intersect(ray, Infinity);
         if (!shape_intersection) {
             return SampledSpectrum::same_value(0);
         }
@@ -35,5 +37,7 @@ class SurfaceNormalIntegrator {
     }
 
   private:
+    const IntegratorBase *base;
+
     RGBAlbedoSpectrum rgb_spectra[3];
 };

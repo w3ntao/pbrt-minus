@@ -63,8 +63,8 @@ class Renderer {
 
             auto ray = camera->generate_ray(camera_sample);
 
-            auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, bvh, sampler);
-            
+            auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, sampler);
+
             if (radiance_l.has_nan()) {
                 printf("%s(): pixel(%d, %d), samples %u: has NAN\n", __func__, p_pixel.x, p_pixel.y,
                        i);

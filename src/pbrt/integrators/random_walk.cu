@@ -1,19 +1,20 @@
 #include "pbrt/integrators/random_walk.h"
-#include "pbrt/base/camera.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/base/material.h"
-#include "pbrt/bxdfs/diffuse_bxdf.h"
 
-void RandomWalkIntegrator::init(const Camera *_camera, uint _max_depth) {
-    camera = _camera;
+#include "pbrt/accelerator/hlbvh.h"
+#include "pbrt/bxdfs/diffuse_bxdf.h"
+#include "pbrt/integrators/integrator_base.h"
+
+void RandomWalkIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
+    base = _base;
     max_depth = _max_depth;
 }
 
 PBRT_GPU
 SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWavelengths &lambda,
-                                                     const HLBVH *bvh, Sampler *sampler,
-                                                     uint depth) const {
-    auto si = bvh->intersect(ray, Infinity);
+                                                     Sampler *sampler, uint depth) const {
+    auto si = base->bvh->intersect(ray, Infinity);
     if (!si) {
         return SampledSpectrum::same_value(0.0);
     }
@@ -35,7 +36,7 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWave
 
     if (isect.material->get_material_type() == Material::Type::diffuse_material) {
         DiffuseBxDF diffuse_bxdf;
-        isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, camera, sampler);
+        isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
 
         // Randomly sample direction leaving surface for random walk
         Point2f u = sampler->get_2d();
@@ -52,6 +53,6 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWave
     }
 
     auto spawned_ray = isect.spawn_ray(wp);
-    return radiance_emission + fcos * li_random_walk(spawned_ray, lambda, bvh, sampler, depth + 1) /
+    return radiance_emission + fcos * li_random_walk(spawned_ray, lambda, sampler, depth + 1) /
                                    (1.0 / (4.0 * compute_pi()));
 }

@@ -24,8 +24,7 @@ class Integrator {
 
     void init(const RandomWalkIntegrator *random_walk_integrator);
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
-                                Sampler *sampler) const;
+    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
   private:
     Type integrator_type;

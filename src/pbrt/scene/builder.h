@@ -396,6 +396,13 @@ class SceneBuilder {
     }
 
     void option_integrator() {
+        IntegratorBase *integrator_base;
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&integrator_base, sizeof(IntegratorBase)));
+        gpu_dynamic_pointers.push_back(integrator_base);
+
+        integrator_base->bvh = renderer->bvh;
+        integrator_base->camera = renderer->camera;
+
         if (!integrator_name.has_value()) {
             printf("Integrator not set, changed to AmbientOcclusion\n");
             integrator_name = "ambientocclusion";
@@ -420,7 +427,8 @@ class SceneBuilder {
                                                sizeof(AmbientOcclusionIntegrator)));
             gpu_dynamic_pointers.push_back(ambient_occlusion_integrator);
 
-            ambient_occlusion_integrator->init(illuminant_spectrum, illuminant_scale);
+            ambient_occlusion_integrator->init(integrator_base, illuminant_spectrum,
+                                               illuminant_scale);
             renderer->integrator->init(ambient_occlusion_integrator);
 
         } else if (integrator_name == "surfacenormal") {
@@ -429,7 +437,8 @@ class SceneBuilder {
                                                sizeof(SurfaceNormalIntegrator)));
             gpu_dynamic_pointers.push_back(surface_normal_integrator);
 
-            surface_normal_integrator->init(renderer->global_variables->rgb_color_space);
+            surface_normal_integrator->init(integrator_base,
+                                            renderer->global_variables->rgb_color_space);
             renderer->integrator->init(surface_normal_integrator);
 
         } else if (integrator_name == "randomwalk") {
@@ -438,7 +447,7 @@ class SceneBuilder {
                 cudaMallocManaged((void **)&random_walk_integrator, sizeof(RandomWalkIntegrator)));
             gpu_dynamic_pointers.push_back(random_walk_integrator);
 
-            random_walk_integrator->init(renderer->camera, 5);
+            random_walk_integrator->init(integrator_base, 5);
             renderer->integrator->init(random_walk_integrator);
 
         } else {

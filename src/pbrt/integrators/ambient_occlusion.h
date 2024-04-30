@@ -1,6 +1,8 @@
 #pragma once
 
 #include "pbrt/base/ray.h"
+#include "pbrt/integrators/integrator_base.h"
+
 #include "pbrt/base/sampler.h"
 #include "pbrt/base/spectrum.h"
 #include "pbrt/accelerator/hlbvh.h"
@@ -9,15 +11,17 @@
 
 class AmbientOcclusionIntegrator {
   public:
-    void init(const Spectrum *_illuminant_spectrum, const FloatType _illuminant_scale) {
+    void init(const IntegratorBase *_base, const Spectrum *_illuminant_spectrum,
+              const FloatType _illuminant_scale) {
+        base = _base;
         illuminant_spectrum = _illuminant_spectrum;
         illuminant_scale = _illuminant_scale;
     }
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, const HLBVH *bvh,
+    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda,
                                 Sampler *sampler) const {
 
-        const auto shape_intersection = bvh->intersect(ray, Infinity);
+        const auto shape_intersection = base->bvh->intersect(ray, Infinity);
 
         if (!shape_intersection) {
             return SampledSpectrum::same_value(0);
@@ -41,7 +45,7 @@ class AmbientOcclusionIntegrator {
         // Divide by PI so that fully visible is one.
         auto spawned_ray = isect.spawn_ray(wi);
 
-        if (bvh->fast_intersect(spawned_ray, Infinity)) {
+        if (base->bvh->fast_intersect(spawned_ray, Infinity)) {
             return SampledSpectrum::same_value(0);
         }
 
@@ -50,6 +54,7 @@ class AmbientOcclusionIntegrator {
     }
 
   private:
+    const IntegratorBase *base;
     const Spectrum *illuminant_spectrum;
     FloatType illuminant_scale;
 };
