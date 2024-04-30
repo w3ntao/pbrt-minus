@@ -2,11 +2,10 @@
 
 #include "pbrt/base/camera.h"
 #include "pbrt/base/material.h"
+#include "pbrt/base/light.h"
 #include "pbrt/base/sampler.h"
 
 #include "pbrt/bxdfs/diffuse_bxdf.h"
-
-#include "pbrt/lights/diffuse_area_light.h"
 
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 
@@ -52,7 +51,7 @@ void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *cam
 
 PBRT_GPU
 void SurfaceInteraction::set_intersection_properties(const Material *_material,
-                                                     const DiffuseAreaLight *_area_light) {
+                                                     const Light *_area_light) {
     material = _material;
     area_light = _area_light;
 }

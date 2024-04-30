@@ -10,11 +10,10 @@
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 
 class Camera;
+class Light;
 class Material;
 class Sampler;
 class SampledWavelengths;
-
-class DiffuseAreaLight;
 
 class Interaction {
   public:
@@ -48,8 +47,7 @@ class SurfaceInteraction : public Interaction {
     FloatType dvdy = NAN;
 
     const Material *material;
-    const DiffuseAreaLight *area_light;
-    // TODO: rewrite DiffuseAreaLight to Light
+    const Light *area_light;
 
     PBRT_CPU_GPU
     explicit SurfaceInteraction(const Point3fi &pi, const Point2f &uv, const Vector3f &wo,
@@ -85,8 +83,7 @@ class SurfaceInteraction : public Interaction {
     // TODO: rewrite compute_differentials(): change Ray to RayDifferential
 
     PBRT_GPU
-    void set_intersection_properties(const Material *_material,
-                                     const DiffuseAreaLight *_area_light);
+    void set_intersection_properties(const Material *_material, const Light *_area_light);
 
     PBRT_GPU
     void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,

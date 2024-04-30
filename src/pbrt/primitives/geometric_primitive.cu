@@ -1,12 +1,11 @@
 #include "pbrt/primitives/geometric_primitive.h"
 
 #include "pbrt/base/shape.h"
-#include "pbrt/materials/diffuse_material.h"
-#include "pbrt/lights/diffuse_area_light.h"
+#include "pbrt/base/light.h"
 
 PBRT_CPU_GPU
 void GeometricPrimitive::init(const Shape *_shape_ptr, const Material *_material,
-                              const DiffuseAreaLight *_area_light) {
+                              const Light *_area_light) {
     shape_ptr = _shape_ptr;
     material = _material;
     area_light = _area_light;

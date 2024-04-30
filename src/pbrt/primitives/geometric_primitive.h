@@ -6,15 +6,14 @@
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/base/interaction.h"
 
+class Light;
 class Material;
 class Shape;
-class DiffuseAreaLight;
 
 class GeometricPrimitive {
   public:
     PBRT_CPU_GPU
-    void init(const Shape *_shape_ptr, const Material *_material,
-              const DiffuseAreaLight *_area_light);
+    void init(const Shape *_shape_ptr, const Material *_material, const Light *_area_light);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const;
@@ -28,5 +27,5 @@ class GeometricPrimitive {
   private:
     const Shape *shape_ptr;
     const Material *material;
-    const DiffuseAreaLight *area_light;
+    const Light *area_light;
 };

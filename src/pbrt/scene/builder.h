@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 
+#include "pbrt/base/light.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/primitive.h"
 
@@ -721,6 +722,10 @@ class SceneBuilder {
                 CHECK_CUDA_ERROR(cudaMallocManaged((void **)&diffuse_area_lights,
                                                    sizeof(DiffuseAreaLight) * num_triangles));
 
+                Light *lights;
+                CHECK_CUDA_ERROR(
+                    cudaMallocManaged((void **)&lights, sizeof(Light) * num_triangles));
+
                 GeometricPrimitive *geometric_primitives;
                 CHECK_CUDA_ERROR(cudaMallocManaged((void **)&geometric_primitives,
                                                    sizeof(GeometricPrimitive) * num_triangles));
@@ -730,8 +735,10 @@ class SceneBuilder {
                                                   graphics_state.area_light_entity->parameters,
                                                   &shapes[idx], renderer->global_variables);
 
+                    lights[idx].init(&diffuse_area_lights[idx]);
+
                     geometric_primitives[idx].init(&shapes[idx], graphics_state.current_material,
-                                                   &diffuse_area_lights[idx]);
+                                                   &lights[idx]);
                 }
 
                 Primitive *primitives;
@@ -749,6 +756,7 @@ class SceneBuilder {
                 }
 
                 gpu_dynamic_pointers.push_back(diffuse_area_lights);
+                gpu_dynamic_pointers.push_back(lights);
                 gpu_dynamic_pointers.push_back(geometric_primitives);
                 gpu_dynamic_pointers.push_back(primitives);
             }
