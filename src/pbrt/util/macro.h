@@ -8,8 +8,8 @@
 using FloatType = float;
 
 namespace {
-inline void _check_cuda(cudaError_t error_code, char const *const func, const char *const file,
-                        int const line) {
+inline void _check_cuda_error(cudaError_t error_code, char const *const func,
+                              const char *const file, int const line) {
     if (!error_code) {
         return;
     }
@@ -23,19 +23,23 @@ inline void _check_cuda(cudaError_t error_code, char const *const func, const ch
     cudaDeviceReset();
     exit(1);
 }
+
+PBRT_CPU_GPU
+void _report_error(const char *file_name, const char *func_name, uint line_num) {
+    printf("\nERROR: %s: %s(): line %d: unreachable branch\n\n", file_name, func_name, line_num);
+
+#if defined(__CUDA_ARCH__)
+    asm("trap;");
+#else
+    exit(1);
+#endif
+}
+
 } // namespace
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
-#define checkCudaErrors(val) _check_cuda((val), #val, __FILE__, __LINE__)
+#define CHECK_CUDA_ERROR(val) _check_cuda_error((val), #val, __FILE__, __LINE__)
 
-PBRT_CPU_GPU
-static void report_function_error_and_exit(const char *func_name) {
-#if defined(__CUDA_ARCH__)
-    printf("\nerror at `%s()`\n\n", func_name);
-    asm("trap;");
-#else
-    throw std::runtime_error("\nerror at `" + std::string(func_name) + "()`\n\n");
-#endif
-}
+#define REPORT_FATAL_ERROR() _report_error(__FILE__, __func__, __LINE__)
 
 static const bool DEBUGGING = true;

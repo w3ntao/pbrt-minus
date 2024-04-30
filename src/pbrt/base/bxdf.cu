@@ -15,7 +15,7 @@ SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return {};
 }
 
@@ -28,7 +28,7 @@ std::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u, T
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return {};
 }
 
@@ -41,6 +41,6 @@ FloatType BxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return {};
 }

@@ -26,7 +26,7 @@ Bounds3f Primitive::bounds() const {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return {};
 }
 
@@ -42,7 +42,7 @@ bool Primitive::fast_intersect(const Ray &ray, FloatType t_max) const {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return false;
 }
 
@@ -58,6 +58,6 @@ std::optional<ShapeIntersection> Primitive::intersect(const Ray &ray, FloatType 
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return {};
 }

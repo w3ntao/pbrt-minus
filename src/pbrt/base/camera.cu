@@ -13,7 +13,7 @@ PBRT_CPU_GPU const CameraBase *Camera::get_camerabase() const {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return nullptr;
 }
 
@@ -24,6 +24,6 @@ PBRT_CPU_GPU CameraRay Camera::generate_ray(const CameraSample &sample) const {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return {};
 }

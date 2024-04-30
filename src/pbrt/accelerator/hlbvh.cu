@@ -325,24 +325,25 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
     printf("total primitives: %u\n", num_total_primitives);
 
     MortonPrimitive *gpu_morton_primitives;
-    checkCudaErrors(cudaMallocManaged((void **)&gpu_morton_primitives,
-                                      sizeof(MortonPrimitive) * num_total_primitives));
+    CHECK_CUDA_ERROR(cudaMallocManaged((void **)&gpu_morton_primitives,
+                                       sizeof(MortonPrimitive) * num_total_primitives));
 
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     const Primitive **gpu_primitives_array;
-    checkCudaErrors(cudaMallocManaged((void **)&gpu_primitives_array,
-                                      sizeof(Primitive *) * num_total_primitives));
-    checkCudaErrors(cudaMemcpy(gpu_primitives_array, gpu_primitives.data(),
-                               sizeof(Primitive *) * num_total_primitives, cudaMemcpyHostToDevice));
+    CHECK_CUDA_ERROR(cudaMallocManaged((void **)&gpu_primitives_array,
+                                       sizeof(Primitive *) * num_total_primitives));
+    CHECK_CUDA_ERROR(cudaMemcpy(gpu_primitives_array, gpu_primitives.data(),
+                                sizeof(Primitive *) * num_total_primitives,
+                                cudaMemcpyHostToDevice));
 
     Treelet *sparse_treelets;
-    checkCudaErrors(
+    CHECK_CUDA_ERROR(
         cudaMallocManaged((void **)&sparse_treelets, sizeof(Treelet) * MAX_TREELET_NUM));
 
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     gpu_dynamic_pointers.push_back(gpu_morton_primitives);
     gpu_dynamic_pointers.push_back(gpu_primitives_array);
@@ -361,8 +362,8 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         hlbvh_init_treelets<<<blocks, threads>>>(sparse_treelets);
     }
 
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     Bounds3f bounds_of_primitives_centroids;
     for (uint idx = 0; idx < num_total_primitives; idx++) {
@@ -375,8 +376,8 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         uint blocks = divide_and_ceil(num_total_primitives, batch_size);
         hlbvh_compute_morton_code<<<blocks, batch_size>>>(morton_primitives, num_total_primitives,
                                                           bounds_of_primitives_centroids);
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     {
@@ -399,8 +400,8 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         hlbvh_collect_primitives_into_treelets<<<blocks, threads>>>(
             sparse_treelets, morton_primitives, primitives, num_total_primitives);
         // TODO: rewrite this part into 2 kernel functions: find gap fist, and fill primitives
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     std::vector<uint> dense_treelet_indices;
@@ -427,25 +428,25 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
     }
 
     Treelet *dense_treelets;
-    checkCudaErrors(cudaMallocManaged((void **)&dense_treelets,
-                                      sizeof(Treelet) * dense_treelet_indices.size()));
+    CHECK_CUDA_ERROR(cudaMallocManaged((void **)&dense_treelets,
+                                       sizeof(Treelet) * dense_treelet_indices.size()));
 
     for (uint idx = 0; idx < dense_treelet_indices.size(); idx++) {
         uint sparse_idx = dense_treelet_indices[idx];
-        checkCudaErrors(cudaMemcpy(&dense_treelets[idx], &sparse_treelets[sparse_idx],
-                                   sizeof(Treelet), cudaMemcpyDeviceToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(&dense_treelets[idx], &sparse_treelets[sparse_idx],
+                                    sizeof(Treelet), cudaMemcpyDeviceToDevice));
     }
-    checkCudaErrors(cudaFree(sparse_treelets));
+    CHECK_CUDA_ERROR(cudaFree(sparse_treelets));
 
     uint max_build_node_length =
         (2 * dense_treelet_indices.size() + 1) + (2 * num_total_primitives + 1);
-    checkCudaErrors(
+    CHECK_CUDA_ERROR(
         cudaMallocManaged((void **)&build_nodes, sizeof(BVHBuildNode) * max_build_node_length));
     gpu_dynamic_pointers.push_back(build_nodes);
 
     uint top_bvh_node_num =
         build_top_bvh_for_treelets(dense_treelet_indices.size(), dense_treelets);
-    checkCudaErrors(cudaFree(dense_treelets));
+    CHECK_CUDA_ERROR(cudaFree(dense_treelets));
 
     auto start_bottom_bvh = std::chrono::system_clock::now();
 
@@ -453,7 +454,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
     uint end = top_bvh_node_num;
 
     uint *shared_offset;
-    checkCudaErrors(cudaMallocManaged(&shared_offset, sizeof(uint)));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&shared_offset, sizeof(uint)));
     *shared_offset = end;
 
     uint depth = 0;
@@ -461,7 +462,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         const uint array_length = end - start;
 
         BottomBVHArgs *bvh_args_array;
-        checkCudaErrors(
+        CHECK_CUDA_ERROR(
             cudaMallocManaged((void **)&bvh_args_array, sizeof(BottomBVHArgs) * array_length));
 
         {
@@ -471,8 +472,8 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
                                                end);
         }
 
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         if (DEBUGGING) {
             printf("HLBVH: building bottom BVH: depth %u, leaves' number: %u\n", depth,
@@ -487,12 +488,12 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         uint blocks = divide_and_ceil(array_length, threads);
 
         hlbvh_build_bottom_bvh<<<blocks, threads>>>(this, bvh_args_array, array_length);
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        checkCudaErrors(cudaFree(bvh_args_array));
+        CHECK_CUDA_ERROR(cudaFree(bvh_args_array));
     }
-    checkCudaErrors(cudaFree(shared_offset));
+    CHECK_CUDA_ERROR(cudaFree(shared_offset));
 
     printf("HLBVH: bottom BVH max depth: %u (max primitives in a leaf: %u)\n", depth,
            MAX_PRIMITIVES_NUM_IN_LEAF);

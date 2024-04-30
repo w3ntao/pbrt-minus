@@ -41,6 +41,6 @@ SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, const
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return {};
 }

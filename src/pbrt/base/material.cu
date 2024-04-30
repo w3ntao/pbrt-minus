@@ -16,6 +16,6 @@ DiffuseBxDF Material::get_diffuse_bsdf(const MaterialEvalContext &ctx,
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return {};
 }

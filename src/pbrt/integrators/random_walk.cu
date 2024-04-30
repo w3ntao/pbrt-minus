@@ -29,17 +29,11 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWave
         return radiance_emission;
     }
 
-    bool material_is_mix = false;
-    if (material_is_mix) {
-        // TODO: this part was not handled
-    }
-
     auto fcos = SampledSpectrum::same_value(NAN);
     BSDF bsdf;
     Vector3f wp(NAN, NAN, NAN);
-    
-    bool material_type_is_diffuse = true;
-    if (material_type_is_diffuse) {
+
+    if (isect.material->get_material_type() == Material::MaterialType::diffuse_material) {
         DiffuseBxDF diffuse_bxdf;
         isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, camera, sampler);
 
@@ -49,6 +43,8 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWave
 
         // Evaluate BSDF at surface for sampled direction
         fcos = bsdf.f(wo, wp) * abs(wp.dot(isect.shading.n.to_vector3()));
+    } else {
+        REPORT_FATAL_ERROR();
     }
 
     if (!fcos.is_positive()) {

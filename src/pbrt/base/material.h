@@ -27,16 +27,21 @@ class DiffuseMaterial;
 
 class Material {
   public:
+    enum class MaterialType {
+        diffuse_material,
+    };
+
     void init(const DiffuseMaterial *diffuse_material);
 
     PBRT_GPU
     DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
-  private:
-    enum class MaterialType {
-        diffuse_material,
-    };
+    PBRT_CPU_GPU
+    MaterialType get_material_type() const {
+        return material_type;
+    }
 
+  private:
     void *material_ptr;
     MaterialType material_type;
 };

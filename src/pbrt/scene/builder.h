@@ -72,7 +72,7 @@ struct PreComputedSpectrum {
         auto start = std::chrono::system_clock::now();
 
         for (uint idx = 0; idx < 3; idx++) {
-            checkCudaErrors(
+            CHECK_CUDA_ERROR(
                 cudaMallocManaged((void **)&(dense_cie_xyz[idx]), sizeof(DenselySampledSpectrum)));
         }
         dense_cie_xyz[0]->init_from_pls_lambdas_values(CIE_LAMBDA_CPU, CIE_X_VALUE_CPU,
@@ -84,22 +84,22 @@ struct PreComputedSpectrum {
 
         for (uint idx = 0; idx < 3; idx++) {
             Spectrum *_spectrum;
-            checkCudaErrors(cudaMallocManaged((void **)&_spectrum, sizeof(Spectrum)));
+            CHECK_CUDA_ERROR(cudaMallocManaged((void **)&_spectrum, sizeof(Spectrum)));
             _spectrum->init(dense_cie_xyz[idx]);
             cie_xyz[idx] = _spectrum;
         }
 
-        checkCudaErrors(
+        CHECK_CUDA_ERROR(
             cudaMallocManaged((void **)&dense_illum_d65, sizeof(DenselySampledSpectrum)));
-        checkCudaErrors(cudaMallocManaged((void **)&illum_d65, sizeof(Spectrum)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&illum_d65, sizeof(Spectrum)));
 
         dense_illum_d65->init_from_pls_interleaved_samples(
             CIE_Illum_D6500, sizeof(CIE_Illum_D6500) / sizeof(CIE_Illum_D6500[0]), true,
             cie_xyz[1]);
         illum_d65->init(dense_illum_d65);
 
-        checkCudaErrors(cudaMallocManaged((void **)&rgb_to_spectrum_table,
-                                          sizeof(RGBtoSpectrumData::RGBtoSpectrumTable)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&rgb_to_spectrum_table,
+                                           sizeof(RGBtoSpectrumData::RGBtoSpectrumTable)));
         rgb_to_spectrum_table->init("sRGB", thread_pool);
 
         const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
@@ -114,15 +114,15 @@ struct PreComputedSpectrum {
                  dense_illum_d65,
                  illum_d65,
              }) {
-            checkCudaErrors(cudaFree(ptr));
+            CHECK_CUDA_ERROR(cudaFree(ptr));
         }
 
         for (uint idx = 0; idx < 3; idx++) {
-            checkCudaErrors(cudaFree(dense_cie_xyz[idx]));
-            checkCudaErrors(cudaFree((void *)cie_xyz[idx]));
+            CHECK_CUDA_ERROR(cudaFree(dense_cie_xyz[idx]));
+            CHECK_CUDA_ERROR(cudaFree((void *)cie_xyz[idx]));
         }
 
-        checkCudaErrors(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaGetLastError());
     }
 
     const Spectrum *cie_xyz[3] = {nullptr};
@@ -170,21 +170,22 @@ class SceneBuilder {
           pre_computed_spectrum(PreComputedSpectrum(thread_pool)) {
 
         GPU::GlobalVariable *global_variables;
-        checkCudaErrors(cudaMallocManaged((void **)&global_variables, sizeof(GPU::GlobalVariable)));
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged((void **)&global_variables, sizeof(GPU::GlobalVariable)));
 
-        checkCudaErrors(cudaMallocManaged((void **)&(global_variables->rgb_color_space),
-                                          sizeof(RGBColorSpace)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&(global_variables->rgb_color_space),
+                                           sizeof(RGBColorSpace)));
 
         global_variables->init(pre_computed_spectrum.cie_xyz, pre_computed_spectrum.illum_d65,
                                pre_computed_spectrum.rgb_to_spectrum_table,
                                RGBtoSpectrumData::Gamut::sRGB);
 
-        checkCudaErrors(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->bvh), sizeof(HLBVH)));
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->camera), sizeof(Camera)));
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->film), sizeof(Film)));
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->filter), sizeof(Filter)));
-        checkCudaErrors(cudaMallocManaged((void **)&(renderer->integrator), sizeof(Integrator)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&renderer, sizeof(GPU::Renderer)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&(renderer->bvh), sizeof(HLBVH)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&(renderer->camera), sizeof(Camera)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&(renderer->film), sizeof(Film)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&(renderer->filter), sizeof(Filter)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&(renderer->integrator), sizeof(Integrator)));
 
         renderer->global_variables = global_variables;
 
@@ -204,12 +205,13 @@ class SceneBuilder {
         DiffuseMaterial *default_diffuse_material;
         Material *default_material;
 
-        checkCudaErrors(cudaMallocManaged((void **)&constant_grey, sizeof(ConstantSpectrum)));
-        checkCudaErrors(cudaMallocManaged((void **)&spectrum_grey, sizeof(Spectrum)));
-        checkCudaErrors(cudaMallocManaged((void **)&texture_grey, sizeof(SpectrumConstantTexture)));
-        checkCudaErrors(
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&constant_grey, sizeof(ConstantSpectrum)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&spectrum_grey, sizeof(Spectrum)));
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged((void **)&texture_grey, sizeof(SpectrumConstantTexture)));
+        CHECK_CUDA_ERROR(
             cudaMallocManaged((void **)&default_diffuse_material, sizeof(DiffuseMaterial)));
-        checkCudaErrors(cudaMallocManaged((void **)&default_material, sizeof(Material)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&default_material, sizeof(Material)));
 
         constant_grey->init(0.5);
         spectrum_grey->init(constant_grey);
@@ -228,9 +230,9 @@ class SceneBuilder {
 
     ~SceneBuilder() {
         for (auto ptr : gpu_dynamic_pointers) {
-            checkCudaErrors(cudaFree(ptr));
+            CHECK_CUDA_ERROR(cudaFree(ptr));
         }
-        checkCudaErrors(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaGetLastError());
     }
 
     static std::vector<uint> group_tokens(const std::vector<Token> &tokens) {
@@ -268,7 +270,7 @@ class SceneBuilder {
             FloatType fov = parameters.get_float("fov", 90);
 
             PerspectiveCamera *perspective_camera;
-            checkCudaErrors(
+            CHECK_CUDA_ERROR(
                 cudaMallocManaged((void **)&perspective_camera, sizeof(PerspectiveCamera)));
             gpu_dynamic_pointers.push_back(perspective_camera);
 
@@ -283,7 +285,7 @@ class SceneBuilder {
 
     void option_filter() {
         BoxFilter *box_filter;
-        checkCudaErrors(cudaMallocManaged((void **)&box_filter, sizeof(BoxFilter)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&box_filter, sizeof(BoxFilter)));
         gpu_dynamic_pointers.push_back(box_filter);
 
         box_filter->init(0.5);
@@ -307,9 +309,9 @@ class SceneBuilder {
         DenselySampledSpectrum *_d_illum_dense;
         Spectrum *d_illum;
 
-        checkCudaErrors(
+        CHECK_CUDA_ERROR(
             cudaMallocManaged((void **)&_d_illum_dense, sizeof(DenselySampledSpectrum)));
-        checkCudaErrors(cudaMallocManaged((void **)&d_illum, sizeof(Spectrum)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&d_illum, sizeof(Spectrum)));
 
         gpu_dynamic_pointers.push_back(d_illum);
         gpu_dynamic_pointers.push_back(_d_illum_dense);
@@ -331,8 +333,8 @@ class SceneBuilder {
                                        white_balance_val == 0 ? nullptr : d_illum, imaging_ratio);
 
         Pixel *gpu_pixels;
-        checkCudaErrors(cudaMallocManaged((void **)&gpu_pixels,
-                                          sizeof(Pixel) * film_resolution->x * film_resolution->y));
+        CHECK_CUDA_ERROR(cudaMallocManaged(
+            (void **)&gpu_pixels, sizeof(Pixel) * film_resolution->x * film_resolution->y));
         gpu_dynamic_pointers.push_back(gpu_pixels);
 
         {
@@ -340,12 +342,12 @@ class SceneBuilder {
             uint blocks = divide_and_ceil(uint(film_resolution->x * film_resolution->y), threads);
 
             GPU::init_pixels<<<blocks, threads>>>(gpu_pixels, film_resolution.value());
-            checkCudaErrors(cudaGetLastError());
-            checkCudaErrors(cudaDeviceSynchronize());
+            CHECK_CUDA_ERROR(cudaGetLastError());
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
         RGBFilm *rgb_film;
-        checkCudaErrors(cudaMallocManaged((void **)&rgb_film, sizeof(RGBFilm)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&rgb_film, sizeof(RGBFilm)));
         gpu_dynamic_pointers.push_back(rgb_film);
 
         rgb_film->init(gpu_pixels, &(renderer->sensor), film_resolution.value(),
@@ -372,10 +374,10 @@ class SceneBuilder {
 
         IndependentSampler *independent_samplers;
 
-        checkCudaErrors(
+        CHECK_CUDA_ERROR(
             cudaMallocManaged((void **)&(renderer->samplers), sizeof(Sampler) * total_pixel_num));
-        checkCudaErrors(cudaMallocManaged((void **)&independent_samplers,
-                                          sizeof(IndependentSampler) * total_pixel_num));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&independent_samplers,
+                                           sizeof(IndependentSampler) * total_pixel_num));
 
         {
             uint threads = 1024;
@@ -413,8 +415,8 @@ class SceneBuilder {
             auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(cie_y);
 
             AmbientOcclusionIntegrator *ambient_occlusion_integrator;
-            checkCudaErrors(cudaMallocManaged((void **)&ambient_occlusion_integrator,
-                                              sizeof(AmbientOcclusionIntegrator)));
+            CHECK_CUDA_ERROR(cudaMallocManaged((void **)&ambient_occlusion_integrator,
+                                               sizeof(AmbientOcclusionIntegrator)));
             gpu_dynamic_pointers.push_back(ambient_occlusion_integrator);
 
             ambient_occlusion_integrator->init(illuminant_spectrum, illuminant_scale);
@@ -422,8 +424,8 @@ class SceneBuilder {
 
         } else if (integrator_name == "surfacenormal") {
             SurfaceNormalIntegrator *surface_normal_integrator;
-            checkCudaErrors(cudaMallocManaged((void **)&surface_normal_integrator,
-                                              sizeof(SurfaceNormalIntegrator)));
+            CHECK_CUDA_ERROR(cudaMallocManaged((void **)&surface_normal_integrator,
+                                               sizeof(SurfaceNormalIntegrator)));
             gpu_dynamic_pointers.push_back(surface_normal_integrator);
 
             surface_normal_integrator->init(renderer->global_variables->rgb_color_space);
@@ -431,7 +433,7 @@ class SceneBuilder {
 
         } else if (integrator_name == "randomwalk") {
             RandomWalkIntegrator *random_walk_integrator;
-            checkCudaErrors(
+            CHECK_CUDA_ERROR(
                 cudaMallocManaged((void **)&random_walk_integrator, sizeof(RandomWalkIntegrator)));
             gpu_dynamic_pointers.push_back(random_walk_integrator);
 
@@ -483,13 +485,14 @@ class SceneBuilder {
             DiffuseMaterial *diffuse_material;
             Material *material;
 
-            checkCudaErrors(
+            CHECK_CUDA_ERROR(
                 cudaMallocManaged((void **)&_reflectance_spectrum, sizeof(RGBAlbedoSpectrum)));
-            checkCudaErrors(cudaMallocManaged((void **)&reflectance_spectrum, sizeof(Spectrum)));
-            checkCudaErrors(cudaMallocManaged((void **)&spectrum_constant_texture,
-                                              sizeof(SpectrumConstantTexture)));
-            checkCudaErrors(cudaMallocManaged((void **)&diffuse_material, sizeof(DiffuseMaterial)));
-            checkCudaErrors(cudaMallocManaged((void **)&material, sizeof(Material)));
+            CHECK_CUDA_ERROR(cudaMallocManaged((void **)&reflectance_spectrum, sizeof(Spectrum)));
+            CHECK_CUDA_ERROR(cudaMallocManaged((void **)&spectrum_constant_texture,
+                                               sizeof(SpectrumConstantTexture)));
+            CHECK_CUDA_ERROR(
+                cudaMallocManaged((void **)&diffuse_material, sizeof(DiffuseMaterial)));
+            CHECK_CUDA_ERROR(cudaMallocManaged((void **)&material, sizeof(Material)));
 
             _reflectance_spectrum->init(renderer->global_variables->rgb_color_space, reflectance);
             reflectance_spectrum->init(_reflectance_spectrum);
@@ -648,38 +651,38 @@ class SceneBuilder {
         const bool reverse_orientation = graphics_state.reverse_orientation;
 
         Point3f *gpu_points;
-        checkCudaErrors(cudaMallocManaged((void **)&gpu_points, sizeof(Point3f) * points.size()));
-        checkCudaErrors(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
-                                   cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&gpu_points, sizeof(Point3f) * points.size()));
+        CHECK_CUDA_ERROR(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
+                                    cudaMemcpyHostToDevice));
 
         uint batch = 256;
         uint total_jobs = points.size() / batch + 1;
         GPU::apply_transform<<<total_jobs, batch>>>(gpu_points, render_from_object, points.size());
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         int *gpu_indices;
-        checkCudaErrors(cudaMallocManaged((void **)&gpu_indices, sizeof(int) * indices.size()));
-        checkCudaErrors(cudaMemcpy(gpu_indices, indices.data(), sizeof(int) * indices.size(),
-                                   cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&gpu_indices, sizeof(int) * indices.size()));
+        CHECK_CUDA_ERROR(cudaMemcpy(gpu_indices, indices.data(), sizeof(int) * indices.size(),
+                                    cudaMemcpyHostToDevice));
 
         Point2f *gpu_uv = nullptr;
         if (!uv.empty()) {
-            checkCudaErrors(cudaMallocManaged((void **)&gpu_uv, sizeof(Point2f) * uv.size()));
-            checkCudaErrors(
+            CHECK_CUDA_ERROR(cudaMallocManaged((void **)&gpu_uv, sizeof(Point2f) * uv.size()));
+            CHECK_CUDA_ERROR(
                 cudaMemcpy(gpu_uv, uv.data(), sizeof(Point2f) * uv.size(), cudaMemcpyHostToDevice));
             gpu_dynamic_pointers.push_back(gpu_uv);
         }
 
         TriangleMesh *mesh;
-        checkCudaErrors(cudaMallocManaged((void **)&mesh, sizeof(TriangleMesh)));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&mesh, sizeof(TriangleMesh)));
         mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, points.size());
 
         uint num_triangles = mesh->triangles_num;
         Triangle *triangles;
-        checkCudaErrors(cudaMallocManaged((void **)&triangles, sizeof(Triangle) * num_triangles));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&triangles, sizeof(Triangle) * num_triangles));
         Shape *shapes;
-        checkCudaErrors(cudaMallocManaged((void **)&shapes, sizeof(Shape) * num_triangles));
+        CHECK_CUDA_ERROR(cudaMallocManaged((void **)&shapes, sizeof(Shape) * num_triangles));
 
         {
             uint threads = 1024;
@@ -691,18 +694,18 @@ class SceneBuilder {
 
             if (!graphics_state.area_light_entity) {
                 SimplePrimitive *simple_primitives;
-                checkCudaErrors(cudaMallocManaged((void **)&simple_primitives,
-                                                  sizeof(SimplePrimitive) * num_triangles));
+                CHECK_CUDA_ERROR(cudaMallocManaged((void **)&simple_primitives,
+                                                   sizeof(SimplePrimitive) * num_triangles));
                 Primitive *primitives;
-                checkCudaErrors(
+                CHECK_CUDA_ERROR(
                     cudaMallocManaged((void **)&primitives, sizeof(Primitive) * num_triangles));
 
                 GPU::init_simple_primitives<<<blocks, threads>>>(
                     simple_primitives, shapes, graphics_state.current_material, num_triangles);
                 GPU::init_primitives<<<blocks, threads>>>(primitives, simple_primitives,
                                                           num_triangles);
-                checkCudaErrors(cudaGetLastError());
-                checkCudaErrors(cudaDeviceSynchronize());
+                CHECK_CUDA_ERROR(cudaGetLastError());
+                CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
                 gpu_primitives.reserve(gpu_primitives.size() + num_triangles);
                 for (uint idx = 0; idx < num_triangles; idx++) {
@@ -715,12 +718,12 @@ class SceneBuilder {
             } else {
                 // build light
                 DiffuseAreaLight *diffuse_area_lights;
-                checkCudaErrors(cudaMallocManaged((void **)&diffuse_area_lights,
-                                                  sizeof(DiffuseAreaLight) * num_triangles));
+                CHECK_CUDA_ERROR(cudaMallocManaged((void **)&diffuse_area_lights,
+                                                   sizeof(DiffuseAreaLight) * num_triangles));
 
                 GeometricPrimitive *geometric_primitives;
-                checkCudaErrors(cudaMallocManaged((void **)&geometric_primitives,
-                                                  sizeof(GeometricPrimitive) * num_triangles));
+                CHECK_CUDA_ERROR(cudaMallocManaged((void **)&geometric_primitives,
+                                                   sizeof(GeometricPrimitive) * num_triangles));
 
                 for (uint idx = 0; idx < num_triangles; idx++) {
                     diffuse_area_lights[idx].init(render_from_object,
@@ -732,13 +735,13 @@ class SceneBuilder {
                 }
 
                 Primitive *primitives;
-                checkCudaErrors(
+                CHECK_CUDA_ERROR(
                     cudaMallocManaged((void **)&primitives, sizeof(Primitive) * num_triangles));
 
                 GPU::init_primitives<<<blocks, threads>>>(primitives, geometric_primitives,
                                                           num_triangles);
-                checkCudaErrors(cudaGetLastError());
-                checkCudaErrors(cudaDeviceSynchronize());
+                CHECK_CUDA_ERROR(cudaGetLastError());
+                CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
                 gpu_primitives.reserve(gpu_primitives.size() + num_triangles);
                 for (uint idx = 0; idx < num_triangles; idx++) {
@@ -906,8 +909,8 @@ class SceneBuilder {
         dim3 threads(thread_width, thread_height, 1);
 
         GPU::parallel_render<<<blocks, threads>>>(renderer, samples_per_pixel.value());
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         const std::chrono::duration<FloatType> duration_rendering{std::chrono::system_clock::now() -
                                                                   start_rendering};
@@ -918,8 +921,8 @@ class SceneBuilder {
 
         renderer->film->write_to_png(output_filename, film_resolution.value());
 
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         std::cout << "image saved to `" << output_filename << "`\n";
     }

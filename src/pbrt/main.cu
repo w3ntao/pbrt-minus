@@ -88,7 +88,7 @@ int main(int argc, const char **argv) {
         size_t stack_size;
         cudaDeviceGetLimit(&stack_size, cudaLimitStackSize);
         size_t new_stack_size = std::max(stack_size, size_t(8 * 1024));
-        checkCudaErrors(cudaDeviceSetLimit(cudaLimitStackSize, new_stack_size));
+        CHECK_CUDA_ERROR(cudaDeviceSetLimit(cudaLimitStackSize, new_stack_size));
     }
 
     display_system_info();
@@ -96,8 +96,8 @@ int main(int argc, const char **argv) {
     const auto command_line_option = CommandLineOption(argc, argv);
     SceneBuilder::render_pbrt(command_line_option);
 
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     cudaDeviceReset();
 
     return 0;

@@ -49,7 +49,7 @@ FloatType Spectrum::operator()(FloatType lambda) const {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return NAN;
 }
 
@@ -73,6 +73,6 @@ SampledSpectrum Spectrum::sample(const SampledWavelengths &lambda) const {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return SampledSpectrum::same_value(NAN);
 }

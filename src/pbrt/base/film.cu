@@ -19,7 +19,7 @@ void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
 }
 
 PBRT_CPU_GPU
@@ -30,8 +30,7 @@ RGB Film::get_pixel_rgb(const Point2i &p) const {
     }
     }
 
-    report_function_error_and_exit(__func__);
-
+    REPORT_FATAL_ERROR();
     return {};
 }
 

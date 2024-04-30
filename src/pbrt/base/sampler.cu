@@ -16,7 +16,7 @@ void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension
         return;
     }
     }
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
 }
 
 PBRT_CPU_GPU
@@ -27,7 +27,7 @@ uint Sampler::get_samples_per_pixel() const {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return 0;
 }
 
@@ -39,7 +39,7 @@ FloatType Sampler::get_1d() {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
     return NAN;
 }
 
@@ -51,7 +51,7 @@ Point2f Sampler::get_2d() {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
 }
 
 PBRT_GPU
@@ -62,7 +62,7 @@ Point2f Sampler::get_pixel_2d() {
     }
     }
 
-    report_function_error_and_exit(__func__);
+    REPORT_FATAL_ERROR();
 }
 
 PBRT_GPU
