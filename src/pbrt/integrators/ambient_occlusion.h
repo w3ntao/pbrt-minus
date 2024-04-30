@@ -45,7 +45,7 @@ class AmbientOcclusionIntegrator {
         // Divide by PI so that fully visible is one.
         auto spawned_ray = isect.spawn_ray(wi);
 
-        if (base->bvh->fast_intersect(spawned_ray, Infinity)) {
+        if (base->bvh->fast_intersect(spawned_ray.ray, Infinity)) {
             return SampledSpectrum::same_value(0);
         }
 

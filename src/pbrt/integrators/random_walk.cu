@@ -53,6 +53,6 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWave
     }
 
     auto spawned_ray = isect.spawn_ray(wp);
-    return radiance_emission + fcos * li_random_walk(spawned_ray, lambda, sampler, depth + 1) /
+    return radiance_emission + fcos * li_random_walk(spawned_ray.ray, lambda, sampler, depth + 1) /
                                    (1.0 / (4.0 * compute_pi()));
 }

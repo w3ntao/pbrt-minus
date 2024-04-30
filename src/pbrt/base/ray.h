@@ -43,14 +43,17 @@ class Ray {
     }
 };
 
-class DifferentialRay : public Ray {
+class DifferentialRay {
   public:
-    // RayDifferential Public Members
-    bool hasDifferentials = false;
+    Ray ray;
+
+    bool hasDifferentials;
+
     Point3f rxOrigin;
     Point3f ryOrigin;
     Vector3f rxDirection;
     Vector3f ryDirection;
 
-    PBRT_GPU DifferentialRay(Point3f o, Vector3f d) : Ray(o, d), hasDifferentials(false) {}
+    PBRT_CPU_GPU DifferentialRay(const Point3f o, const Vector3f d)
+        : ray(Ray(o, d)), hasDifferentials(false) {}
 };
