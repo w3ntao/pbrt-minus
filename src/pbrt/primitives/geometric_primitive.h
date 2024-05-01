@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include <cuda/std/optional>
 
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/bounds3.h"
@@ -22,7 +22,7 @@ class GeometricPrimitive {
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
-    std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
   private:
     const Shape *shape_ptr;

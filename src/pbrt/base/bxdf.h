@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include <cuda/std/optional>
 
 #include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
@@ -129,7 +129,7 @@ class BxDF {
         null,
         diffuse_bxdf,
     };
-    
+
     PBRT_GPU
     BxDF() : bxdf_type(Type::null), bxdf_ptr(nullptr) {}
 
@@ -140,7 +140,7 @@ class BxDF {
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;
 
     PBRT_GPU
-    std::optional<BSDFSample>
+    cuda::std::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode = TransportMode::Radiance,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 

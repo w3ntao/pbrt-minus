@@ -1,7 +1,10 @@
 #pragma once
 
+#include <cuda/std/optional>
+
 #include "pbrt/base/light.h"
 #include "pbrt/spectra/densely_sampled_spectrum.h"
+#include "pbrt/base/shape.h"
 
 class ParameterDict;
 class RGBColorSpace;
@@ -20,6 +23,11 @@ class DiffuseAreaLight {
     PBRT_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                       const SampledWavelengths &lambda) const;
+
+    PBRT_GPU
+    cuda::std::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
+                                                 SampledWavelengths &lambda,
+                                                 bool allow_incomplete_pdf) const;
 
   private:
     LightBase light_base;

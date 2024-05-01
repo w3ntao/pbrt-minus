@@ -1,12 +1,18 @@
 #pragma once
 
-#include <optional>
+#include <cuda/std/optional>
 
-#include "pbrt/util/macro.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/base/interaction.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/shapes/triangle_mesh.h"
+#include "pbrt/util/macro.h"
+#include "pbrt/util/sampling.h"
+
+PBRT_CPU_GPU
+static FloatType SphericalTriangleArea(const Vector3f a, const Vector3f b, const Vector3f c) {
+    return std::abs(2.0 * std::atan2(a.dot(b.cross(c)), 1 + a.dot(b) + a.dot(c) + b.dot(c)));
+}
 
 class Triangle {
   public:
@@ -39,12 +45,12 @@ class Triangle {
         return intersect_triangle(ray, t_max, points[0], points[1], points[2]).has_value();
     }
 
-    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const {
+    PBRT_GPU
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const {
         Point3f points[3];
         get_points(points);
 
-        std::optional<TriangleIntersection> tri_intersection =
-            intersect_triangle(ray, t_max, points[0], points[1], points[2]);
+        auto tri_intersection = intersect_triangle(ray, t_max, points[0], points[1], points[2]);
         if (!tri_intersection) {
             return {};
         }
@@ -52,6 +58,144 @@ class Triangle {
         SurfaceInteraction si = interaction_from_intersection(tri_intersection.value(), -ray.d);
 
         return ShapeIntersection(si, tri_intersection->t);
+    }
+
+    PBRT_GPU
+    cuda::std::optional<ShapeSample> sample(Point2f u) const {
+        const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
+        const Point3f p0 = mesh->p[v[0]];
+        const Point3f p1 = mesh->p[v[1]];
+        const Point3f p2 = mesh->p[v[2]];
+
+        FloatType b[3];
+        sample_uniform_triangle(b, u);
+        const Point3f p = b[0] * p0 + b[1] * p1 + b[2] * p2;
+
+        // Compute surface normal for sampled point on triangle
+        // Normal3f n = Normalize(Normal3f(Cross(p1 - p0, p2 - p0)));
+        Normal3f n = Normal3f((p1 - p0).cross(p2 - p0).normalize());
+
+        if (mesh->n) {
+            // this part not implemented
+            REPORT_FATAL_ERROR();
+        } else if ((mesh->reverse_orientation ^ mesh->transformSwapsHandedness)) {
+            // this part not implemented
+            REPORT_FATAL_ERROR();
+        }
+
+        Point2f uv[3];
+        if (mesh->uv) {
+            for (uint idx = 0; idx < 3; ++idx) {
+                uv[idx] = mesh->uv[v[idx]];
+            }
+        } else {
+            uv[0] = Point2f(0, 0);
+            uv[1] = Point2f(1, 0);
+            uv[2] = Point2f(1, 1);
+        }
+
+        Point2f uvSample = b[0] * uv[0] + b[1] * uv[1] + b[2] * uv[2];
+
+        // Compute error bounds _pError_ for sampled point on triangle
+        Point3f pAbsSum = (b[0] * p0).abs() + (b[1] * p1).abs() + ((1 - b[0] - b[1]) * p2).abs();
+
+        Vector3f pError = (gamma(6) * pAbsSum).to_vector3();
+
+        return ShapeSample{
+            .interaction = Interaction(Point3fi(p, pError), n, uvSample),
+            .pdf = FloatType(1.0) / area(),
+        };
+    }
+
+    PBRT_GPU
+    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, Point2f u) const {
+        Point3f points[3];
+        get_points(points);
+        const auto p0 = points[0];
+        const auto p1 = points[1];
+        const auto p2 = points[2];
+        const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
+
+        // Use uniform area sampling for numerically unstable cases
+        FloatType solid_angle = this->solid_angle(ctx.p());
+
+        if (solid_angle < MinSphericalSampleArea || solid_angle > MaxSphericalSampleArea) {
+            auto ss = sample(u);
+            Vector3f wi = ss->interaction.p() - ctx.p();
+            if (wi.squared_length() == 0) {
+                return {};
+            }
+            wi = wi.normalize();
+
+            // Convert area sampling PDF in _ss_ to solid angle measure
+            ss->pdf /= std::abs(ss->interaction.n.dot(-wi)) /
+                       (ctx.p() - ss->interaction.p()).squared_length();
+
+            if (is_inf(ss->pdf)) {
+                return {};
+            }
+
+            return ss;
+        }
+
+        // Sample spherical triangle from reference point
+        // Apply warp product sampling for cosine factor at reference point
+        FloatType pdf = 1.0;
+        if (ctx.ns != Normal3f(0, 0, 0)) {
+            // Compute $\cos\theta$-based weights _w_ at sample domain corners
+            Point3f rp = ctx.p();
+            Vector3f wi[3] = {(p0 - rp).normalize(), (p1 - rp).normalize(), (p2 - rp).normalize()};
+
+            FloatType w[4] = {std::max<FloatType>(0.01, std::abs(ctx.ns.dot(wi[1]))),
+                              std::max<FloatType>(0.01, std::abs(ctx.ns.dot(wi[1]))),
+                              std::max<FloatType>(0.01, std::abs(ctx.ns.dot(wi[0]))),
+                              std::max<FloatType>(0.01, std::abs(ctx.ns.dot(wi[2])))};
+            u = sample_bilinear(u, w);
+            pdf = bilinear_pdf(u, w);
+        }
+
+        FloatType triPDF;
+        FloatType b[3];
+        sample_spherical_triangle(b, &triPDF, points, ctx.p(), u);
+        if (triPDF == 0.0) {
+            return {};
+        }
+        pdf *= triPDF;
+
+        // Compute error bounds _pError_ for sampled point on triangle
+        Point3f pAbsSum = (b[0] * p0).abs() + (b[1] * p1).abs() + ((1 - b[0] - b[1]) * p2).abs();
+        Vector3f pError = (gamma(6) * pAbsSum).to_vector3();
+
+        // Return _ShapeSample_ for solid angle sampled point on triangle
+        Point3f p = b[0] * p0 + b[1] * p1 + b[2] * p2;
+        // Compute surface normal for sampled point on triangle
+        Normal3f n = Normal3f((p1 - p0).cross(p2 - p0).normalize());
+
+        if (mesh->n) {
+            Normal3f ns(b[0] * mesh->n[v[0]] + b[1] * mesh->n[v[1]] +
+                        (1 - b[0] - b[1]) * mesh->n[v[2]]);
+            n = Normal3f(n.to_vector3().face_forward(ns.to_vector3()));
+        } else if (mesh->reverse_orientation ^ mesh->transformSwapsHandedness) {
+            n *= -1;
+        }
+
+        Point2f uv[3];
+        if (mesh->uv) {
+            uv[0] = mesh->uv[v[0]];
+            uv[1] = mesh->uv[v[1]];
+            uv[2] = mesh->uv[v[2]];
+        } else {
+            uv[0] = Point2f(0, 0);
+            uv[1] = Point2f(1, 0);
+            uv[2] = Point2f(1, 1);
+        }
+
+        Point2f uvSample = b[0] * uv[0] + b[1] * uv[1] + b[2] * uv[2];
+
+        return ShapeSample{
+            .interaction = Interaction(Point3fi(p, pError), n, uvSample),
+            .pdf = pdf,
+        };
     }
 
   private:
@@ -65,9 +209,10 @@ class Triangle {
 
     int triangle_idx;
     const TriangleMesh *mesh;
+    static constexpr FloatType MinSphericalSampleArea = 3e-4;
+    static constexpr FloatType MaxSphericalSampleArea = 6.22;
 
     PBRT_CPU_GPU
-
     void get_points(Point3f p[3]) const {
         const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
         for (uint idx = 0; idx < 3; ++idx) {
@@ -75,10 +220,21 @@ class Triangle {
         }
     }
 
-    PBRT_GPU std::optional<TriangleIntersection> intersect_triangle(const Ray &ray, FloatType t_max,
-                                                                    const Point3f &p0,
-                                                                    const Point3f &p1,
-                                                                    const Point3f &p2) const {
+    PBRT_GPU
+    FloatType solid_angle(const Point3f p) const {
+        // Get triangle vertices in _p0_, _p1_, and _p2_
+        Point3f points[3];
+        get_points(points);
+
+        return SphericalTriangleArea((points[0] - p).normalize(), (points[1] - p).normalize(),
+                                     (points[2] - p).normalize());
+    }
+
+    PBRT_GPU
+    cuda::std::optional<TriangleIntersection> intersect_triangle(const Ray &ray, FloatType t_max,
+                                                                 const Point3f &p0,
+                                                                 const Point3f &p1,
+                                                                 const Point3f &p2) const {
         // Return no intersection if triangle is degenerate
         if ((p2 - p0).cross(p1 - p0).squared_length() == 0.0) {
             return {};
@@ -256,9 +412,7 @@ class Triangle {
         }
 
         if (mesh->n || mesh->s) {
-            printf("\nTriangle::interaction_from_intersection():\n");
-            printf("    mesh->n and mesh->s are not implemented\n\n");
-            asm("trap;");
+            REPORT_FATAL_ERROR();
         }
 
         return isect;

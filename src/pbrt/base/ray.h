@@ -41,6 +41,14 @@ class Ray {
 
         return po;
     }
+
+    PBRT_CPU_GPU static Ray spawn_ray_to(const Point3fi &p_from, const Normal3f &n_from,
+                                         const Point3fi &p_to, const Normal3f &n_to) {
+        auto pf = offset_ray_origin(p_from, n_from, p_to.to_point3f() - p_from.to_point3f());
+        auto pt = offset_ray_origin(p_to, n_to, pf - p_to.to_point3f());
+
+        return Ray(pf, pt - pf);
+    }
 };
 
 class DifferentialRay {

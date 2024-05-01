@@ -20,8 +20,9 @@ SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
 }
 
 PBRT_GPU
-std::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
-                                         BxDFReflTransFlags sampleFlags) const {
+cuda::std::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
+                                               TransportMode mode,
+                                               BxDFReflTransFlags sampleFlags) const {
     switch (bxdf_type) {
     case (Type::diffuse_bxdf): {
         return ((DiffuseBxDF *)bxdf_ptr)->sample_f(wo, uc, u, mode, sampleFlags);

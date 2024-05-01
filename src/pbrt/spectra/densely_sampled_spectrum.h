@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/spectrum_util/constants.h"
+#include "pbrt/spectrum_util/spectrum_constants.h"
 #include "pbrt/spectrum_util/black_body_spectrum.h"
 
 class Spectrum;

@@ -18,7 +18,7 @@ void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *cam
     } else {
         // Approximate screen-space change in $\pt{}$ based on camera projection
         // camera.Approximate_dp_dxy(p(), n, time, samplesPerPixel, &dpdx, &dpdy);
-        camera->approximate_dp_dxy(pi.to_point3f(), n, samples_per_pixel, &dpdx, &dpdy);
+        camera->approximate_dp_dxy(p(), n, samples_per_pixel, &dpdx, &dpdy);
     }
 
     // Estimate screen-space change in $(u,v)$
@@ -75,5 +75,5 @@ SampledSpectrum SurfaceInteraction::le(const Vector3f w, const SampledWavelength
         return SampledSpectrum::same_value(0.0);
     }
 
-    return area_light->l(pi.to_point3f(), n, uv, w, lambda);
+    return area_light->l(p(), n, uv, w, lambda);
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include <cuda/std/optional>
 
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/bounds3.h"
@@ -8,6 +8,22 @@
 #include "pbrt/base/ray.h"
 
 class Triangle;
+
+struct ShapeSampleContext {
+    Point3fi pi;
+    Normal3f n;
+    Normal3f ns;
+
+    PBRT_CPU_GPU
+    Point3f p() const {
+        return pi.to_point3f();
+    }
+};
+
+struct ShapeSample {
+    Interaction interaction;
+    FloatType pdf;
+};
 
 class Shape {
   public:
@@ -28,7 +44,10 @@ class Shape {
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
-    std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+
+    PBRT_GPU
+    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f u) const;
 
   private:
     Type shape_type;

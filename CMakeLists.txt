@@ -19,6 +19,8 @@ set(PROJ_NAME "pbrt-minus")
 
 project(${PROJ_NAME} LANGUAGES CUDA CXX)
 
+option(PBRT_FLOAT_AS_DOUBLE "Use 64-bit floats" ON)
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/ext)
 
 enable_language(CUDA)
@@ -49,6 +51,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/accelerator/hlbvh.cu
         src/pbrt/euclidean_space/squared_matrix.cu
         src/pbrt/integrators/random_walk.cu
+        src/pbrt/integrators/simple_path.cu
         src/pbrt/lights/diffuse_area_light.cu
         src/pbrt/materials/diffuse_material.cu
         src/pbrt/primitives/geometric_primitive.cu

@@ -44,10 +44,23 @@ bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
 }
 
 PBRT_GPU
-std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
+cuda::std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
     switch (shape_type) {
     case (Type::triangle): {
         return ((Triangle *)shape_ptr)->intersect(ray, t_max);
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return {};
+}
+
+PBRT_GPU
+cuda::std::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
+                                               const Point2f u) const {
+    switch (shape_type) {
+    case (Type::triangle): {
+        return ((Triangle *)shape_ptr)->sample(ctx, u);
     }
     }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/spectrum_util/constants.h"
+#include "pbrt/spectrum_util/spectrum_constants.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/utility_math.h"
 #include "pbrt/util/sampling.h"
@@ -21,32 +21,6 @@ class SampledWavelengths {
             lambda[idx] = _lambda[idx];
             pdf[idx] = _pdf[idx];
         }
-    }
-
-    PBRT_CPU_GPU
-    static SampledWavelengths SampleUniform(FloatType u, FloatType lambda_min = LAMBDA_MIN,
-                                            FloatType lambda_max = LAMBDA_MAX) {
-        FloatType _lambda[NSpectrumSamples];
-
-        // Sample first wavelength using _u_
-        _lambda[0] = lerp(u, lambda_min, lambda_max);
-
-        // Initialize _lambda_ for remaining wavelengths
-        FloatType delta = (lambda_max - lambda_min) / NSpectrumSamples;
-        for (uint i = 1; i < NSpectrumSamples; ++i) {
-            _lambda[i] = _lambda[i - 1] + delta;
-            if (_lambda[i] > lambda_max) {
-                _lambda[i] = lambda_min + (_lambda[i] - lambda_max);
-            }
-        }
-
-        FloatType _pdf[NSpectrumSamples];
-        // Compute PDF for sampled wavelengths
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
-            _pdf[i] = 1 / (lambda_max - lambda_min);
-        }
-
-        return SampledWavelengths(_lambda, _pdf);
     }
 
     PBRT_CPU_GPU

@@ -19,8 +19,11 @@
 #include "pbrt/integrators/ambient_occlusion.h"
 #include "pbrt/integrators/surface_normal.h"
 #include "pbrt/integrators/random_walk.h"
+#include "pbrt/integrators/simple_path.h"
 
 #include "pbrt/lights/diffuse_area_light.h"
+
+#include "pbrt/light_samplers/uniform_light_sampler.h"
 
 #include "pbrt/materials/diffuse_material.h"
 
@@ -153,13 +156,15 @@ class SceneBuilder {
 
     PreComputedSpectrum pre_computed_spectrum;
     std::vector<void *> gpu_dynamic_pointers;
-    std::vector<const Primitive *> gpu_primitives;
 
     std::optional<Point2i> film_resolution = std::nullopt;
     std::string output_filename;
     std::vector<Token> camera_tokens;
     std::vector<Token> film_tokens;
     std::vector<Token> sampler_tokens;
+
+    std::vector<const Primitive *> gpu_primitives;
+    std::vector<const Light *> gpu_lights;
 
     GraphicsState graphics_state;
     std::stack<GraphicsState> pushed_graphics_state;
@@ -395,20 +400,39 @@ class SceneBuilder {
         gpu_dynamic_pointers.push_back(independent_samplers);
     }
 
-    void option_integrator() {
+    void build_integrator() {
         IntegratorBase *integrator_base;
         CHECK_CUDA_ERROR(cudaMallocManaged((void **)&integrator_base, sizeof(IntegratorBase)));
-        gpu_dynamic_pointers.push_back(integrator_base);
+
+        const Light **light_array;
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged((void **)&light_array, sizeof(Light *) * gpu_lights.size()));
+        CHECK_CUDA_ERROR(cudaMemcpy(light_array, gpu_lights.data(),
+                                    sizeof(Light *) * gpu_lights.size(), cudaMemcpyHostToDevice));
+
+        UniformLightSampler *uniform_light_sampler;
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged((void **)&uniform_light_sampler, sizeof(UniformLightSampler)));
+        uniform_light_sampler->lights = light_array;
+        uniform_light_sampler->light_num = gpu_lights.size();
 
         integrator_base->bvh = renderer->bvh;
         integrator_base->camera = renderer->camera;
+        integrator_base->lights = light_array;
+        integrator_base->light_num = gpu_lights.size();
+
+        integrator_base->uniform_light_sampler = uniform_light_sampler;
+
+        gpu_dynamic_pointers.push_back(integrator_base);
+        gpu_dynamic_pointers.push_back(light_array);
+        gpu_dynamic_pointers.push_back(uniform_light_sampler);
 
         if (!integrator_name.has_value()) {
             printf("Integrator not set, changed to AmbientOcclusion\n");
             integrator_name = "ambientocclusion";
         }
 
-        if (integrator_name == "simplepath" || integrator_name == "volpath") {
+        if (integrator_name == "volpath") {
             printf("Integrator `%s` not implemented, changed to AmbientOcclusion\n",
                    integrator_name->c_str());
             integrator_name = "ambientocclusion";
@@ -430,8 +454,10 @@ class SceneBuilder {
             ambient_occlusion_integrator->init(integrator_base, illuminant_spectrum,
                                                illuminant_scale);
             renderer->integrator->init(ambient_occlusion_integrator);
+            return;
+        }
 
-        } else if (integrator_name == "surfacenormal") {
+        if (integrator_name == "surfacenormal") {
             SurfaceNormalIntegrator *surface_normal_integrator;
             CHECK_CUDA_ERROR(cudaMallocManaged((void **)&surface_normal_integrator,
                                                sizeof(SurfaceNormalIntegrator)));
@@ -440,8 +466,10 @@ class SceneBuilder {
             surface_normal_integrator->init(integrator_base,
                                             renderer->global_variables->rgb_color_space);
             renderer->integrator->init(surface_normal_integrator);
+            return;
+        }
 
-        } else if (integrator_name == "randomwalk") {
+        if (integrator_name == "randomwalk") {
             RandomWalkIntegrator *random_walk_integrator;
             CHECK_CUDA_ERROR(
                 cudaMallocManaged((void **)&random_walk_integrator, sizeof(RandomWalkIntegrator)));
@@ -449,12 +477,24 @@ class SceneBuilder {
 
             random_walk_integrator->init(integrator_base, 5);
             renderer->integrator->init(random_walk_integrator);
-
-        } else {
-            const std::string error =
-                "parse_tokens(): unknown Integrator name: `" + integrator_name.value() + "`";
-            throw std::runtime_error(error.c_str());
+            return;
         }
+
+        if (integrator_name == "simplepath") {
+            SimplePathIntegrator *simple_path_integrator;
+            CHECK_CUDA_ERROR(
+                cudaMallocManaged((void **)&simple_path_integrator, sizeof(SimplePathIntegrator)));
+            gpu_dynamic_pointers.push_back(simple_path_integrator);
+
+            simple_path_integrator->init(integrator_base, 5);
+            renderer->integrator->init(simple_path_integrator);
+
+            return;
+        }
+
+        const std::string error =
+            "parse_tokens(): unknown Integrator name: `" + integrator_name.value() + "`";
+        throw std::runtime_error(error.c_str());
     }
 
     void parse_lookat(const std::vector<Token> &tokens) {
@@ -743,12 +783,13 @@ class SceneBuilder {
                     diffuse_area_lights[idx].init(render_from_object,
                                                   graphics_state.area_light_entity->parameters,
                                                   &shapes[idx], renderer->global_variables);
-
-                    lights[idx].init(&diffuse_area_lights[idx]);
-
-                    geometric_primitives[idx].init(&shapes[idx], graphics_state.current_material,
-                                                   &lights[idx]);
                 }
+
+                GPU::init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num_triangles);
+
+                GPU::init_geometric_primitives<<<blocks, threads>>>(geometric_primitives, shapes,
+                                                                    graphics_state.current_material,
+                                                                    lights, num_triangles);
 
                 Primitive *primitives;
                 CHECK_CUDA_ERROR(
@@ -762,6 +803,11 @@ class SceneBuilder {
                 gpu_primitives.reserve(gpu_primitives.size() + num_triangles);
                 for (uint idx = 0; idx < num_triangles; idx++) {
                     gpu_primitives.push_back(&primitives[idx]);
+                }
+
+                gpu_lights.reserve(gpu_lights.size() + num_triangles);
+                for (uint idx = 0; idx < num_triangles; idx++) {
+                    gpu_lights.push_back(&lights[idx]);
                 }
 
                 gpu_dynamic_pointers.push_back(diffuse_area_lights);
@@ -798,7 +844,6 @@ class SceneBuilder {
             option_filter();
             option_camera();
             option_sampler();
-            option_integrator();
 
             graphics_state.current_transform = Transform::identity();
             named_coordinate_systems["world"] = graphics_state.current_transform;
@@ -905,6 +950,7 @@ class SceneBuilder {
 
     void preprocess() {
         renderer->bvh->build_bvh(gpu_dynamic_pointers, gpu_primitives);
+        build_integrator();
     }
 
     void render() const {

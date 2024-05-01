@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cuda/std/optional>
+
 #include "pbrt/base/bxdf.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/sampling.h"
@@ -31,7 +33,7 @@ struct DiffuseBxDF {
     }
 
     PBRT_GPU
-    std::optional<BSDFSample>
+    cuda::std::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode = TransportMode::Radiance,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         if (!(sampleFlags & BxDFReflTransFlags::Reflection)) {

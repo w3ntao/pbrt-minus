@@ -7,9 +7,23 @@ constexpr FloatType Infinity = std::numeric_limits<FloatType>::infinity();
 
 constexpr FloatType MachineEpsilon = std::numeric_limits<FloatType>::epsilon() * 0.5;
 
+#define _DoubleOneMinusEpsilon 0x1.fffffffffffffp-1
+#define _FloatOneMinusEpsilon float(0x1.fffffep-1)
+
+#ifdef PBRT_FLOAT_AS_DOUBLE
+#define OneMinusEpsilon _DoubleOneMinusEpsilon
+#else
+#define OneMinusEpsilon _FloatOneMinusEpsilon
+#endif
+
 PBRT_CPU_GPU
 constexpr FloatType gamma(int n) {
     return (FloatType(n) * MachineEpsilon) / (FloatType(1.0) - FloatType(n) * MachineEpsilon);
+}
+
+template <typename T>
+PBRT_CPU_GPU constexpr T clamp(T x, T low, T high) {
+    return x < low ? low : (x > high ? high : x);
 }
 
 PBRT_CPU_GPU
@@ -20,6 +34,10 @@ static FloatType compute_pi() {
 PBRT_CPU_GPU
 static FloatType degree_to_radian(FloatType degree) {
     return compute_pi() / 180.0 * degree;
+}
+
+PBRT_CPU_GPU inline FloatType safe_asin(float x) {
+    return std::asin(clamp<FloatType>(x, -1, 1));
 }
 
 template <typename T>
@@ -40,11 +58,6 @@ T divide_and_ceil(T dividend, T divisor) {
     return dividend / divisor + 1;
 }
 
-PBRT_CPU_GPU
-constexpr FloatType clamp(FloatType x, FloatType low, FloatType high) {
-    return x < low ? low : (x > high ? high : x);
-}
-
 template <typename Predicate>
 PBRT_CPU_GPU size_t find_interval(size_t sz, const Predicate &pred) {
     using ssize_t = std::make_signed_t<size_t>;
@@ -56,7 +69,7 @@ PBRT_CPU_GPU size_t find_interval(size_t sz, const Predicate &pred) {
         first = predResult ? middle + 1 : first;
         size = predResult ? size - (half + 1) : half;
     }
-    return (size_t)clamp((ssize_t)first - 1, 0, sz - 2);
+    return clamp<size_t>((ssize_t)first - 1, 0, sz - 2);
 }
 
 PBRT_CPU_GPU

@@ -106,7 +106,8 @@ class HLBVH {
 
     PBRT_GPU bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
-    PBRT_GPU std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    PBRT_GPU
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
     void build_bvh(std::vector<void *> &gpu_dynamic_pointers,
                    const std::vector<const Primitive *> &gpu_primitives);

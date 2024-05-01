@@ -28,15 +28,20 @@ class Normal3f {
         return !this->operator==(n);
     }
 
+    PBRT_CPU_GPU Normal3f operator+(const Normal3f &n) const {
+        return Normal3f(x + n.x, y + n.y, z + n.z);
+    }
+
     PBRT_CPU_GPU Normal3f operator-() const {
         return Normal3f(-x, -y, -z);
     }
 
-    PBRT_CPU_GPU Normal3f operator*=(FloatType factor) {
-        x *= factor;
-        y *= factor;
-        z *= factor;
-        return *this;
+    PBRT_CPU_GPU Normal3f operator*(FloatType factor) const {
+        return Normal3f(x * factor, y * factor, z * factor);
+    }
+
+    PBRT_CPU_GPU void operator*=(FloatType factor) {
+        *this = *this * factor;
     }
 
     PBRT_CPU_GPU Normal3f abs() const {
@@ -52,3 +57,8 @@ class Normal3f {
         return stream;
     }
 };
+
+PBRT_CPU_GPU
+static Normal3f operator*(FloatType factor, const Normal3f &n) {
+    return n * factor;
+}

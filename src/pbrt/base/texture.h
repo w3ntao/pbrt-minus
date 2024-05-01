@@ -27,10 +27,10 @@ struct TextureEvalContext {
     TextureEvalContext() = default;
 
     PBRT_CPU_GPU
-    explicit TextureEvalContext(const Interaction &intr) : p(intr.pi.to_point3f()), uv(intr.uv) {}
+    explicit TextureEvalContext(const Interaction &intr) : p(intr.p()), uv(intr.uv) {}
 
     PBRT_CPU_GPU
     explicit TextureEvalContext(const SurfaceInteraction &si)
-        : p(si.pi.to_point3f()), dpdx(si.dpdx), dpdy(si.dpdy), n(si.n), uv(si.uv), dudx(si.dudx),
-          dudy(si.dudy), dvdx(si.dvdx), dvdy(si.dvdy), faceIndex(si.faceIndex) {}
+        : p(si.p()), dpdx(si.dpdx), dpdy(si.dpdy), n(si.n), uv(si.uv), dudx(si.dudx), dudy(si.dudy),
+          dvdx(si.dvdx), dvdy(si.dvdy), faceIndex(si.faceIndex) {}
 };

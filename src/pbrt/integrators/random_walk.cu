@@ -30,29 +30,27 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWave
         return radiance_emission;
     }
 
-    auto fcos = SampledSpectrum::same_value(NAN);
-    BSDF bsdf;
-    Vector3f wp(NAN, NAN, NAN);
-
     if (isect.material->get_material_type() == Material::Type::diffuse_material) {
+        BSDF bsdf;
         DiffuseBxDF diffuse_bxdf;
         isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
 
         // Randomly sample direction leaving surface for random walk
         Point2f u = sampler->get_2d();
-        wp = sample_uniform_sphere(u);
+        auto wp = sample_uniform_sphere(u);
 
         // Evaluate BSDF at surface for sampled direction
-        fcos = bsdf.f(wo, wp) * abs(wp.dot(isect.shading.n.to_vector3()));
-    } else {
-        REPORT_FATAL_ERROR();
-    }
+        auto fcos = bsdf.f(wo, wp) * abs(wp.dot(isect.shading.n.to_vector3()));
 
-    if (!fcos.is_positive()) {
-        return radiance_emission;
-    }
+        if (!fcos.is_positive()) {
+            return radiance_emission;
+        }
 
-    auto spawned_ray = isect.spawn_ray(wp);
-    return radiance_emission + fcos * li_random_walk(spawned_ray.ray, lambda, sampler, depth + 1) /
-                                   (1.0 / (4.0 * compute_pi()));
+        auto spawned_ray = isect.spawn_ray(wp);
+        return radiance_emission + fcos *
+                                       li_random_walk(spawned_ray.ray, lambda, sampler, depth + 1) /
+                                       (1.0 / (4.0 * compute_pi()));
+    }
+    
+    REPORT_FATAL_ERROR();
 }

@@ -47,7 +47,7 @@ bool Primitive::fast_intersect(const Ray &ray, FloatType t_max) const {
 }
 
 PBRT_GPU
-std::optional<ShapeIntersection> Primitive::intersect(const Ray &ray, FloatType t_max) const {
+cuda::std::optional<ShapeIntersection> Primitive::intersect(const Ray &ray, FloatType t_max) const {
     switch (primitive_type) {
     case (Type::simple_primitive): {
         return ((SimplePrimitive *)primitive_ptr)->intersect(ray, t_max);

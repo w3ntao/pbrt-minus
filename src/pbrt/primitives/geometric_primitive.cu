@@ -22,8 +22,8 @@ bool GeometricPrimitive::fast_intersect(const Ray &ray, FloatType t_max) const {
 }
 
 PBRT_GPU
-std::optional<ShapeIntersection> GeometricPrimitive::intersect(const Ray &ray,
-                                                               FloatType t_max) const {
+cuda::std::optional<ShapeIntersection> GeometricPrimitive::intersect(const Ray &ray,
+                                                                     FloatType t_max) const {
     auto si = shape_ptr->intersect(ray, t_max);
     if (!si.has_value()) {
         return {};

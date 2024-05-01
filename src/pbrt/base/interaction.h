@@ -26,6 +26,29 @@ class Interaction {
     explicit Interaction(const Point3fi &pi, const Normal3f &n, const Point2f &uv,
                          const Vector3f &wo)
         : pi(pi), n(n), uv(uv), wo(wo.normalize()) {}
+
+    PBRT_CPU_GPU
+    explicit Interaction(const Point3fi &pi, const Normal3f &n, const Point2f &uv)
+        : pi(pi), n(n), uv(uv), wo(Vector3f(NAN, NAN, NAN)) {}
+
+    PBRT_CPU_GPU
+    Point3f p() const {
+        return pi.to_point3f();
+    }
+
+    PBRT_CPU_GPU
+    Point3f offset_ray_origin(const Vector3f &w) const {
+        return Ray::offset_ray_origin(pi, n, w);
+    }
+
+    PBRT_GPU DifferentialRay spawn_ray(const Vector3f &d) const {
+        return DifferentialRay(offset_ray_origin(d), d);
+    }
+
+    PBRT_CPU_GPU
+    Ray spawn_ray_to(const Interaction &it) const {
+        return Ray::spawn_ray_to(pi, n, it.pi, it.n);
+    }
 };
 
 class SurfaceInteraction : public Interaction {
@@ -67,15 +90,6 @@ class SurfaceInteraction : public Interaction {
             n *= -1;
             shading.n *= -1;
         }
-    }
-
-    PBRT_CPU_GPU
-    Point3f offset_ray_origin(const Vector3f &w) const {
-        return Ray::offset_ray_origin(pi, n, w);
-    }
-
-    PBRT_GPU DifferentialRay spawn_ray(const Vector3f &d) const {
-        return DifferentialRay(offset_ray_origin(d), d);
     }
 
     PBRT_GPU

@@ -93,6 +93,12 @@ int main(int argc, const char **argv) {
 
     display_system_info();
 
+#ifdef PBRT_FLOAT_AS_DOUBLE
+    std::cout << "Float type: double\n";
+#else
+    std::cout << "Float type: float\n";
+#endif
+
     const auto command_line_option = CommandLineOption(argc, argv);
     SceneBuilder::render_pbrt(command_line_option);
 

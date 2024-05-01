@@ -135,8 +135,14 @@ class Vector3 {
         return v / (v.x + v.y + v.z);
     }
 
-    PBRT_CPU_GPU T dot(const Vector3 &right) const {
+    PBRT_CPU_GPU
+    inline T dot(const Vector3 &right) const {
         return x * right.x + y * right.y + z * right.z;
+    }
+
+    PBRT_CPU_GPU
+    inline T abs_dot(const Vector3 &right) const {
+        return std::abs(this->dot(right));
     }
 
     PBRT_CPU_GPU Vector3 cross(const Vector3 &right) const {
@@ -165,7 +171,7 @@ class Vector3 {
         return std::abs(z);
     }
 
-    PBRT_CPU_GPU void display() const {
+    PBRT_CPU_GPU void print() const {
         printf("(%f, %f, %f)", x, y, z);
     }
 };
@@ -178,4 +184,20 @@ PBRT_CPU_GPU inline Vector3f FMA(FloatType a, const Vector3f &b, const Vector3f 
 
 PBRT_CPU_GPU inline Vector3f FMA(const Vector3f &a, FloatType b, const Vector3f &c) {
     return FMA(b, a, c);
+}
+
+// Equivalent to std::acos(Dot(a, b)), but more numerically stable.
+// via http://www.plunk.org/~hatch/rightway.html
+template <typename T>
+PBRT_CPU_GPU inline FloatType angle_between(Vector3<T> v1, Vector3<T> v2) {
+    if (v1.dot(v2) < 0) {
+        return compute_pi() - 2 * safe_asin((v1 + v2).length() / 2);
+    } else {
+        return 2 * safe_asin((v2 - v1).length() / 2);
+    }
+}
+
+template <typename T>
+PBRT_CPU_GPU inline Vector3<T> gram_schmidt(Vector3<T> v, Vector3<T> w) {
+    return v - v.dot(w) * w;
 }

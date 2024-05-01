@@ -1,19 +1,13 @@
 #pragma once
 
-#include "xyz.h"
-#include "constants.h"
+#include "pbrt/spectrum_util/xyz.h"
+#include "pbrt/spectrum_util/spectrum_constants.h"
 
 class SampledSpectrum {
   public:
     PBRT_CPU_GPU SampledSpectrum() {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             values[idx] = NAN;
-        }
-    }
-
-    PBRT_CPU_GPU SampledSpectrum(const SampledSpectrum &s) {
-        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
-            values[idx] = s.values[idx];
         }
     }
 

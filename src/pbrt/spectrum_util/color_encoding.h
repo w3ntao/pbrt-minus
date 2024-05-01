@@ -22,8 +22,8 @@ inline FloatType LinearToSRGB(FloatType value) {
     FloatType sqrt_value = safe_sqrt(value);
 
     FloatType p = evaluate_polynomial(sqrt_value, -0.0016829072605308378f, 0.03453868659826638f,
-                                   0.7642611304733891f, 2.0041169284241644f, 0.7551545191665577f,
-                                   -0.016202083165206348f);
+                                      0.7642611304733891f, 2.0041169284241644f, 0.7551545191665577f,
+                                      -0.016202083165206348f);
     FloatType q =
         evaluate_polynomial(sqrt_value, 4.178892964897981e-7f, -0.00004375359692957097f,
                             0.03467195408529984f, 0.6085338522168684f, 1.8970238036421054f, 1.f);
@@ -46,7 +46,7 @@ class SRGBColorEncoding : ColorEncoding {
             return 255;
         }
 
-        return clamp(std::round(255.0 * LinearToSRGB(value)), 0, 255);
+        return clamp<uint8_t>(std::round(255.0 * LinearToSRGB(value)), 0, 255);
     }
 
   private:

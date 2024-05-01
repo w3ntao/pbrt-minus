@@ -52,3 +52,31 @@ SampledSpectrum DiffuseAreaLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f 
 
     return scale * l_emit.sample(lambda);
 }
+
+PBRT_GPU
+cuda::std::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleContext &ctx,
+                                                               const Point2f &u,
+                                                               SampledWavelengths &lambda,
+                                                               bool allow_incomplete_pdf) const {
+    // Sample point on shape for _DiffuseAreaLight_
+    auto shape_ctx = ShapeSampleContext{
+        .pi = ctx.pi,
+        .n = ctx.n,
+        .ns = ctx.ns,
+    };
+
+    auto ss = shape->sample(shape_ctx, u);
+
+    if (!ss || ss->pdf == 0 || (ss->interaction.p() - ctx.p()).squared_length() == 0) {
+        return {};
+    }
+
+    Vector3f wi = (ss->interaction.p() - ctx.p()).normalize();
+    SampledSpectrum Le = l(ss->interaction.p(), ss->interaction.n, ss->interaction.uv, -wi, lambda);
+
+    if (!Le.is_positive()) {
+        return {};
+    }
+
+    return LightLiSample(Le, wi, ss->pdf, ss->interaction);
+}

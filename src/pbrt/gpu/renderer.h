@@ -28,7 +28,7 @@
 
 #include "pbrt/shapes/triangle.h"
 
-#include "pbrt/spectrum_util/constants.h"
+#include "pbrt/spectrum_util/spectrum_constants.h"
 #include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
@@ -51,7 +51,7 @@ class Renderer {
 
     PBRT_GPU void evaluate_pixel_sample(const Point2i p_pixel, const int num_samples) {
         int width = camera->get_camerabase()->resolution.x;
-        int pixel_index = p_pixel.y * width + p_pixel.x;
+        const uint pixel_index = p_pixel.y * width + p_pixel.x;
 
         auto sampler = &samplers[pixel_index];
         sampler->start_pixel_sample(pixel_index, 0, 0);
@@ -84,8 +84,18 @@ __global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh
     triangles[worker_idx].init(worker_idx, mesh);
 }
 
-template <typename S>
-static __global__ void init_shapes(Shape *shapes, const S *concrete_shapes, uint num) {
+template <typename TypeOfLight>
+static __global__ void init_lights(Light *lights, const TypeOfLight *concrete_shapes, uint num) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num) {
+        return;
+    }
+
+    lights[worker_idx].init(&concrete_shapes[worker_idx]);
+}
+
+template <typename TypeOfShape>
+static __global__ void init_shapes(Shape *shapes, const TypeOfShape *concrete_shapes, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
@@ -105,8 +115,20 @@ static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives
     simple_primitives[idx].init(&shapes[idx], material);
 }
 
-template <typename T>
-static __global__ void init_primitives(Primitive *primitives, T *_primitives, uint length) {
+static __global__ void init_geometric_primitives(GeometricPrimitive *geometric_primitives,
+                                                 const Shape *shapes, const Material *material,
+                                                 const Light *area_light, uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    geometric_primitives[idx].init(&shapes[idx], material, &area_light[idx]);
+}
+
+template <typename TypeOfPrimitive>
+static __global__ void init_primitives(Primitive *primitives, TypeOfPrimitive *_primitives,
+                                       uint length) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= length) {
         return;
