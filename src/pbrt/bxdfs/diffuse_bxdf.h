@@ -23,6 +23,15 @@ struct DiffuseBxDF {
         }
     }
 
+    PBRT_CPU_GPU
+    BxDFFlags flags() const {
+        if (r.is_positive()) {
+            return BxDFFlags::DiffuseReflection;
+        }
+
+        return BxDFFlags::Unset;
+    }
+
     PBRT_GPU SampledSpectrum f(const Vector3f wo, const Vector3f wi,
                                const TransportMode mode) const {
         if (!wo.same_hemisphere(wi)) {

@@ -30,7 +30,8 @@ void Integrator::init(const SimplePathIntegrator *simple_path_integrator) {
 }
 
 PBRT_GPU
-SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const {
+SampledSpectrum Integrator::li(const DifferentialRay &ray, SampledWavelengths &lambda,
+                               Sampler *sampler) const {
     switch (integrator_type) {
     case (Type::surface_normal): {
         return ((SurfaceNormalIntegrator *)integrator_ptr)->li(ray, lambda);

@@ -6,7 +6,6 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/shapes/triangle_mesh.h"
-#include "pbrt/util/macro.h"
 #include "pbrt/util/sampling.h"
 
 PBRT_CPU_GPU

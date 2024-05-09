@@ -70,6 +70,19 @@ struct CameraRay {
     PBRT_CPU_GPU CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum::same_value(1)) {}
 };
 
+// CameraRay Definition
+struct CameraDifferentialRay {
+    DifferentialRay ray;
+    SampledSpectrum weight;
+
+    PBRT_CPU_GPU CameraDifferentialRay() {
+        weight = SampledSpectrum::same_value(NAN);
+    }
+
+    PBRT_CPU_GPU CameraDifferentialRay(const DifferentialRay &_ray)
+        : ray(_ray), weight(SampledSpectrum::same_value(1)) {}
+};
+
 struct CameraBase {
     Point2i resolution;
     CameraTransform camera_transform;
@@ -126,9 +139,14 @@ class Camera {
 
     void init(const PerspectiveCamera *perspective_camera);
 
-    PBRT_CPU_GPU const CameraBase *get_camerabase() const;
+    PBRT_CPU_GPU
+    const CameraBase *get_camerabase() const;
 
-    PBRT_CPU_GPU CameraRay generate_ray(const CameraSample &sample) const;
+    PBRT_CPU_GPU
+    CameraRay generate_ray(const CameraSample &sample) const;
+
+    PBRT_CPU_GPU
+    CameraDifferentialRay generate_camera_differential_ray(const CameraSample &sample) const;
 
     PBRT_CPU_GPU
     void approximate_dp_dxy(const Point3f p, const Normal3f n, uint samples_per_pixel,

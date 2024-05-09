@@ -93,14 +93,15 @@ class SurfaceInteraction : public Interaction {
     }
 
     PBRT_GPU
-    void compute_differentials(const Ray &ray, const Camera *camera, int samples_per_pixel);
+    void compute_differentials(const DifferentialRay &ray, const Camera *camera,
+                               int samples_per_pixel);
     // TODO: rewrite compute_differentials(): change Ray to RayDifferential
 
     PBRT_GPU
     void set_intersection_properties(const Material *_material, const Light *_area_light);
 
     PBRT_GPU
-    void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,
+    void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const DifferentialRay &ray,
                            SampledWavelengths &lambda, const Camera *camera, Sampler *sampler);
 
     PBRT_GPU SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;

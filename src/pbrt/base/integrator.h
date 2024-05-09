@@ -2,7 +2,7 @@
 
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 
-class Ray;
+class DifferentialRay;
 class SampledWavelengths;
 class HLBVH;
 class Sampler;
@@ -29,7 +29,8 @@ class Integrator {
 
     void init(const SimplePathIntegrator *simple_path_integrator);
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
+    PBRT_GPU SampledSpectrum li(const DifferentialRay &ray, SampledWavelengths &lambda,
+                                Sampler *sampler) const;
 
   private:
     Type integrator_type;

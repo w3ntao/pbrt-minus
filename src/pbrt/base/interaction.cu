@@ -10,11 +10,10 @@
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 
 PBRT_GPU
-void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *camera,
+void SurfaceInteraction::compute_differentials(const DifferentialRay &ray, const Camera *camera,
                                                int samples_per_pixel) {
-    // TODO: rewrite compute_differentials(): change Ray to RayDifferential
-    const bool ray_has_differential = false;
-    if (ray_has_differential) {
+    if (ray.hasDifferentials) {
+        // TODO: ray.hasDifferentials not implemented
     } else {
         // Approximate screen-space change in $\pt{}$ based on camera projection
         // camera.Approximate_dp_dxy(p(), n, time, samplesPerPixel, &dpdx, &dpdy);
@@ -43,10 +42,10 @@ void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *cam
     dvdy = difference_of_products(ata00, atb1y, ata01, atb0y) * invDet;
 
     // Clamp derivatives of $u$ and $v$ to reasonable values
-    dudx = std::isfinite(dudx) ? clamp(dudx, -1e8f, 1e8f) : 0.0;
-    dvdx = std::isfinite(dvdx) ? clamp(dvdx, -1e8f, 1e8f) : 0.0;
-    dudy = std::isfinite(dudy) ? clamp(dudy, -1e8f, 1e8f) : 0.0;
-    dvdy = std::isfinite(dvdy) ? clamp(dvdy, -1e8f, 1e8f) : 0.0;
+    dudx = std::isfinite(dudx) ? clamp<FloatType>(dudx, -1e8f, 1e8f) : 0.0;
+    dvdx = std::isfinite(dvdx) ? clamp<FloatType>(dvdx, -1e8f, 1e8f) : 0.0;
+    dudy = std::isfinite(dudy) ? clamp<FloatType>(dudy, -1e8f, 1e8f) : 0.0;
+    dvdy = std::isfinite(dvdy) ? clamp<FloatType>(dvdy, -1e8f, 1e8f) : 0.0;
 }
 
 PBRT_GPU
@@ -57,9 +56,9 @@ void SurfaceInteraction::set_intersection_properties(const Material *_material,
 }
 
 PBRT_GPU
-void SurfaceInteraction::init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,
-                                           SampledWavelengths &lambda, const Camera *camera,
-                                           Sampler *sampler) {
+void SurfaceInteraction::init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf,
+                                           const DifferentialRay &ray, SampledWavelengths &lambda,
+                                           const Camera *camera, Sampler *sampler) {
     compute_differentials(ray, camera, sampler->get_samples_per_pixel());
 
     auto material_eval_context = MaterialEvalContext(*this);

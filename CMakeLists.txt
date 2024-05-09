@@ -19,7 +19,11 @@ set(PROJ_NAME "pbrt-minus")
 
 project(${PROJ_NAME} LANGUAGES CUDA CXX)
 
-option(PBRT_FLOAT_AS_DOUBLE "Use 64-bit floats" ON)
+option(PBRT_FLOAT_AS_DOUBLE "use 64-bit floats" OFF)
+
+if (PBRT_FLOAT_AS_DOUBLE)
+    list(APPEND PBRT_DEFINITIONS "PBRT_FLOAT_AS_DOUBLE")
+endif ()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/ext)
 
@@ -96,4 +100,9 @@ target_compile_options(
         $<$<COMPILE_LANGUAGE:CUDA>:
         --expt-relaxed-constexpr
         >
+)
+
+target_compile_definitions(
+        ${PROJ_NAME} PRIVATE
+        ${PBRT_DEFINITIONS}
 )

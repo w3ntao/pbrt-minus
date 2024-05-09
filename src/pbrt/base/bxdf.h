@@ -52,8 +52,23 @@ enum class BxDFReflTransFlags {
     Unset = 0,
     Reflection = 1 << 0,
     Transmission = 1 << 1,
-    All = Reflection | Transmission
+    All = Reflection | Transmission,
 };
+
+PBRT_CPU_GPU
+inline BxDFFlags operator|(BxDFFlags a, BxDFFlags b) {
+    return BxDFFlags((int)a | (int)b);
+}
+
+PBRT_CPU_GPU
+inline int operator&(BxDFFlags a, BxDFFlags b) {
+    return ((int)a & (int)b);
+}
+
+PBRT_CPU_GPU
+inline int operator&(BxDFFlags a, BxDFReflTransFlags b) {
+    return ((int)a & (int)b);
+}
 
 PBRT_CPU_GPU
 inline BxDFReflTransFlags operator|(BxDFReflTransFlags a, BxDFReflTransFlags b) {
@@ -95,23 +110,23 @@ struct BSDFSample {
         : f(f), wi(wi), pdf(pdf), flags(flags), eta(eta), pdfIsProportional(pdfIsProportional) {}
 
     PBRT_CPU_GPU
-    bool IsReflection() const {
+    bool is_reflection() const {
         return ::_is_reflective(flags);
     }
     PBRT_CPU_GPU
-    bool IsTransmission() const {
+    bool is_transmission() const {
         return ::_is_transmissive(flags);
     }
     PBRT_CPU_GPU
-    bool IsDiffuse() const {
+    bool is_diffuse() const {
         return ::_is_diffuse(flags);
     }
     PBRT_CPU_GPU
-    bool IsGlossy() const {
+    bool is_glossy() const {
         return ::_is_glossy(flags);
     }
     PBRT_CPU_GPU
-    bool IsSpecular() const {
+    bool is_specular() const {
         return ::_is_specular(flags);
     }
 
@@ -135,6 +150,9 @@ class BxDF {
 
     PBRT_GPU
     void init(const DiffuseBxDF *diffuse_bxdf);
+
+    PBRT_CPU_GPU
+    BxDFFlags flags() const;
 
     PBRT_GPU
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;

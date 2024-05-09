@@ -61,7 +61,7 @@ class Renderer {
             auto lu = sampler->get_1d();
             auto lambda = SampledWavelengths::sample_visible(lu);
 
-            auto ray = camera->generate_ray(camera_sample);
+            auto ray = camera->generate_camera_differential_ray(camera_sample);
 
             auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, sampler);
 

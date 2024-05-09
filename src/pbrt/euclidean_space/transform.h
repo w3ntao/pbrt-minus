@@ -262,7 +262,8 @@ class Transform {
                           m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z);
     }
 
-    PBRT_CPU_GPU Ray operator()(const Ray &r, FloatType *tMax = nullptr) const {
+    PBRT_CPU_GPU
+    Ray operator()(const Ray &r, FloatType *tMax = nullptr) const {
         Point3fi o = (*this)(Point3fi(r.o));
         Vector3f d = (*this)(r.d);
 
@@ -276,6 +277,13 @@ class Transform {
         }
 
         return Ray(o.to_point3f(), d);
+    }
+
+    PBRT_CPU_GPU
+    DifferentialRay operator()(const DifferentialRay &_ray, FloatType *tMax = nullptr) const {
+        return DifferentialRay((*this)(_ray.ray, tMax), _ray.hasDifferentials,
+                               (*this)(_ray.rxOrigin), (*this)(_ray.ryOrigin),
+                               (*this)(_ray.rxDirection), (*this)(_ray.ryDirection));
     }
 
     template <typename T>

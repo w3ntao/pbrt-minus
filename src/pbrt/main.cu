@@ -2,6 +2,7 @@
 
 #include "pbrt/util/thread_pool.h"
 #include "pbrt/scene/builder.h"
+#include "pbrt/util/command_line.h"
 
 using namespace std;
 
@@ -46,11 +47,17 @@ void display_system_info() {
     cudaGetDeviceCount(&device_count);
     printf("CUDA devices: %d\n", device_count);
     for (int i = 0; i < device_count; ++i) {
+        uint cuda_cores = stoi(bash("nvidia-settings -q CUDACores -t"));
+
         cudaDeviceProp props;
         cudaGetDeviceProperties(&props, i);
         printf("    device %d: %s\n", i, props.name);
         printf("        compute capability: %d.%d\n", props.major, props.minor);
+        printf("        cuda cores:         %u\n", cuda_cores);
+        printf("        total memory:       %.2f GB\n",
+               float(props.totalGlobalMem / 1024 / 1024) / 1024.0f);
         printf("        max threads per block: %u\n", props.maxThreadsPerBlock);
+        printf("        wrap size:             %u\n", props.warpSize);
     }
 
     print_arch_global<<<1, 1>>>();

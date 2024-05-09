@@ -7,6 +7,18 @@ void BxDF::init(const DiffuseBxDF *diffuse_bxdf) {
     bxdf_ptr = diffuse_bxdf;
 }
 
+PBRT_CPU_GPU
+BxDFFlags BxDF::flags() const {
+    switch (bxdf_type) {
+    case (Type::diffuse_bxdf): {
+        return ((DiffuseBxDF *)bxdf_ptr)->flags();
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return {};
+}
+
 PBRT_GPU
 SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     switch (bxdf_type) {

@@ -21,14 +21,14 @@ class SurfaceNormalIntegrator {
         rgb_spectra[2].init(rgb_color_space, RGB(0, 0, scale));
     }
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda) const {
-        const auto shape_intersection = base->bvh->intersect(ray, Infinity);
+    PBRT_GPU SampledSpectrum li(const DifferentialRay &ray, SampledWavelengths &lambda) const {
+        const auto shape_intersection = base->bvh->intersect(ray.ray, Infinity);
         if (!shape_intersection) {
             return SampledSpectrum::same_value(0);
         }
 
         const Vector3f normal =
-            shape_intersection->interaction.n.to_vector3().face_forward(-ray.d).normalize();
+            shape_intersection->interaction.n.to_vector3().face_forward(-ray.ray.d).normalize();
 
         const auto color = normal.softmax();
 

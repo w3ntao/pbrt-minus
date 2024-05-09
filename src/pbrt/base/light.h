@@ -74,7 +74,6 @@ class Light {
                                                  SampledWavelengths &lambda,
                                                  bool allow_incomplete_pdf) const;
 
-    // TODO: change this to private
   public:
     Type light_type;
     const void *light_ptr;

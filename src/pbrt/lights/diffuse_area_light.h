@@ -4,7 +4,6 @@
 
 #include "pbrt/base/light.h"
 #include "pbrt/spectra/densely_sampled_spectrum.h"
-#include "pbrt/base/shape.h"
 
 class ParameterDict;
 class RGBColorSpace;
