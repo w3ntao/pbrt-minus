@@ -36,7 +36,8 @@ static FloatType degree_to_radian(FloatType degree) {
     return compute_pi() / 180.0 * degree;
 }
 
-PBRT_CPU_GPU inline FloatType safe_asin(float x) {
+PBRT_CPU_GPU
+inline FloatType safe_asin(FloatType x) {
     return std::asin(clamp<FloatType>(x, -1, 1));
 }
 

@@ -274,17 +274,17 @@ class Triangle {
         FloatType e1 = difference_of_products(p2t.x, p0t.y, p2t.y, p0t.x);
         FloatType e2 = difference_of_products(p0t.x, p1t.y, p0t.y, p1t.x);
 
-        // Fall back to FloatType-precision test at triangle edges
+        // Fall back to double-precision test at triangle edges
         if (sizeof(FloatType) == sizeof(float) && (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f)) {
-            FloatType p2txp1ty = (FloatType)p2t.x * (FloatType)p1t.y;
-            FloatType p2typ1tx = (FloatType)p2t.y * (FloatType)p1t.x;
-            e0 = (float)(p2typ1tx - p2txp1ty);
-            FloatType p0txp2ty = (FloatType)p0t.x * (FloatType)p2t.y;
-            FloatType p0typ2tx = (FloatType)p0t.y * (FloatType)p2t.x;
-            e1 = (float)(p0typ2tx - p0txp2ty);
-            FloatType p1txp0ty = (FloatType)p1t.x * (FloatType)p0t.y;
-            FloatType p1typ0tx = (FloatType)p1t.y * (FloatType)p0t.x;
-            e2 = (float)(p1typ0tx - p1txp0ty);
+            double p2txp1ty = (double)p2t.x * (double)p1t.y;
+            double p2typ1tx = (double)p2t.y * (double)p1t.x;
+            e0 = (FloatType)(p2typ1tx - p2txp1ty);
+            double p0txp2ty = (double)p0t.x * (double)p2t.y;
+            double p0typ2tx = (double)p0t.y * (double)p2t.x;
+            e1 = (FloatType)(p0typ2tx - p0txp2ty);
+            double p1txp0ty = (double)p1t.x * (double)p0t.y;
+            double p1typ0tx = (double)p1t.y * (double)p0t.x;
+            e2 = (FloatType)(p1typ0tx - p1txp0ty);
         }
 
         // Perform triangle edge and determinant tests

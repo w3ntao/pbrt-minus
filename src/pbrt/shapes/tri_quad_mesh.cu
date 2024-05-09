@@ -20,7 +20,7 @@ int rply_vertex_callback(p_ply_argument argument) {
     int stride = (flags & 0x0F0) >> 4;
     int offset = flags & 0x00F;
 
-    buffer[index * stride + offset] = (float)ply_get_argument_value(argument);
+    buffer[index * stride + offset] = ply_get_argument_value(argument);
 
     return 1;
 }

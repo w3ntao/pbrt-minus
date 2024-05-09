@@ -403,7 +403,7 @@ LoopSubdivide::LoopSubdivide(int nLevels, const std::vector<int> &vertexIndices,
                 T = (-1 * pRing[0] + 2 * pRing[1] + 2 * pRing[2] + -1 * pRing[3] + -2 * vertex->p)
                         .to_vector3();
             else {
-                FloatType theta = compute_pi() / float(valence - 1);
+                FloatType theta = compute_pi() / FloatType(valence - 1);
                 T = (std::sin(theta) * (pRing[0] + pRing[valence - 1])).to_vector3();
                 for (int k = 1; k < valence - 1; ++k) {
                     FloatType wt = (2 * std::cos(theta) - 2) * std::sin((k)*theta);
