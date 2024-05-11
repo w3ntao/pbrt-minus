@@ -51,6 +51,12 @@ class Bounds3 {
     }
 
     PBRT_CPU_GPU
+    T surface_area() const {
+        auto d = diagonal();
+        return 2.0 * (d.x * d.y + d.x * d.z + d.y * d.z);
+    }
+
+    PBRT_CPU_GPU
     bool operator==(const Bounds3 &bounds) const {
         return p_min == bounds.p_min && p_max == bounds.p_max;
     }
@@ -118,11 +124,6 @@ class Bounds3 {
         }
 
         return o;
-    }
-
-    PBRT_CPU_GPU FloatType surface_area() const {
-        auto d = diagonal();
-        return 2.0 * (d.x * d.y + d.x * d.z + d.y * d.z);
     }
 
     PBRT_CPU_GPU uint8_t max_dimension() const {

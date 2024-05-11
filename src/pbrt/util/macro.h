@@ -46,4 +46,4 @@ static void _report_error(const char *file_name, const char *func_name, uint lin
 
 #define REPORT_FATAL_ERROR() HIDDEN::_report_error(__FILE__, __func__, __LINE__)
 
-static const bool DEBUGGING = true;
+static const bool DEBUGGING = false;

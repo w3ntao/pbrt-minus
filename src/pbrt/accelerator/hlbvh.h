@@ -115,9 +115,9 @@ class HLBVH {
   private:
     uint build_top_bvh_for_treelets(uint num_dense_treelets, const Treelet *treelets);
 
-    uint recursive_build_top_bvh_for_treelets(const std::vector<uint> &treelet_indices,
-                                              const Treelet *treelets, uint &build_node_count,
-                                              uint depth, uint &max_depth);
+    uint build_upper_sah(const std::vector<uint> &treelet_indices, const Treelet *treelets,
+                         uint &build_node_count, uint depth, uint &max_depth);
+
     PBRT_GPU
     uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,
                                      FloatType split_val);

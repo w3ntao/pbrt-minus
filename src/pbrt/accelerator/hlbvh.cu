@@ -8,6 +8,8 @@
 
 constexpr int MORTON_SCALE = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
 
+constexpr uint NUM_BUCKETS = 64;
+
 __global__ void hlbvh_init_morton_primitives(MortonPrimitive *morton_primitives,
                                              const Primitive **primitives, uint num_primitives) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -120,7 +122,8 @@ __global__ void init_bvh_args(BottomBVHArgs *bvh_args_array, const BVHBuildNode 
     // 2 pointers: one for left and another right child
 }
 
-PBRT_GPU void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length) {
+PBRT_GPU
+void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= array_length) {
         return;
@@ -177,7 +180,7 @@ PBRT_GPU void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint 
         }
 
         if (kill_thread) {
-            asm("trap;");
+            REPORT_FATAL_ERROR();
         }
     }
 
@@ -317,13 +320,11 @@ PBRT_GPU cuda::std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray,
 
 void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
                       const std::vector<const Primitive *> &gpu_primitives) {
-    printf("\n");
-
     auto start_top_bvh = std::chrono::system_clock::now();
 
     uint num_total_primitives = gpu_primitives.size();
 
-    printf("total primitives: %u\n", num_total_primitives);
+    printf("\ntotal primitives: %u\n", num_total_primitives);
 
     MortonPrimitive *gpu_morton_primitives;
     CHECK_CUDA_ERROR(cudaMallocManaged((void **)&gpu_morton_primitives,
@@ -423,7 +424,10 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
             dense_treelet_indices.push_back(idx);
         }
 
-        assert(primitives_counter == num_total_primitives);
+        if (primitives_counter != num_total_primitives) {
+            REPORT_FATAL_ERROR();
+        }
+
         printf("HLBVH: %zu/%d treelets filled (max primitives in a treelet: %d)\n",
                dense_treelet_indices.size(), MAX_TREELET_NUM, max_primitive_num_in_a_treelet);
     }
@@ -445,7 +449,6 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         cudaMallocManaged((void **)&build_nodes, sizeof(BVHBuildNode) * max_build_node_length));
     gpu_dynamic_pointers.push_back(build_nodes);
 
-    // TODO: rewrite build top BVH
     uint top_bvh_node_num =
         build_top_bvh_for_treelets(dense_treelet_indices.size(), dense_treelets);
     CHECK_CUDA_ERROR(cudaFree(dense_treelets));
@@ -521,16 +524,17 @@ uint HLBVH::build_top_bvh_for_treelets(uint num_dense_treelets, const Treelet *t
 
     uint build_node_count = 0;
     uint max_depth = 0;
-    recursive_build_top_bvh_for_treelets(treelet_indices, treelets, build_node_count, 0, max_depth);
 
+    build_upper_sah(treelet_indices, treelets, build_node_count, 0, max_depth);
+
+    printf("HLBVH: build top BVH with SAH: (number of buckets: %d)\n", NUM_BUCKETS);
     printf("HLBVH: top BVH nodes: %u, max depth: %u\n", build_node_count, max_depth);
 
     return build_node_count;
 }
 
-uint HLBVH::recursive_build_top_bvh_for_treelets(const std::vector<uint> &treelet_indices,
-                                                 const Treelet *treelets, uint &build_node_count,
-                                                 uint depth, uint &max_depth) {
+uint HLBVH::build_upper_sah(const std::vector<uint> &treelet_indices, const Treelet *treelets,
+                            uint &build_node_count, uint depth, uint &max_depth) {
     max_depth = std::max(depth, max_depth);
 
     uint current_build_node_idx = build_node_count;
@@ -547,34 +551,134 @@ uint HLBVH::recursive_build_top_bvh_for_treelets(const std::vector<uint> &treele
         return current_build_node_idx;
     }
 
-    Bounds3f _bounds_of_centroids;
+    Bounds3f full_bounds_of_current_level;
+    Bounds3f bounds_of_centroids_current_level;
     for (const auto treelet_idx : treelet_indices) {
-        _bounds_of_centroids += treelets[treelet_idx].bounds.centroid();
+        bounds_of_centroids_current_level += treelets[treelet_idx].bounds.centroid();
+        full_bounds_of_current_level += treelets[treelet_idx].bounds;
     }
-    uint8_t split_axis = _bounds_of_centroids.max_dimension();
-    auto split_val = _bounds_of_centroids.centroid()[split_axis];
+
+    // TODO: explore more dimension ?
+    const uint8_t split_axis = bounds_of_centroids_current_level.max_dimension();
+
+    if (bounds_of_centroids_current_level.p_min[split_axis] ==
+        bounds_of_centroids_current_level.p_max[split_axis]) {
+        // when the bounds is of zero volume
+        REPORT_FATAL_ERROR();
+    }
+
+    struct BVHSplitBucket {
+        uint count = 0;
+        Bounds3f bounds = Bounds3f ::empty();
+        std::vector<uint> treelet_indices;
+    };
+    BVHSplitBucket buckets[NUM_BUCKETS];
+
+    const auto base_val = bounds_of_centroids_current_level.p_min[split_axis];
+    const auto span = bounds_of_centroids_current_level.p_max[split_axis] -
+                      bounds_of_centroids_current_level.p_min[split_axis];
+
+    // Initialize _BVHSplitBucket_ for HLBVH SAH partition buckets
+    for (unsigned int treelet_idx : treelet_indices) {
+        const auto treelet = &treelets[treelet_idx];
+
+        auto centroid_val = treelet->bounds.centroid()[split_axis];
+        uint bucket_idx = NUM_BUCKETS * ((centroid_val - base_val) / span);
+
+        if (bucket_idx > NUM_BUCKETS) {
+            REPORT_FATAL_ERROR();
+        }
+        if (bucket_idx == NUM_BUCKETS) {
+            bucket_idx = NUM_BUCKETS - 1;
+        }
+
+        buckets[bucket_idx].count += treelet->n_primitives;
+        buckets[bucket_idx].bounds += treelet->bounds;
+        buckets[bucket_idx].treelet_indices.push_back(treelet_idx);
+    }
+
+    const auto total_surface_area = full_bounds_of_current_level.surface_area();
+
+    // Compute costs for splitting after each bucket
+    FloatType sah_cost[NUM_BUCKETS - 1];
+    for (uint split_idx = 0; split_idx < NUM_BUCKETS - 1; ++split_idx) {
+        Bounds3f bounds_left;
+        Bounds3f bounds_right;
+        uint count_left = 0;
+        uint count_right = 0;
+
+        for (uint left = 0; left <= split_idx; ++left) {
+            bounds_left += buckets[left].bounds;
+            count_left += buckets[left].count;
+        }
+
+        for (uint right = split_idx + 1; right < NUM_BUCKETS; ++right) {
+            bounds_right += buckets[right].bounds;
+            count_right += buckets[right].count;
+        }
+
+        sah_cost[split_idx] = 0.125 + (count_left * bounds_left.surface_area() +
+                                       count_right * bounds_right.surface_area()) /
+                                          total_surface_area;
+    }
+
+    // Find bucket to split at that minimizes SAH metric
+    FloatType min_cost_so_far = sah_cost[0];
+    uint min_cost_split = 0;
+    for (uint idx = 1; idx < NUM_BUCKETS - 1; ++idx) {
+        if (sah_cost[idx] < min_cost_so_far) {
+            min_cost_so_far = sah_cost[idx];
+            min_cost_split = idx;
+        }
+    }
 
     std::vector<uint> left_indices;
     std::vector<uint> right_indices;
 
-    for (const auto idx : treelet_indices) {
-        if (treelets[idx].bounds.centroid()[split_axis] < split_val) {
-            left_indices.push_back(idx);
-        } else {
-            right_indices.push_back(idx);
-        }
+    for (uint idx = 0; idx <= min_cost_split; ++idx) {
+        left_indices.insert(left_indices.end(), buckets[idx].treelet_indices.begin(),
+                            buckets[idx].treelet_indices.end());
+    }
+
+    for (uint idx = min_cost_split + 1; idx < NUM_BUCKETS; ++idx) {
+        right_indices.insert(right_indices.end(), buckets[idx].treelet_indices.begin(),
+                             buckets[idx].treelet_indices.end());
     }
 
     if (left_indices.empty() || right_indices.empty()) {
-        printf("ERROR: conflicted treelets centroid\n");
-        printf("ERROR: each treelets are independent that they shouldn't overlap\n");
-        exit(1);
+        // when SAH couldn't build a valid tree: fall back to MidSplit
+        left_indices.clear();
+        right_indices.clear();
+
+        auto split_val = bounds_of_centroids_current_level.centroid()[split_axis];
+        for (const auto idx : treelet_indices) {
+            if (treelets[idx].bounds.centroid()[split_axis] < split_val) {
+                left_indices.push_back(idx);
+            } else {
+                right_indices.push_back(idx);
+            }
+        }
     }
 
-    uint left_build_node_idx = recursive_build_top_bvh_for_treelets(
-        left_indices, treelets, build_node_count, depth + 1, max_depth);
-    uint right_build_node_idx = recursive_build_top_bvh_for_treelets(
-        right_indices, treelets, build_node_count, depth + 1, max_depth);
+    if (DEBUGGING) {
+        // check missing indices
+        std::vector<uint> combined_indices = left_indices;
+        combined_indices.insert(combined_indices.end(), right_indices.begin(), right_indices.end());
+
+        auto treelet_indices_copy = treelet_indices;
+        std::sort(treelet_indices_copy.begin(), treelet_indices_copy.end());
+        std::sort(combined_indices.begin(), combined_indices.end());
+
+        if (treelet_indices_copy != combined_indices) {
+            printf("%s(): SAH-BVH not split right at depth %d\n", __func__, depth);
+            REPORT_FATAL_ERROR();
+        }
+    }
+
+    uint left_build_node_idx =
+        build_upper_sah(left_indices, treelets, build_node_count, depth + 1, max_depth);
+    uint right_build_node_idx =
+        build_upper_sah(right_indices, treelets, build_node_count, depth + 1, max_depth);
 
     auto bounds_combined =
         build_nodes[left_build_node_idx].bounds + build_nodes[right_build_node_idx].bounds;
