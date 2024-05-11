@@ -445,6 +445,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         cudaMallocManaged((void **)&build_nodes, sizeof(BVHBuildNode) * max_build_node_length));
     gpu_dynamic_pointers.push_back(build_nodes);
 
+    // TODO: rewrite build top BVH
     uint top_bvh_node_num =
         build_top_bvh_for_treelets(dense_treelet_indices.size(), dense_treelets);
     CHECK_CUDA_ERROR(cudaFree(dense_treelets));

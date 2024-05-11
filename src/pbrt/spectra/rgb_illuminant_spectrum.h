@@ -19,14 +19,11 @@ class RGBIlluminantSpectrum {
 
     PBRT_CPU_GPU
     FloatType to_photometric(const Spectrum *cie_y) const {
-        return inner_product(cie_y);
+        return illuminant->inner_product(cie_y);
     }
 
   private:
     FloatType scale;
     RGBSigmoidPolynomial rsp;
     const Spectrum *illuminant;
-
-    PBRT_CPU_GPU
-    FloatType inner_product(const Spectrum *spectrum) const;
 };

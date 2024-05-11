@@ -75,11 +75,12 @@ class Triangle {
         Normal3f n = Normal3f((p1 - p0).cross(p2 - p0).normalize());
 
         if (mesh->n) {
-            // this part not implemented
-            REPORT_FATAL_ERROR();
+            Normal3f ns =
+                (b[0] * mesh->n[v[0]] + b[1] * mesh->n[v[1]] + (1 - b[0] - b[1]) * mesh->n[v[2]]);
+            n = n.face_forward(ns);
         } else if ((mesh->reverse_orientation ^ mesh->transformSwapsHandedness)) {
             // this part not implemented
-            REPORT_FATAL_ERROR();
+            n *= -1;
         }
 
         Point2f uv[3];

@@ -391,9 +391,13 @@ class SceneBuilder {
 
             GPU::init_independent_samplers<<<blocks, threads>>>(
                 independent_samplers, samples_per_pixel.value(), total_pixel_num);
+            CHECK_CUDA_ERROR(cudaGetLastError());
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
             GPU::init_samplers<<<blocks, threads>>>(renderer->samplers, independent_samplers,
                                                     total_pixel_num);
+            CHECK_CUDA_ERROR(cudaGetLastError());
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
         gpu_dynamic_pointers.push_back(renderer->samplers);
@@ -739,8 +743,12 @@ class SceneBuilder {
             uint blocks = divide_and_ceil(num_triangles, threads);
 
             GPU::init_triangles_from_mesh<<<blocks, threads>>>(triangles, mesh);
+            CHECK_CUDA_ERROR(cudaGetLastError());
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
             GPU::init_shapes<<<blocks, threads>>>(shapes, triangles, num_triangles);
+            CHECK_CUDA_ERROR(cudaGetLastError());
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
             if (!graphics_state.area_light_entity) {
                 SimplePrimitive *simple_primitives;
@@ -752,6 +760,9 @@ class SceneBuilder {
 
                 GPU::init_simple_primitives<<<blocks, threads>>>(
                     simple_primitives, shapes, graphics_state.current_material, num_triangles);
+                CHECK_CUDA_ERROR(cudaGetLastError());
+                CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
                 GPU::init_primitives<<<blocks, threads>>>(primitives, simple_primitives,
                                                           num_triangles);
                 CHECK_CUDA_ERROR(cudaGetLastError());
@@ -786,10 +797,14 @@ class SceneBuilder {
                 }
 
                 GPU::init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num_triangles);
+                CHECK_CUDA_ERROR(cudaGetLastError());
+                CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
                 GPU::init_geometric_primitives<<<blocks, threads>>>(geometric_primitives, shapes,
                                                                     graphics_state.current_material,
                                                                     lights, num_triangles);
+                CHECK_CUDA_ERROR(cudaGetLastError());
+                CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
                 Primitive *primitives;
                 CHECK_CUDA_ERROR(
@@ -890,6 +905,11 @@ class SceneBuilder {
                 return;
             }
 
+            if (keyword == "ReverseOrientation") {
+                graphics_state.reverse_orientation = !graphics_state.reverse_orientation;
+                return;
+            }
+
             if (keyword == "Rotate") {
                 parse_rotate(tokens);
                 return;
@@ -921,8 +941,7 @@ class SceneBuilder {
             }
 
             if (keyword == "LightSource" || keyword == "MakeNamedMaterial" ||
-                keyword == "NamedMaterial" || keyword == "PixelFilter" ||
-                keyword == "ReverseOrientation" || keyword == "Texture") {
+                keyword == "NamedMaterial" || keyword == "PixelFilter" || keyword == "Texture") {
                 std::cout << "parse_tokens::Keyword `" << keyword << "` ignored for the moment\n";
                 return;
             }

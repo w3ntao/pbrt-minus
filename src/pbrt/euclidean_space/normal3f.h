@@ -20,6 +20,22 @@ class Normal3f {
         return Vector3f(x, y, z);
     }
 
+    PBRT_CPU_GPU Normal3f abs() const {
+        return Normal3f(std::abs(x), std::abs(y), std::abs(z));
+    }
+
+    PBRT_CPU_GPU FloatType dot(const Normal3f &n) const {
+        return FMA(x, n.x, sum_of_products(y, n.y, z, n.z));
+    }
+
+    PBRT_CPU_GPU FloatType dot(const Vector3f &v) const {
+        return FMA(x, v.x, sum_of_products(y, v.y, z, v.z));
+    }
+
+    PBRT_CPU_GPU Normal3f face_forward(const Normal3f &n) const {
+        return this->dot(n) < 0.0 ? (-*this) : (*this);
+    }
+
     PBRT_CPU_GPU bool operator==(const Normal3f &n) const {
         return x == n.x && y == n.y && z == n.z;
     }
@@ -42,14 +58,6 @@ class Normal3f {
 
     PBRT_CPU_GPU void operator*=(FloatType factor) {
         *this = *this * factor;
-    }
-
-    PBRT_CPU_GPU Normal3f abs() const {
-        return Normal3f(std::abs(x), std::abs(y), std::abs(z));
-    }
-
-    PBRT_CPU_GPU FloatType dot(const Vector3f &v) const {
-        return FMA(x, v.x, sum_of_products(y, v.y, z, v.z));
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Normal3f &n) {
