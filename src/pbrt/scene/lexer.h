@@ -100,9 +100,8 @@ class Lexer {
                 continue;
             }
 
-            std::cout << "Lexer::read_list(): unknown token type: " << token.type << "\n";
-
-            throw std::runtime_error("Lexer::read_list() error");
+            std::cout << "\n" << __func__ << "(): unknown token type: " << token.type << "\n";
+            REPORT_FATAL_ERROR();
         }
 
         return values;

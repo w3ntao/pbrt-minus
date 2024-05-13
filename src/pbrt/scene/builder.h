@@ -946,13 +946,13 @@ class SceneBuilder {
                 return;
             }
 
-            auto error_msg = "\nERROR: parse_tokens(): `" + keyword + "` not implemented\n\n";
-            throw std::runtime_error(error_msg);
+            printf("\n%s(): `%s` not implemented\n\n", __func__, keyword.c_str());
+            REPORT_FATAL_ERROR();
         }
         }
-
-        std::cerr << "Builder::parse_tokens(): unknown token type: " << first_token << "\n";
-        throw std::runtime_error("parse_tokens() fail");
+        
+        std::cout << __func__ << "(): unknown token type: " << first_token << "\n\n";
+        REPORT_FATAL_ERROR();
     }
 
     void parse_file(const std::string &_filename) {
@@ -968,7 +968,7 @@ class SceneBuilder {
     }
 
     void preprocess() {
-        renderer->bvh->build_bvh(gpu_dynamic_pointers, gpu_primitives);
+        renderer->bvh->build_bvh(thread_pool, gpu_dynamic_pointers, gpu_primitives);
         build_integrator();
     }
 

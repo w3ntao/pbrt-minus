@@ -2,16 +2,19 @@
 
 #include <cassert>
 #include <vector>
+#include <atomic>
 
 #include "pbrt/base/shape.h"
 #include "pbrt/base/primitive.h"
 #include "pbrt/euclidean_space/bounds3.h"
 
+class ThreadPool;
+
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
-const uint BIT_LENGTH_TREELET_MASK = 18;
+const uint BIT_LENGTH_TREELET_MASK = 21;
 const uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_TREELET_MASK;
 
-constexpr uint MAX_TREELET_NUM = 262144;
+constexpr uint MAX_TREELET_NUM = 1 << BIT_LENGTH_TREELET_MASK;
 /*
 2 ^ 12 = 4096
 2 ^ 15 = 32768
@@ -25,7 +28,6 @@ constexpr uint MAX_PRIMITIVES_NUM_IN_LEAF = 1;
 
 namespace {
 [[maybe_unused]] void validate_treelet_num() {
-    static_assert(MAX_TREELET_NUM == (1 << BIT_LENGTH_TREELET_MASK));
     static_assert(BIT_LENGTH_TREELET_MASK > 0 && BIT_LENGTH_TREELET_MASK < 32);
     static_assert(BIT_LENGTH_TREELET_MASK % 3 == 0);
 }
@@ -44,6 +46,11 @@ struct Treelet {
     Bounds3f bounds;
 };
 
+struct TopBVHArgs {
+    uint build_node_idx;
+    std::vector<uint> treelet_indices;
+};
+
 struct BottomBVHArgs {
     uint build_node_idx;
     uint left_child_idx;
@@ -58,10 +65,9 @@ struct BVHBuildNode {
         uint left_child_idx;      // for interior node
     };
 
-    uint num_primitives;  // for leaf node
-    uint right_child_idx; // for interior node
-
-    // TODO: delete right_child_idx after rewriting top BVH building (right_idx = left_idx + 1)
+    uint num_primitives;
+    // 0 for interior node
+    // otherwise for leaf node
 
     /*
     uint8_t:         0 - 255
@@ -81,13 +87,12 @@ struct BVHBuildNode {
         first_primitive_idx = _first_primitive_offset;
         num_primitives = _num_primitive;
         bounds = _bounds;
+        axis = 255;
     }
 
     PBRT_CPU_GPU
-    void init_interior(uint8_t _axis, uint _left_child_idx, uint _right_child_offset,
-                       const Bounds3f &_bounds) {
+    void init_interior(uint8_t _axis, uint _left_child_idx, const Bounds3f &_bounds) {
         left_child_idx = _left_child_idx;
-        right_child_idx = _right_child_offset;
         num_primitives = 0;
 
         bounds = _bounds;
@@ -109,14 +114,16 @@ class HLBVH {
     PBRT_GPU
     cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
-    void build_bvh(std::vector<void *> &gpu_dynamic_pointers,
+    void build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_pointers,
                    const std::vector<const Primitive *> &gpu_primitives);
 
   private:
-    uint build_top_bvh_for_treelets(uint num_dense_treelets, const Treelet *treelets);
+    uint build_top_bvh_for_treelets(ThreadPool &thread_pool, uint num_dense_treelets,
+                                    const Treelet *treelets);
 
-    uint build_upper_sah(const std::vector<uint> &treelet_indices, const Treelet *treelets,
-                         uint &build_node_count, uint depth, uint &max_depth);
+    void build_upper_sah(const TopBVHArgs &args, const Treelet *treelets,
+                         std::vector<TopBVHArgs> &next_level_args, std::atomic_int &node_count,
+                         uint offset);
 
     PBRT_GPU
     uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,

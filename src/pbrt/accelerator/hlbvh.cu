@@ -2,9 +2,9 @@
 
 #include <chrono>
 #include <iomanip>
-#include <cuda/atomic>
 
 #include "pbrt/util/stack.h"
+#include "pbrt/util/thread_pool.h"
 
 constexpr int MORTON_SCALE = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
 
@@ -211,7 +211,7 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
     build_nodes[right_child_idx].init_leaf(
         mid_idx, node.num_primitives - (mid_idx - node.first_primitive_idx), right_bounds);
 
-    build_nodes[args.build_node_idx].init_interior(split_dimension, left_child_idx, right_child_idx,
+    build_nodes[args.build_node_idx].init_interior(split_dimension, left_child_idx,
                                                    left_bounds + right_bounds);
 }
 
@@ -252,9 +252,9 @@ PBRT_GPU bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
 
         if (dir_is_neg[node.axis] > 0) {
             nodes_to_visit.push(node.left_child_idx);
-            nodes_to_visit.push(node.right_child_idx);
+            nodes_to_visit.push(node.left_child_idx + 1);
         } else {
-            nodes_to_visit.push(node.right_child_idx);
+            nodes_to_visit.push(node.left_child_idx + 1);
             nodes_to_visit.push(node.left_child_idx);
         }
     }
@@ -308,9 +308,9 @@ PBRT_GPU cuda::std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray,
 
         if (dir_is_neg[node.axis] > 0) {
             nodes_to_visit.push(node.left_child_idx);
-            nodes_to_visit.push(node.right_child_idx);
+            nodes_to_visit.push(node.left_child_idx + 1);
         } else {
-            nodes_to_visit.push(node.right_child_idx);
+            nodes_to_visit.push(node.left_child_idx + 1);
             nodes_to_visit.push(node.left_child_idx);
         }
     }
@@ -318,7 +318,7 @@ PBRT_GPU cuda::std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray,
     return best_intersection;
 };
 
-void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
+void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_pointers,
                       const std::vector<const Primitive *> &gpu_primitives) {
     auto start_top_bvh = std::chrono::system_clock::now();
 
@@ -450,7 +450,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
     gpu_dynamic_pointers.push_back(build_nodes);
 
     uint top_bvh_node_num =
-        build_top_bvh_for_treelets(dense_treelet_indices.size(), dense_treelets);
+        build_top_bvh_for_treelets(thread_pool, dense_treelet_indices.size(), dense_treelets);
     CHECK_CUDA_ERROR(cudaFree(dense_treelets));
 
     auto start_bottom_bvh = std::chrono::system_clock::now();
@@ -481,8 +481,7 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         if (DEBUGGING) {
-            printf("HLBVH: building bottom BVH: depth %u, leaves' number: %u\n", depth,
-                   array_length);
+            printf("HLBVH: building bottom BVH: depth %u, node number: %u\n", depth, array_length);
         }
 
         depth += 1;
@@ -516,54 +515,79 @@ void HLBVH::build_bvh(std::vector<void *> &gpu_dynamic_pointers,
               << std::flush;
 }
 
-uint HLBVH::build_top_bvh_for_treelets(uint num_dense_treelets, const Treelet *treelets) {
+uint HLBVH::build_top_bvh_for_treelets(ThreadPool &thread_pool, uint num_dense_treelets,
+                                       const Treelet *treelets) {
     std::vector<uint> treelet_indices;
     for (uint idx = 0; idx < num_dense_treelets; idx++) {
         treelet_indices.push_back(idx);
     }
 
-    uint build_node_count = 0;
-    uint max_depth = 0;
+    std::vector<TopBVHArgs> next_level_args = {TopBVHArgs{
+        .build_node_idx = 0,
+        .treelet_indices = treelet_indices,
+    }};
 
-    build_upper_sah(treelet_indices, treelets, build_node_count, 0, max_depth);
+    uint depth = 0;
+    std::atomic_int node_count = 1; // for the root
+    uint current_node_num = 0;
 
+    while (node_count.load() > current_node_num) {
+        if (DEBUGGING) {
+            printf("HLBVH: building top BVH: depth %d: nodes: %zu\n", depth,
+                   next_level_args.size());
+        }
+        depth += 1;
+
+        const auto current_level_args = std::move(next_level_args);
+        next_level_args =
+            std::vector<TopBVHArgs>((node_count.load() - current_node_num) * 2, TopBVHArgs{});
+
+        current_node_num = node_count.load();
+
+        thread_pool.parallel_execute(
+            0, current_level_args.size(),
+            [this, &current_level_args, &next_level_args, &treelets, &node_count,
+             current_node_num](const int idx) {
+                if (current_level_args[idx].treelet_indices.empty()) {
+                    return;
+                }
+                this->build_upper_sah(current_level_args[idx], treelets, std::ref(next_level_args),
+                                      std::ref(node_count), current_node_num);
+            });
+    }
     printf("HLBVH: build top BVH with SAH: (number of buckets: %d)\n", NUM_BUCKETS);
-    printf("HLBVH: top BVH nodes: %u, max depth: %u\n", build_node_count, max_depth);
+    printf("HLBVH: top BVH nodes: %u, max depth: %u\n", node_count.load(), depth);
 
-    return build_node_count;
+    return node_count.load();
 }
 
-uint HLBVH::build_upper_sah(const std::vector<uint> &treelet_indices, const Treelet *treelets,
-                            uint &build_node_count, uint depth, uint &max_depth) {
-    max_depth = std::max(depth, max_depth);
-
-    uint current_build_node_idx = build_node_count;
-    build_node_count += 1;
+void HLBVH::build_upper_sah(const TopBVHArgs &args, const Treelet *treelets,
+                            std::vector<TopBVHArgs> &next_level_args, std::atomic_int &node_count,
+                            uint offset) {
+    const auto treelet_indices = args.treelet_indices;
+    const auto build_node_idx = args.build_node_idx;
 
     if (treelet_indices.size() == 1) {
         uint treelet_idx = treelet_indices[0];
         const auto &current_treelet = treelets[treelet_idx];
 
-        build_nodes[current_build_node_idx].init_leaf(current_treelet.first_primitive_offset,
-                                                      current_treelet.n_primitives,
-                                                      current_treelet.bounds);
-
-        return current_build_node_idx;
+        build_nodes[build_node_idx].init_leaf(current_treelet.first_primitive_offset,
+                                              current_treelet.n_primitives, current_treelet.bounds);
+        return;
     }
 
     Bounds3f full_bounds_of_current_level;
-    Bounds3f bounds_of_centroids_current_level;
+    Bounds3f bounds_of_centroid;
     for (const auto treelet_idx : treelet_indices) {
-        bounds_of_centroids_current_level += treelets[treelet_idx].bounds.centroid();
+        bounds_of_centroid += treelets[treelet_idx].bounds.centroid();
         full_bounds_of_current_level += treelets[treelet_idx].bounds;
     }
 
-    // TODO: explore more dimension ?
-    const uint8_t split_axis = bounds_of_centroids_current_level.max_dimension();
+    const uint8_t split_axis = bounds_of_centroid.max_dimension();
 
-    if (bounds_of_centroids_current_level.p_min[split_axis] ==
-        bounds_of_centroids_current_level.p_max[split_axis]) {
+    if (bounds_of_centroid.p_min[split_axis] == bounds_of_centroid.p_max[split_axis]) {
         // when the bounds is of zero volume
+        // should build everything into one leaf?
         REPORT_FATAL_ERROR();
     }
 
@@ -574,9 +598,8 @@ uint HLBVH::build_upper_sah(const std::vector<uint> &treelet_indices, const Tree
     };
     BVHSplitBucket buckets[NUM_BUCKETS];
 
-    const auto base_val = bounds_of_centroids_current_level.p_min[split_axis];
-    const auto span = bounds_of_centroids_current_level.p_max[split_axis] -
-                      bounds_of_centroids_current_level.p_min[split_axis];
+    const auto base_val = bounds_of_centroid.p_min[split_axis];
+    const auto span = bounds_of_centroid.p_max[split_axis] - bounds_of_centroid.p_min[split_axis];
 
     // Initialize _BVHSplitBucket_ for HLBVH SAH partition buckets
     for (unsigned int treelet_idx : treelet_indices) {
@@ -594,7 +617,7 @@ uint HLBVH::build_upper_sah(const std::vector<uint> &treelet_indices, const Tree
 
         buckets[bucket_idx].count += treelet->n_primitives;
         buckets[bucket_idx].bounds += treelet->bounds;
-        buckets[bucket_idx].treelet_indices.push_back(treelet_idx);
+        buckets[bucket_idx].treelet_indices.emplace_back(treelet_idx);
     }
 
     const auto total_surface_area = full_bounds_of_current_level.surface_area();
@@ -634,6 +657,8 @@ uint HLBVH::build_upper_sah(const std::vector<uint> &treelet_indices, const Tree
 
     std::vector<uint> left_indices;
     std::vector<uint> right_indices;
+    left_indices.reserve(treelet_indices.size());
+    right_indices.reserve(treelet_indices.size());
 
     for (uint idx = 0; idx <= min_cost_split; ++idx) {
         left_indices.insert(left_indices.end(), buckets[idx].treelet_indices.begin(),
@@ -650,13 +675,19 @@ uint HLBVH::build_upper_sah(const std::vector<uint> &treelet_indices, const Tree
         left_indices.clear();
         right_indices.clear();
 
-        auto split_val = bounds_of_centroids_current_level.centroid()[split_axis];
+        auto split_val = bounds_of_centroid.centroid()[split_axis];
         for (const auto idx : treelet_indices) {
             if (treelets[idx].bounds.centroid()[split_axis] < split_val) {
-                left_indices.push_back(idx);
+                left_indices.emplace_back(idx);
             } else {
-                right_indices.push_back(idx);
+                right_indices.emplace_back(idx);
             }
+        }
+
+        if (left_indices.empty() || right_indices.empty()) {
+            // if MidSplit still couldn't divide them:
+            // should build everything into one leaf?
+            REPORT_FATAL_ERROR();
         }
     }
 
@@ -670,23 +701,22 @@ uint HLBVH::build_upper_sah(const std::vector<uint> &treelet_indices, const Tree
         std::sort(combined_indices.begin(), combined_indices.end());
 
         if (treelet_indices_copy != combined_indices) {
-            printf("%s(): SAH-BVH not split right at depth %d\n", __func__, depth);
+            printf("%s(): SAH-BVH not split right\n", __func__);
             REPORT_FATAL_ERROR();
         }
     }
 
-    uint left_build_node_idx =
-        build_upper_sah(left_indices, treelets, build_node_count, depth + 1, max_depth);
-    uint right_build_node_idx =
-        build_upper_sah(right_indices, treelets, build_node_count, depth + 1, max_depth);
+    const uint left_build_node_idx = node_count.fetch_add(2);
+    const uint right_build_node_idx = left_build_node_idx + 1;
 
-    auto bounds_combined =
-        build_nodes[left_build_node_idx].bounds + build_nodes[right_build_node_idx].bounds;
+    build_nodes[build_node_idx].init_interior(split_axis, left_build_node_idx,
+                                              full_bounds_of_current_level);
 
-    build_nodes[current_build_node_idx].init_interior(split_axis, left_build_node_idx,
-                                                      right_build_node_idx, bounds_combined);
+    next_level_args[left_build_node_idx - offset].build_node_idx = left_build_node_idx;
+    next_level_args[left_build_node_idx - offset].treelet_indices = left_indices;
 
-    return current_build_node_idx;
+    next_level_args[right_build_node_idx - offset].build_node_idx = right_build_node_idx;
+    next_level_args[right_build_node_idx - offset].treelet_indices = right_indices;
 }
 
 PBRT_GPU
