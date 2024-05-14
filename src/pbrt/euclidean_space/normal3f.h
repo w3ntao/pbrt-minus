@@ -20,16 +20,24 @@ class Normal3f {
         return Vector3f(x, y, z);
     }
 
-    PBRT_CPU_GPU Normal3f abs() const {
-        return Normal3f(std::abs(x), std::abs(y), std::abs(z));
-    }
-
-    PBRT_CPU_GPU FloatType dot(const Normal3f &n) const {
+    PBRT_CPU_GPU
+    FloatType dot(const Normal3f &n) const {
         return FMA(x, n.x, sum_of_products(y, n.y, z, n.z));
     }
 
-    PBRT_CPU_GPU FloatType dot(const Vector3f &v) const {
+    PBRT_CPU_GPU
+    FloatType dot(const Vector3f &v) const {
         return FMA(x, v.x, sum_of_products(y, v.y, z, v.z));
+    }
+
+    PBRT_CPU_GPU
+    FloatType abs_dot(const Normal3f &n) const {
+        return std::abs(this->dot(n));
+    }
+
+    PBRT_CPU_GPU
+    FloatType abs_dot(const Vector3f &v) const {
+        return std::abs(this->dot(v));
     }
 
     PBRT_CPU_GPU Normal3f face_forward(const Normal3f &n) const {

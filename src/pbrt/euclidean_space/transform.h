@@ -269,7 +269,7 @@ class Transform {
 
         // Offset ray origin to edge of error bounds and compute _tMax_
         if (FloatType lengthSquared = d.squared_length(); lengthSquared > 0) {
-            FloatType dt = d.abs().dot(o.error()) / lengthSquared;
+            FloatType dt = d.abs_dot(o.error()) / lengthSquared;
             o += d * dt;
             if (tMax) {
                 *tMax -= dt;

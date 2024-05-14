@@ -128,8 +128,8 @@ class Triangle {
             wi = wi.normalize();
 
             // Convert area sampling PDF in _ss_ to solid angle measure
-            ss->pdf /= std::abs(ss->interaction.n.dot(-wi)) /
-                       (ctx.p() - ss->interaction.p()).squared_length();
+            ss->pdf /=
+                ss->interaction.n.abs_dot(-wi) / (ctx.p() - ss->interaction.p()).squared_length();
 
             if (is_inf(ss->pdf)) {
                 return {};
@@ -146,10 +146,10 @@ class Triangle {
             Point3f rp = ctx.p();
             Vector3f wi[3] = {(p0 - rp).normalize(), (p1 - rp).normalize(), (p2 - rp).normalize()};
 
-            FloatType w[4] = {std::max<FloatType>(0.01, std::abs(ctx.ns.dot(wi[1]))),
-                              std::max<FloatType>(0.01, std::abs(ctx.ns.dot(wi[1]))),
-                              std::max<FloatType>(0.01, std::abs(ctx.ns.dot(wi[0]))),
-                              std::max<FloatType>(0.01, std::abs(ctx.ns.dot(wi[2])))};
+            FloatType w[4] = {std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[1])),
+                              std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[1])),
+                              std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[0])),
+                              std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[2]))};
             u = sample_bilinear(u, w);
             pdf = bilinear_pdf(u, w);
         }
@@ -174,7 +174,7 @@ class Triangle {
         if (mesh->n) {
             Normal3f ns(b[0] * mesh->n[v[0]] + b[1] * mesh->n[v[1]] +
                         (1 - b[0] - b[1]) * mesh->n[v[2]]);
-            n = Normal3f(n.to_vector3().face_forward(ns.to_vector3()));
+            n = n.face_forward(ns);
         } else if (mesh->reverse_orientation ^ mesh->transformSwapsHandedness) {
             n *= -1;
         }

@@ -43,7 +43,7 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const DifferentialRay &ray,
         auto wp = sample_uniform_sphere(u);
 
         // Evaluate BSDF at surface for sampled direction
-        auto fcos = bsdf.f(wo, wp) * abs(wp.dot(isect.shading.n.to_vector3()));
+        auto fcos = bsdf.f(wo, wp) * wp.abs_dot(isect.shading.n.to_vector3());
 
         if (!fcos.is_positive()) {
             return radiance_emission;
