@@ -17,6 +17,16 @@ uint morton_code_to_treelet_idx(const uint morton_code) {
            (3 * TREELET_MORTON_BITS_PER_DIMENSION - BIT_LENGTH_OF_TREELET_MASK);
 }
 
+template <typename T>
+__global__ void init_array(T *array, const T val, const uint length) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= length) {
+        return;
+    }
+
+    array[worker_idx] = val;
+}
+
 __global__ void sort_morton_primitives(MortonPrimitive *out, const MortonPrimitive *in,
                                        uint *counter, const uint *offset,
                                        const uint num_primitives) {
@@ -398,9 +408,14 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
     CHECK_CUDA_ERROR(cudaMallocManaged(&primitives_counter, sizeof(uint) * MAX_TREELET_NUM));
     CHECK_CUDA_ERROR(cudaMallocManaged(&primitives_indices_offset, sizeof(uint) * MAX_TREELET_NUM));
 
-    for (uint idx = 0; idx < MAX_TREELET_NUM; ++idx) {
-        primitives_counter[idx] = 0;
-        primitives_indices_offset[idx] = 0;
+    {
+        const uint threads = 1024;
+        const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
+
+        init_array<<<blocks, threads>>>(primitives_counter, uint(0), MAX_TREELET_NUM);
+        init_array<<<blocks, threads>>>(primitives_indices_offset, uint(0), MAX_TREELET_NUM);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     {
@@ -417,8 +432,13 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
             primitives_indices_offset[idx - 1] + primitives_counter[idx - 1];
     }
 
-    for (uint idx = 0; idx < MAX_TREELET_NUM; ++idx) {
-        primitives_counter[idx] = 0;
+    {
+        const uint threads = 1024;
+        const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
+
+        init_array<<<blocks, threads>>>(primitives_counter, uint(0), MAX_TREELET_NUM);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     MortonPrimitive *buffer_morton_primitives;
@@ -573,9 +593,8 @@ uint HLBVH::build_top_bvh_for_treelets(ThreadPool &thread_pool, uint num_dense_t
                                        const Treelet *treelets) {
     std::vector<uint> treelet_indices;
     treelet_indices.reserve(num_dense_treelets);
-
     for (uint idx = 0; idx < num_dense_treelets; idx++) {
-        treelet_indices.push_back(idx);
+        treelet_indices.emplace_back(idx);
     }
 
     std::vector<TopBVHArgs> next_level_args = {TopBVHArgs{

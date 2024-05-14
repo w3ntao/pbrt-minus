@@ -1,9 +1,10 @@
 #pragma once
 
-#include <stack>
-#include <map>
 #include <chrono>
 #include <filesystem>
+#include <map>
+#include <set>
+#include <stack>
 
 #include "pbrt/base/light.h"
 #include "pbrt/base/material.h"
@@ -143,6 +144,8 @@ class SceneBuilder {
   private:
     ThreadPool thread_pool;
     std::string root;
+
+    std::set<std::string> ignored_keywords;
 
     [[nodiscard]] std::string get_file_full_path(const std::string &relative_path) const {
         return root.empty() ? relative_path : root + "/" + relative_path;
@@ -872,7 +875,6 @@ class SceneBuilder {
 
             if (keyword == "AreaLightSource") {
                 if (should_ignore_material_and_texture()) {
-                    printf("ignoring %s\n", keyword.c_str());
                     return;
                 }
 
@@ -952,10 +954,17 @@ class SceneBuilder {
             }
 
             if (keyword == "ConcatTransform" || keyword == "LightSource" ||
-                keyword == "MakeNamedMaterial" || keyword == "NamedMaterial" ||
+                keyword == "MakeNamedMaterial" || keyword == "MakeNamedMedium" ||
+                keyword == "MediumInterface" || keyword == "NamedMaterial" ||
                 keyword == "ObjectBegin" || keyword == "ObjectEnd" || keyword == "ObjectInstance" ||
                 keyword == "PixelFilter" || keyword == "Texture") {
-                std::cout << "parse_tokens::Keyword `" << keyword << "` ignored for the moment\n";
+
+                if (ignored_keywords.find(keyword) == ignored_keywords.end()) {
+                    std::cout << "parse_tokens::Keyword `" << keyword
+                              << "` ignored for the moment\n";
+                    ignored_keywords.insert(keyword);
+                }
+
                 return;
             }
 
