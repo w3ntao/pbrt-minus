@@ -1,7 +1,6 @@
 #include "pbrt/accelerator/hlbvh.h"
 
 #include <chrono>
-#include <iomanip>
 
 #include "pbrt/util/stack.h"
 #include "pbrt/util/thread_pool.h"
@@ -9,6 +8,61 @@
 constexpr int MORTON_SCALE = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
 
 constexpr uint NUM_BUCKETS = 64;
+
+PBRT_CPU_GPU
+uint morton_code_to_treelet_idx(const uint morton_code) {
+    const auto masked_morton_code = morton_code & TREELET_MASK;
+
+    return masked_morton_code >>
+           (3 * TREELET_MORTON_BITS_PER_DIMENSION - BIT_LENGTH_OF_TREELET_MASK);
+}
+
+__global__ void sort_morton_primitives(MortonPrimitive *out, const MortonPrimitive *in,
+                                       uint *counter, const uint *offset,
+                                       const uint num_primitives) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num_primitives) {
+        return;
+    }
+
+    const auto primitive = &in[worker_idx];
+    const uint treelet_idx = morton_code_to_treelet_idx(primitive->morton_code);
+
+    const uint sorted_idx = atomicAdd(&counter[treelet_idx], 1) + offset[treelet_idx];
+    out[sorted_idx] = *primitive;
+}
+
+__global__ void count_primitives_for_treelets(uint *counter,
+                                              const MortonPrimitive *morton_primitives,
+                                              const uint num_primitives) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num_primitives) {
+        return;
+    }
+
+    const uint morton_code = morton_primitives[worker_idx].morton_code;
+    const uint treelet_idx = morton_code_to_treelet_idx(morton_code);
+    atomicAdd(&counter[treelet_idx], 1);
+}
+
+__global__ void compute_treelet_bounds(Treelet *treelets,
+                                       const MortonPrimitive *morton_primitives) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= MAX_TREELET_NUM) {
+        return;
+    }
+
+    const uint start = treelets[worker_idx].first_primitive_offset;
+    const uint end =
+        treelets[worker_idx].first_primitive_offset + treelets[worker_idx].n_primitives;
+
+    Bounds3f bounds;
+    for (uint primitive_idx = start; primitive_idx < end; ++primitive_idx) {
+        bounds += morton_primitives[primitive_idx].bounds;
+    }
+
+    treelets[worker_idx].bounds = bounds;
+}
 
 __global__ void hlbvh_init_morton_primitives(MortonPrimitive *morton_primitives,
                                              const Primitive **primitives, uint num_primitives) {
@@ -50,49 +104,6 @@ __global__ void hlbvh_compute_morton_code(MortonPrimitive *morton_primitives,
     auto scaled_offset = centroid_offset * MORTON_SCALE;
     morton_primitives[worker_idx].morton_code = encode_morton3(
         uint32_t(scaled_offset.x), uint32_t(scaled_offset.y), uint32_t(scaled_offset.z));
-}
-
-__global__ void hlbvh_collect_primitives_into_treelets(Treelet *treelets,
-                                                       const MortonPrimitive *morton_primitives,
-                                                       const Primitive **primitives,
-                                                       uint num_total_primitives) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= num_total_primitives) {
-        return;
-    }
-
-    const uint start = worker_idx;
-    uint32_t morton_start = morton_primitives[start].morton_code & TREELET_MASK;
-
-    if (start == 0 || morton_start != (morton_primitives[start - 1].morton_code & TREELET_MASK)) {
-        // only if the worker starts from 0 or a gap will this function continue
-    } else {
-        return;
-    }
-
-    uint treelet_idx = morton_start >> MASK_OFFSET_BIT;
-
-    uint start_primitive_idx = morton_primitives[start].primitive_idx;
-    Bounds3f treelet_bounds = primitives[start_primitive_idx]->bounds();
-
-    uint end = num_total_primitives;
-    // if end doesn't match anything, it will be total_primitives
-    for (uint idx = start + 1; idx < num_total_primitives; idx++) {
-        uint32_t morton_end = morton_primitives[idx].morton_code & TREELET_MASK;
-
-        if (morton_start != morton_end) {
-            // discontinuity
-            end = idx;
-            break;
-        }
-
-        // exclude the "end" primitive in the treelet_bounds
-        treelet_bounds += morton_primitives[idx].bounds;
-    }
-
-    treelets[treelet_idx].first_primitive_offset = start;
-    treelets[treelet_idx].n_primitives = end - start;
-    treelets[treelet_idx].bounds = treelet_bounds;
 }
 
 __global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const BottomBVHArgs *bvh_args_array,
@@ -353,13 +364,14 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
     this->init(gpu_primitives_array, gpu_morton_primitives);
 
     {
-        uint threads = 512;
+        uint threads = 1024;
         uint blocks = divide_and_ceil(num_total_primitives, threads);
         hlbvh_init_morton_primitives<<<blocks, threads>>>(morton_primitives, primitives,
                                                           num_total_primitives);
     }
+
     {
-        uint threads = 512;
+        uint threads = 1024;
         uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
         hlbvh_init_treelets<<<blocks, threads>>>(sparse_treelets);
     }
@@ -369,7 +381,6 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
 
     Bounds3f bounds_of_primitives_centroids;
     for (uint idx = 0; idx < num_total_primitives; idx++) {
-        // TODO: make this one parallel (on CPU)?
         bounds_of_primitives_centroids += gpu_morton_primitives[idx].bounds.centroid();
     }
 
@@ -382,49 +393,89 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
-    {
-        struct {
-            bool operator()(const MortonPrimitive &left, const MortonPrimitive &right) const {
-                return (left.morton_code & TREELET_MASK) < (right.morton_code & TREELET_MASK);
-            }
-        } morton_comparator;
+    uint *primitives_counter;
+    uint *primitives_indices_offset;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&primitives_counter, sizeof(uint) * MAX_TREELET_NUM));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&primitives_indices_offset, sizeof(uint) * MAX_TREELET_NUM));
 
-        std::sort(morton_primitives, morton_primitives + num_total_primitives, morton_comparator);
-        // TODO: rewrite this sorting in GPU, check CUDA samples: radixSortThrust
-        // https://github.com/NVIDIA/cuda-samples/tree/master/Samples/2_Concepts_and_Techniques/radixSortThrust
+    for (uint idx = 0; idx < MAX_TREELET_NUM; ++idx) {
+        primitives_counter[idx] = 0;
+        primitives_indices_offset[idx] = 0;
     }
 
-    // init top treelets
     {
-        uint threads = 512;
-        uint blocks = divide_and_ceil(num_total_primitives, threads);
+        const uint threads = 1024;
+        const uint blocks = divide_and_ceil(num_total_primitives, threads);
+        count_primitives_for_treelets<<<blocks, threads>>>(primitives_counter, morton_primitives,
+                                                           num_total_primitives);
 
-        hlbvh_collect_primitives_into_treelets<<<blocks, threads>>>(
-            sparse_treelets, morton_primitives, primitives, num_total_primitives);
-        // TODO: rewrite this part into 2 kernel functions: find gap fist, and fill primitives
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    }
+    for (uint idx = 1; idx < MAX_TREELET_NUM; ++idx) {
+        primitives_indices_offset[idx] =
+            primitives_indices_offset[idx - 1] + primitives_counter[idx - 1];
+    }
+
+    for (uint idx = 0; idx < MAX_TREELET_NUM; ++idx) {
+        primitives_counter[idx] = 0;
+    }
+
+    MortonPrimitive *buffer_morton_primitives;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&buffer_morton_primitives,
+                                       sizeof(MortonPrimitive) * num_total_primitives));
+
+    {
+        const uint threads = 1024;
+        const uint blocks = divide_and_ceil(num_total_primitives, threads);
+        sort_morton_primitives<<<blocks, threads>>>(buffer_morton_primitives, morton_primitives,
+                                                    primitives_counter, primitives_indices_offset,
+                                                    num_total_primitives);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
+    CHECK_CUDA_ERROR(cudaMemcpy(morton_primitives, buffer_morton_primitives,
+                                sizeof(MortonPrimitive) * num_total_primitives,
+                                cudaMemcpyDeviceToDevice));
+
+    for (uint treelet_idx = 0; treelet_idx < MAX_TREELET_NUM; ++treelet_idx) {
+        sparse_treelets[treelet_idx].first_primitive_offset =
+            primitives_indices_offset[treelet_idx];
+        sparse_treelets[treelet_idx].n_primitives = primitives_counter[treelet_idx];
+        // bounds is not computed so far
+    }
+    {
+        // compute bounds
+        const uint threads = 1024;
+        const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
+        compute_treelet_bounds<<<blocks, threads>>>(sparse_treelets, morton_primitives);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    }
+
+    CHECK_CUDA_ERROR(cudaFree(primitives_counter));
+    CHECK_CUDA_ERROR(cudaFree(primitives_indices_offset));
+    CHECK_CUDA_ERROR(cudaFree(buffer_morton_primitives));
+
     std::vector<uint> dense_treelet_indices;
     uint max_primitive_num_in_a_treelet = 0;
-
     {
-        uint primitives_counter = 0;
+        uint verify_counter = 0;
         for (uint idx = 0; idx < MAX_TREELET_NUM; idx++) {
             uint current_treelet_primitives_num = sparse_treelets[idx].n_primitives;
             if (current_treelet_primitives_num <= 0) {
                 continue;
             }
 
-            primitives_counter += current_treelet_primitives_num;
+            verify_counter += current_treelet_primitives_num;
 
             max_primitive_num_in_a_treelet =
                 std::max(max_primitive_num_in_a_treelet, current_treelet_primitives_num);
             dense_treelet_indices.push_back(idx);
         }
 
-        if (primitives_counter != num_total_primitives) {
+        if (verify_counter != num_total_primitives) {
             REPORT_FATAL_ERROR();
         }
 
@@ -513,7 +564,7 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
                                                                start_bottom_bvh};
 
     printf("BVH constructing took %.2f seconds "
-           "(sorting: %.2f, top-building: %.2f, bottom-building: %.2f)\n",
+           "(sorting: %.2f, top BVH building: %.2f, bottom BVH building: %.2f)\n",
            (duration_sorting + duration_top_bvh + duration_bottom_bvh).count(),
            duration_sorting.count(), duration_top_bvh.count(), duration_bottom_bvh.count());
 }
@@ -522,7 +573,7 @@ uint HLBVH::build_top_bvh_for_treelets(ThreadPool &thread_pool, uint num_dense_t
                                        const Treelet *treelets) {
     std::vector<uint> treelet_indices;
     treelet_indices.reserve(num_dense_treelets);
-    
+
     for (uint idx = 0; idx < num_dense_treelets; idx++) {
         treelet_indices.push_back(idx);
     }

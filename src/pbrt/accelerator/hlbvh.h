@@ -11,10 +11,10 @@
 class ThreadPool;
 
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
-const uint BIT_LENGTH_TREELET_MASK = 21;
-const uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_TREELET_MASK;
+const uint BIT_LENGTH_OF_TREELET_MASK = 21;
+const uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_OF_TREELET_MASK;
 
-constexpr uint MAX_TREELET_NUM = 1 << BIT_LENGTH_TREELET_MASK;
+constexpr uint MAX_TREELET_NUM = 1 << BIT_LENGTH_OF_TREELET_MASK;
 /*
 2 ^ 12 = 4096
 2 ^ 15 = 32768
@@ -28,8 +28,8 @@ constexpr uint MAX_PRIMITIVES_NUM_IN_LEAF = 1;
 
 namespace {
 [[maybe_unused]] void validate_treelet_num() {
-    static_assert(BIT_LENGTH_TREELET_MASK > 0 && BIT_LENGTH_TREELET_MASK < 32);
-    static_assert(BIT_LENGTH_TREELET_MASK % 3 == 0);
+    static_assert(BIT_LENGTH_OF_TREELET_MASK > 0 && BIT_LENGTH_OF_TREELET_MASK < 32);
+    static_assert(BIT_LENGTH_OF_TREELET_MASK % 3 == 0);
 }
 } // namespace
 
