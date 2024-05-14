@@ -14,7 +14,7 @@ std::vector<Token> parse_pbrt_into_token(const std::string &filename) {
 
         if (token.type == TokenType::Illegal) {
             printf("parsing `%s` fails at line %d\n", filename.c_str(), lexer.line_number);
-            throw std::runtime_error("parse_pbrt_into_token() fails");
+            REPORT_FATAL_ERROR();
         }
 
         if (token.type == TokenType::EndOfFile) {
@@ -23,6 +23,6 @@ std::vector<Token> parse_pbrt_into_token(const std::string &filename) {
 
         tokens.push_back(token);
     }
-    
+
     return tokens;
 }

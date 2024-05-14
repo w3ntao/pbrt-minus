@@ -71,14 +71,18 @@ class Lexer {
     std::string read_number() {
         int last_position = position - 1;
 
-        for (;;) {
+        while (true) {
             if (!current_char) {
                 break;
             }
-            if (current_char == '-' || current_char == '.' || is_digit(current_char.value())) {
+
+            if (current_char == '-' || current_char == 'e' || current_char == '.' ||
+                is_digit(current_char.value())) {
+                // `e` for scientific notation
                 read_char();
                 continue;
             }
+
             break;
         }
 
@@ -196,20 +200,18 @@ class Lexer {
         case '"': {
             return read_quoted_string();
         }
-
-        default: {
-            if (is_letter(current_char.value())) {
-                return parse_identifier(read_identifier());
-            }
-
-            if (current_char == '-' || current_char == '.' || is_digit(current_char.value())) {
-                return Token(TokenType::Number, read_number());
-            }
-
-            printf("line %d: illegal char: `%c`", line_number, current_char.value());
-
-            return Token(TokenType::Illegal);
         }
+
+        if (is_letter(current_char.value())) {
+            return parse_identifier(read_identifier());
         }
+
+        if (current_char == '-' || current_char == '.' || is_digit(current_char.value())) {
+            return Token(TokenType::Number, read_number());
+        }
+
+        printf("line %d: illegal char: `%c`", line_number, current_char.value());
+
+        return Token(TokenType::Illegal);
     }
 };

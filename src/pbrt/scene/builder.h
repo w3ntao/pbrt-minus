@@ -259,7 +259,7 @@ class SceneBuilder {
         return render_from_world * graphics_state.current_transform;
     }
 
-    void option_camera() {
+    void build_camera() {
         auto parameters = ParameterDict(camera_tokens);
         const auto camera_type = camera_tokens[1].values[0];
         if (camera_type == "perspective") {
@@ -289,7 +289,7 @@ class SceneBuilder {
         throw std::runtime_error("camera type not implemented");
     }
 
-    void option_filter() {
+    void build_filter() {
         BoxFilter *box_filter;
         CHECK_CUDA_ERROR(cudaMallocManaged((void **)&box_filter, sizeof(BoxFilter)));
         gpu_dynamic_pointers.push_back(box_filter);
@@ -298,7 +298,7 @@ class SceneBuilder {
         renderer->filter->init(box_filter);
     }
 
-    void option_film() {
+    void build_film() {
         auto parameters = ParameterDict(film_tokens);
 
         auto _resolution_x = parameters.get_integer("xresolution")[0];
@@ -362,7 +362,7 @@ class SceneBuilder {
         renderer->film->init(rgb_film);
     }
 
-    void option_sampler() {
+    void build_sampler() {
         // TODO: sampler is not parsed, only pixelsamples read
         const auto parameters = ParameterDict(sampler_tokens);
         auto samples_from_parameters = parameters.get_integer("pixelsamples");
@@ -638,8 +638,8 @@ class SceneBuilder {
             }
 
             if (!ply_mesh.quadIndices.empty()) {
-                throw std::runtime_error(
-                    "\nworld_shape()::plymesh: quadIndices not implemented\n\n");
+                printf("\n%s(): Shape::plymesh.quadIndices not implemented\n", __func__);
+                REPORT_FATAL_ERROR();
             }
 
             return;
@@ -662,13 +662,14 @@ class SceneBuilder {
             return;
         }
 
-        std::cerr << "\n\nworld_shape(): unknown shape: `" << type_of_shape << "`\n\n\n";
-        throw std::runtime_error("unknown shape");
+        std::cout << "\n" << __func__ << "(): unknown shape: `" << type_of_shape << "`\n\n\n";
+        REPORT_FATAL_ERROR();
     }
 
     void world_transform(const std::vector<Token> &tokens) {
         if (tokens[0] != Token(TokenType::Keyword, "Transform")) {
-            throw std::runtime_error("expect Keyword(Transform)");
+            std::cout << "\nexpect Keyword(Transform)\n";
+            REPORT_FATAL_ERROR();
         }
 
         std::vector<FloatType> data(16);
@@ -855,10 +856,10 @@ class SceneBuilder {
         }
 
         case TokenType::WorldBegin: {
-            option_film();
-            option_filter();
-            option_camera();
-            option_sampler();
+            build_film();
+            build_filter();
+            build_camera();
+            build_sampler();
 
             graphics_state.current_transform = Transform::identity();
             named_coordinate_systems["world"] = graphics_state.current_transform;
@@ -870,6 +871,11 @@ class SceneBuilder {
             const auto keyword = first_token.values[0];
 
             if (keyword == "AreaLightSource") {
+                if (should_ignore_material_and_texture()) {
+                    printf("ignoring %s\n", keyword.c_str());
+                    return;
+                }
+
                 world_area_light_source(tokens);
                 return;
             }
@@ -901,6 +907,11 @@ class SceneBuilder {
             }
 
             if (keyword == "Material") {
+                if (should_ignore_material_and_texture()) {
+                    printf("ignoring %s\n", keyword.c_str());
+                    return;
+                }
+
                 parse_material(tokens);
                 return;
             }
@@ -940,17 +951,19 @@ class SceneBuilder {
                 return;
             }
 
-            if (keyword == "LightSource" || keyword == "MakeNamedMaterial" ||
-                keyword == "NamedMaterial" || keyword == "PixelFilter" || keyword == "Texture") {
+            if (keyword == "ConcatTransform" || keyword == "LightSource" ||
+                keyword == "MakeNamedMaterial" || keyword == "NamedMaterial" ||
+                keyword == "ObjectBegin" || keyword == "ObjectEnd" || keyword == "ObjectInstance" ||
+                keyword == "PixelFilter" || keyword == "Texture") {
                 std::cout << "parse_tokens::Keyword `" << keyword << "` ignored for the moment\n";
                 return;
             }
 
-            printf("\n%s(): `%s` not implemented\n\n", __func__, keyword.c_str());
+            printf("\n%s(): `%s` not implemented\n", __func__, keyword.c_str());
             REPORT_FATAL_ERROR();
         }
         }
-        
+
         std::cout << __func__ << "(): unknown token type: " << first_token << "\n\n";
         REPORT_FATAL_ERROR();
     }
@@ -1006,6 +1019,10 @@ class SceneBuilder {
         std::cout << "image saved to `" << output_filename << "`\n";
     }
 
+    bool should_ignore_material_and_texture() const {
+        return integrator_name == "ambientocclusion" || integrator_name == "surfacenormal";
+    }
+
   public:
     static void render_pbrt(const CommandLineOption &command_line_option) {
         if (!std::filesystem::exists(command_line_option.input_file)) {
@@ -1019,14 +1036,12 @@ class SceneBuilder {
 
         if (std::filesystem::path p(input_file); p.extension() != ".pbrt") {
             printf("ERROR: input file `%s` not ended with `.pbrt`\n", input_file.c_str());
-            exit(1);
+            REPORT_FATAL_ERROR();
         }
 
         builder.root = get_dirname(input_file);
 
         builder.parse_file(input_file);
-
-        // TODO: decouple renderer from builder
 
         builder.preprocess();
 

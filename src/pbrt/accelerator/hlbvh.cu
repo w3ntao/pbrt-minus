@@ -320,7 +320,7 @@ PBRT_GPU cuda::std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray,
 
 void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_pointers,
                       const std::vector<const Primitive *> &gpu_primitives) {
-    auto start_top_bvh = std::chrono::system_clock::now();
+    auto start_sorting = std::chrono::system_clock::now();
 
     uint num_total_primitives = gpu_primitives.size();
 
@@ -449,7 +449,9 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
         cudaMallocManaged((void **)&build_nodes, sizeof(BVHBuildNode) * max_build_node_length));
     gpu_dynamic_pointers.push_back(build_nodes);
 
-    uint top_bvh_node_num =
+    auto start_top_bvh = std::chrono::system_clock::now();
+
+    const uint top_bvh_node_num =
         build_top_bvh_for_treelets(thread_pool, dense_treelet_indices.size(), dense_treelets);
     CHECK_CUDA_ERROR(cudaFree(dense_treelets));
 
@@ -499,25 +501,28 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
     }
     CHECK_CUDA_ERROR(cudaFree(shared_offset));
 
-    printf("HLBVH: bottom BVH max depth: %u (max primitives in a leaf: %u)\n", depth,
-           MAX_PRIMITIVES_NUM_IN_LEAF);
+    printf("HLBVH: bottom BVH nodes: %u, max depth: %u, max primitives in a leaf: %u\n",
+           end - top_bvh_node_num, depth, MAX_PRIMITIVES_NUM_IN_LEAF);
     printf("HLBVH: total nodes: %u/%u\n", end, max_build_node_length);
 
-    const std::chrono::duration<FloatType> duration_top_bvh{start_bottom_bvh - start_top_bvh};
+    const std::chrono::duration<FloatType> duration_sorting{start_top_bvh - start_sorting};
+
+    const std::chrono::duration<FloatType> duration_top_bvh{start_bottom_bvh - start_sorting};
 
     const std::chrono::duration<FloatType> duration_bottom_bvh{std::chrono::system_clock::now() -
                                                                start_bottom_bvh};
 
-    std::cout << std::fixed << std::setprecision(2) << "BVH constructing took "
-              << (duration_top_bvh.count() + duration_bottom_bvh.count()) << " seconds "
-              << "(top: " << duration_top_bvh.count() << ", bottom: " << duration_bottom_bvh.count()
-              << ")\n"
-              << std::flush;
+    printf("BVH constructing took %.2f seconds "
+           "(sorting: %.2f, top-building: %.2f, bottom-building: %.2f)\n",
+           (duration_sorting + duration_top_bvh + duration_bottom_bvh).count(),
+           duration_sorting.count(), duration_top_bvh.count(), duration_bottom_bvh.count());
 }
 
 uint HLBVH::build_top_bvh_for_treelets(ThreadPool &thread_pool, uint num_dense_treelets,
                                        const Treelet *treelets) {
     std::vector<uint> treelet_indices;
+    treelet_indices.reserve(num_dense_treelets);
+    
     for (uint idx = 0; idx < num_dense_treelets; idx++) {
         treelet_indices.push_back(idx);
     }
