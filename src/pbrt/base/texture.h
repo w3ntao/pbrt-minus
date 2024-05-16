@@ -34,3 +34,39 @@ struct TextureEvalContext {
         : p(si.p()), dpdx(si.dpdx), dpdy(si.dpdy), n(si.n), uv(si.uv), dudx(si.dudx), dudy(si.dudy),
           dvdx(si.dvdx), dvdy(si.dvdy), faceIndex(si.faceIndex) {}
 };
+
+class FloatConstantTexture;
+
+class FloatTexture {
+  public:
+    enum class Type {
+        constant,
+    };
+
+    void init(const FloatConstantTexture *float_constant_texture);
+
+    PBRT_CPU_GPU
+    FloatType evaluate(const TextureEvalContext &ctx) const;
+
+  private:
+    Type type;
+    const void *ptr;
+};
+
+class SpectrumConstantTexture;
+
+class SpectrumTexture {
+  public:
+    enum class Type {
+        constant,
+    };
+
+    void init(const SpectrumConstantTexture *spectrum_constant_texture);
+
+    PBRT_CPU_GPU
+    SampledSpectrum evaluate(const TextureEvalContext &ctx, const SampledWavelengths &lambda) const;
+
+  private:
+    Type type;
+    const void *ptr;
+};

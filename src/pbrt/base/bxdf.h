@@ -7,6 +7,7 @@
 #include "pbrt/util/macro.h"
 
 class DiffuseBxDF;
+class DielectricBxDF;
 
 enum BxDFFlags {
     Unset = 0,
@@ -143,6 +144,7 @@ class BxDF {
     enum class Type {
         null,
         diffuse_bxdf,
+        dielectric_bxdf,
     };
 
     PBRT_GPU
@@ -150,6 +152,9 @@ class BxDF {
 
     PBRT_GPU
     void init(const DiffuseBxDF *diffuse_bxdf);
+
+    PBRT_GPU
+    void init(const DielectricBxDF *dielectric_bxdf);
 
     PBRT_CPU_GPU
     BxDFFlags flags() const;

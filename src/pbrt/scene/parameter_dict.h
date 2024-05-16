@@ -9,9 +9,9 @@
 
 class ParameterDict {
   public:
-    ParameterDict() {}
+    ParameterDict() = default;
 
-    ParameterDict(const std::vector<Token> &tokens) {
+    explicit ParameterDict(const std::vector<Token> &tokens) {
         // the 1st token is Keyword
         // the 2nd token is String
         // e.g. { Shape "trianglemesh" }, { Camera "perspective" }
@@ -23,6 +23,23 @@ class ParameterDict {
 
             auto variable_type = tokens[idx].values[0];
             auto variable_name = tokens[idx].values[1];
+
+            if (variable_type == "bool") {
+                auto value_in_str = tokens[idx + 1].values[0];
+
+                if (value_in_str == "true") {
+                    booleans[variable_name] = true;
+                    continue;
+                }
+
+                if (value_in_str == "false") {
+                    booleans[variable_name] = false;
+                    continue;
+                }
+
+                printf("\n%s(): illegal BOOL value: %s\n", __func__, value_in_str.c_str());
+                REPORT_FATAL_ERROR();
+            }
 
             if (variable_type == "float") {
                 floats[variable_name] = tokens[idx + 1].to_floats();
@@ -77,15 +94,19 @@ class ParameterDict {
                 continue;
             }
 
-            std::cerr << "\nParameterDict(): unknown variable type: `" << variable_type << "`\n\n";
-            throw std::runtime_error("unknown variable type");
+            printf("\n%s(): unknown variable type: %s\n", __func__, variable_type.c_str());
+            REPORT_FATAL_ERROR();
         }
+    }
+
+    bool has_floats(const std::string &key) const {
+        return floats.find(key) != floats.end();
     }
 
     bool has_string(const std::string &key) const {
         return strings.find(key) != strings.end();
     }
-    
+
     std::vector<int> get_integer(const std::string &key) const {
         if (integers.find(key) == integers.end()) {
             return {};

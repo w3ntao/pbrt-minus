@@ -93,6 +93,10 @@ class Point2 {
     PBRT_CPU_GPU Point2<FloatType> to_point2f() const {
         return Point2<FloatType>(FloatType(x), FloatType(y));
     }
+
+    PBRT_CPU_GPU Vector2<FloatType> to_vector2f() const {
+        return Vector2<FloatType>(FloatType(x), FloatType(y));
+    }
 };
 
 using Point2f = Point2<FloatType>;

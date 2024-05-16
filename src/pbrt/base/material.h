@@ -24,24 +24,32 @@ struct MaterialEvalContext : public TextureEvalContext {
 };
 
 class DiffuseMaterial;
+class DielectricMaterial;
 
 class Material {
   public:
     enum class Type {
-        diffuse_material,
+        diffuse,
+        dieletric,
     };
 
     void init(const DiffuseMaterial *diffuse_material);
 
+    void init(const DielectricMaterial *dielectric_material);
+
     PBRT_GPU
     DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
+    PBRT_GPU
+    DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
+                                       SampledWavelengths &lambda) const;
+
     PBRT_CPU_GPU
     Type get_material_type() const {
-        return material_type;
+        return type;
     }
 
   private:
-    const void *material_ptr;
-    Type material_type;
+    const void *ptr;
+    Type type;
 };

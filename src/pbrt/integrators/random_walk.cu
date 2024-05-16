@@ -33,7 +33,7 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const DifferentialRay &ray,
         return radiance_emission;
     }
 
-    if (isect.material->get_material_type() == Material::Type::diffuse_material) {
+    if (isect.material->get_material_type() == Material::Type::diffuse) {
         BSDF bsdf;
         DiffuseBxDF diffuse_bxdf;
         isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);

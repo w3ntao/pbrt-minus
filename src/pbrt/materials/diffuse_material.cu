@@ -1,11 +1,11 @@
 #include "pbrt/materials/diffuse_material.h"
 
 #include "pbrt/base/material.h"
+#include "pbrt/base/texture.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include "pbrt/textures/spectrum_constant_texture.h"
 
-void DiffuseMaterial::init(const SpectrumConstantTexture *_reflectance) {
+void DiffuseMaterial::init(const SpectrumTexture *_reflectance) {
     reflectance = _reflectance;
 }
 

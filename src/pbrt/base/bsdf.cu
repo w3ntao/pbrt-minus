@@ -14,6 +14,11 @@ void BSDF::init_bxdf(const DiffuseBxDF *diffuse_bxdf) {
 }
 
 PBRT_GPU
+void BSDF::init_bxdf(const DielectricBxDF *dielectric_bxdf) {
+    bxdf.init(dielectric_bxdf);
+}
+
+PBRT_GPU
 SampledSpectrum BSDF::f(const Vector3f &woRender, const Vector3f &wiRender,
                         const TransportMode mode) const {
     Vector3f wi = render_to_local(wiRender);
@@ -30,10 +35,11 @@ PBRT_GPU
 cuda::std::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, FloatType u,
                                                const Point2f &u2, TransportMode mode,
                                                BxDFReflTransFlags sample_flags) const {
-    const auto wo = render_to_local(wo_render);
     if (bxdf.has_type_null()) {
         REPORT_FATAL_ERROR();
     }
+
+    const auto wo = render_to_local(wo_render);
 
     if (wo.z == 0 || !(bxdf.flags() & sample_flags)) {
         return {};

@@ -6,6 +6,7 @@
 #include "pbrt/base/sampler.h"
 
 #include "pbrt/bxdfs/diffuse_bxdf.h"
+#include "pbrt/bxdfs/dielectric_bxdf.h"
 
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 
@@ -66,6 +67,20 @@ void SurfaceInteraction::init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf
 
     diffuse_bxdf = material->get_diffuse_bsdf(material_eval_context, lambda);
     bsdf.init_bxdf(&diffuse_bxdf);
+}
+
+PBRT_GPU
+void SurfaceInteraction::init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielectric_bxdf,
+                                              const DifferentialRay &ray,
+                                              SampledWavelengths &lambda, const Camera *camera,
+                                              Sampler *sampler) {
+    compute_differentials(ray, camera, sampler->get_samples_per_pixel());
+
+    auto material_eval_context = MaterialEvalContext(*this);
+    bsdf.init_frame(material_eval_context.ns, material_eval_context.dpdus);
+
+    dielectric_bxdf = material->get_dielectric_bsdf(material_eval_context, lambda);
+    bsdf.init_bxdf(&dielectric_bxdf);
 }
 
 PBRT_GPU

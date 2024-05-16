@@ -348,22 +348,21 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
     printf("\ntotal primitives: %u\n", num_total_primitives);
 
     MortonPrimitive *gpu_morton_primitives;
-    CHECK_CUDA_ERROR(cudaMallocManaged((void **)&gpu_morton_primitives,
-                                       sizeof(MortonPrimitive) * num_total_primitives));
+    CHECK_CUDA_ERROR(
+        cudaMallocManaged(&gpu_morton_primitives, sizeof(MortonPrimitive) * num_total_primitives));
 
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     const Primitive **gpu_primitives_array;
-    CHECK_CUDA_ERROR(cudaMallocManaged((void **)&gpu_primitives_array,
-                                       sizeof(Primitive *) * num_total_primitives));
+    CHECK_CUDA_ERROR(
+        cudaMallocManaged(&gpu_primitives_array, sizeof(Primitive *) * num_total_primitives));
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_primitives_array, gpu_primitives.data(),
                                 sizeof(Primitive *) * num_total_primitives,
                                 cudaMemcpyHostToDevice));
 
     Treelet *sparse_treelets;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged((void **)&sparse_treelets, sizeof(Treelet) * MAX_TREELET_NUM));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&sparse_treelets, sizeof(Treelet) * MAX_TREELET_NUM));
 
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
@@ -504,8 +503,8 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
     }
 
     Treelet *dense_treelets;
-    CHECK_CUDA_ERROR(cudaMallocManaged((void **)&dense_treelets,
-                                       sizeof(Treelet) * dense_treelet_indices.size()));
+    CHECK_CUDA_ERROR(
+        cudaMallocManaged(&dense_treelets, sizeof(Treelet) * dense_treelet_indices.size()));
 
     for (uint idx = 0; idx < dense_treelet_indices.size(); idx++) {
         uint sparse_idx = dense_treelet_indices[idx];
@@ -516,8 +515,7 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
 
     uint max_build_node_length =
         (2 * dense_treelet_indices.size() + 1) + (2 * num_total_primitives + 1);
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged((void **)&build_nodes, sizeof(BVHBuildNode) * max_build_node_length));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&build_nodes, sizeof(BVHBuildNode) * max_build_node_length));
     gpu_dynamic_pointers.push_back(build_nodes);
 
     auto start_top_bvh = std::chrono::system_clock::now();
@@ -540,8 +538,7 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
         const uint array_length = end - start;
 
         BottomBVHArgs *bvh_args_array;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged((void **)&bvh_args_array, sizeof(BottomBVHArgs) * array_length));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&bvh_args_array, sizeof(BottomBVHArgs) * array_length));
 
         {
             uint threads = 1024;

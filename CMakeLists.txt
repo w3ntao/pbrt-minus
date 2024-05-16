@@ -52,11 +52,15 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/sampler.cu
         src/pbrt/base/shape.cu
         src/pbrt/base/spectrum.cu
+        src/pbrt/base/texture.cu
+
         src/pbrt/accelerator/hlbvh.cu
+        src/pbrt/bxdfs/dielectric_bxdf.cu
         src/pbrt/euclidean_space/squared_matrix.cu
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu
         src/pbrt/lights/diffuse_area_light.cu
+        src/pbrt/materials/dielectric_material.cu
         src/pbrt/materials/diffuse_material.cu
         src/pbrt/primitives/geometric_primitive.cu
         src/pbrt/shapes/loop_subdivide.cu

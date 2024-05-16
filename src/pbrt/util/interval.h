@@ -91,9 +91,9 @@ class Interval {
         }
 
         FloatType lowQuot[4] = {div_round_down(low, i.low), div_round_down(high, i.low),
-                             div_round_down(low, i.high), div_round_down(high, i.high)};
+                                div_round_down(low, i.high), div_round_down(high, i.high)};
         FloatType highQuot[4] = {div_round_up(low, i.low), div_round_up(high, i.low),
-                              div_round_up(low, i.high), div_round_up(high, i.high)};
+                                 div_round_up(low, i.high), div_round_up(high, i.high)};
         return {std::min({lowQuot[0], lowQuot[1], lowQuot[2], lowQuot[3]}),
                 std::max({highQuot[0], highQuot[1], highQuot[2], highQuot[3]})};
     }
@@ -102,16 +102,18 @@ class Interval {
 PBRT_GPU
 inline Interval sqr(Interval i) {
     FloatType abs_low = std::abs(i.low);
-    FloatType abas_high = std::abs(i.high);
-    if (abs_low > abas_high) {
-        std::swap(abs_low, abas_high);
+    FloatType abs_high = std::abs(i.high);
+    if (abs_low > abs_high) {
+        auto temp = abs_low;
+        abs_low = abs_high;
+        abs_high = temp;
     }
 
     if (i.cover(0)) {
-        return Interval(0, mul_round_up(abas_high, abas_high));
+        return Interval(0, mul_round_up(abs_high, abs_high));
     }
 
-    return Interval(mul_round_down(abs_low, abs_low), mul_round_up(abas_high, abas_high));
+    return Interval(mul_round_down(abs_low, abs_low), mul_round_up(abs_high, abs_high));
 }
 
 PBRT_CPU_GPU

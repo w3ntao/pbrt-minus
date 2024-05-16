@@ -1,0 +1,31 @@
+#pragma once
+
+#include <vector>
+
+#include "pbrt/base/bsdf.h"
+#include "pbrt/util/macro.h"
+
+class DielectricBxDF;
+class FloatTexture;
+class MaterialEvalContext;
+class ParameterDict;
+class SampledWavelengths;
+class Spectrum;
+class SpectrumTexture;
+
+class DielectricMaterial {
+  public:
+    void init(const ParameterDict &parameters, std::vector<void *> &gpu_dynamic_pointers);
+
+    PBRT_GPU
+    DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
+                                       SampledWavelengths &lambda) const;
+
+  private:
+    const FloatTexture *u_roughness;
+    const FloatTexture *v_roughness;
+
+    const Spectrum *eta;
+
+    bool remap_roughness;
+};

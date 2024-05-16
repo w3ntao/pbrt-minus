@@ -6,7 +6,7 @@
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/sampling.h"
 
-struct DiffuseBxDF {
+class DiffuseBxDF {
   public:
     PBRT_GPU DiffuseBxDF() : r(SampledSpectrum::same_value(NAN)) {}
 

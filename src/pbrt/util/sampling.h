@@ -74,6 +74,13 @@ inline Point2f sample_uniform_disk_concentric(Point2f u) {
 }
 
 PBRT_CPU_GPU
+inline Point2f sample_uniform_disk_polar(const Point2f u) {
+    FloatType r = std::sqrt(u[0]);
+    FloatType theta = 2 * compute_pi() * u[1];
+    return {r * std::cos(theta), r * std::sin(theta)};
+}
+
+PBRT_CPU_GPU
 inline void sample_uniform_triangle(FloatType out[3], const Point2f u) {
     FloatType b0, b1;
 
