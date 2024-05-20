@@ -31,6 +31,6 @@ class Sampler {
     CameraSample get_camera_sample(Point2i pPixel, const Filter *filter);
 
   private:
-    Type sampler_type;
-    void *sampler_ptr;
+    Type type;
+    void *ptr;
 };

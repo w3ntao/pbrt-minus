@@ -148,7 +148,7 @@ class BxDF {
     };
 
     PBRT_GPU
-    BxDF() : bxdf_type(Type::null), bxdf_ptr(nullptr) {}
+    BxDF() : type(Type::null), ptr(nullptr) {}
 
     PBRT_GPU
     void init(const DiffuseBxDF *diffuse_bxdf);
@@ -173,10 +173,10 @@ class BxDF {
 
     PBRT_GPU
     bool has_type_null() const {
-        return bxdf_type == Type::null;
+        return type == Type::null;
     }
 
   private:
-    Type bxdf_type;
-    const void *bxdf_ptr;
+    Type type;
+    const void *ptr;
 };

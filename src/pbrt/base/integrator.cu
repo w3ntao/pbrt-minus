@@ -10,43 +10,43 @@
 #include "pbrt/integrators/simple_path.h"
 
 void Integrator::init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator) {
-    integrator_type = Type::ambient_occlusion;
-    integrator_ptr = ambient_occlusion_integrator;
+    type = Type::ambient_occlusion;
+    ptr = ambient_occlusion_integrator;
 }
 
 void Integrator::init(const SurfaceNormalIntegrator *surface_normal_integrator) {
-    integrator_type = Type::surface_normal;
-    integrator_ptr = surface_normal_integrator;
+    type = Type::surface_normal;
+    ptr = surface_normal_integrator;
 }
 
 void Integrator::init(const RandomWalkIntegrator *random_walk_integrator) {
-    integrator_type = Type::random_walk;
-    integrator_ptr = random_walk_integrator;
+    type = Type::random_walk;
+    ptr = random_walk_integrator;
 }
 
 void Integrator::init(const SimplePathIntegrator *simple_path_integrator) {
-    integrator_type = Type::simple_path;
-    integrator_ptr = simple_path_integrator;
+    type = Type::simple_path;
+    ptr = simple_path_integrator;
 }
 
 PBRT_GPU
 SampledSpectrum Integrator::li(const DifferentialRay &ray, SampledWavelengths &lambda,
                                Sampler *sampler) const {
-    switch (integrator_type) {
+    switch (type) {
     case (Type::surface_normal): {
-        return ((SurfaceNormalIntegrator *)integrator_ptr)->li(ray, lambda);
+        return ((SurfaceNormalIntegrator *)ptr)->li(ray, lambda);
     }
 
     case (Type::ambient_occlusion): {
-        return ((AmbientOcclusionIntegrator *)integrator_ptr)->li(ray, lambda, sampler);
+        return ((AmbientOcclusionIntegrator *)ptr)->li(ray, lambda, sampler);
     }
 
     case (Type::random_walk): {
-        return ((RandomWalkIntegrator *)integrator_ptr)->li(ray, lambda, sampler);
+        return ((RandomWalkIntegrator *)ptr)->li(ray, lambda, sampler);
     }
 
     case (Type::simple_path): {
-        return ((SimplePathIntegrator *)integrator_ptr)->li(ray, lambda, sampler);
+        return ((SimplePathIntegrator *)ptr)->li(ray, lambda, sampler);
     }
     }
 

@@ -31,6 +31,6 @@ class Primitive {
     cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
   private:
-    Type primitive_type;
-    const void *primitive_ptr;
+    Type type;
+    const void *ptr;
 };

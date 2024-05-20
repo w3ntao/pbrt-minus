@@ -2,15 +2,15 @@
 #include "pbrt/cameras/perspective.h"
 
 void Camera::init(const PerspectiveCamera *perspective_camera) {
-    camera_ptr = perspective_camera;
-    camera_type = Type::perspective;
+    ptr = perspective_camera;
+    type = Type::perspective;
 }
 
 PBRT_CPU_GPU
 const CameraBase *Camera::get_camerabase() const {
-    switch (camera_type) {
+    switch (type) {
     case (Type::perspective): {
-        return &((PerspectiveCamera *)camera_ptr)->camera_base;
+        return &((PerspectiveCamera *)ptr)->camera_base;
     }
     }
 
@@ -20,9 +20,9 @@ const CameraBase *Camera::get_camerabase() const {
 
 PBRT_CPU_GPU
 CameraRay Camera::generate_ray(const CameraSample &sample) const {
-    switch (camera_type) {
+    switch (type) {
     case (Type::perspective): {
-        return ((PerspectiveCamera *)camera_ptr)->generate_ray(sample);
+        return ((PerspectiveCamera *)ptr)->generate_ray(sample);
     }
     }
 
@@ -32,9 +32,9 @@ CameraRay Camera::generate_ray(const CameraSample &sample) const {
 
 PBRT_CPU_GPU
 CameraDifferentialRay Camera::generate_camera_differential_ray(const CameraSample &sample) const {
-    switch (camera_type) {
+    switch (type) {
     case (Type::perspective): {
-        return ((PerspectiveCamera *)camera_ptr)->generate_camera_differential_ray(sample);
+        return ((PerspectiveCamera *)ptr)->generate_camera_differential_ray(sample);
     }
     }
 

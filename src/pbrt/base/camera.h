@@ -155,6 +155,6 @@ class Camera {
     }
 
   private:
-    const void *camera_ptr;
-    Type camera_type;
+    Type type;
+    const void *ptr;
 };

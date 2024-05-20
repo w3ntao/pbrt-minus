@@ -7,45 +7,45 @@
 
 PBRT_CPU_GPU
 void Spectrum::init(const DenselySampledSpectrum *densely_sampled_spectrum) {
-    spectrum_type = Type::densely_sampled_spectrum;
-    spectrum_ptr = densely_sampled_spectrum;
+    type = Type::densely_sampled_spectrum;
+    ptr = densely_sampled_spectrum;
 }
 
 PBRT_CPU_GPU
 void Spectrum::init(const ConstantSpectrum *constant_spectrum) {
-    spectrum_type = Type::constant_spectrum;
-    spectrum_ptr = constant_spectrum;
+    type = Type::constant_spectrum;
+    ptr = constant_spectrum;
 }
 
 PBRT_CPU_GPU
 void Spectrum::init(const RGBIlluminantSpectrum *rgb_illuminant_spectrum) {
-    spectrum_type = Type::rgb_illuminant_spectrum;
-    spectrum_ptr = rgb_illuminant_spectrum;
+    type = Type::rgb_illuminant_spectrum;
+    ptr = rgb_illuminant_spectrum;
 }
 
 PBRT_CPU_GPU
 void Spectrum::init(const RGBAlbedoSpectrum *rgb_albedo_spectrum) {
-    spectrum_type = Type::rgb_albedo_spectrum;
-    spectrum_ptr = rgb_albedo_spectrum;
+    type = Type::rgb_albedo_spectrum;
+    ptr = rgb_albedo_spectrum;
 }
 
 PBRT_CPU_GPU
 FloatType Spectrum::operator()(FloatType lambda) const {
-    switch (spectrum_type) {
+    switch (type) {
     case (Type::densely_sampled_spectrum): {
-        return ((DenselySampledSpectrum *)spectrum_ptr)->operator()(lambda);
+        return ((DenselySampledSpectrum *)ptr)->operator()(lambda);
     }
 
     case (Type::constant_spectrum): {
-        return ((ConstantSpectrum *)spectrum_ptr)->operator()(lambda);
+        return ((ConstantSpectrum *)ptr)->operator()(lambda);
     }
 
     case (Type::rgb_illuminant_spectrum): {
-        return ((RGBIlluminantSpectrum *)spectrum_ptr)->operator()(lambda);
+        return ((RGBIlluminantSpectrum *)ptr)->operator()(lambda);
     }
 
     case (Type::rgb_albedo_spectrum): {
-        return ((RGBAlbedoSpectrum *)spectrum_ptr)->operator()(lambda);
+        return ((RGBAlbedoSpectrum *)ptr)->operator()(lambda);
     }
     }
 
@@ -55,21 +55,21 @@ FloatType Spectrum::operator()(FloatType lambda) const {
 
 PBRT_CPU_GPU
 SampledSpectrum Spectrum::sample(const SampledWavelengths &lambda) const {
-    switch (spectrum_type) {
+    switch (type) {
     case (Type::densely_sampled_spectrum): {
-        return ((DenselySampledSpectrum *)spectrum_ptr)->sample(lambda);
+        return ((DenselySampledSpectrum *)ptr)->sample(lambda);
     }
 
     case (Type::constant_spectrum): {
-        return ((ConstantSpectrum *)spectrum_ptr)->sample(lambda);
+        return ((ConstantSpectrum *)ptr)->sample(lambda);
     }
 
     case (Type::rgb_illuminant_spectrum): {
-        return ((RGBIlluminantSpectrum *)spectrum_ptr)->sample(lambda);
+        return ((RGBIlluminantSpectrum *)ptr)->sample(lambda);
     }
 
     case (Type::rgb_albedo_spectrum): {
-        return ((RGBAlbedoSpectrum *)spectrum_ptr)->sample(lambda);
+        return ((RGBAlbedoSpectrum *)ptr)->sample(lambda);
     }
     }
 

@@ -4,25 +4,25 @@
 
 PBRT_GPU
 void BxDF::init(const DiffuseBxDF *diffuse_bxdf) {
-    bxdf_type = Type::diffuse_bxdf;
-    bxdf_ptr = diffuse_bxdf;
+    type = Type::diffuse_bxdf;
+    ptr = diffuse_bxdf;
 }
 
 PBRT_GPU
 void BxDF::init(const DielectricBxDF *dielectric_bxdf) {
-    bxdf_type = Type::dielectric_bxdf;
-    bxdf_ptr = dielectric_bxdf;
+    type = Type::dielectric_bxdf;
+    ptr = dielectric_bxdf;
 }
 
 PBRT_CPU_GPU
 BxDFFlags BxDF::flags() const {
-    switch (bxdf_type) {
+    switch (type) {
     case (Type::diffuse_bxdf): {
-        return ((DiffuseBxDF *)bxdf_ptr)->flags();
+        return ((DiffuseBxDF *)ptr)->flags();
     }
 
     case (Type::dielectric_bxdf): {
-        return ((DielectricBxDF *)bxdf_ptr)->flags();
+        return ((DielectricBxDF *)ptr)->flags();
     }
     }
 
@@ -32,12 +32,12 @@ BxDFFlags BxDF::flags() const {
 
 PBRT_GPU
 SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
-    switch (bxdf_type) {
+    switch (type) {
     case (Type::diffuse_bxdf): {
-        return ((DiffuseBxDF *)bxdf_ptr)->f(wo, wi, mode);
+        return ((DiffuseBxDF *)ptr)->f(wo, wi, mode);
     }
     case (Type::dielectric_bxdf): {
-        return ((DielectricBxDF *)bxdf_ptr)->f(wo, wi, mode);
+        return ((DielectricBxDF *)ptr)->f(wo, wi, mode);
     }
     }
 
@@ -49,13 +49,13 @@ PBRT_GPU
 cuda::std::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
                                                TransportMode mode,
                                                BxDFReflTransFlags sampleFlags) const {
-    switch (bxdf_type) {
+    switch (type) {
     case (Type::diffuse_bxdf): {
-        return ((DiffuseBxDF *)bxdf_ptr)->sample_f(wo, uc, u, mode, sampleFlags);
+        return ((DiffuseBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
 
     case (Type::dielectric_bxdf): {
-        return ((DielectricBxDF *)bxdf_ptr)->sample_f(wo, uc, u, mode, sampleFlags);
+        return ((DielectricBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
     }
 
@@ -66,13 +66,13 @@ cuda::std::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2
 PBRT_GPU
 FloatType BxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                     BxDFReflTransFlags sampleFlags) const {
-    switch (bxdf_type) {
+    switch (type) {
     case (Type::diffuse_bxdf): {
-        return ((DiffuseBxDF *)bxdf_ptr)->pdf(wo, wi, mode, sampleFlags);
+        return ((DiffuseBxDF *)ptr)->pdf(wo, wi, mode, sampleFlags);
     }
 
     case (Type::dielectric_bxdf): {
-        return ((DielectricBxDF *)bxdf_ptr)->pdf(wo, wi, mode, sampleFlags);
+        return ((DielectricBxDF *)ptr)->pdf(wo, wi, mode, sampleFlags);
     }
     }
 

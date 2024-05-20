@@ -3,15 +3,15 @@
 
 PBRT_CPU_GPU
 void Shape::init(const Triangle *triangle) {
-    shape_type = Type::triangle;
-    shape_ptr = triangle;
+    type = Type::triangle;
+    ptr = triangle;
 }
 
 PBRT_CPU_GPU
 Bounds3f Shape::bounds() const {
-    switch (shape_type) {
+    switch (type) {
     case (Type::triangle): {
-        return ((Triangle *)shape_ptr)->bounds();
+        return ((Triangle *)ptr)->bounds();
     }
     }
 
@@ -21,9 +21,9 @@ Bounds3f Shape::bounds() const {
 
 PBRT_CPU_GPU
 FloatType Shape::area() const {
-    switch (shape_type) {
+    switch (type) {
     case (Type::triangle): {
-        return ((Triangle *)shape_ptr)->area();
+        return ((Triangle *)ptr)->area();
     }
     }
 
@@ -33,9 +33,9 @@ FloatType Shape::area() const {
 
 PBRT_GPU
 bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
-    switch (shape_type) {
+    switch (type) {
     case (Type::triangle): {
-        return ((Triangle *)shape_ptr)->fast_intersect(ray, t_max);
+        return ((Triangle *)ptr)->fast_intersect(ray, t_max);
     }
     }
 
@@ -45,9 +45,9 @@ bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
 
 PBRT_GPU
 cuda::std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
-    switch (shape_type) {
+    switch (type) {
     case (Type::triangle): {
-        return ((Triangle *)shape_ptr)->intersect(ray, t_max);
+        return ((Triangle *)ptr)->intersect(ray, t_max);
     }
     }
 
@@ -58,9 +58,9 @@ cuda::std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatTyp
 PBRT_GPU
 cuda::std::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
                                                const Point2f u) const {
-    switch (shape_type) {
+    switch (type) {
     case (Type::triangle): {
-        return ((Triangle *)shape_ptr)->sample(ctx, u);
+        return ((Triangle *)ptr)->sample(ctx, u);
     }
     }
 

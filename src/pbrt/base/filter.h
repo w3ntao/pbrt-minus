@@ -29,6 +29,6 @@ class Filter {
     FilterSample sample(Point2f u) const;
 
   private:
-    const void *filter_ptr;
-    Type filter_type;
+    Type type;
+    const void *ptr;
 };

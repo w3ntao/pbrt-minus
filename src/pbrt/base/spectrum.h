@@ -30,7 +30,7 @@ class Spectrum {
     void init(const RGBAlbedoSpectrum *rgb_albedo_spectrum);
 
     PBRT_CPU_GPU bool is_constant_spectrum() const {
-        return spectrum_type == Type::constant_spectrum;
+        return type == Type::constant_spectrum;
     }
 
     PBRT_CPU_GPU FloatType operator()(FloatType lambda) const;
@@ -63,6 +63,6 @@ class Spectrum {
     }
 
   private:
-    Type spectrum_type;
-    const void *spectrum_ptr;
+    Type type;
+    const void *ptr;
 };

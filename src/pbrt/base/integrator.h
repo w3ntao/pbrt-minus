@@ -33,6 +33,6 @@ class Integrator {
                                 Sampler *sampler) const;
 
   private:
-    Type integrator_type;
-    const void *integrator_ptr;
+    Type type;
+    const void *ptr;
 };

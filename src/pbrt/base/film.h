@@ -24,6 +24,6 @@ class Film {
     void write_to_png(const std::string &filename, const Point2i &resolution) const;
 
   private:
-    void *film_ptr;
-    Type film_type;
+    Type type;
+    void *ptr;
 };

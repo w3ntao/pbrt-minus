@@ -4,15 +4,15 @@
 
 PBRT_CPU_GPU
 void Sampler::init(IndependentSampler *independent_sampler) {
-    sampler_type = Type::independent_sampler;
-    sampler_ptr = independent_sampler;
+    type = Type::independent_sampler;
+    ptr = independent_sampler;
 }
 
 PBRT_GPU
 void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension) {
-    switch (sampler_type) {
+    switch (type) {
     case (Type::independent_sampler): {
-        ((IndependentSampler *)sampler_ptr)->start_pixel_sample(pixel_idx, sample_idx, dimension);
+        ((IndependentSampler *)ptr)->start_pixel_sample(pixel_idx, sample_idx, dimension);
         return;
     }
     }
@@ -21,9 +21,9 @@ void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension
 
 PBRT_CPU_GPU
 uint Sampler::get_samples_per_pixel() const {
-    switch (sampler_type) {
+    switch (type) {
     case (Type::independent_sampler): {
-        return ((IndependentSampler *)sampler_ptr)->get_samples_per_pixel();
+        return ((IndependentSampler *)ptr)->get_samples_per_pixel();
     }
     }
 
@@ -33,9 +33,9 @@ uint Sampler::get_samples_per_pixel() const {
 
 PBRT_GPU
 FloatType Sampler::get_1d() {
-    switch (sampler_type) {
+    switch (type) {
     case (Type::independent_sampler): {
-        return ((IndependentSampler *)sampler_ptr)->get_1d();
+        return ((IndependentSampler *)ptr)->get_1d();
     }
     }
 
@@ -45,9 +45,9 @@ FloatType Sampler::get_1d() {
 
 PBRT_GPU
 Point2f Sampler::get_2d() {
-    switch (sampler_type) {
+    switch (type) {
     case (Type::independent_sampler): {
-        return ((IndependentSampler *)sampler_ptr)->get_2d();
+        return ((IndependentSampler *)ptr)->get_2d();
     }
     }
 
@@ -56,9 +56,9 @@ Point2f Sampler::get_2d() {
 
 PBRT_GPU
 Point2f Sampler::get_pixel_2d() {
-    switch (sampler_type) {
+    switch (type) {
     case (Type::independent_sampler): {
-        return ((IndependentSampler *)sampler_ptr)->get_pixel_2d();
+        return ((IndependentSampler *)ptr)->get_pixel_2d();
     }
     }
 

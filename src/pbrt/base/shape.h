@@ -50,6 +50,6 @@ class Shape {
     cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f u) const;
 
   private:
-    Type shape_type;
-    const void *shape_ptr;
+    Type type;
+    const void *ptr;
 };
