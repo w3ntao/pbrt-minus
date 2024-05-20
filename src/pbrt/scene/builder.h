@@ -539,46 +539,19 @@ class SceneBuilder {
         auto type_of_material = tokens[1].values[0];
 
         if (type_of_material == "diffuse") {
-            auto key = "reflectance";
-
-            // TODO: if "reflectance" in texture
-
-            // TODO: move those functionalities into DiffuseMaterial::init()
-
-            auto reflectance = parameters.get_rgb(key, std::nullopt);
-            RGBAlbedoSpectrum *_reflectance_spectrum;
-            Spectrum *reflectance_spectrum;
-            SpectrumConstantTexture *spectrum_constant_texture;
-            SpectrumTexture *spectrum_texture;
             DiffuseMaterial *diffuse_material;
             Material *material;
-
-            CHECK_CUDA_ERROR(cudaMallocManaged(&_reflectance_spectrum, sizeof(RGBAlbedoSpectrum)));
-            CHECK_CUDA_ERROR(cudaMallocManaged(&reflectance_spectrum, sizeof(Spectrum)));
-            CHECK_CUDA_ERROR(
-                cudaMallocManaged(&spectrum_constant_texture, sizeof(SpectrumConstantTexture)));
-            CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
             CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material, sizeof(DiffuseMaterial)));
             CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
 
-            _reflectance_spectrum->init(renderer->global_variables->rgb_color_space, reflectance);
-            reflectance_spectrum->init(_reflectance_spectrum);
-            spectrum_constant_texture->init(reflectance_spectrum);
-            spectrum_texture->init(spectrum_constant_texture);
-            diffuse_material->init(spectrum_texture);
+            diffuse_material->init(renderer->global_variables->rgb_color_space, parameters,
+                                   gpu_dynamic_pointers);
             material->init(diffuse_material);
+
             graphics_state.current_material = material;
 
-            for (auto ptr : std::vector<void *>({
-                     _reflectance_spectrum,
-                     reflectance_spectrum,
-                     spectrum_constant_texture,
-                     spectrum_texture,
-                     diffuse_material,
-                     material,
-                 })) {
-                gpu_dynamic_pointers.push_back(ptr);
-            }
+            gpu_dynamic_pointers.push_back(diffuse_material);
+            gpu_dynamic_pointers.push_back(material);
             return;
         }
 
