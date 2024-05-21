@@ -22,6 +22,12 @@ constexpr FloatType gamma(int n) {
 }
 
 template <typename T>
+PBRT_CPU_GPU inline T mod(T a, T b) {
+    T result = a - (a / b) * b;
+    return (T)((result < 0) ? result + b : result);
+}
+
+template <typename T>
 PBRT_CPU_GPU constexpr T clamp(T x, T low, T high) {
     return x < low ? low : (x > high ? high : x);
 }

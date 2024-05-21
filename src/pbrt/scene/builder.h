@@ -42,6 +42,10 @@
 #include "pbrt/shapes/tri_quad_mesh.h"
 
 #include "pbrt/textures/spectrum_constant_texture.h"
+#include "pbrt/textures/spectrum_image_texture.h"
+#include "pbrt/textures/spectrum_scale_texture.h"
+
+#include "pbrt/util/std_container.h"
 
 namespace {
 std::string get_dirname(const std::string &full_path) {
@@ -174,6 +178,8 @@ class SceneBuilder {
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
 
+    std::map<std::string, const SpectrumTexture *> named_spectrum_texture;
+
     explicit SceneBuilder(const CommandLineOption &command_line_option)
         : samples_per_pixel(command_line_option.samples_per_pixel),
           pre_computed_spectrum(PreComputedSpectrum(thread_pool)) {
@@ -228,7 +234,7 @@ class SceneBuilder {
         spectrum_grey->init(constant_grey);
         texture_grey->init(spectrum_grey);
         texture->init(texture_grey);
-        default_diffuse_material->init(texture);
+        default_diffuse_material->init_reflectance(texture);
         default_material->init(default_diffuse_material);
 
         graphics_state.current_material = default_material;
@@ -271,7 +277,8 @@ class SceneBuilder {
     }
 
     void build_camera() {
-        auto parameters = ParameterDict(camera_tokens);
+        auto parameters =
+            ParameterDict(sub_vector(camera_tokens, 2), named_spectrum_texture, this->root);
         const auto camera_type = camera_tokens[1].values[0];
         if (camera_type == "perspective") {
             auto camera_from_world = graphics_state.current_transform;
@@ -309,13 +316,14 @@ class SceneBuilder {
     }
 
     void build_film() {
-        auto parameters = ParameterDict(film_tokens);
+        auto parameters =
+            ParameterDict(sub_vector(film_tokens, 2), named_spectrum_texture, this->root);
 
         auto _resolution_x = parameters.get_integer("xresolution")[0];
         auto _resolution_y = parameters.get_integer("yresolution")[0];
 
         film_resolution = Point2i(_resolution_x, _resolution_y);
-        output_filename = parameters.get_string("filename");
+        output_filename = parameters.get_string("filename", std::nullopt);
 
         if (std::filesystem::path p(output_filename); p.extension() != ".png") {
             printf("output filename extension: only PNG is supported for the moment\n");
@@ -373,7 +381,8 @@ class SceneBuilder {
 
     void build_sampler() {
         // TODO: sampler is not parsed, only pixelsamples read
-        const auto parameters = ParameterDict(sampler_tokens);
+        const auto parameters =
+            ParameterDict(sub_vector(sampler_tokens, 2), named_spectrum_texture, this->root);
         auto samples_from_parameters = parameters.get_integer("pixelsamples");
 
         if (!samples_per_pixel) {
@@ -535,7 +544,8 @@ class SceneBuilder {
             throw std::runtime_error("expect Keyword(Material)");
         }
 
-        const auto parameters = ParameterDict(tokens);
+        const auto parameters =
+            ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, this->root);
         auto type_of_material = tokens[1].values[0];
 
         if (type_of_material == "diffuse") {
@@ -614,15 +624,17 @@ class SceneBuilder {
         }
 
         graphics_state.area_light_entity =
-            AreaLightEntity(tokens[1].values[0], ParameterDict(tokens));
+            AreaLightEntity(tokens[1].values[0], ParameterDict(sub_vector(tokens, 2),
+                                                               named_spectrum_texture, this->root));
     }
 
-    void world_shape(const std::vector<Token> &tokens) {
+    void parse_shape(const std::vector<Token> &tokens) {
         if (tokens[0] != Token(TokenType::Keyword, "Shape")) {
             throw std::runtime_error("expect Keyword(Shape)");
         }
 
-        const auto parameters = ParameterDict(tokens);
+        const auto parameters =
+            ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, this->root);
 
         auto type_of_shape = tokens[1].values[0];
         if (type_of_shape == "trianglemesh") {
@@ -636,7 +648,7 @@ class SceneBuilder {
         }
 
         if (type_of_shape == "plymesh") {
-            auto file_path = get_file_full_path(parameters.get_string("filename"));
+            auto file_path = get_file_full_path(parameters.get_string("filename", std::nullopt));
             auto ply_mesh = TriQuadMesh::read_ply(file_path);
 
             // TODO: displacement texture is not implemented here
@@ -673,7 +685,75 @@ class SceneBuilder {
         REPORT_FATAL_ERROR();
     }
 
-    void world_transform(const std::vector<Token> &tokens) {
+    void parse_texture(const std::vector<Token> &tokens) {
+        auto texture_name = tokens[1].values[0];
+        auto color_type = tokens[2].values[0];
+        auto texture_type = tokens[3].values[0];
+
+        if (color_type == "spectrum") {
+            auto parameters =
+                ParameterDict(sub_vector(tokens, 4), named_spectrum_texture, this->root);
+            if (texture_type == "imagemap") {
+                SpectrumImageTexture *image_texture;
+                SpectrumTexture *spectrum_texture;
+
+                CHECK_CUDA_ERROR(cudaMallocManaged(&image_texture, sizeof(SpectrumImageTexture)));
+                CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
+
+                image_texture->new_init(parameters, renderer->global_variables->rgb_color_space,
+                                        gpu_dynamic_pointers);
+                spectrum_texture->init(image_texture);
+
+                /*
+                auto filename = parameters.get_string("filename", std::nullopt);
+                auto absolute_path = this->root + "/" + filename;
+
+                SpectrumImageTexture *image_texture;
+                SpectrumTexture *spectrum_texture;
+                CHECK_CUDA_ERROR(cudaMallocManaged(&image_texture, sizeof(SpectrumImageTexture)));
+                CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
+
+                image_texture->init(parameters, get_render_from_object(), absolute_path,
+                                    renderer->global_variables->rgb_color_space,
+                                    gpu_dynamic_pointers);
+                spectrum_texture->init(image_texture);
+                */
+                named_spectrum_texture[texture_name] = spectrum_texture;
+
+                gpu_dynamic_pointers.push_back(image_texture);
+                gpu_dynamic_pointers.push_back(spectrum_texture);
+
+                return;
+            }
+
+            if (texture_type == "scale") {
+                auto base_texture = parameters.get_spectrum_texture("tex");
+                auto scale = parameters.get_float("scale", std::optional(1.0));
+
+                SpectrumScaleTexture *scale_texture;
+                SpectrumTexture *spectrum_texture;
+
+                CHECK_CUDA_ERROR(cudaMallocManaged(&scale_texture, sizeof(SpectrumScaleTexture)));
+                CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
+
+                scale_texture->init(base_texture, scale);
+                spectrum_texture->init(scale_texture);
+
+                named_spectrum_texture[texture_name] = spectrum_texture;
+
+                gpu_dynamic_pointers.push_back(scale_texture);
+                gpu_dynamic_pointers.push_back(spectrum_texture);
+
+                return;
+            }
+
+            REPORT_FATAL_ERROR();
+        }
+
+        REPORT_FATAL_ERROR();
+    }
+
+    void parse_transform(const std::vector<Token> &tokens) {
         if (tokens[0] != Token(TokenType::Keyword, "Transform")) {
             std::cout << "\nexpect Keyword(Transform)\n";
             REPORT_FATAL_ERROR();
@@ -696,7 +776,7 @@ class SceneBuilder {
         graphics_state.current_transform = transform_matrix.transpose();
     }
 
-    void world_translate(const std::vector<Token> &tokens) {
+    void parse_translate(const std::vector<Token> &tokens) {
         std::vector<FloatType> data;
         for (int idx = 1; idx < tokens.size(); idx++) {
             data.push_back(tokens[idx].to_float());
@@ -738,7 +818,7 @@ class SceneBuilder {
 
         TriangleMesh *mesh;
         CHECK_CUDA_ERROR(cudaMallocManaged(&mesh, sizeof(TriangleMesh)));
-        mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, points.size());
+        mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, gpu_uv);
 
         uint num_triangles = mesh->triangles_num;
         Triangle *triangles;
@@ -948,17 +1028,27 @@ class SceneBuilder {
             }
 
             if (keyword == "Shape") {
-                world_shape(tokens);
+                parse_shape(tokens);
+                return;
+            }
+
+            if (keyword == "Texture") {
+                if (should_ignore_material_and_texture()) {
+                    printf("ignoring %s\n", keyword.c_str());
+                    return;
+                }
+
+                parse_texture(tokens);
                 return;
             }
 
             if (keyword == "Transform") {
-                world_transform(tokens);
+                parse_transform(tokens);
                 return;
             }
 
             if (keyword == "Translate") {
-                world_translate(tokens);
+                parse_translate(tokens);
                 return;
             }
 
@@ -966,7 +1056,7 @@ class SceneBuilder {
                 keyword == "MakeNamedMaterial" || keyword == "MakeNamedMedium" ||
                 keyword == "MediumInterface" || keyword == "NamedMaterial" ||
                 keyword == "ObjectBegin" || keyword == "ObjectEnd" || keyword == "ObjectInstance" ||
-                keyword == "PixelFilter" || keyword == "Texture") {
+                keyword == "PixelFilter") {
 
                 if (ignored_keywords.find(keyword) == ignored_keywords.end()) {
                     std::cout << "parse_tokens::Keyword `" << keyword

@@ -9,6 +9,11 @@
 
 #include "pbrt/base/interaction.h"
 
+class FloatConstantTexture;
+class SpectrumConstantTexture;
+class SpectrumImageTexture;
+class SpectrumScaleTexture;
+
 struct TextureEvalContext {
     Point3f p;
     Vector3f dpdx;
@@ -35,15 +40,13 @@ struct TextureEvalContext {
           dvdx(si.dvdx), dvdy(si.dvdy), faceIndex(si.faceIndex) {}
 };
 
-class FloatConstantTexture;
-
 class FloatTexture {
   public:
     enum class Type {
         constant,
     };
 
-    void init(const FloatConstantTexture *float_constant_texture);
+    void init(const FloatConstantTexture *constant_texture);
 
     PBRT_CPU_GPU
     FloatType evaluate(const TextureEvalContext &ctx) const;
@@ -53,15 +56,19 @@ class FloatTexture {
     const void *ptr;
 };
 
-class SpectrumConstantTexture;
-
 class SpectrumTexture {
   public:
     enum class Type {
         constant,
+        image,
+        scale,
     };
 
-    void init(const SpectrumConstantTexture *spectrum_constant_texture);
+    void init(const SpectrumConstantTexture *constant_texture);
+
+    void init(const SpectrumImageTexture *image_texture);
+
+    void init(const SpectrumScaleTexture *scale_texture);
 
     PBRT_CPU_GPU
     SampledSpectrum evaluate(const TextureEvalContext &ctx, const SampledWavelengths &lambda) const;

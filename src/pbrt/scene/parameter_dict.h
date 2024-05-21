@@ -7,16 +7,22 @@
 #include "pbrt/spectrum_util/rgb.h"
 #include "pbrt/scene/tokenizer.h"
 
+class SpectrumTexture;
+
 class ParameterDict {
   public:
     ParameterDict() = default;
 
-    explicit ParameterDict(const std::vector<Token> &tokens) {
+    explicit ParameterDict(
+        const std::vector<Token> &tokens,
+        const std::map<std::string, const SpectrumTexture *> &named_spectrum_texture,
+        const std::string &_file_root)
+        : file_root(_file_root) {
         // the 1st token is Keyword
         // the 2nd token is String
         // e.g. { Shape "trianglemesh" }, { Camera "perspective" }
 
-        for (int idx = 2; idx < tokens.size(); idx += 2) {
+        for (int idx = 0; idx < tokens.size(); idx += 2) {
             if (tokens[idx].type != TokenType::Variable) {
                 throw std::runtime_error("expect token Variable");
             }
@@ -94,6 +100,22 @@ class ParameterDict {
                 continue;
             }
 
+            if (variable_type == "texture") {
+                auto target_texture_name = tokens[idx + 1].values[0];
+
+                if (named_spectrum_texture.find(target_texture_name) ==
+                    named_spectrum_texture.end()) {
+                    printf("texture not found in spectrum texture: %s\n\n",
+                           target_texture_name.c_str());
+                    REPORT_FATAL_ERROR();
+                }
+
+                spectrum_textures[variable_name] = named_spectrum_texture.at(target_texture_name);
+                continue;
+
+                REPORT_FATAL_ERROR();
+            }
+
             printf("\n%s(): unknown variable type: %s\n", __func__, variable_type.c_str());
             REPORT_FATAL_ERROR();
         }
@@ -107,6 +129,14 @@ class ParameterDict {
         return strings.find(key) != strings.end();
     }
 
+    bool has_rgb(const std::string &key) const {
+        return rgbs.find(key) != rgbs.end();
+    }
+
+    bool has_spectrum_texture(const std::string &key) const {
+        return spectrum_textures.find(key) != spectrum_textures.end();
+    }
+
     std::vector<int> get_integer(const std::string &key) const {
         if (integers.find(key) == integers.end()) {
             return {};
@@ -118,8 +148,8 @@ class ParameterDict {
     FloatType get_float(const std::string &key, std::optional<FloatType> default_val) const {
         if (floats.find(key) == floats.end()) {
             if (!default_val.has_value()) {
-                auto error_msg = "ParameterDict::get_float(): key `" + key + "` not available\n";
-                throw std::runtime_error(error_msg);
+                printf("%s(): key not available\n", __func__);
+                REPORT_FATAL_ERROR();
             }
 
             return default_val.value();
@@ -131,8 +161,8 @@ class ParameterDict {
     bool get_bool(const std::string &key, std::optional<bool> default_val) const {
         if (booleans.find(key) == booleans.end()) {
             if (!default_val.has_value()) {
-                auto error_msg = "ParameterDict::get_bool(): key `" + key + "` not available\n";
-                throw std::runtime_error(error_msg);
+                printf("%s(): key not available\n", __func__);
+                REPORT_FATAL_ERROR();
             }
 
             return default_val.value();
@@ -141,7 +171,16 @@ class ParameterDict {
         return booleans.at(key);
     }
 
-    std::string get_string(const std::string &key) const {
+    std::string get_string(const std::string &key, std::optional<std::string> default_val) const {
+        if (strings.find(key) == strings.end()) {
+            if (!default_val.has_value()) {
+                printf("%s(): key not available\n", __func__);
+                REPORT_FATAL_ERROR();
+            }
+
+            return default_val.value();
+        }
+
         return strings.at(key);
     }
 
@@ -164,14 +203,18 @@ class ParameterDict {
     RGB get_rgb(const std::string &key, std::optional<RGB> default_val) const {
         if (rgbs.find(key) == rgbs.end()) {
             if (!default_val.has_value()) {
-                auto error_msg = "ParameterDict::get_rgb(): key `" + key + "` not available\n";
-                throw std::runtime_error(error_msg);
+                printf("%s(): key not available\n", __func__);
+                REPORT_FATAL_ERROR();
             }
 
             return default_val.value();
         }
 
         return rgbs.at(key);
+    }
+
+    const SpectrumTexture *get_spectrum_texture(const std::string &key) const {
+        return spectrum_textures.at(key);
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const ParameterDict &parameters) {
@@ -226,6 +269,8 @@ class ParameterDict {
         return stream;
     }
 
+    std::string file_root;
+
   private:
     std::map<std::string, bool> booleans;
     std::map<std::string, std::vector<Point2f>> point2s;
@@ -235,6 +280,7 @@ class ParameterDict {
     std::map<std::string, std::vector<FloatType>> floats;
     std::map<std::string, std::string> strings;
     std::map<std::string, RGB> rgbs;
+    std::map<std::string, const SpectrumTexture *> spectrum_textures;
 
     template <typename T>
     void print_dict_of_single_var(std::ostream &stream,

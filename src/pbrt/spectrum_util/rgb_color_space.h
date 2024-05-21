@@ -44,7 +44,7 @@ class RGBColorSpace {
 
     PBRT_CPU_GPU
     RGBSigmoidPolynomial to_rgb_coefficients(const RGB &rgb) const {
-        return (*rgb_to_spectrum_table)(rgb.clamp_zero());
+        return (*rgb_to_spectrum_table)(rgb.clamp(0.0, Infinity));
     }
 
     // RGBColorSpace Public Members

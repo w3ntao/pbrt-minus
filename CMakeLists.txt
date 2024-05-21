@@ -69,6 +69,11 @@ add_executable(${PROJ_NAME}
         src/pbrt/spectra/rgb_illuminant_spectrum.cu
         src/pbrt/spectra/rgb_albedo_spectrum.cu
         src/pbrt/spectrum_util/rgb_to_spectrum_data.cu
+        
+        src/pbrt/textures/gpu_image.cu
+        src/pbrt/textures/image_texture_base.cu
+        src/pbrt/textures/spectrum_image_texture.cu
+        src/pbrt/textures/spectrum_scale_texture.cu
 
         src/ext/lodepng/lodepng.cpp
         src/ext/rply/rply.cpp

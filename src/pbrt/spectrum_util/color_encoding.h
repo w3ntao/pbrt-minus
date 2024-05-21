@@ -1,16 +1,7 @@
 #pragma once
 
-#include "xyz.h"
+#include "pbrt/spectrum_util/xyz.h"
 #include "pbrt/util/utility_math.h"
-
-class ColorEncoding {
-
-  public:
-    virtual ~ColorEncoding() = default;
-
-    [[nodiscard]] virtual FloatType to_linear(uint8_t value) const = 0;
-    [[nodiscard]] virtual uint8_t from_linear(FloatType value) const = 0;
-};
 
 PBRT_CPU_GPU
 inline FloatType LinearToSRGB(FloatType value) {
@@ -30,15 +21,17 @@ inline FloatType LinearToSRGB(FloatType value) {
     return p / q * value;
 }
 
-class SRGBColorEncoding : ColorEncoding {
+class SRGBColorEncoding {
   public:
-    SRGBColorEncoding() = default;
+    PBRT_CPU_GPU SRGBColorEncoding() {}
 
-    [[nodiscard]] FloatType to_linear(uint8_t value) const override {
+    PBRT_CPU_GPU
+    FloatType to_linear(uint8_t value) const {
         return SRGBToLinearLUT[value];
     }
 
-    [[nodiscard]] uint8_t from_linear(FloatType value) const override {
+    PBRT_CPU_GPU
+    uint8_t from_linear(FloatType value) const {
         if (value <= 0) {
             return 0;
         }

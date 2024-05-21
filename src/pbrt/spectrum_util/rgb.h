@@ -13,8 +13,9 @@ class RGB {
 
     PBRT_CPU_GPU RGB(FloatType _r, FloatType _g, FloatType _b) : r(_r), g(_g), b(_b) {}
 
-    PBRT_CPU_GPU RGB clamp_zero() const {
-        return RGB(std::max<FloatType>(0, r), std::max<FloatType>(0, g), std::max<FloatType>(0, b));
+    PBRT_CPU_GPU
+    RGB clamp(FloatType low, FloatType high) const {
+        return RGB(::clamp(r, low, high), ::clamp(g, low, high), ::clamp(b, low, high));
     }
 
     PBRT_CPU_GPU bool has_nan() const {
@@ -89,16 +90,10 @@ class RGB {
         case 2: {
             return b;
         }
-        default: {
-            printf("RGB: invalid index: `%d`\n", idx);
+        }
 
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("RGB: invalid index\n");
-#endif
-        }
-        }
+        REPORT_FATAL_ERROR();
+        return NAN;
     }
 
     PBRT_CPU_GPU

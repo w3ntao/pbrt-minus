@@ -13,38 +13,49 @@
 
 void DiffuseMaterial::init(const RGBColorSpace *color_space, const ParameterDict &parameters,
                            std::vector<void *> &gpu_dynamic_pointers) {
-    RGBAlbedoSpectrum *_reflectance_spectrum;
-    Spectrum *reflectance_spectrum;
-    SpectrumConstantTexture *spectrum_constant_texture;
-    SpectrumTexture *spectrum_texture;
-
-    CHECK_CUDA_ERROR(cudaMallocManaged(&_reflectance_spectrum, sizeof(RGBAlbedoSpectrum)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&reflectance_spectrum, sizeof(Spectrum)));
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&spectrum_constant_texture, sizeof(SpectrumConstantTexture)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
-
     auto key = "reflectance";
-    auto rgb_reflectance = parameters.get_rgb(key, std::nullopt);
-    _reflectance_spectrum->init(color_space, rgb_reflectance);
-    reflectance_spectrum->init(_reflectance_spectrum);
-    spectrum_constant_texture->init(reflectance_spectrum);
-    spectrum_texture->init(spectrum_constant_texture);
 
-    reflectance = spectrum_texture;
+    if (parameters.has_rgb(key)) {
+        RGBAlbedoSpectrum *_reflectance_spectrum;
+        Spectrum *reflectance_spectrum;
+        SpectrumConstantTexture *spectrum_constant_texture;
+        SpectrumTexture *spectrum_texture;
 
-    for (auto ptr : std::vector<void *>({
-             _reflectance_spectrum,
-             reflectance_spectrum,
-             spectrum_constant_texture,
-             spectrum_texture,
-         })) {
-        gpu_dynamic_pointers.push_back(ptr);
+        CHECK_CUDA_ERROR(cudaMallocManaged(&_reflectance_spectrum, sizeof(RGBAlbedoSpectrum)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&reflectance_spectrum, sizeof(Spectrum)));
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged(&spectrum_constant_texture, sizeof(SpectrumConstantTexture)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
+
+        auto rgb_reflectance = parameters.get_rgb(key, std::nullopt);
+        _reflectance_spectrum->init(color_space, rgb_reflectance);
+        reflectance_spectrum->init(_reflectance_spectrum);
+        spectrum_constant_texture->init(reflectance_spectrum);
+        spectrum_texture->init(spectrum_constant_texture);
+
+        reflectance = spectrum_texture;
+
+        for (auto ptr : std::vector<void *>({
+                 _reflectance_spectrum,
+                 reflectance_spectrum,
+                 spectrum_constant_texture,
+                 spectrum_texture,
+             })) {
+            gpu_dynamic_pointers.push_back(ptr);
+        }
+
+        return;
     }
+
+    if (parameters.has_spectrum_texture(key)) {
+        reflectance = parameters.get_spectrum_texture(key);
+        return;
+    }
+
+    REPORT_FATAL_ERROR();
 }
 
-void DiffuseMaterial::init(const SpectrumTexture *_reflectance) {
-    // TODO: delete me
+void DiffuseMaterial::init_reflectance(const SpectrumTexture *_reflectance) {
     reflectance = _reflectance;
 }
 

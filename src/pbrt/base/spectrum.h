@@ -8,6 +8,12 @@ class ConstantSpectrum;
 class RGBIlluminantSpectrum;
 class RGBAlbedoSpectrum;
 
+enum class SpectrumType {
+    Illuminant,
+    Albedo,
+    Unbounded,
+};
+
 class Spectrum {
   public:
     enum class Type {
