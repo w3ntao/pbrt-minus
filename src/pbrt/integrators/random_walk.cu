@@ -19,7 +19,7 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const DifferentialRay &ray,
                                                      uint depth) const {
     auto si = base->bvh->intersect(ray.ray, Infinity);
     if (!si) {
-        return SampledSpectrum::same_value(0.0);
+        return SampledSpectrum(0.0);
     }
 
     SurfaceInteraction &isect = si->interaction;

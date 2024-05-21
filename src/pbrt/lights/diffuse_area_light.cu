@@ -47,7 +47,7 @@ SampledSpectrum DiffuseAreaLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f 
                                     const SampledWavelengths &lambda) const {
     // Check for zero emitted radiance from point on area light
     if (!two_sided && n.dot(w) < 0.0) {
-        return SampledSpectrum::same_value(0.f);
+        return SampledSpectrum(0.0);
     }
 
     return scale * l_emit.sample(lambda);

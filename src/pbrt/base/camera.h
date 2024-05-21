@@ -63,11 +63,11 @@ struct CameraRay {
     Ray ray;
     SampledSpectrum weight;
 
-    PBRT_CPU_GPU CameraRay() {
-        weight = SampledSpectrum::same_value(NAN);
-    }
+    PBRT_CPU_GPU
+    CameraRay() : weight(SampledSpectrum(NAN)) {}
 
-    PBRT_CPU_GPU CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum::same_value(1)) {}
+    PBRT_CPU_GPU
+    CameraRay(const Ray &_ray) : ray(_ray), weight(SampledSpectrum(1)) {}
 };
 
 // CameraRay Definition
@@ -75,12 +75,12 @@ struct CameraDifferentialRay {
     DifferentialRay ray;
     SampledSpectrum weight;
 
-    PBRT_CPU_GPU CameraDifferentialRay() {
-        weight = SampledSpectrum::same_value(NAN);
-    }
+    PBRT_CPU_GPU
+    CameraDifferentialRay() : weight(SampledSpectrum(NAN)) {}
 
-    PBRT_CPU_GPU CameraDifferentialRay(const DifferentialRay &_ray)
-        : ray(_ray), weight(SampledSpectrum::same_value(1)) {}
+    PBRT_CPU_GPU
+    explicit CameraDifferentialRay(const DifferentialRay &_ray)
+        : ray(_ray), weight(SampledSpectrum(1)) {}
 };
 
 struct CameraBase {

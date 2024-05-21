@@ -25,7 +25,7 @@ SampledSpectrum BSDF::f(const Vector3f &woRender, const Vector3f &wiRender,
     Vector3f wo = render_to_local(woRender);
 
     if (wo.z == 0) {
-        return SampledSpectrum::same_value(0.0);
+        return SampledSpectrum(0.0);
     }
 
     return bxdf.f(wo, wi, mode);

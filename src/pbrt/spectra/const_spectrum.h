@@ -17,7 +17,7 @@ class ConstantSpectrum {
     // ConstantSpectrum Public Methods
     PBRT_CPU_GPU
     SampledSpectrum sample(const SampledWavelengths &) const {
-        return SampledSpectrum::same_value(c);
+        return SampledSpectrum(c);
     }
 
   private:

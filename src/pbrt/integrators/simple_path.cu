@@ -23,8 +23,8 @@ bool SimplePathIntegrator::fast_intersect(const Ray &ray, FloatType t_max) const
 
 PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary_ray,
                                                   SampledWavelengths &lambda, Sampler *sampler) {
-    auto L = SampledSpectrum::same_value(0.0);
-    auto beta = SampledSpectrum::same_value(1.0);
+    auto L = SampledSpectrum(0.0);
+    auto beta = SampledSpectrum(1.0);
     bool specular_bounce = true;
     uint depth = 0;
 

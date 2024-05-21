@@ -28,7 +28,7 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
             // Sample perfect specular dielectric BRDF
             Vector3f wi(-wo.x, -wo.y, wo.z);
             // SampledSpectrum fr(R / AbsCosTheta(wi));
-            auto fr = SampledSpectrum::same_value(R / wi.abs_cos_theta());
+            auto fr = SampledSpectrum(R / wi.abs_cos_theta());
             return BSDFSample(fr, wi, pr / (pr + pt), BxDFFlags::SpecularReflection);
 
         } else {
@@ -42,7 +42,7 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
                 return {};
             }
 
-            auto ft = SampledSpectrum::same_value(T / wi.abs_cos_theta());
+            auto ft = SampledSpectrum(T / wi.abs_cos_theta());
             // Account for non-symmetry with transmission to different medium
             if (mode == TransportMode::Radiance) {
                 ft /= sqr(etap);
@@ -80,8 +80,8 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
             // Compute PDF of rough dielectric reflection
 
             _pdf = mfDistrib.pdf(wo, wm) / (4 * wo.abs_dot(wm)) * pr / (pr + pt);
-            SampledSpectrum f = SampledSpectrum::same_value(
-                mfDistrib.D(wm) * mfDistrib.G(wo, wi) * R / (4 * wi.cos_theta() * wo.cos_theta()));
+            SampledSpectrum f = SampledSpectrum(mfDistrib.D(wm) * mfDistrib.G(wo, wi) * R /
+                                                (4 * wi.cos_theta() * wo.cos_theta()));
 
             return BSDFSample(f, wi, _pdf, BxDFFlags::GlossyReflection);
 
@@ -102,7 +102,7 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
             _pdf = mfDistrib.pdf(wo, wm) * dwm_dwi * pt / (pr + pt);
 
             // Evaluate BRDF and return _BSDFSample_ for rough transmission
-            auto ft = SampledSpectrum::same_value(
+            auto ft = SampledSpectrum(
                 T * mfDistrib.D(wm) * mfDistrib.G(wo, wi) *
                 std::abs(wi.dot(wm) * wo.dot(wm) / (wi.cos_theta() * wo.cos_theta() * denom)));
 
@@ -119,7 +119,7 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
 PBRT_CPU_GPU
 SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     if (eta == 1 || mfDistrib.EffectivelySmooth()) {
-        return SampledSpectrum::same_value(0.f);
+        return SampledSpectrum(0.f);
     }
 
     // Evaluate rough dielectric BSDF
@@ -150,8 +150,8 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
 
     if (reflect) {
         // Compute reflection at rough dielectric interface
-        return SampledSpectrum::same_value(mfDistrib.D(wm) * mfDistrib.G(wo, wi) * F /
-                                           std::abs(4 * cosTheta_i * cosTheta_o));
+        return SampledSpectrum(mfDistrib.D(wm) * mfDistrib.G(wo, wi) * F /
+                               std::abs(4 * cosTheta_i * cosTheta_o));
     }
 
     // Compute transmission at rough dielectric interface
@@ -165,7 +165,7 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
         ft /= sqr(etap);
     }
 
-    return SampledSpectrum::same_value(ft);
+    return SampledSpectrum(ft);
 }
 
 PBRT_CPU_GPU

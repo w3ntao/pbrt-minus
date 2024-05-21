@@ -8,7 +8,7 @@
 
 class DiffuseBxDF {
   public:
-    PBRT_GPU DiffuseBxDF() : r(SampledSpectrum::same_value(NAN)) {}
+    PBRT_GPU DiffuseBxDF() : r(SampledSpectrum(NAN)) {}
 
     PBRT_GPU DiffuseBxDF(const SampledSpectrum &_r) {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
@@ -35,7 +35,7 @@ class DiffuseBxDF {
     PBRT_GPU SampledSpectrum f(const Vector3f wo, const Vector3f wi,
                                const TransportMode mode) const {
         if (!wo.same_hemisphere(wi)) {
-            return SampledSpectrum::same_value(0.0);
+            return SampledSpectrum(0.0);
         }
 
         return r * (1.0 / compute_pi());

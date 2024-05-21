@@ -86,7 +86,7 @@ void SurfaceInteraction::init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielec
 PBRT_GPU
 SampledSpectrum SurfaceInteraction::le(const Vector3f w, const SampledWavelengths &lambda) const {
     if (area_light == nullptr) {
-        return SampledSpectrum::same_value(0.0);
+        return SampledSpectrum(0.0);
     }
 
     return area_light->l(p(), n, uv, w, lambda);

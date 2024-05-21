@@ -24,7 +24,7 @@ class SurfaceNormalIntegrator {
     PBRT_GPU SampledSpectrum li(const DifferentialRay &ray, SampledWavelengths &lambda) const {
         const auto shape_intersection = base->bvh->intersect(ray.ray, Infinity);
         if (!shape_intersection) {
-            return SampledSpectrum::same_value(0);
+            return SampledSpectrum(0.0);
         }
 
         const Vector3f normal =

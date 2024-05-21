@@ -23,7 +23,7 @@ class AmbientOcclusionIntegrator {
         const auto shape_intersection = base->bvh->intersect(ray.ray, Infinity);
 
         if (!shape_intersection) {
-            return SampledSpectrum::same_value(0);
+            return SampledSpectrum(0.0);
         }
 
         const SurfaceInteraction &isect = shape_intersection->interaction;
@@ -35,7 +35,7 @@ class AmbientOcclusionIntegrator {
         auto pdf = cosine_hemisphere_pdf(std::abs(local_wi.z));
 
         if (pdf == 0.0) {
-            return SampledSpectrum::same_value(0);
+            return SampledSpectrum(0.0);
         }
 
         auto frame = Frame::from_z(normal);
@@ -45,7 +45,7 @@ class AmbientOcclusionIntegrator {
         auto spawned_ray = isect.spawn_ray(wi);
 
         if (base->bvh->fast_intersect(spawned_ray.ray, Infinity)) {
-            return SampledSpectrum::same_value(0);
+            return SampledSpectrum(0.0);
         }
 
         return illuminant_spectrum->sample(lambda) *

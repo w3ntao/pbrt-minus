@@ -11,19 +11,18 @@ class SampledSpectrum {
         }
     }
 
-    PBRT_CPU_GPU explicit SampledSpectrum(const FloatType _values[NSpectrumSamples]) {
+    PBRT_CPU_GPU
+    SampledSpectrum(const FloatType _values[NSpectrumSamples]) {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             values[idx] = _values[idx];
         }
     }
 
     PBRT_CPU_GPU
-    static SampledSpectrum same_value(FloatType c) {
-        FloatType _values[NSpectrumSamples];
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
-            _values[i] = c;
+    SampledSpectrum(const FloatType val) {
+        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+            values[idx] = val;
         }
-        return SampledSpectrum(_values);
     }
 
     PBRT_CPU_GPU

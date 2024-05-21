@@ -74,5 +74,5 @@ SampledSpectrum Spectrum::sample(const SampledWavelengths &lambda) const {
     }
 
     REPORT_FATAL_ERROR();
-    return SampledSpectrum::same_value(NAN);
+    return SampledSpectrum(NAN);
 }
