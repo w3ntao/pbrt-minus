@@ -60,8 +60,11 @@ add_executable(${PROJ_NAME}
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu
         src/pbrt/lights/diffuse_area_light.cu
+
+        src/pbrt/materials/coated_diffuse_material.cu
         src/pbrt/materials/dielectric_material.cu
         src/pbrt/materials/diffuse_material.cu
+
         src/pbrt/primitives/geometric_primitive.cu
         src/pbrt/shapes/loop_subdivide.cu
         src/pbrt/shapes/tri_quad_mesh.cu
@@ -69,11 +72,13 @@ add_executable(${PROJ_NAME}
         src/pbrt/spectra/rgb_illuminant_spectrum.cu
         src/pbrt/spectra/rgb_albedo_spectrum.cu
         src/pbrt/spectrum_util/rgb_to_spectrum_data.cu
-        
+
         src/pbrt/textures/gpu_image.cu
         src/pbrt/textures/image_texture_base.cu
         src/pbrt/textures/spectrum_image_texture.cu
         src/pbrt/textures/spectrum_scale_texture.cu
+
+        src/pbrt/util/sampling.cu
 
         src/ext/lodepng/lodepng.cpp
         src/ext/rply/rply.cpp

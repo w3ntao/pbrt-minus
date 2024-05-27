@@ -1,6 +1,8 @@
 #include "pbrt/base/bxdf.h"
+
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
+#include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 
 PBRT_GPU
 void BxDF::init(const DiffuseBxDF *diffuse_bxdf) {
@@ -14,6 +16,12 @@ void BxDF::init(const DielectricBxDF *dielectric_bxdf) {
     ptr = dielectric_bxdf;
 }
 
+PBRT_GPU
+void BxDF::init(const CoatedDiffuseBxDF *coated_diffuse_bxdf) {
+    type = Type::coated_diffuse_bxdf;
+    ptr = coated_diffuse_bxdf;
+}
+
 PBRT_CPU_GPU
 BxDFFlags BxDF::flags() const {
     switch (type) {
@@ -23,6 +31,10 @@ BxDFFlags BxDF::flags() const {
 
     case (Type::dielectric_bxdf): {
         return ((DielectricBxDF *)ptr)->flags();
+    }
+
+    case (Type::coated_diffuse_bxdf): {
+        return ((CoatedDiffuseBxDF *)ptr)->flags();
     }
     }
 
@@ -36,8 +48,13 @@ SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     case (Type::diffuse_bxdf): {
         return ((DiffuseBxDF *)ptr)->f(wo, wi, mode);
     }
+
     case (Type::dielectric_bxdf): {
         return ((DielectricBxDF *)ptr)->f(wo, wi, mode);
+    }
+
+    case (Type::coated_diffuse_bxdf): {
+        return ((CoatedDiffuseBxDF *)ptr)->f(wo, wi, mode);
     }
     }
 
@@ -56,6 +73,10 @@ cuda::std::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2
 
     case (Type::dielectric_bxdf): {
         return ((DielectricBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
+    }
+
+    case (Type::coated_diffuse_bxdf): {
+        return ((CoatedDiffuseBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
     }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "pbrt/util/macro.h"
 
 #include "pbrt/euclidean_space/point2.h"
@@ -46,6 +48,8 @@ class FloatTexture {
         constant,
     };
 
+    static const FloatTexture *create(FloatType val, std::vector<void *> &gpu_dynamic_pointers);
+
     void init(const FloatConstantTexture *constant_texture);
 
     PBRT_CPU_GPU
@@ -63,6 +67,9 @@ class SpectrumTexture {
         image,
         scale,
     };
+
+    static const SpectrumTexture *
+    create_constant_texture(FloatType val, std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const SpectrumConstantTexture *constant_texture);
 

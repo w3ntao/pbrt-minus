@@ -1,9 +1,25 @@
 #include "pbrt/base/spectrum.h"
 
 #include "pbrt/spectra/densely_sampled_spectrum.h"
-#include "pbrt/spectra/const_spectrum.h"
+#include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
+
+const Spectrum *Spectrum::create_constant_spectrum(FloatType val,
+                                                   std::vector<void *> &gpu_dynamic_pointers) {
+    ConstantSpectrum *constant_spectrum;
+    Spectrum *spectrum;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&constant_spectrum, sizeof(ConstantSpectrum)));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
+
+    constant_spectrum->init(val);
+    spectrum->init(constant_spectrum);
+
+    gpu_dynamic_pointers.push_back(constant_spectrum);
+    gpu_dynamic_pointers.push_back(spectrum);
+
+    return spectrum;
+}
 
 PBRT_CPU_GPU
 void Spectrum::init(const DenselySampledSpectrum *densely_sampled_spectrum) {

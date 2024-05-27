@@ -8,6 +8,7 @@
 #include "pbrt/scene/tokenizer.h"
 
 class SpectrumTexture;
+class FloatTexture;
 
 class ParameterDict {
   public:
@@ -133,6 +134,10 @@ class ParameterDict {
         return rgbs.find(key) != rgbs.end();
     }
 
+    bool has_float_texture(const std::string &key) const {
+        return float_textures.find(key) != float_textures.end();
+    }
+
     bool has_spectrum_texture(const std::string &key) const {
         return spectrum_textures.find(key) != spectrum_textures.end();
     }
@@ -213,6 +218,10 @@ class ParameterDict {
         return rgbs.at(key);
     }
 
+    const FloatTexture *get_float_texture(const std::string &key) const {
+        return float_textures.at(key);
+    }
+
     const SpectrumTexture *get_spectrum_texture(const std::string &key) const {
         return spectrum_textures.at(key);
     }
@@ -280,6 +289,7 @@ class ParameterDict {
     std::map<std::string, std::vector<FloatType>> floats;
     std::map<std::string, std::string> strings;
     std::map<std::string, RGB> rgbs;
+    std::map<std::string, const FloatTexture *> float_textures;
     std::map<std::string, const SpectrumTexture *> spectrum_textures;
 
     template <typename T>

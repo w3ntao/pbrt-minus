@@ -235,3 +235,10 @@ template <typename T>
 PBRT_CPU_GPU inline Vector3<T> gram_schmidt(Vector3<T> v, Vector3<T> w) {
     return v - v.dot(w) * w;
 }
+
+PBRT_CPU_GPU
+static Vector3f SphericalDirection(FloatType sinTheta, FloatType cosTheta, FloatType phi) {
+    return Vector3f(clamp<FloatType>(sinTheta, -1, 1) * std::cos(phi),
+                    clamp<FloatType>(sinTheta, -1, 1) * std::sin(phi),
+                    clamp<FloatType>(cosTheta, -1, 1));
+}

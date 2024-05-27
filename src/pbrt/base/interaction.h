@@ -14,6 +14,7 @@ class Light;
 class Material;
 class Sampler;
 class SampledWavelengths;
+class CoatedDiffuseBxDF;
 
 class Interaction {
   public:
@@ -107,6 +108,11 @@ class SurfaceInteraction : public Interaction {
     void init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielectric_bxdf,
                               const DifferentialRay &ray, SampledWavelengths &lambda,
                               const Camera *camera, Sampler *sampler);
+
+    PBRT_GPU
+    void init_coated_diffuse_bsdf(BSDF &bsdf, CoatedDiffuseBxDF &coated_diffuse_bxdf,
+                                  const DifferentialRay &ray, SampledWavelengths &lambda,
+                                  const Camera *camera, Sampler *sampler);
 
     PBRT_GPU SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
 };

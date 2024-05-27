@@ -5,7 +5,7 @@
 #include "pbrt/base/texture.h"
 
 #include "pbrt/bxdfs/dielectric_bxdf.h"
-#include "pbrt/spectra/const_spectrum.h"
+#include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/scene/parameter_dict.h"
 #include "pbrt/textures/float_constant_texture.h"
 

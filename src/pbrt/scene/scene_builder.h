@@ -34,7 +34,7 @@
 #include "pbrt/primitives/geometric_primitive.h"
 
 #include "pbrt/spectrum_util/rgb_to_spectrum_data.h"
-#include "pbrt/spectra/const_spectrum.h"
+#include "pbrt/spectra/constant_spectrum.h"
 
 #include "pbrt/scene/command_line_option.h"
 #include "pbrt/scene/parser.h"
@@ -69,11 +69,11 @@ struct AreaLightEntity {
 
 class GraphicsState {
   public:
-    GraphicsState() : current_transform(Transform::identity()), reverse_orientation(false) {}
+    GraphicsState() : transform(Transform::identity()), reverse_orientation(false) {}
 
-    Transform current_transform;
     bool reverse_orientation = false;
-    Material *current_material = nullptr;
+    Transform transform;
+    Material *material = nullptr;
 
     std::optional<AreaLightEntity> area_light_entity;
 };
@@ -238,7 +238,7 @@ class SceneBuilder {
         default_diffuse_material->init_reflectance(texture);
         default_material->init(default_diffuse_material);
 
-        graphics_state.current_material = default_material;
+        graphics_state.material = default_material;
 
         for (auto ptr : std::vector<void *>({
                  constant_grey,
@@ -274,7 +274,7 @@ class SceneBuilder {
     }
 
     Transform get_render_from_object() const {
-        return render_from_world * graphics_state.current_transform;
+        return render_from_world * graphics_state.transform;
     }
 
     void build_camera() {
@@ -282,7 +282,7 @@ class SceneBuilder {
             ParameterDict(sub_vector(camera_tokens, 2), named_spectrum_texture, this->root);
         const auto camera_type = camera_tokens[1].values[0];
         if (camera_type == "perspective") {
-            auto camera_from_world = graphics_state.current_transform;
+            auto camera_from_world = graphics_state.transform;
             auto world_from_camera = camera_from_world.inverse();
 
             named_coordinate_systems["camera"] = world_from_camera;
@@ -536,8 +536,7 @@ class SceneBuilder {
         auto look = Point3f(data[3], data[4], data[5]);
         auto up = Vector3f(data[6], data[7], data[8]);
 
-        graphics_state.current_transform =
-            graphics_state.current_transform * Transform::lookat(position, look, up);
+        graphics_state.transform = graphics_state.transform * Transform::lookat(position, look, up);
     }
 
     void parse_material(const std::vector<Token> &tokens) {
@@ -549,6 +548,23 @@ class SceneBuilder {
             ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, this->root);
         auto type_of_material = tokens[1].values[0];
 
+        if (type_of_material == "coateddiffuse") {
+            CoatedDiffuseMaterial *coated_diffuse_material;
+            Material *material;
+            CHECK_CUDA_ERROR(
+                cudaMallocManaged(&coated_diffuse_material, sizeof(CoatedDiffuseMaterial)));
+            CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+
+            coated_diffuse_material->init(parameters, gpu_dynamic_pointers);
+            material->init(coated_diffuse_material);
+
+            graphics_state.material = material;
+
+            gpu_dynamic_pointers.push_back(coated_diffuse_material);
+            gpu_dynamic_pointers.push_back(material);
+            return;
+        }
+
         if (type_of_material == "diffuse") {
             DiffuseMaterial *diffuse_material;
             Material *material;
@@ -559,7 +575,7 @@ class SceneBuilder {
                                    gpu_dynamic_pointers);
             material->init(diffuse_material);
 
-            graphics_state.current_material = material;
+            graphics_state.material = material;
 
             gpu_dynamic_pointers.push_back(diffuse_material);
             gpu_dynamic_pointers.push_back(material);
@@ -575,7 +591,7 @@ class SceneBuilder {
 
             dielectric_material->init(parameters, gpu_dynamic_pointers);
             material->init(dielectric_material);
-            graphics_state.current_material = material;
+            graphics_state.material = material;
 
             gpu_dynamic_pointers.push_back(dielectric_material);
             gpu_dynamic_pointers.push_back(material);
@@ -597,8 +613,8 @@ class SceneBuilder {
             data.push_back(tokens[idx].to_float());
         }
 
-        graphics_state.current_transform = graphics_state.current_transform *
-                                           Transform::rotate(data[0], data[1], data[2], data[3]);
+        graphics_state.transform =
+            graphics_state.transform * Transform::rotate(data[0], data[1], data[2], data[3]);
     }
 
     void parse_scale(const std::vector<Token> &tokens) {
@@ -611,7 +627,7 @@ class SceneBuilder {
             data.push_back(tokens[idx].to_float());
         }
 
-        graphics_state.current_transform *= Transform::scale(data[0], data[1], data[2]);
+        graphics_state.transform *= Transform::scale(data[0], data[1], data[2]);
     }
 
     void world_area_light_source(const std::vector<Token> &tokens) {
@@ -757,7 +773,7 @@ class SceneBuilder {
 
         auto transform_matrix = SquareMatrix<4>(transform_data);
 
-        graphics_state.current_transform = transform_matrix.transpose();
+        graphics_state.transform = transform_matrix.transpose();
     }
 
     void parse_translate(const std::vector<Token> &tokens) {
@@ -768,7 +784,7 @@ class SceneBuilder {
 
         assert(data.size() == 16);
 
-        graphics_state.current_transform *= Transform::translate(data[0], data[1], data[2]);
+        graphics_state.transform *= Transform::translate(data[0], data[1], data[2]);
     }
 
     void add_triangle_mesh(const std::vector<Point3f> &points, const std::vector<int> &indices,
@@ -830,7 +846,7 @@ class SceneBuilder {
                 CHECK_CUDA_ERROR(cudaMallocManaged(&primitives, sizeof(Primitive) * num_triangles));
 
                 GPU::init_simple_primitives<<<blocks, threads>>>(
-                    simple_primitives, shapes, graphics_state.current_material, num_triangles);
+                    simple_primitives, shapes, graphics_state.material, num_triangles);
                 CHECK_CUDA_ERROR(cudaGetLastError());
                 CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -870,9 +886,8 @@ class SceneBuilder {
                 CHECK_CUDA_ERROR(cudaGetLastError());
                 CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-                GPU::init_geometric_primitives<<<blocks, threads>>>(geometric_primitives, shapes,
-                                                                    graphics_state.current_material,
-                                                                    lights, num_triangles);
+                GPU::init_geometric_primitives<<<blocks, threads>>>(
+                    geometric_primitives, shapes, graphics_state.material, lights, num_triangles);
                 CHECK_CUDA_ERROR(cudaGetLastError());
                 CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -937,8 +952,8 @@ class SceneBuilder {
             build_camera();
             build_sampler();
 
-            graphics_state.current_transform = Transform::identity();
-            named_coordinate_systems["world"] = graphics_state.current_transform;
+            graphics_state.transform = Transform::identity();
+            named_coordinate_systems["world"] = graphics_state.transform;
 
             return;
         }

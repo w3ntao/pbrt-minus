@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/spectrum_util/xyz.h"
 
@@ -22,6 +24,9 @@ class Spectrum {
         rgb_illuminant_spectrum,
         rgb_albedo_spectrum,
     };
+
+    static const Spectrum *create_constant_spectrum(FloatType val,
+                                                    std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     void init(const DenselySampledSpectrum *densely_sampled_spectrum);

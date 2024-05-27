@@ -6,6 +6,7 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/material.h"
 
+#include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 
@@ -33,6 +34,7 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
     BSDF bsdf;
     DiffuseBxDF diffuse_bxdf;
     DielectricBxDF dielectric_bxdf;
+    CoatedDiffuseBxDF coated_diffuse_bxdf;
 
     while (beta.is_positive()) {
         auto si = base->bvh->intersect(ray.ray, Infinity);
@@ -64,6 +66,11 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
         }
         case (Material::Type::dieletric): {
             isect.init_dielectric_bsdf(bsdf, dielectric_bxdf, ray, lambda, base->camera, sampler);
+            break;
+        }
+        case (Material::Type::coated_diffuse): {
+            isect.init_coated_diffuse_bsdf(bsdf, coated_diffuse_bxdf, ray, lambda, base->camera,
+                                           sampler);
             break;
         }
         default: {

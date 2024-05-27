@@ -222,3 +222,21 @@ PBRT_CPU_GPU
 inline FloatType sample_visible_wavelengths(FloatType u) {
     return 538 - 138.888889f * std::atanh(0.85691062f - 1.82750197f * u);
 }
+
+PBRT_CPU_GPU
+inline FloatType SampleExponential(FloatType u, FloatType a) {
+    return -std::log(1 - u) / a;
+}
+
+PBRT_CPU_GPU
+inline FloatType PowerHeuristic(int nf, FloatType fPdf, int ng, FloatType gPdf) {
+    FloatType f = nf * fPdf, g = ng * gPdf;
+    if (is_inf(sqr(f))) {
+        return 1;
+    }
+
+    return sqr(f) / (sqr(f) + sqr(g));
+}
+
+PBRT_CPU_GPU
+Vector3f SampleHenyeyGreenstein(Vector3f wo, FloatType g, Point2f u, FloatType *pdf);

@@ -8,6 +8,7 @@
 
 class DiffuseBxDF;
 class DielectricBxDF;
+class CoatedDiffuseBxDF;
 
 enum BxDFFlags {
     Unset = 0,
@@ -69,6 +70,12 @@ inline int operator&(BxDFFlags a, BxDFFlags b) {
 PBRT_CPU_GPU
 inline int operator&(BxDFFlags a, BxDFReflTransFlags b) {
     return ((int)a & (int)b);
+}
+
+PBRT_CPU_GPU
+inline BxDFFlags &operator|=(BxDFFlags &a, BxDFFlags b) {
+    (int &)a |= int(b);
+    return a;
 }
 
 PBRT_CPU_GPU
@@ -145,6 +152,7 @@ class BxDF {
         null,
         diffuse_bxdf,
         dielectric_bxdf,
+        coated_diffuse_bxdf,
     };
 
     PBRT_GPU
@@ -155,6 +163,9 @@ class BxDF {
 
     PBRT_GPU
     void init(const DielectricBxDF *dielectric_bxdf);
+
+    PBRT_GPU
+    void init(const CoatedDiffuseBxDF *coated_diffuse_bxdf);
 
     PBRT_CPU_GPU
     BxDFFlags flags() const;

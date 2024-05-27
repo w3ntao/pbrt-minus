@@ -25,17 +25,21 @@ struct MaterialEvalContext : public TextureEvalContext {
 
 class DiffuseMaterial;
 class DielectricMaterial;
+class CoatedDiffuseMaterial;
 
 class Material {
   public:
     enum class Type {
         diffuse,
         dieletric,
+        coated_diffuse,
     };
 
     void init(const DiffuseMaterial *diffuse_material);
 
     void init(const DielectricMaterial *dielectric_material);
+
+    void init(const CoatedDiffuseMaterial *coated_diffuse_material);
 
     PBRT_GPU
     DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
@@ -43,6 +47,10 @@ class Material {
     PBRT_GPU
     DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
                                        SampledWavelengths &lambda) const;
+
+    PBRT_GPU
+    CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
+                                              SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     Type get_material_type() const {

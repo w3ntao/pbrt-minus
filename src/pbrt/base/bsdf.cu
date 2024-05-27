@@ -19,6 +19,11 @@ void BSDF::init_bxdf(const DielectricBxDF *dielectric_bxdf) {
 }
 
 PBRT_GPU
+void BSDF::init_bxdf(const CoatedDiffuseBxDF *coated_diffuse_bxdf) {
+    bxdf.init(coated_diffuse_bxdf);
+}
+
+PBRT_GPU
 SampledSpectrum BSDF::f(const Vector3f &woRender, const Vector3f &wiRender,
                         const TransportMode mode) const {
     Vector3f wi = render_to_local(wiRender);
