@@ -26,6 +26,7 @@
 
 #include "pbrt/light_samplers/uniform_light_sampler.h"
 
+#include "pbrt/materials/coated_diffuse_material.h"
 #include "pbrt/materials/diffuse_material.h"
 #include "pbrt/materials/dielectric_material.h"
 
@@ -700,24 +701,10 @@ class SceneBuilder {
                 CHECK_CUDA_ERROR(cudaMallocManaged(&image_texture, sizeof(SpectrumImageTexture)));
                 CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
 
-                image_texture->new_init(parameters, renderer->global_variables->rgb_color_space,
-                                        gpu_dynamic_pointers);
-                spectrum_texture->init(image_texture);
-
-                /*
-                auto filename = parameters.get_string("filename", std::nullopt);
-                auto absolute_path = this->root + "/" + filename;
-
-                SpectrumImageTexture *image_texture;
-                SpectrumTexture *spectrum_texture;
-                CHECK_CUDA_ERROR(cudaMallocManaged(&image_texture, sizeof(SpectrumImageTexture)));
-                CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
-
-                image_texture->init(parameters, get_render_from_object(), absolute_path,
-                                    renderer->global_variables->rgb_color_space,
+                image_texture->init(parameters, renderer->global_variables->rgb_color_space,
                                     gpu_dynamic_pointers);
                 spectrum_texture->init(image_texture);
-                */
+
                 named_spectrum_texture[texture_name] = spectrum_texture;
 
                 gpu_dynamic_pointers.push_back(image_texture);
@@ -727,16 +714,13 @@ class SceneBuilder {
             }
 
             if (texture_type == "scale") {
-                auto base_texture = parameters.get_spectrum_texture("tex");
-                auto scale = parameters.get_float("scale", std::optional(1.0));
-
                 SpectrumScaleTexture *scale_texture;
                 SpectrumTexture *spectrum_texture;
 
                 CHECK_CUDA_ERROR(cudaMallocManaged(&scale_texture, sizeof(SpectrumScaleTexture)));
                 CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
 
-                scale_texture->init(base_texture, scale);
+                scale_texture->init(parameters);
                 spectrum_texture->init(scale_texture);
 
                 named_spectrum_texture[texture_name] = spectrum_texture;

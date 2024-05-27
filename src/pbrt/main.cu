@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "pbrt/util/thread_pool.h"
-#include "pbrt/scene/builder.h"
+#include "pbrt/scene/scene_builder.h"
 #include "pbrt/util/command_line.h"
 
 using namespace std;

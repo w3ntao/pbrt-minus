@@ -16,8 +16,8 @@ class ParameterDict {
     explicit ParameterDict(
         const std::vector<Token> &tokens,
         const std::map<std::string, const SpectrumTexture *> &named_spectrum_texture,
-        const std::string &_file_root)
-        : file_root(_file_root) {
+        const std::string &_root)
+        : root(_root) {
         // the 1st token is Keyword
         // the 2nd token is String
         // e.g. { Shape "trianglemesh" }, { Camera "perspective" }
@@ -269,7 +269,7 @@ class ParameterDict {
         return stream;
     }
 
-    std::string file_root;
+    std::string root;
 
   private:
     std::map<std::string, bool> booleans;
