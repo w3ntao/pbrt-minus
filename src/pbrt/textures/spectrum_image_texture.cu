@@ -9,18 +9,18 @@ void SpectrumImageTexture::init(const ParameterDict &parameters, const RGBColorS
 
     mapping = UVMapping(parameters);
 
-    scale = parameters.get_float("scale", std::optional(1.0));
-    invert = parameters.get_bool("invert", std::optional(false));
+    scale = parameters.get_float("scale", 1.0);
+    invert = parameters.get_bool("invert", false);
 
-    auto max_anisotropy = parameters.get_float("maxanisotropy", std::optional(8.0));
-    auto filter_string = parameters.get_string("filter", std::optional("bilinear"));
+    auto max_anisotropy = parameters.get_float("maxanisotropy", 8.0);
+    auto filter_string = parameters.get_string("filter", "bilinear");
 
     auto mipmap_filter_options = MIPMapFilterOptions{
         .filter = parse_filter_function(filter_string),
         .max_anisotropy = max_anisotropy,
     };
 
-    auto wrap_string = parameters.get_string("wrap", std::optional("repeat"));
+    auto wrap_string = parameters.get_string("wrap", "repeat");
     auto wrap_mode = parse_wrap_mode(wrap_string);
 
     MIPMap *_mipmap;

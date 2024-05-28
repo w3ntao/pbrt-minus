@@ -11,8 +11,19 @@
 #include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/textures/spectrum_constant_texture.h"
 
-void DiffuseMaterial::init(const RGBColorSpace *color_space, const ParameterDict &parameters,
-                           std::vector<void *> &gpu_dynamic_pointers) {
+const DiffuseMaterial *DiffuseMaterial::create(const SpectrumTexture *_reflectance,
+                                               std::vector<void *> &gpu_dynamic_pointers) {
+    DiffuseMaterial *diffuse_material;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material, sizeof(DiffuseMaterial)));
+    diffuse_material->reflectance = _reflectance;
+
+    gpu_dynamic_pointers.push_back(diffuse_material);
+    return diffuse_material;
+}
+
+void DiffuseMaterial::init(const ParameterDict &parameters,
+                           std::vector<void *> &gpu_dynamic_pointers,
+                           const RGBColorSpace *color_space) {
     auto key = "reflectance";
 
     if (parameters.has_rgb(key)) {
@@ -53,10 +64,6 @@ void DiffuseMaterial::init(const RGBColorSpace *color_space, const ParameterDict
     }
 
     REPORT_FATAL_ERROR();
-}
-
-void DiffuseMaterial::init_reflectance(const SpectrumTexture *_reflectance) {
-    reflectance = _reflectance;
 }
 
 PBRT_GPU

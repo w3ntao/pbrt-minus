@@ -13,34 +13,9 @@ void CoatedDiffuseMaterial::init(const ParameterDict &parameters,
     if (parameters.has_spectrum_texture(reflectance_key)) {
         reflectance = parameters.get_spectrum_texture(reflectance_key);
     } else {
-        // TODO: rewrite this part
-        ConstantSpectrum *constant_spectrum;
-        Spectrum *spectrum;
-        SpectrumConstantTexture *spectrum_constant_texture;
-        SpectrumTexture *spectrum_texture;
-
-        CHECK_CUDA_ERROR(cudaMallocManaged(&constant_spectrum, sizeof(ConstantSpectrum)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&spectrum_constant_texture, sizeof(SpectrumConstantTexture)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
-        constant_spectrum->init(0.5);
-        spectrum->init(constant_spectrum);
-        spectrum_constant_texture->init(spectrum);
-        spectrum_texture->init(spectrum_constant_texture);
-
-        reflectance = spectrum_texture;
-
-        for (auto ptr : std::vector<void *>({
-                 constant_spectrum,
-                 spectrum,
-                 spectrum_constant_texture,
-                 spectrum_texture,
-             })) {
-            gpu_dynamic_pointers.push_back(ptr);
-        }
+        reflectance = SpectrumTexture::create_constant_texture(0.5, gpu_dynamic_pointers);
     }
-    
+
     auto uroughness_key = "uroughness";
     if (parameters.has_float_texture(uroughness_key)) {
         uRoughness = parameters.get_float_texture(uroughness_key);

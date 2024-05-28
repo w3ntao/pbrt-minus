@@ -64,7 +64,7 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
             isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
             break;
         }
-        case (Material::Type::dieletric): {
+        case (Material::Type::dielectric): {
             isect.init_dielectric_bsdf(bsdf, dielectric_bxdf, ray, lambda, base->camera, sampler);
             break;
         }

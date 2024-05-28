@@ -31,9 +31,12 @@ class Material {
   public:
     enum class Type {
         diffuse,
-        dieletric,
+        dielectric,
         coated_diffuse,
     };
+
+    static const Material *create_diffuse_material(const SpectrumTexture *texture,
+                                                   std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const DiffuseMaterial *diffuse_material);
 

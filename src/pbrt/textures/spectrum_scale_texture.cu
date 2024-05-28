@@ -5,7 +5,7 @@
 
 void SpectrumScaleTexture::init(const ParameterDict &parameters) {
     texture = parameters.get_spectrum_texture("tex");
-    scale = parameters.get_float("scale", std::optional(1.0));
+    scale = parameters.get_float("scale", 1.0);
 }
 
 PBRT_CPU_GPU

@@ -73,7 +73,7 @@ class GraphicsState {
 
     bool reverse_orientation = false;
     Transform transform;
-    Material *material = nullptr;
+    const Material *material = nullptr;
 
     std::optional<AreaLightEntity> area_light_entity;
 };
@@ -217,39 +217,8 @@ class SceneBuilder {
             gpu_dynamic_pointers.push_back(ptr);
         }
 
-        ConstantSpectrum *constant_grey;
-        Spectrum *spectrum_grey;
-        SpectrumConstantTexture *texture_grey;
-        SpectrumTexture *texture;
-        DiffuseMaterial *default_diffuse_material;
-        Material *default_material;
-
-        CHECK_CUDA_ERROR(cudaMallocManaged(&constant_grey, sizeof(ConstantSpectrum)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_grey, sizeof(Spectrum)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&texture_grey, sizeof(SpectrumConstantTexture)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&texture, sizeof(SpectrumTexture)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&default_diffuse_material, sizeof(DiffuseMaterial)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&default_material, sizeof(Material)));
-
-        constant_grey->init(0.5);
-        spectrum_grey->init(constant_grey);
-        texture_grey->init(spectrum_grey);
-        texture->init(texture_grey);
-        default_diffuse_material->init_reflectance(texture);
-        default_material->init(default_diffuse_material);
-
-        graphics_state.material = default_material;
-
-        for (auto ptr : std::vector<void *>({
-                 constant_grey,
-                 spectrum_grey,
-                 texture_grey,
-                 texture,
-                 default_diffuse_material,
-                 default_material,
-             })) {
-            gpu_dynamic_pointers.push_back(ptr);
-        }
+        auto texture = SpectrumTexture::create_constant_texture(0.5, gpu_dynamic_pointers);
+        graphics_state.material = Material::create_diffuse_material(texture, gpu_dynamic_pointers);
     }
 
     ~SceneBuilder() {
@@ -571,8 +540,8 @@ class SceneBuilder {
             CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material, sizeof(DiffuseMaterial)));
             CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
 
-            diffuse_material->init(renderer->global_variables->rgb_color_space, parameters,
-                                   gpu_dynamic_pointers);
+            diffuse_material->init(parameters, gpu_dynamic_pointers,
+                                   renderer->global_variables->rgb_color_space);
             material->init(diffuse_material);
 
             graphics_state.material = material;

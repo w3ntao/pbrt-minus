@@ -15,8 +15,8 @@ void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterD
     RGBIlluminantSpectrum rgb_illuminant_spectrum_l;
     rgb_illuminant_spectrum_l.init(rgb_l, global_variable->rgb_color_space);
 
-    scale = parameters.get_float("scale", std::optional(1.0));
-    two_sided = parameters.get_bool("twosided", std::optional(false));
+    scale = parameters.get_float("scale", 1.0);
+    two_sided = parameters.get_bool("twosided", false);
 
     if (parameters.has_string("filename")) {
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
@@ -25,7 +25,7 @@ void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterD
     const auto cie_y = global_variable->cie_xyz[1];
     scale /= rgb_illuminant_spectrum_l.to_photometric(cie_y);
 
-    auto phi_v = parameters.get_float("power", std::optional(-1.0));
+    auto phi_v = parameters.get_float("power", -1.0);
     if (phi_v > 0.0) {
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
     }

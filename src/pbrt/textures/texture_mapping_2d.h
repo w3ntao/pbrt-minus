@@ -15,10 +15,10 @@ struct TexCoord2D {
 class UVMapping {
   public:
     UVMapping(const ParameterDict &parameters) {
-        su = parameters.get_float("uscale", std::optional(1.0));
-        sv = parameters.get_float("vscale", std::optional(1.0));
-        du = parameters.get_float("udelta", std::optional(0.0));
-        dv = parameters.get_float("vdelta", std::optional(0.0));
+        su = parameters.get_float("uscale", 1.0);
+        sv = parameters.get_float("vscale", 1.0);
+        du = parameters.get_float("udelta", 0.0);
+        dv = parameters.get_float("vdelta", 0.0);
     }
 
     PBRT_CPU_GPU

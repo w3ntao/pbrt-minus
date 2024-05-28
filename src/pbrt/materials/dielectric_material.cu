@@ -31,8 +31,8 @@ void DielectricMaterial::init(const ParameterDict &parameters,
         eta = spectrum_eta;
     }
 
-    auto float_u_roughness = parameters.get_float("uroughness", std::optional(0.0));
-    auto float_v_roughness = parameters.get_float("uroughness", std::optional(0.0));
+    auto float_u_roughness = parameters.get_float("uroughness", 0.0);
+    auto float_v_roughness = parameters.get_float("uroughness", 0.0);
 
     FloatTexture *_u_roughness;
     FloatTexture *_v_roughness;
@@ -52,7 +52,7 @@ void DielectricMaterial::init(const ParameterDict &parameters,
     u_roughness = _u_roughness;
     v_roughness = _v_roughness;
 
-    remap_roughness = parameters.get_bool("remaproughness", std::optional(true));
+    remap_roughness = parameters.get_bool("remaproughness", true);
 
     for (auto ptr : std::vector<void *>{
              _u_roughness,

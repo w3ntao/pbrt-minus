@@ -7,13 +7,25 @@
 #include "pbrt/materials/dielectric_material.h"
 #include "pbrt/materials/coated_diffuse_material.h"
 
+const Material *Material::create_diffuse_material(const SpectrumTexture *texture,
+                                                  std::vector<void *> &gpu_dynamic_pointers) {
+    auto diffuse_material = DiffuseMaterial::create(texture, gpu_dynamic_pointers);
+
+    Material *material;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+    material->init(diffuse_material);
+
+    gpu_dynamic_pointers.push_back(material);
+    return material;
+}
+
 void Material::init(const DiffuseMaterial *diffuse_material) {
     type = Type::diffuse;
     ptr = diffuse_material;
 }
 
 void Material::init(const DielectricMaterial *dielectric_material) {
-    type = Type::dieletric;
+    type = Type::dielectric;
     ptr = dielectric_material;
 }
 
@@ -35,7 +47,7 @@ DiffuseBxDF Material::get_diffuse_bsdf(const MaterialEvalContext &ctx,
 PBRT_GPU
 DielectricBxDF Material::get_dielectric_bsdf(const MaterialEvalContext &ctx,
                                              SampledWavelengths &lambda) const {
-    if (type != Type::dieletric) {
+    if (type != Type::dielectric) {
         REPORT_FATAL_ERROR();
     }
 
