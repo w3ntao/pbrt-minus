@@ -183,6 +183,7 @@ class SceneBuilder {
 
     explicit SceneBuilder(const CommandLineOption &command_line_option)
         : samples_per_pixel(command_line_option.samples_per_pixel),
+          output_filename(command_line_option.output_file),
           pre_computed_spectrum(PreComputedSpectrum(thread_pool)) {
 
         GPU::GlobalVariable *global_variables;
@@ -293,8 +294,10 @@ class SceneBuilder {
         auto _resolution_y = parameters.get_integer("yresolution")[0];
 
         film_resolution = Point2i(_resolution_x, _resolution_y);
-        output_filename = parameters.get_string("filename", std::nullopt);
-
+        if (output_filename.empty()) {
+            output_filename = parameters.get_string("filename", std::nullopt);
+        }
+        
         if (std::filesystem::path p(output_filename); p.extension() != ".png") {
             printf("output filename extension: only PNG is supported for the moment\n");
             output_filename = p.replace_extension(".png").filename();

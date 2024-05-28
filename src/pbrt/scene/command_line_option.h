@@ -7,6 +7,7 @@
 
 struct CommandLineOption {
     std::string input_file;
+    std::string output_file;
     std::optional<int> samples_per_pixel;
 
     CommandLineOption(int argc, const char **argv) {
@@ -16,6 +17,12 @@ struct CommandLineOption {
             if (argument.size() > 2 && argument.substr(0, 2) == "--") {
                 if (argument == "--spp") {
                     samples_per_pixel = stoi(std::string(argv[idx + 1]));
+                    idx += 2;
+                    continue;
+                }
+
+                if (argument == "--output") {
+                    output_file = argv[idx + 1];
                     idx += 2;
                     continue;
                 }
