@@ -1,36 +1,30 @@
 #include "pbrt/textures/spectrum_image_texture.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 
-void SpectrumImageTexture::init(const ParameterDict &parameters, const RGBColorSpace *_color_space,
-                                std::vector<void *> &gpu_dynamic_pointers) {
-    auto image_path = parameters.root + "/" + parameters.get_string("filename", std::nullopt);
+const SpectrumImageTexture *SpectrumImageTexture::create(const ParameterDict &parameters,
+                                                         std::vector<void *> &gpu_dynamic_pointers,
+                                                         const RGBColorSpace *_color_space) {
+    SpectrumImageTexture *texture;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&texture, sizeof(SpectrumImageTexture)));
+    texture->init(parameters, gpu_dynamic_pointers, _color_space);
 
+    gpu_dynamic_pointers.push_back(texture);
+
+    return texture;
+}
+
+void SpectrumImageTexture::init(const ParameterDict &parameters,
+                                std::vector<void *> &gpu_dynamic_pointers,
+                                const RGBColorSpace *_color_space) {
+    mipmap = MIPMap::create(parameters, gpu_dynamic_pointers, _color_space);
+
+    color_space = _color_space;
     spectrum_type = SpectrumType::Albedo;
 
     mapping = UVMapping(parameters);
 
     scale = parameters.get_float("scale", 1.0);
     invert = parameters.get_bool("invert", false);
-
-    auto max_anisotropy = parameters.get_float("maxanisotropy", 8.0);
-    auto filter_string = parameters.get_string("filter", "bilinear");
-
-    auto mipmap_filter_options = MIPMapFilterOptions{
-        .filter = parse_filter_function(filter_string),
-        .max_anisotropy = max_anisotropy,
-    };
-
-    auto wrap_string = parameters.get_string("wrap", "repeat");
-    auto wrap_mode = parse_wrap_mode(wrap_string);
-
-    MIPMap *_mipmap;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&_mipmap, sizeof(MIPMap)));
-    _mipmap->init(mipmap_filter_options, wrap_mode, image_path, _color_space, gpu_dynamic_pointers);
-    mipmap = _mipmap;
-
-    gpu_dynamic_pointers.push_back(_mipmap);
-
-    color_space = _color_space;
 }
 
 PBRT_CPU_GPU

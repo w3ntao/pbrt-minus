@@ -297,7 +297,7 @@ class SceneBuilder {
         if (output_filename.empty()) {
             output_filename = parameters.get_string("filename", std::nullopt);
         }
-        
+
         if (std::filesystem::path p(output_filename); p.extension() != ".png") {
             printf("output filename extension: only PNG is supported for the moment\n");
             output_filename = p.replace_extension(".png").filename();
@@ -683,21 +683,16 @@ class SceneBuilder {
             auto parameters =
                 ParameterDict(sub_vector(tokens, 4), named_spectrum_texture, this->root);
             if (texture_type == "imagemap") {
-                SpectrumImageTexture *image_texture;
+                auto image_texture = SpectrumImageTexture::create(
+                    parameters, gpu_dynamic_pointers, renderer->global_variables->rgb_color_space);
+
                 SpectrumTexture *spectrum_texture;
-
-                CHECK_CUDA_ERROR(cudaMallocManaged(&image_texture, sizeof(SpectrumImageTexture)));
                 CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
-
-                image_texture->init(parameters, renderer->global_variables->rgb_color_space,
-                                    gpu_dynamic_pointers);
                 spectrum_texture->init(image_texture);
 
                 named_spectrum_texture[texture_name] = spectrum_texture;
 
-                gpu_dynamic_pointers.push_back(image_texture);
                 gpu_dynamic_pointers.push_back(spectrum_texture);
-
                 return;
             }
 

@@ -5,6 +5,9 @@
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/spectrum_util/xyz.h"
 
+class RGB;
+class RGBColorSpace;
+
 class DenselySampledSpectrum;
 class ConstantSpectrum;
 class RGBIlluminantSpectrum;
@@ -27,6 +30,10 @@ class Spectrum {
 
     static const Spectrum *create_constant_spectrum(FloatType val,
                                                     std::vector<void *> &gpu_dynamic_pointers);
+
+    static const Spectrum *create_rgb_albedo_spectrum(const RGB &val,
+                                                      std::vector<void *> &gpu_dynamic_pointers,
+                                                      const RGBColorSpace *color_space);
 
     PBRT_CPU_GPU
     void init(const DenselySampledSpectrum *densely_sampled_spectrum);

@@ -27,28 +27,20 @@ void DiffuseMaterial::init(const ParameterDict &parameters,
     auto key = "reflectance";
 
     if (parameters.has_rgb(key)) {
-        RGBAlbedoSpectrum *_reflectance_spectrum;
-        Spectrum *reflectance_spectrum;
         SpectrumConstantTexture *spectrum_constant_texture;
         SpectrumTexture *spectrum_texture;
-
-        CHECK_CUDA_ERROR(cudaMallocManaged(&_reflectance_spectrum, sizeof(RGBAlbedoSpectrum)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&reflectance_spectrum, sizeof(Spectrum)));
         CHECK_CUDA_ERROR(
             cudaMallocManaged(&spectrum_constant_texture, sizeof(SpectrumConstantTexture)));
         CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
 
-        auto rgb_reflectance = parameters.get_rgb(key, std::nullopt);
-        _reflectance_spectrum->init(color_space, rgb_reflectance);
-        reflectance_spectrum->init(_reflectance_spectrum);
-        spectrum_constant_texture->init(reflectance_spectrum);
+        auto rgb_val = parameters.get_rgb(key, std::nullopt);
+        spectrum_constant_texture->init(
+            Spectrum::create_rgb_albedo_spectrum(rgb_val, gpu_dynamic_pointers, color_space));
         spectrum_texture->init(spectrum_constant_texture);
 
         reflectance = spectrum_texture;
 
         for (auto ptr : std::vector<void *>({
-                 _reflectance_spectrum,
-                 reflectance_spectrum,
                  spectrum_constant_texture,
                  spectrum_texture,
              })) {

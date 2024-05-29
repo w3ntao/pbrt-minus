@@ -31,6 +31,16 @@ Point2i remap_pixel_coord(const Point2i p, const Point2i resolution, WrapMode2D 
     return coord;
 }
 
+const GPUImage *GPUImage::create(const std::string &filename,
+                                 std::vector<void *> &gpu_dynamic_pointers) {
+    GPUImage *image;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&image, sizeof(GPUImage)));
+    image->init(filename, gpu_dynamic_pointers);
+
+    gpu_dynamic_pointers.push_back(image);
+    return image;
+}
+
 void GPUImage::init(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers) {
     std::vector<unsigned char> rgba_pixels;
     unsigned width, height;
@@ -87,7 +97,7 @@ RGB GPUImage::bilerp(const Point2f p, const WrapMode2D wrap) const {
 
     const auto dx = x - xi;
     const auto dy = y - yi;
-    
+
     // Load pixel channel values and return bilinearly interpolated value
     RGB v[4] = {
         fetch_pixel(Point2i(xi, yi), wrap),

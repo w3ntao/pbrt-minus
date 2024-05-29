@@ -32,7 +32,6 @@ void CoatedDiffuseMaterial::init(const ParameterDict &parameters,
         vRoughness = FloatTexture::create(vroughness_val, gpu_dynamic_pointers);
     }
 
-    // FloatTexture thickness = parameters.GetFloatTexture("thickness", .01, alloc);
     auto thickness_key = "thickness";
     if (parameters.has_float_texture(thickness_key)) {
         thickness = parameters.get_float_texture(thickness_key);

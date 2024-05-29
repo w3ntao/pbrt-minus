@@ -45,19 +45,15 @@ struct MIPMapFilterOptions {
 
 class MIPMap {
   public:
-    void init(const MIPMapFilterOptions &_options, WrapMode _wrap_mode, const std::string &filepath,
-              const RGBColorSpace *_color_space, std::vector<void *> &gpu_dynamic_pointers) {
-        options = _options;
-        wrap_mode = _wrap_mode;
-        color_space = _color_space;
+    static const MIPMap *create(const ParameterDict &parameters,
+                                std::vector<void *> &gpu_dynamic_pointers,
+                                const RGBColorSpace *_color_space) {
+        MIPMap *mipmap;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&mipmap, sizeof(MIPMap)));
+        mipmap->init(parameters, gpu_dynamic_pointers, _color_space);
 
-        GPUImage *gpu_image;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_image, sizeof(GPUImage)));
-
-        gpu_image->init(filepath, gpu_dynamic_pointers);
-        image = gpu_image;
-
-        gpu_dynamic_pointers.push_back(gpu_image);
+        gpu_dynamic_pointers.push_back(mipmap);
+        return mipmap;
     }
 
     PBRT_CPU_GPU
@@ -66,8 +62,24 @@ class MIPMap {
     }
 
   private:
-    GPUImage *image;
-    const RGBColorSpace *color_space;
+    const GPUImage *image;
     WrapMode wrap_mode;
     MIPMapFilterOptions options;
+
+    void init(const ParameterDict &parameters, std::vector<void *> &gpu_dynamic_pointers,
+              const RGBColorSpace *_color_space) {
+        auto max_anisotropy = parameters.get_float("maxanisotropy", 8.0);
+        auto filter_string = parameters.get_string("filter", "bilinear");
+
+        options = MIPMapFilterOptions{
+            .filter = parse_filter_function(filter_string),
+            .max_anisotropy = max_anisotropy,
+        };
+
+        auto wrap_string = parameters.get_string("wrap", "repeat");
+        wrap_mode = parse_wrap_mode(wrap_string);
+        
+        auto image_path = parameters.root + "/" + parameters.get_string("filename", std::nullopt);
+        image = GPUImage::create(image_path, gpu_dynamic_pointers);
+    }
 };

@@ -17,51 +17,16 @@ void DielectricMaterial::init(const ParameterDict &parameters,
 
     } else {
         // TODO: if eta was initialized as a Spectrum?
-        ConstantSpectrum *constant_eta;
-        Spectrum *spectrum_eta;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&constant_eta, sizeof(ConstantSpectrum)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_eta, sizeof(Spectrum)));
-
-        constant_eta->init(1.5);
-        spectrum_eta->init(constant_eta);
-
-        gpu_dynamic_pointers.push_back(constant_eta);
-        gpu_dynamic_pointers.push_back(spectrum_eta);
-
-        eta = spectrum_eta;
+        eta = Spectrum::create_constant_spectrum(1.5, gpu_dynamic_pointers);
     }
 
     auto float_u_roughness = parameters.get_float("uroughness", 0.0);
     auto float_v_roughness = parameters.get_float("uroughness", 0.0);
 
-    FloatTexture *_u_roughness;
-    FloatTexture *_v_roughness;
-    FloatConstantTexture *constant_u_roughness;
-    FloatConstantTexture *constant_v_roughness;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&_u_roughness, sizeof(FloatTexture)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&_v_roughness, sizeof(FloatTexture)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&constant_u_roughness, sizeof(FloatConstantTexture)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&constant_v_roughness, sizeof(FloatConstantTexture)));
-
-    constant_u_roughness->init(float_u_roughness);
-    _u_roughness->init(constant_u_roughness);
-
-    constant_v_roughness->init(float_v_roughness);
-    _v_roughness->init(constant_v_roughness);
-
-    u_roughness = _u_roughness;
-    v_roughness = _v_roughness;
+    u_roughness = FloatTexture::create(float_u_roughness, gpu_dynamic_pointers);
+    v_roughness = FloatTexture::create(float_v_roughness, gpu_dynamic_pointers);
 
     remap_roughness = parameters.get_bool("remaproughness", true);
-
-    for (auto ptr : std::vector<void *>{
-             _u_roughness,
-             _v_roughness,
-             constant_u_roughness,
-             constant_v_roughness,
-         }) {
-        gpu_dynamic_pointers.push_back(ptr);
-    }
 }
 
 PBRT_GPU

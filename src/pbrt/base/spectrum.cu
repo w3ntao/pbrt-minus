@@ -21,6 +21,24 @@ const Spectrum *Spectrum::create_constant_spectrum(FloatType val,
     return spectrum;
 }
 
+const Spectrum *Spectrum::create_rgb_albedo_spectrum(const RGB &val,
+                                                     std::vector<void *> &gpu_dynamic_pointers,
+                                                     const RGBColorSpace *color_space) {
+    RGBAlbedoSpectrum *rgb_albedo_spectrum;
+    Spectrum *spectrum;
+
+    CHECK_CUDA_ERROR(cudaMallocManaged(&rgb_albedo_spectrum, sizeof(RGBAlbedoSpectrum)));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
+
+    rgb_albedo_spectrum->init(color_space, val);
+    spectrum->init(rgb_albedo_spectrum);
+
+    gpu_dynamic_pointers.push_back(rgb_albedo_spectrum);
+    gpu_dynamic_pointers.push_back(spectrum);
+
+    return spectrum;
+}
+
 PBRT_CPU_GPU
 void Spectrum::init(const DenselySampledSpectrum *densely_sampled_spectrum) {
     type = Type::densely_sampled_spectrum;

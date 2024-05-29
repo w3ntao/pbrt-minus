@@ -59,7 +59,8 @@ enum class PixelFormat {
 
 class GPUImage {
   public:
-    void init(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers);
+    static const GPUImage *create(const std::string &filename,
+                                  std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     RGB fetch_pixel(Point2i _p, WrapMode2D wrap_mode) const;
@@ -70,4 +71,6 @@ class GPUImage {
     const RGB *pixels;
     Point2i resolution;
     PixelFormat pixel_format;
+
+    void init(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers);
 };
