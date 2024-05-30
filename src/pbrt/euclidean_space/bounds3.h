@@ -137,6 +137,18 @@ class Bounds3 {
         return 2;
     }
 
+    PBRT_CPU_GPU
+    inline bool inside(Point3<T> p, const Bounds3<T> &b) const {
+        return (p.x >= b.p_min.x && p.x <= b.p_max.x && p.y >= b.p_min.y && p.y <= b.p_max.y &&
+                p.z >= b.p_min.z && p.z <= b.p_max.z);
+    }
+
+    PBRT_CPU_GPU
+    void bounding_sphere(Point3<T> *center, FloatType *radius) const {
+        *center = (p_min + p_max) / 2;
+        *radius = inside(*center, *this) ? (*center - p_max).length() : 0.0;
+    }
+
     PBRT_GPU bool fast_intersect(const Ray &ray, FloatType ray_t_max, const Vector3f &inv_dir,
                                  const int dir_is_neg[3]) const {
         // Check for ray intersection against $x$ and $y$ slabs

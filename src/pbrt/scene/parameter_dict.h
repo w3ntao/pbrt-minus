@@ -25,6 +25,7 @@ class ParameterDict {
 
         for (int idx = 0; idx < tokens.size(); idx += 2) {
             if (tokens[idx].type != TokenType::Variable) {
+                std::cout << "tokens[" << idx << "] is not a Variable\n\n";
                 throw std::runtime_error("expect token Variable");
             }
 

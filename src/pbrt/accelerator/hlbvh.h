@@ -108,11 +108,23 @@ class HLBVH {
     void init(const Primitive **_primitives, MortonPrimitive *gpu_morton_primitives) {
         primitives = _primitives;
         morton_primitives = gpu_morton_primitives;
+        build_nodes = nullptr;
     }
 
-    PBRT_GPU void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length);
+    PBRT_CPU_GPU
+    Bounds3f bounds() const {
+        if (build_nodes == nullptr) {
+            REPORT_FATAL_ERROR();
+        }
 
-    PBRT_GPU bool fast_intersect(const Ray &ray, FloatType t_max) const;
+        return build_nodes[0].bounds;
+    }
+
+    PBRT_GPU
+    void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length);
+
+    PBRT_GPU
+    bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
     cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;

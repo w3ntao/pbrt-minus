@@ -76,9 +76,7 @@ class Spectrum {
     }
 
     PBRT_CPU_GPU
-    FloatType to_photometric(const Spectrum *cie_y) const {
-        return inner_product(cie_y);
-    }
+    FloatType to_photometric(const Spectrum *cie_y) const;
 
   private:
     Type type;

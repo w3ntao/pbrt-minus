@@ -16,6 +16,11 @@ class Normal3f {
 
     PBRT_CPU_GPU explicit Normal3f(const Vector3f &v) : x(v.x), y(v.y), z(v.z) {}
 
+    PBRT_CPU_GPU
+    bool has_nan() const {
+        return std::isnan(x) || std::isnan(y) || std::isnan(z);
+    }
+
     PBRT_CPU_GPU Vector3f to_vector3() const {
         return Vector3f(x, y, z);
     }

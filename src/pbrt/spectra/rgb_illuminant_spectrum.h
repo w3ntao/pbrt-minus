@@ -9,6 +9,12 @@ class RGBColorSpace;
 
 class RGBIlluminantSpectrum {
   public:
+    PBRT_CPU_GPU
+    RGBIlluminantSpectrum(const RGB &rgb, const RGBColorSpace *rgb_color_space) {
+        init(rgb, rgb_color_space);
+    }
+
+    PBRT_CPU_GPU
     void init(const RGB &rgb, const RGBColorSpace *rgb_color_space);
 
     PBRT_CPU_GPU

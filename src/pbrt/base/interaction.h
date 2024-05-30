@@ -24,13 +24,17 @@ class Interaction {
     Point2f uv;
 
     PBRT_CPU_GPU
-    explicit Interaction(const Point3fi &pi, const Normal3f &n, const Point2f &uv,
+    explicit Interaction(const Point3fi &_pi, const Normal3f &_n, const Point2f &_uv,
                          const Vector3f &wo)
-        : pi(pi), n(n), uv(uv), wo(wo.normalize()) {}
+        : pi(_pi), n(_n), uv(_uv), wo(wo.normalize()) {}
 
     PBRT_CPU_GPU
-    explicit Interaction(const Point3fi &pi, const Normal3f &n, const Point2f &uv)
-        : pi(pi), n(n), uv(uv), wo(Vector3f(NAN, NAN, NAN)) {}
+    explicit Interaction(const Point3fi &_pi, const Normal3f &_n, const Point2f &_uv)
+        : pi(_pi), n(_n), uv(_uv), wo(Vector3f(NAN, NAN, NAN)) {}
+
+    PBRT_CPU_GPU
+    Interaction(const Point3f &p)
+        : pi(p), n(Normal3f(0, 0, 0)), uv(Point2f(NAN, NAN)), wo(Vector3f(NAN, NAN, NAN)) {}
 
     PBRT_CPU_GPU
     Point3f p() const {

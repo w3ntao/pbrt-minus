@@ -5,6 +5,7 @@
 #include "pbrt/euclidean_space/point3.h"
 #include "pbrt/spectrum_util/spectrum_constants.h"
 #include "pbrt/util/utility_math.h"
+#include "pbrt/euclidean_space/bounds2.h"
 
 PBRT_CPU_GPU
 inline FloatType cosine_hemisphere_pdf(FloatType cos_theta) {

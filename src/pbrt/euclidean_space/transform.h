@@ -287,7 +287,7 @@ class Transform {
     }
 
     template <typename T>
-    PBRT_CPU_GPU Vector3<T> ApplyInverse(Vector3<T> v) const {
+    PBRT_CPU_GPU Vector3<T> apply_inverse(Vector3<T> v) const {
         T x = v.x;
         T y = v.y;
         T z = v.z;

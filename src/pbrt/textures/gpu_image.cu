@@ -1,5 +1,7 @@
 #include "pbrt/textures/gpu_image.h"
 
+#include <filesystem>
+
 #include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/rgb.h"
 
@@ -8,7 +10,34 @@
 PBRT_CPU_GPU
 Point2i remap_pixel_coord(const Point2i p, const Point2i resolution, WrapMode2D wrap_mode) {
     if (wrap_mode[0] == WrapMode::OctahedralSphere || wrap_mode[1] == WrapMode::OctahedralSphere) {
-        REPORT_FATAL_ERROR();
+        auto coord = p;
+
+        if (coord[0] < 0) {
+            coord[0] = -coord[0];                    // mirror across u = 0
+            coord[1] = resolution[1] - 1 - coord[1]; // mirror across v = 0.5
+        } else if (coord[0] >= resolution[0]) {
+            coord[0] = 2 * resolution[0] - 1 - coord[0]; // mirror across u = 1
+            coord[1] = resolution[1] - 1 - coord[1];     // mirror across v = 0.5
+        }
+
+        if (coord[1] < 0) {
+            coord[0] = resolution[0] - 1 - coord[0]; // mirror across u = 0.5
+            coord[1] = -coord[1];                    // mirror across v = 0;
+        } else if (coord[1] >= resolution[1]) {
+            coord[0] = resolution[0] - 1 - coord[0];     // mirror across u = 0.5
+            coord[1] = 2 * resolution[1] - 1 - coord[1]; // mirror across v = 1
+        }
+
+        // Bleh: things don't go as expected for 1x1 images.
+        if (resolution[0] == 1) {
+            coord[0] = 0;
+        }
+
+        if (resolution[1] == 1) {
+            coord[1] = 0;
+        }
+
+        return coord;
     }
 
     auto coord = p;
@@ -31,19 +60,31 @@ Point2i remap_pixel_coord(const Point2i p, const Point2i resolution, WrapMode2D 
     return coord;
 }
 
-const GPUImage *GPUImage::create(const std::string &filename,
-                                 std::vector<void *> &gpu_dynamic_pointers) {
+const GPUImage *GPUImage::create_from_file(const std::string &filename,
+                                           std::vector<void *> &gpu_dynamic_pointers) {
     GPUImage *image;
     CHECK_CUDA_ERROR(cudaMallocManaged(&image, sizeof(GPUImage)));
-    image->init(filename, gpu_dynamic_pointers);
-
     gpu_dynamic_pointers.push_back(image);
-    return image;
+
+    auto path = std::filesystem::path(filename);
+    if (path.extension() == ".png") {
+        image->init_png(filename, gpu_dynamic_pointers);
+        return image;
+    }
+
+    if (path.extension() == ".exr") {
+        image->init_exr(filename, gpu_dynamic_pointers);
+        return image;
+    }
+
+    REPORT_FATAL_ERROR();
+    return nullptr;
 }
 
-void GPUImage::init(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers) {
+void GPUImage::init_png(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers) {
     std::vector<unsigned char> rgba_pixels;
-    unsigned width, height;
+    uint width;
+    uint height;
 
     unsigned error = lodepng::decode(rgba_pixels, width, height, filename);
     if (error) {
@@ -73,6 +114,28 @@ void GPUImage::init(const std::string &filename, std::vector<void *> &gpu_dynami
             gpu_pixels[index] =
                 RGB(encoding.to_linear(red), encoding.to_linear(green), encoding.to_linear(blue));
         }
+    }
+
+    pixels = gpu_pixels;
+    pixel_format = PixelFormat::U256;
+}
+
+void GPUImage::init_exr(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers) {
+    std::vector<RGB> rgb_pixels;
+    uint width;
+    uint height;
+
+    REPORT_FATAL_ERROR();
+    // TODO: progress 2024/06/05: GPUImage::init_exr() not implemented
+
+    resolution = Point2i(width, height);
+
+    RGB *gpu_pixels;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_pixels, sizeof(RGB) * width * height));
+    gpu_dynamic_pointers.push_back(gpu_pixels);
+
+    for (uint idx = 0; idx < width * height; ++idx) {
+        gpu_pixels[idx] = rgb_pixels[idx];
     }
 
     pixels = gpu_pixels;

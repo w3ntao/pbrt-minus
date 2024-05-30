@@ -23,6 +23,7 @@
 #include "pbrt/integrators/simple_path.h"
 
 #include "pbrt/lights/diffuse_area_light.h"
+#include "pbrt/lights/image_infinite_light.h"
 
 #include "pbrt/light_samplers/uniform_light_sampler.h"
 
@@ -172,7 +173,7 @@ class SceneBuilder {
     std::vector<Token> sampler_tokens;
 
     std::vector<const Primitive *> gpu_primitives;
-    std::vector<const Light *> gpu_lights;
+    std::vector<Light *> gpu_lights;
 
     GraphicsState graphics_state;
     std::stack<GraphicsState> pushed_graphics_state;
@@ -409,17 +410,36 @@ class SceneBuilder {
         uniform_light_sampler->lights = light_array;
         uniform_light_sampler->light_num = gpu_lights.size();
 
+        std::vector<const Light *> infinite_lights;
+        for (auto light : gpu_lights) {
+            if (light->get_light_type() == LightType::infinite) {
+                infinite_lights.push_back(light);
+            }
+        }
+
+        const Light **gpu_infinite_lights;
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged(&gpu_infinite_lights, sizeof(Light *) * infinite_lights.size()));
+        CHECK_CUDA_ERROR(cudaMemcpy(gpu_infinite_lights, infinite_lights.data(),
+                                    sizeof(Light *) * infinite_lights.size(),
+                                    cudaMemcpyHostToDevice));
+
         integrator_base->bvh = renderer->bvh;
         integrator_base->camera = renderer->camera;
+
         integrator_base->lights = light_array;
         integrator_base->light_num = gpu_lights.size();
 
         integrator_base->uniform_light_sampler = uniform_light_sampler;
 
+        integrator_base->infinite_lights = gpu_infinite_lights;
+        integrator_base->infinite_light_num = infinite_lights.size();
+
         for (auto ptr : std::vector<void *>({
                  integrator_base,
                  light_array,
                  uniform_light_sampler,
+                 gpu_infinite_lights,
              })) {
             gpu_dynamic_pointers.push_back(ptr);
         }
@@ -492,6 +512,31 @@ class SceneBuilder {
         const std::string error =
             "parse_tokens(): unknown Integrator name: `" + integrator_name.value() + "`";
         throw std::runtime_error(error.c_str());
+    }
+
+    void parse_light_source(const std::vector<Token> &tokens) {
+        auto parameters = ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root);
+
+        auto texture_file = root + "/" + parameters.get_string("filename", {});
+
+        auto scale = parameters.get_float("scale", 1.0);
+
+        const Spectrum *cie_xyz[3];
+        renderer->global_variables->get_cie_xyz(cie_xyz);
+        const auto cie_y = cie_xyz[1];
+
+        scale /= renderer->global_variables->rgb_color_space->illuminant->to_photometric(cie_y);
+
+        auto image_infinite_light = ImageInfiniteLight::create(
+            get_render_from_object(), texture_file, scale,
+            renderer->global_variables->rgb_color_space, gpu_dynamic_pointers);
+
+        Light *infinite_light;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&infinite_light, sizeof(Light)));
+        gpu_dynamic_pointers.push_back(infinite_light);
+
+        infinite_light->init(image_infinite_light);
+        gpu_lights.push_back(infinite_light);
     }
 
     void parse_lookat(const std::vector<Token> &tokens) {
@@ -958,6 +1003,11 @@ class SceneBuilder {
                 return;
             }
 
+            if (keyword == "LightSource") {
+                parse_light_source(tokens);
+                return;
+            }
+
             if (keyword == "LookAt") {
                 parse_lookat(tokens);
                 return;
@@ -1018,11 +1068,10 @@ class SceneBuilder {
                 return;
             }
 
-            if (keyword == "ConcatTransform" || keyword == "LightSource" ||
-                keyword == "MakeNamedMaterial" || keyword == "MakeNamedMedium" ||
-                keyword == "MediumInterface" || keyword == "NamedMaterial" ||
-                keyword == "ObjectBegin" || keyword == "ObjectEnd" || keyword == "ObjectInstance" ||
-                keyword == "PixelFilter") {
+            if (keyword == "ConcatTransform" || keyword == "MakeNamedMaterial" ||
+                keyword == "MakeNamedMedium" || keyword == "MediumInterface" ||
+                keyword == "NamedMaterial" || keyword == "ObjectBegin" || keyword == "ObjectEnd" ||
+                keyword == "ObjectInstance" || keyword == "PixelFilter") {
 
                 if (ignored_keywords.find(keyword) == ignored_keywords.end()) {
                     std::cout << "parse_tokens::Keyword `" << keyword
@@ -1056,6 +1105,12 @@ class SceneBuilder {
 
     void preprocess() {
         renderer->bvh->build_bvh(thread_pool, gpu_dynamic_pointers, gpu_primitives);
+
+        auto full_bounds = renderer->bvh->bounds();
+        for (auto light : gpu_lights) {
+            light->preprocess(full_bounds);
+        }
+
         build_integrator();
     }
 

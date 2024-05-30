@@ -85,7 +85,7 @@ __global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh
 }
 
 template <typename TypeOfLight>
-static __global__ void init_lights(Light *lights, const TypeOfLight *concrete_shapes, uint num) {
+static __global__ void init_lights(Light *lights, TypeOfLight *concrete_shapes, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;

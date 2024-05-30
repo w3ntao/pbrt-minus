@@ -12,8 +12,7 @@ void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterD
                             const Shape *_shape, const GPU::GlobalVariable *global_variable) {
     auto rgb_l = parameters.get_rgb("L", std::nullopt);
 
-    RGBIlluminantSpectrum rgb_illuminant_spectrum_l;
-    rgb_illuminant_spectrum_l.init(rgb_l, global_variable->rgb_color_space);
+    auto rgb_illuminant_spectrum_l = RGBIlluminantSpectrum(rgb_l, global_variable->rgb_color_space);
 
     scale = parameters.get_float("scale", 1.0);
     two_sided = parameters.get_bool("twosided", false);
@@ -56,8 +55,7 @@ SampledSpectrum DiffuseAreaLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f 
 PBRT_GPU
 cuda::std::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleContext &ctx,
                                                                const Point2f &u,
-                                                               SampledWavelengths &lambda,
-                                                               bool allow_incomplete_pdf) const {
+                                                               SampledWavelengths &lambda) const {
     // Sample point on shape for _DiffuseAreaLight_
     auto shape_ctx = ShapeSampleContext{
         .pi = ctx.pi,

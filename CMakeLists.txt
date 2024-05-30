@@ -59,7 +59,9 @@ add_executable(${PROJ_NAME}
         src/pbrt/euclidean_space/squared_matrix.cu
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu
+
         src/pbrt/lights/diffuse_area_light.cu
+        src/pbrt/lights/image_infinite_light.cu
 
         src/pbrt/materials/coated_diffuse_material.cu
         src/pbrt/materials/dielectric_material.cu
@@ -79,6 +81,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/textures/spectrum_scale_texture.cu
 
         src/pbrt/util/sampling.cu
+        src/pbrt/util/math.cu
 
         src/ext/lodepng/lodepng.cpp
         src/ext/rply/rply.cpp

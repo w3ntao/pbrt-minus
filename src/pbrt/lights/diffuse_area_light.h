@@ -25,8 +25,7 @@ class DiffuseAreaLight {
 
     PBRT_GPU
     cuda::std::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
-                                                 SampledWavelengths &lambda,
-                                                 bool allow_incomplete_pdf) const;
+                                                 SampledWavelengths &lambda) const;
 
   private:
     LightBase light_base;

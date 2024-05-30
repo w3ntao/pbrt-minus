@@ -125,9 +125,9 @@ struct CameraBase {
             std::max<FloatType>(0.125, 1.0 / std::sqrt((FloatType)samples_per_pixel));
 
         *dpdx = sppScale *
-                camera_transform.render_from_camera(DownZFromCamera.ApplyInverse(px - pDownZ));
+                camera_transform.render_from_camera(DownZFromCamera.apply_inverse(px - pDownZ));
         *dpdy = sppScale *
-                camera_transform.render_from_camera(DownZFromCamera.ApplyInverse(py - pDownZ));
+                camera_transform.render_from_camera(DownZFromCamera.apply_inverse(py - pDownZ));
     }
 };
 

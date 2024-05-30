@@ -78,8 +78,8 @@ class MIPMap {
 
         auto wrap_string = parameters.get_string("wrap", "repeat");
         wrap_mode = parse_wrap_mode(wrap_string);
-        
+
         auto image_path = parameters.root + "/" + parameters.get_string("filename", std::nullopt);
-        image = GPUImage::create(image_path, gpu_dynamic_pointers);
+        image = GPUImage::create_from_file(image_path, gpu_dynamic_pointers);
     }
 };

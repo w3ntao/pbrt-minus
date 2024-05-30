@@ -88,6 +88,15 @@ FloatType Spectrum::operator()(FloatType lambda) const {
 }
 
 PBRT_CPU_GPU
+FloatType Spectrum::to_photometric(const Spectrum *cie_y) const {
+    if (type == Type::rgb_illuminant_spectrum) {
+        return ((RGBIlluminantSpectrum *)ptr)->to_photometric(cie_y);
+    }
+
+    return inner_product(cie_y);
+}
+
+PBRT_CPU_GPU
 SampledSpectrum Spectrum::sample(const SampledWavelengths &lambda) const {
     switch (type) {
     case (Type::densely_sampled_spectrum): {

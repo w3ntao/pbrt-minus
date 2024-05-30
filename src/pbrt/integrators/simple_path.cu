@@ -11,6 +11,7 @@
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 
 #include "pbrt/lights/diffuse_area_light.h"
+#include "pbrt/lights/image_infinite_light.h"
 
 void SimplePathIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
     base = _base;
@@ -38,9 +39,13 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
 
     while (beta.is_positive()) {
         auto si = base->bvh->intersect(ray.ray, Infinity);
+
         if (!si) {
             if (specular_bounce) {
-                // TODO: sampling infinite lights is not implemented
+                for (uint idx = 0; idx < base->infinite_light_num; ++idx) {
+                    auto light = base->infinite_lights[idx];
+                    L += beta * light->le(ray.ray, lambda);
+                }
             }
             break;
         }
@@ -84,12 +89,14 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
         if (sampled_light.has_value()) {
             auto u_light = sampler->get_2d();
             auto light_li_sample =
-                sampled_light->light->sample_li(LightSampleContext(isect), u_light, lambda, false);
+                sampled_light->light->sample_li(LightSampleContext(isect), u_light, lambda);
+
             if (light_li_sample.has_value() && light_li_sample->l.is_positive() &&
                 light_li_sample->pdf > 0.0) {
                 auto wi = light_li_sample->wi;
                 SampledSpectrum f = bsdf.f(wo, wi, TransportMode::Radiance) *
                                     wi.abs_dot(isect.shading.n.to_vector3());
+
                 if (f.is_positive() && unoccluded(isect, light_li_sample->p_light)) {
                     L += beta * f * light_li_sample->l / (sampled_light->p * light_li_sample->pdf);
                 }

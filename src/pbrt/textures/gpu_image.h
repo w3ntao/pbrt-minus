@@ -3,8 +3,9 @@
 #include <string>
 #include <vector>
 
-#include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/point2.h"
+#include "pbrt/util/macro.h"
+#include "pbrt/util/float.h"
 
 class RGB;
 
@@ -57,11 +58,27 @@ enum class PixelFormat {
     Float,
 };
 
+// PixelFormat Inline Functions
+PBRT_CPU_GPU
+inline bool Is8Bit(PixelFormat format) {
+    return format == PixelFormat::U256;
+}
+
+PBRT_CPU_GPU
+inline bool Is16Bit(PixelFormat format) {
+    return format == PixelFormat::Half;
+}
+
+PBRT_CPU_GPU
+inline bool Is32Bit(PixelFormat format) {
+    return format == PixelFormat::Float;
+}
+
 class GPUImage {
   public:
-    static const GPUImage *create(const std::string &filename,
-                                  std::vector<void *> &gpu_dynamic_pointers);
-
+    static const GPUImage *create_from_file(const std::string &filename,
+                                            std::vector<void *> &gpu_dynamic_pointers);
+    
     PBRT_CPU_GPU
     RGB fetch_pixel(Point2i _p, WrapMode2D wrap_mode) const;
 
@@ -72,5 +89,7 @@ class GPUImage {
     Point2i resolution;
     PixelFormat pixel_format;
 
-    void init(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers);
+    void init_png(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers);
+
+    void init_exr(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers);
 };

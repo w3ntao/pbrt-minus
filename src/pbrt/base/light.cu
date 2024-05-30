@@ -1,18 +1,36 @@
 #include "pbrt/base/light.h"
 #include "pbrt/lights/diffuse_area_light.h"
+#include "pbrt/lights/image_infinite_light.h"
 
 PBRT_CPU_GPU
-void Light::init(const DiffuseAreaLight *diffuse_area_light) {
-    light_type = Type::diffuse_area_light;
-    light_ptr = diffuse_area_light;
+void Light::init(DiffuseAreaLight *diffuse_area_light) {
+    type = Type::diffuse_area_light;
+    ptr = diffuse_area_light;
+}
+
+PBRT_CPU_GPU
+void Light::init(ImageInfiniteLight *image_infinite_light) {
+    type = Type::image_infinite_light;
+    ptr = image_infinite_light;
 }
 
 PBRT_GPU
 SampledSpectrum Light::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                          const SampledWavelengths &lambda) const {
-    switch (light_type) {
+    switch (type) {
     case (Type::diffuse_area_light): {
-        return ((DiffuseAreaLight *)light_ptr)->l(p, n, uv, w, lambda);
+        return ((DiffuseAreaLight *)ptr)->l(p, n, uv, w, lambda);
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+}
+
+PBRT_GPU
+SampledSpectrum Light::le(const Ray &ray, const SampledWavelengths &lambda) const {
+    switch (type) {
+    case (Type::image_infinite_light): {
+        return ((ImageInfiniteLight *)ptr)->le(ray, lambda);
     }
     }
 
@@ -21,11 +39,27 @@ SampledSpectrum Light::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
 
 PBRT_GPU
 cuda::std::optional<LightLiSample> Light::sample_li(const LightSampleContext ctx, const Point2f u,
-                                                    SampledWavelengths &lambda,
-                                                    bool allow_incomplete_pdf) const {
-    switch (light_type) {
+                                                    SampledWavelengths &lambda) const {
+    switch (type) {
     case (Type::diffuse_area_light): {
-        return ((DiffuseAreaLight *)light_ptr)->sample_li(ctx, u, lambda, allow_incomplete_pdf);
+        return ((DiffuseAreaLight *)ptr)->sample_li(ctx, u, lambda);
+    }
+    case (Type::image_infinite_light): {
+        return ((ImageInfiniteLight *)ptr)->sample_li(ctx, u, lambda);
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+}
+
+void Light::preprocess(const Bounds3<FloatType> &scene_bounds) {
+    switch (type) {
+    case (Type::diffuse_area_light): {
+        // do nothing
+        return;
+    }
+    case (Type::image_infinite_light): {
+        return ((ImageInfiniteLight *)ptr)->preprocess(scene_bounds);
     }
     }
 

@@ -7,6 +7,12 @@
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 
+class Light;
+class DiffuseAreaLight;
+class ImageInfiniteLight;
+template <typename T>
+class Bounds3;
+
 enum class LightType {
     delta_position,
     delta_direction,
@@ -18,9 +24,6 @@ struct LightBase {
     LightType light_type;
     Transform render_from_light;
 };
-
-class Light;
-class DiffuseAreaLight;
 
 struct SampledLight {
     const Light *light;
@@ -56,13 +59,28 @@ class Light {
   public:
     enum class Type {
         diffuse_area_light,
+        image_infinite_light,
     };
 
     PBRT_CPU_GPU
-    void init(const DiffuseAreaLight *diffuse_area_light);
+    void init(DiffuseAreaLight *diffuse_area_light);
 
-    PBRT_CPU_GPU Type get_light_type() const {
-        return light_type;
+    PBRT_CPU_GPU
+    void init(ImageInfiniteLight *image_infinite_light);
+
+    PBRT_CPU_GPU
+    LightType get_light_type() const {
+        switch (type) {
+        case (Type::diffuse_area_light): {
+            return LightType::area;
+        }
+        case (Type::image_infinite_light): {
+            return LightType::infinite;
+        }
+        }
+
+        REPORT_FATAL_ERROR();
+        return {};
     }
 
     PBRT_GPU
@@ -70,11 +88,15 @@ class Light {
                       const SampledWavelengths &lambda) const;
 
     PBRT_GPU
+    SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
+
+    PBRT_GPU
     cuda::std::optional<LightLiSample> sample_li(const LightSampleContext ctx, const Point2f u,
-                                                 SampledWavelengths &lambda,
-                                                 bool allow_incomplete_pdf) const;
+                                                 SampledWavelengths &lambda) const;
+
+    void preprocess(const Bounds3<FloatType> &scene_bounds);
 
   public:
-    Type light_type;
-    const void *light_ptr;
+    Type type;
+    void *ptr;
 };

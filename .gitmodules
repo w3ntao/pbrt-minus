@@ -5,6 +5,12 @@ url = https://github.com/w3ntao/lodepng.git
 [submodule "src/ext/rply"]
 path = src/ext/rply
 url = https://github.com/w3ntao/rply.git
+
 [submodule "src/ext/zlib"]
-	path = src/ext/zlib
-	url = https://github.com/w3ntao/zlib.git
+path = src/ext/zlib
+url = https://github.com/w3ntao/zlib.git
+
+[submodule "src/ext/openexr"]
+path = src/ext/openexr
+url = https://github.com/w3ntao/openexr.git
+branch = cuda-conflict-workaround
