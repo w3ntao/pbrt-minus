@@ -47,6 +47,11 @@ inline FloatType safe_asin(FloatType x) {
     return std::asin(clamp<FloatType>(x, -1, 1));
 }
 
+PBRT_CPU_GPU
+inline float safe_acos(float x) {
+    return std::acos(clamp<FloatType>(x, -1, 1));
+}
+
 template <typename T>
 PBRT_CPU_GPU std::enable_if_t<std::is_floating_point_v<T>, bool> is_inf(T v) {
 #if defined(__CUDA_ARCH__)

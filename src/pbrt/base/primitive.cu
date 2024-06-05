@@ -1,6 +1,23 @@
 #include "pbrt/base/primitive.h"
+
 #include "pbrt/primitives/simple_primitives.h"
 #include "pbrt/primitives/geometric_primitive.h"
+
+const Primitive *Primitive::create_simple_primitive(const Shape *shape, const Material *material,
+                                                    std::vector<void *> &gpu_dynamic_pointers) {
+    SimplePrimitive *simple_primitive;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&simple_primitive, sizeof(SimplePrimitive)));
+    Primitive *primitive;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&primitive, sizeof(Primitive)));
+
+    gpu_dynamic_pointers.push_back(simple_primitive);
+    gpu_dynamic_pointers.push_back(primitive);
+
+    simple_primitive->init(shape, material);
+    primitive->init(simple_primitive);
+
+    return primitive;
+}
 
 PBRT_CPU_GPU
 void Primitive::init(const SimplePrimitive *simple_primitive) {

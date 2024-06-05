@@ -8,7 +8,7 @@
 #include "pbrt/scene/parameter_dict.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 
-void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterDict &parameters,
+void DiffuseAreaLight::init(const Transform &_render_from_light, const ParameterDict &parameters,
                             const Shape *_shape, const GPU::GlobalVariable *global_variable) {
     auto rgb_l = parameters.get_rgb("L", std::nullopt);
 
@@ -29,11 +29,10 @@ void DiffuseAreaLight::init(const Transform &render_from_light, const ParameterD
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
     }
 
-    light_base.light_type = LightType::delta_direction;
-    light_base.render_from_light = render_from_light;
+    light_type = LightType::delta_direction;
+    render_from_light = _render_from_light;
 
     shape = _shape;
-    area = _shape->area();
 
     Spectrum spectrum_l;
     spectrum_l.init(&rgb_illuminant_spectrum_l);

@@ -57,6 +57,8 @@ add_executable(${PROJ_NAME}
         src/pbrt/accelerator/hlbvh.cu
         src/pbrt/bxdfs/dielectric_bxdf.cu
         src/pbrt/euclidean_space/squared_matrix.cu
+
+        src/pbrt/integrators/integrator_base.cu
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu
 
@@ -68,8 +70,11 @@ add_executable(${PROJ_NAME}
         src/pbrt/materials/diffuse_material.cu
 
         src/pbrt/primitives/geometric_primitive.cu
+
         src/pbrt/shapes/loop_subdivide.cu
         src/pbrt/shapes/tri_quad_mesh.cu
+        src/pbrt/shapes/sphere.cu
+
         src/pbrt/spectra/densely_sampled_spectrum.cu
         src/pbrt/spectra/rgb_illuminant_spectrum.cu
         src/pbrt/spectra/rgb_albedo_spectrum.cu

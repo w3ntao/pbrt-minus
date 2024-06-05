@@ -76,6 +76,13 @@ class SurfaceInteraction : public Interaction {
 
     const Material *material;
     const Light *area_light;
+    PBRT_CPU_GPU
+    SurfaceInteraction()
+        : Interaction(Point3fi(NAN, NAN, NAN), Normal3f(NAN, NAN, NAN), Point2f(NAN, NAN),
+                      Vector3f(NAN, NAN, NAN)),
+          dpdu(Vector3f(NAN, NAN, NAN)), dpdv(Vector3f(NAN, NAN, NAN)),
+          dndu(Vector3f(NAN, NAN, NAN)), dndv(Vector3f(NAN, NAN, NAN)), material(nullptr),
+          area_light(nullptr) {}
 
     PBRT_CPU_GPU
     explicit SurfaceInteraction(const Point3fi &pi, const Point2f &uv, const Vector3f &wo,
@@ -128,4 +135,10 @@ struct ShapeIntersection {
 
     PBRT_CPU_GPU ShapeIntersection(const SurfaceInteraction &si, FloatType t)
         : interaction(si), t_hit(t) {}
+};
+
+struct QuadricIntersection {
+    FloatType t_hit;
+    Point3f p_obj;
+    FloatType phi;
 };

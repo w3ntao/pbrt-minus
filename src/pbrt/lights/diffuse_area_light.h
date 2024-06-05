@@ -14,9 +14,9 @@ namespace GPU {
 class GlobalVariable;
 }
 
-class DiffuseAreaLight {
+class DiffuseAreaLight : public LightBase {
   public:
-    void init(const Transform &render_from_light, const ParameterDict &parameters,
+    void init(const Transform &_render_from_light, const ParameterDict &parameters,
               const Shape *_shape, const GPU::GlobalVariable *global_variable);
 
     PBRT_GPU
@@ -28,9 +28,7 @@ class DiffuseAreaLight {
                                                  SampledWavelengths &lambda) const;
 
   private:
-    LightBase light_base;
     const Shape *shape;
-    FloatType area;
     bool two_sided;
     DenselySampledSpectrum l_emit;
     FloatType scale;

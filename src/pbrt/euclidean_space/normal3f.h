@@ -25,6 +25,14 @@ class Normal3f {
         return Vector3f(x, y, z);
     }
 
+    PBRT_CPU_GPU FloatType length() const {
+        return std::sqrt(sqr(x) + sqr(y) + sqr(z));
+    }
+
+    PBRT_CPU_GPU Normal3f normalize() const {
+        return *this / length();
+    }
+
     PBRT_CPU_GPU
     FloatType dot(const Normal3f &n) const {
         return FMA(x, n.x, sum_of_products(y, n.y, z, n.z));
@@ -71,6 +79,10 @@ class Normal3f {
 
     PBRT_CPU_GPU void operator*=(FloatType factor) {
         *this = *this * factor;
+    }
+
+    PBRT_CPU_GPU Normal3f operator/(FloatType divisor) const {
+        return Normal3f(x / divisor, y / divisor, z / divisor);
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Normal3f &n) {

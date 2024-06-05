@@ -54,4 +54,9 @@ class Point3fi : public Point3<Interval> {
     bool is_exact() const {
         return x.width() == 0 && y.width() == 0 && z.width() == 0;
     }
+
+    template <typename U>
+    PBRT_CPU_GPU Point3fi operator-(Vector3<U> v) const {
+        return {x - v.x, y - v.y, z - v.z};
+    }
 };

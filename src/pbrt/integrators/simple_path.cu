@@ -1,5 +1,7 @@
 #include "pbrt/integrators/simple_path.h"
 
+#include "pbrt/integrators/integrator_base.h"
+
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/base/bxdf.h"
 #include "pbrt/base/sampler.h"
@@ -16,11 +18,6 @@
 void SimplePathIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
     base = _base;
     max_depth = _max_depth;
-}
-
-PBRT_GPU
-bool SimplePathIntegrator::fast_intersect(const Ray &ray, FloatType t_max) const {
-    return base->bvh->fast_intersect(ray, t_max);
 }
 
 PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary_ray,
@@ -97,7 +94,7 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
                 SampledSpectrum f = bsdf.f(wo, wi, TransportMode::Radiance) *
                                     wi.abs_dot(isect.shading.n.to_vector3());
 
-                if (f.is_positive() && unoccluded(isect, light_li_sample->p_light)) {
+                if (f.is_positive() && base->unoccluded(isect, light_li_sample->p_light)) {
                     L += beta * f * light_li_sample->l / (sampled_light->p * light_li_sample->pdf);
                 }
             }

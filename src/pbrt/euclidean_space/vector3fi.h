@@ -40,11 +40,23 @@ class Vector3fi : public Vector3<Interval> {
                             Interval::from_value_and_error(v.z, e.z)) {}
 
     PBRT_CPU_GPU
-    Vector3f Error() const {
+    Vector3f to_vector3f() const {
+        return Vector3f(x.midpoint(), y.midpoint(), z.midpoint());
+    }
+
+    PBRT_CPU_GPU
+    Vector3f error() const {
         return {x.width() / 2, y.width() / 2, z.width() / 2};
     }
+
     PBRT_CPU_GPU
-    bool IsExact() const {
+    bool is_exact() const {
         return x.width() == 0 && y.width() == 0 && z.width() == 0;
+    }
+
+    PBRT_CPU_GPU
+    Interval length() const {
+        auto squared_length = x * x + y * y + z * z;
+        return squared_length.sqrt();
     }
 };

@@ -4,8 +4,9 @@
 #include <optional>
 #include <vector>
 
-#include "pbrt/spectrum_util/rgb.h"
+#include "pbrt/euclidean_space/point2.h"
 #include "pbrt/scene/tokenizer.h"
+#include "pbrt/spectrum_util/rgb.h"
 
 class SpectrumTexture;
 class FloatTexture;

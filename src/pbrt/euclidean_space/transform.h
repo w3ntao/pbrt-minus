@@ -1,9 +1,13 @@
 #pragma once
 
+#include "pbrt/base/ray.h"
+#include "pbrt/base/interaction.h"
+
+#include "pbrt/euclidean_space/bounds3.h"
+#include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/vector3fi.h"
 #include "pbrt/euclidean_space/point3fi.h"
 #include "pbrt/euclidean_space/squared_matrix.h"
-#include "pbrt/base/ray.h"
 
 class Transform {
   public:
@@ -225,7 +229,7 @@ class Transform {
         FloatType y = FloatType(v.y);
         FloatType z = FloatType(v.z);
         Vector3f vOutError;
-        if (v.IsExact()) {
+        if (v.is_exact()) {
             vOutError.x =
                 gamma(3) * (std::abs(m[0][0] * x) + std::abs(m[0][1] * y) + std::abs(m[0][2] * z));
             vOutError.y =
@@ -233,7 +237,7 @@ class Transform {
             vOutError.z =
                 gamma(3) * (std::abs(m[2][0] * x) + std::abs(m[2][1] * y) + std::abs(m[2][2] * z));
         } else {
-            Vector3f vInError = v.Error();
+            Vector3f vInError = v.error();
             vOutError.x =
                 (gamma(3) + 1) * (std::abs(m[0][0]) * vInError.x + std::abs(m[0][1]) * vInError.y +
                                   std::abs(m[0][2]) * vInError.z) +
@@ -262,6 +266,16 @@ class Transform {
                           m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z);
     }
 
+    PBRT_CPU_GPU Normal3f operator()(const Normal3f &n) const {
+        FloatType x = n.x;
+        FloatType y = n.y;
+        FloatType z = n.z;
+
+        return Normal3f(inv_m[0][0] * x + inv_m[1][0] * y + inv_m[2][0] * z,
+                        inv_m[0][1] * x + inv_m[1][1] * y + inv_m[2][1] * z,
+                        inv_m[0][2] * x + inv_m[1][2] * y + inv_m[2][2] * z);
+    }
+
     PBRT_CPU_GPU
     Ray operator()(const Ray &r, FloatType *tMax = nullptr) const {
         Point3fi o = (*this)(Point3fi(r.o));
@@ -280,10 +294,81 @@ class Transform {
     }
 
     PBRT_CPU_GPU
+    Bounds3f operator()(const Bounds3f &bounds) const {
+        // a smarter way to transform bounds:
+        // takes roughly 2 transforms instead of 8
+        // https://stackoverflow.com/a/58630206
+
+        auto transformed_bounds = Bounds3f ::empty();
+        for (uint idx = 0; idx < 3; ++idx) {
+            transformed_bounds.p_min[idx] = m[idx][3];
+        }
+        transformed_bounds.p_max = transformed_bounds.p_min;
+
+        for (uint i = 0; i < 3; ++i) {
+            for (uint k = 0; k < 3; ++k) {
+                auto a = m[i][k] * bounds.p_min[k];
+                auto b = m[i][k] * bounds.p_max[k];
+
+                auto min_val = std::min(a, b);
+                auto max_val = std::max(a, b);
+
+                transformed_bounds.p_min[i] += min_val;
+                transformed_bounds.p_max[i] += max_val;
+            }
+        }
+
+        return transformed_bounds;
+    }
+
+    PBRT_CPU_GPU
     DifferentialRay operator()(const DifferentialRay &_ray, FloatType *tMax = nullptr) const {
         return DifferentialRay((*this)(_ray.ray, tMax), _ray.hasDifferentials,
                                (*this)(_ray.rxOrigin), (*this)(_ray.ryOrigin),
                                (*this)(_ray.rxDirection), (*this)(_ray.ryDirection));
+    }
+
+    PBRT_CPU_GPU
+    SurfaceInteraction operator()(const SurfaceInteraction &si) const {
+        SurfaceInteraction ret;
+        const Transform &t = *this;
+
+        ret.pi = t(si.pi);
+        // Transform remaining members of _SurfaceInteraction_
+
+        ret.n = t(si.n).normalize();
+        ret.wo = t(si.wo).normalize();
+
+        ret.uv = si.uv;
+        ret.dpdu = t(si.dpdu);
+        ret.dpdv = t(si.dpdv);
+
+        ret.dndu = t(si.dndu);
+        ret.dndv = t(si.dndv);
+
+        ret.shading.n = t(si.shading.n).normalize();
+
+        ret.shading.dpdu = t(si.shading.dpdu);
+        ret.shading.dpdv = t(si.shading.dpdv);
+        ret.shading.dndu = t(si.shading.dndu);
+        ret.shading.dndv = t(si.shading.dndv);
+
+        ret.dudx = si.dudx;
+        ret.dvdx = si.dvdx;
+        ret.dudy = si.dudy;
+        ret.dvdy = si.dvdy;
+        ret.dpdx = t(si.dpdx);
+        ret.dpdy = t(si.dpdy);
+
+        ret.material = si.material;
+        ret.area_light = si.area_light;
+
+        ret.n = ret.n.face_forward(ret.shading.n);
+        ret.shading.n = ret.shading.n.face_forward(ret.n);
+
+        ret.faceIndex = si.faceIndex;
+
+        return ret;
     }
 
     template <typename T>

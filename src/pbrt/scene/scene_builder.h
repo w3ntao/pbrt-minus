@@ -710,7 +710,24 @@ class SceneBuilder {
             return;
         }
 
-        if (type_of_shape == "disk" || type_of_shape == "sphere") {
+        if (type_of_shape == "sphere") {
+            auto shape_sphere = Shape::create_sphere(
+                get_render_from_object(), get_render_from_object().inverse(),
+                graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
+
+            if (graphics_state.area_light_entity) {
+                printf("\nbuilding Sphere: ignore area light for the moment\n\n");
+            } else {
+                auto primitive = Primitive::create_simple_primitive(
+                    shape_sphere, graphics_state.material, gpu_dynamic_pointers);
+
+                gpu_primitives.push_back(primitive);
+            }
+
+            return;
+        }
+
+        if (type_of_shape == "disk") {
             printf("\nignore Shape::%s for the moment\n\n", type_of_shape.c_str());
             return;
         }

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "pbrt/util/bit_arithmetic.h"
 #include "pbrt/util/utility_math.h"
+#include "pbrt/util/util.h"
 
 class Interval {
   public:
@@ -56,6 +57,10 @@ class Interval {
         return exactly(v);
     }
 
+    PBRT_CPU_GPU bool operator==(const Interval &i) const {
+        return low == i.low && high == i.high;
+    }
+
     PBRT_CPU_GPU
     bool cover(FloatType v) const {
         return v >= low && v <= high;
@@ -76,9 +81,23 @@ class Interval {
     }
 
     PBRT_CPU_GPU
+    Interval operator-(const Interval &i) const {
+        return {sub_round_down(low, i.high), sub_round_up(high, i.low)};
+    }
+
+    PBRT_CPU_GPU
     Interval operator*(FloatType f) const {
         return f > 0.0 ? Interval(mul_round_down(f, low), mul_round_up(f, high))
                        : Interval(mul_round_down(f, high), mul_round_up(f, low));
+    }
+
+    PBRT_CPU_GPU
+    Interval operator*(Interval i) const {
+        FloatType lp[4] = {mul_round_down(low, i.low), mul_round_down(high, i.low),
+                           mul_round_down(low, i.high), mul_round_down(high, i.high)};
+        FloatType hp[4] = {mul_round_up(low, i.low), mul_round_up(high, i.low),
+                           mul_round_up(low, i.high), mul_round_up(high, i.high)};
+        return {std::min({lp[0], lp[1], lp[2], lp[3]}), std::max({hp[0], hp[1], hp[2], hp[3]})};
     }
 
     PBRT_CPU_GPU
@@ -97,16 +116,19 @@ class Interval {
         return {std::min({lowQuot[0], lowQuot[1], lowQuot[2], lowQuot[3]}),
                 std::max({highQuot[0], highQuot[1], highQuot[2], highQuot[3]})};
     }
+
+    PBRT_CPU_GPU
+    Interval sqrt() const {
+        return {sqrt_round_down(low), sqrt_round_up(high)};
+    }
 };
 
-PBRT_GPU
-inline Interval sqr(Interval i) {
+PBRT_CPU_GPU
+inline Interval sqr(const Interval &i) {
     FloatType abs_low = std::abs(i.low);
     FloatType abs_high = std::abs(i.high);
     if (abs_low > abs_high) {
-        auto temp = abs_low;
-        abs_low = abs_high;
-        abs_high = temp;
+        pstd::swap(abs_low, abs_high);
     }
 
     if (i.cover(0)) {

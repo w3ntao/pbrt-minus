@@ -810,9 +810,7 @@ uint HLBVH::partition_morton_primitives(const uint start, const uint end,
         }
 
         if (left < right) {
-            const auto temp = morton_primitives[left];
-            morton_primitives[left] = morton_primitives[right];
-            morton_primitives[right] = temp;
+            pstd::swap(morton_primitives[left], morton_primitives[right]);
             continue;
         }
 

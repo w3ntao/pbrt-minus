@@ -1,13 +1,18 @@
 #pragma once
 
 #include <cuda/std/optional>
+#include <vector>
 
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/ray.h"
 
+class Sphere;
 class Triangle;
+
+class Transform;
+class ParameterDict;
 
 struct ShapeSampleContext {
     Point3fi pi;
@@ -29,10 +34,19 @@ class Shape {
   public:
     enum class Type {
         triangle,
+        sphere,
     };
+
+    static const Shape *create_sphere(const Transform &render_from_object,
+                                      const Transform &object_from_render, bool reverse_orientation,
+                                      const ParameterDict &parameters,
+                                      std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     void init(const Triangle *triangle);
+
+    PBRT_CPU_GPU
+    void init(const Sphere *sphere);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const;
@@ -51,5 +65,5 @@ class Shape {
 
   private:
     Type type;
-    const void *ptr;
+    const void *shape;
 };
