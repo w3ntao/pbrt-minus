@@ -1,16 +1,19 @@
 [submodule "src/ext/lodepng"]
 path = src/ext/lodepng
 url = https://github.com/w3ntao/lodepng.git
+branch = master
 
 [submodule "src/ext/rply"]
 path = src/ext/rply
 url = https://github.com/w3ntao/rply.git
+branch = main
 
 [submodule "src/ext/zlib"]
 path = src/ext/zlib
 url = https://github.com/w3ntao/zlib.git
+branch = master
 
-[submodule "src/ext/openexr"]
-path = src/ext/openexr
-url = https://github.com/w3ntao/openexr.git
-branch = cuda-conflict-workaround
+[submodule "src/ext/tinyexr"]
+path = src/ext/tinyexr
+url = https://github.com/w3ntao/tinyexr.git
+branch = release

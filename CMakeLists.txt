@@ -17,7 +17,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(PROJ_NAME "pbrt-minus")
 
-project(${PROJ_NAME} LANGUAGES CUDA CXX)
+project(${PROJ_NAME} LANGUAGES CUDA CXX C)
 
 option(PBRT_FLOAT_AS_DOUBLE "use 64-bit floats" OFF)
 
@@ -85,12 +85,14 @@ add_executable(${PROJ_NAME}
 
         src/ext/lodepng/lodepng.cpp
         src/ext/rply/rply.cpp
+        src/ext/tinyexr/deps/miniz/miniz.c
 )
 
 target_include_directories(
         ${PROJ_NAME} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         ${ZLIB_INCLUDE_DIRS}
+        ${TINYEXR_INCLUDE_DIRS}
 )
 
 target_link_libraries(

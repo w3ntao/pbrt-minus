@@ -7,6 +7,9 @@
 
 #include "ext/lodepng/lodepng.h"
 
+#define TINYEXR_IMPLEMENTATION
+#include "ext/tinyexr/tinyexr.h"
+
 PBRT_CPU_GPU
 Point2i remap_pixel_coord(const Point2i p, const Point2i resolution, WrapMode2D wrap_mode) {
     if (wrap_mode[0] == WrapMode::OctahedralSphere || wrap_mode[1] == WrapMode::OctahedralSphere) {
@@ -121,13 +124,17 @@ void GPUImage::init_png(const std::string &filename, std::vector<void *> &gpu_dy
 }
 
 void GPUImage::init_exr(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers) {
-    std::vector<RGB> rgb_pixels;
-    uint width;
-    uint height;
-
-    REPORT_FATAL_ERROR();
-    // TODO: progress 2024/06/05: GPUImage::init_exr() not implemented
-
+    float *out; // width * height * RGBA
+    int width;
+    int height;
+    const char *err = nullptr; // or nullptr in C++11
+    if (LoadEXR(&out, &width, &height, filename.c_str(), &err) != TINYEXR_SUCCESS) {
+        if (err) {
+            fprintf(stderr, "ERR : %s\n", err);
+            FreeEXRErrorMessage(err); // release memory of error message.
+        }
+        exit(1);
+    }
     resolution = Point2i(width, height);
 
     RGB *gpu_pixels;
@@ -135,7 +142,12 @@ void GPUImage::init_exr(const std::string &filename, std::vector<void *> &gpu_dy
     gpu_dynamic_pointers.push_back(gpu_pixels);
 
     for (uint idx = 0; idx < width * height; ++idx) {
-        gpu_pixels[idx] = rgb_pixels[idx];
+        auto r = out[idx * 4 + 0];
+        auto g = out[idx * 4 + 1];
+        auto b = out[idx * 4 + 2];
+        // auto alpha = out[idx * 4 + 3];
+
+        gpu_pixels[idx] = RGB(r, g, b);
     }
 
     pixels = gpu_pixels;

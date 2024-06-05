@@ -1,6 +1,6 @@
 # pbrt-minus
 
-A simpler, less performant physically based GPU ray tracer rewritten from PBRT-v4.
+A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT-v4.
 
 ## requisite
 
