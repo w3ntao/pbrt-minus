@@ -26,6 +26,7 @@ struct MaterialEvalContext : public TextureEvalContext {
 class DiffuseMaterial;
 class DielectricMaterial;
 class CoatedDiffuseMaterial;
+class ParameterDict;
 
 class Material {
   public:
@@ -37,6 +38,10 @@ class Material {
 
     static const Material *create_diffuse_material(const SpectrumTexture *texture,
                                                    std::vector<void *> &gpu_dynamic_pointers);
+
+    static const Material *
+    create_coated_diffuse_material(const ParameterDict &parameters,
+                                   std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const DiffuseMaterial *diffuse_material);
 

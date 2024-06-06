@@ -29,7 +29,8 @@ void FloatTexture::init(const FloatConstantTexture *constant_texture) {
 }
 
 const SpectrumTexture *
-SpectrumTexture::create_constant_texture(FloatType val, std::vector<void *> &gpu_dynamic_pointers) {
+SpectrumTexture::create_constant_float_val_texture(FloatType val,
+                                                   std::vector<void *> &gpu_dynamic_pointers) {
     SpectrumConstantTexture *spectrum_constant_texture;
     SpectrumTexture *spectrum_texture;
 
@@ -42,6 +43,25 @@ SpectrumTexture::create_constant_texture(FloatType val, std::vector<void *> &gpu
 
     gpu_dynamic_pointers.push_back(spectrum_constant_texture);
     gpu_dynamic_pointers.push_back(spectrum_texture);
+
+    return spectrum_texture;
+}
+
+const SpectrumTexture *
+SpectrumTexture::create_constant_texture(const Spectrum *spectrum,
+                                         std::vector<void *> &gpu_dynamic_pointers) {
+    SpectrumConstantTexture *spectrum_constant_texture;
+    SpectrumTexture *spectrum_texture;
+
+    CHECK_CUDA_ERROR(
+        cudaMallocManaged(&spectrum_constant_texture, sizeof(SpectrumConstantTexture)));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
+
+    gpu_dynamic_pointers.push_back(spectrum_constant_texture);
+    gpu_dynamic_pointers.push_back(spectrum_texture);
+
+    spectrum_constant_texture->init(spectrum);
+    spectrum_texture->init(spectrum_constant_texture);
 
     return spectrum_texture;
 }

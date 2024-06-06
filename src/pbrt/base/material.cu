@@ -13,9 +13,27 @@ const Material *Material::create_diffuse_material(const SpectrumTexture *texture
 
     Material *material;
     CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
-    material->init(diffuse_material);
-
     gpu_dynamic_pointers.push_back(material);
+
+    material->init(diffuse_material);
+    
+    return material;
+}
+
+const Material *
+Material::create_coated_diffuse_material(const ParameterDict &parameters,
+                                         std::vector<void *> &gpu_dynamic_pointers) {
+    CoatedDiffuseMaterial *coated_diffuse_material;
+    Material *material;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&coated_diffuse_material, sizeof(CoatedDiffuseMaterial)));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+
+    gpu_dynamic_pointers.push_back(coated_diffuse_material);
+    gpu_dynamic_pointers.push_back(material);
+
+    coated_diffuse_material->init(parameters, gpu_dynamic_pointers);
+    material->init(coated_diffuse_material);
+
     return material;
 }
 

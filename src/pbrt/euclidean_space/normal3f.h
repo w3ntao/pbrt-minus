@@ -25,6 +25,10 @@ class Normal3f {
         return Vector3f(x, y, z);
     }
 
+    PBRT_CPU_GPU Normal3f abs() const {
+        return Normal3f(std::abs(x), std::abs(y), std::abs(z));
+    }
+
     PBRT_CPU_GPU FloatType length() const {
         return std::sqrt(sqr(x) + sqr(y) + sqr(z));
     }

@@ -7,6 +7,8 @@
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/util/macro.h"
 
+class ShapeSample;
+class ShapeSampleContext;
 class ParameterDict;
 
 class Sphere {
@@ -24,11 +26,16 @@ class Sphere {
     Bounds3f bounds() const;
 
     PBRT_CPU_GPU
+    FloatType area() const {
+        return phi_max * radius * (z_max - z_min);
+    }
+
+    PBRT_GPU
     bool fast_intersect(const Ray &r, FloatType t_max) const {
         return basic_intersect(r, t_max).has_value();
     }
 
-    PBRT_CPU_GPU
+    PBRT_GPU
     cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const {
         auto isect = basic_intersect(ray, t_max);
         if (!isect) {
@@ -38,6 +45,12 @@ class Sphere {
         SurfaceInteraction intr = interaction_from_intersection(*isect, -ray.d);
         return ShapeIntersection{intr, isect->t_hit};
     }
+
+    PBRT_GPU
+    cuda::std::optional<ShapeSample> sample(const Point2f &u) const;
+
+    PBRT_GPU
+    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, Point2f u) const;
 
   private:
     FloatType radius;
@@ -54,7 +67,7 @@ class Sphere {
     bool reverse_orientation;
     bool transform_swaps_handedness;
 
-    PBRT_CPU_GPU
+    PBRT_GPU
     cuda::std::optional<QuadricIntersection> basic_intersect(const Ray &r, FloatType tMax) const;
 
     PBRT_CPU_GPU

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <cuda/std/optional>
 
 #include "pbrt/base/interaction.h"
@@ -7,11 +8,18 @@
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 
+template <typename T>
+class Bounds3;
+
+namespace GPU {
+class GlobalVariable;
+}
+
 class Light;
 class DiffuseAreaLight;
 class ImageInfiniteLight;
-template <typename T>
-class Bounds3;
+class Shape;
+class ParameterDict;
 
 enum class LightType {
     delta_position,
@@ -61,6 +69,11 @@ class Light {
         diffuse_area_light,
         image_infinite_light,
     };
+
+    static Light *create_diffuse_area_light(const Transform &_render_from_light,
+                                            const ParameterDict &parameters, const Shape *_shape,
+                                            const GPU::GlobalVariable *global_variable,
+                                            std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     void init(DiffuseAreaLight *diffuse_area_light);

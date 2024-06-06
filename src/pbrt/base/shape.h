@@ -23,6 +23,36 @@ struct ShapeSampleContext {
     Point3f p() const {
         return pi.to_point3f();
     }
+
+    PBRT_CPU_GPU
+    inline Point3f offset_ray_origin(const Vector3f &w) const {
+        // Find vector _offset_ to corner of error bounds and compute initial _po_
+        FloatType d = n.abs().dot(pi.error());
+
+        Vector3f offset = d * n.to_vector3();
+        if (n.dot(w) < 0) {
+            offset = -offset;
+        }
+
+        Point3f po = pi.to_point3f() + offset;
+
+        // Round offset point _po_ away from _p_
+        for (int i = 0; i < 3; ++i) {
+            if (offset[i] > 0) {
+                po[i] = next_float_up(po[i]);
+
+            } else if (offset[i] < 0) {
+                po[i] = next_float_down(po[i]);
+            }
+        }
+
+        return po;
+    }
+
+    PBRT_CPU_GPU
+    inline Point3f offset_ray_origin(const Point3f &pt) const {
+        return this->offset_ray_origin(pt - p());
+    }
 };
 
 struct ShapeSample {

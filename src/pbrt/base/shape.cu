@@ -52,6 +52,10 @@ FloatType Shape::area() const {
     case (Type::triangle): {
         return ((Triangle *)shape)->area();
     }
+
+    case (Type::sphere): {
+        return ((Sphere *)shape)->area();
+    }
     }
 
     REPORT_FATAL_ERROR();
@@ -96,6 +100,10 @@ cuda::std::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
     switch (type) {
     case (Type::triangle): {
         return ((Triangle *)shape)->sample(ctx, u);
+    }
+
+    case (Type::sphere): {
+        return ((Sphere *)shape)->sample(ctx, u);
     }
     }
 

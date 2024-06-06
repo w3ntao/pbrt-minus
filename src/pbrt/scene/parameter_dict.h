@@ -7,6 +7,7 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/scene/tokenizer.h"
 #include "pbrt/spectrum_util/rgb.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
 
 class SpectrumTexture;
 class FloatTexture;
@@ -18,8 +19,8 @@ class ParameterDict {
     explicit ParameterDict(
         const std::vector<Token> &tokens,
         const std::map<std::string, const SpectrumTexture *> &named_spectrum_texture,
-        const std::string &_root)
-        : root(_root) {
+        const std::string &_root, const RGBColorSpace *_rgb_color_space)
+        : root(_root), rgb_color_space(_rgb_color_space) {
         // the 1st token is Keyword
         // the 2nd token is String
         // e.g. { Shape "trianglemesh" }, { Camera "perspective" }
@@ -124,6 +125,8 @@ class ParameterDict {
         }
     }
 
+    const RGBColorSpace *rgb_color_space = nullptr;
+
     bool has_floats(const std::string &key) const {
         return floats.find(key) != floats.end();
     }
@@ -210,7 +213,7 @@ class ParameterDict {
     RGB get_rgb(const std::string &key, std::optional<RGB> default_val) const {
         if (rgbs.find(key) == rgbs.end()) {
             if (!default_val.has_value()) {
-                printf("%s(): key not available\n", __func__);
+                printf("%s(): key not available: %s\n", __func__, key.c_str());
                 REPORT_FATAL_ERROR();
             }
 

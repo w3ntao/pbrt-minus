@@ -21,8 +21,8 @@ class CoatedDiffuseMaterial {
     const SpectrumTexture *reflectance;
     const SpectrumTexture *albedo;
 
-    const FloatTexture *uRoughness;
-    const FloatTexture *vRoughness;
+    const FloatTexture *u_roughness;
+    const FloatTexture *v_roughness;
     const FloatTexture *thickness;
     const FloatTexture *g;
 

@@ -129,9 +129,14 @@ class Point3 {
         return Point3(_x, _y, _z);
     }
 
-    PBRT_CPU_GPU FloatType distance(const Point3 &p) {
-        auto squared_length = sqr(x - p.x) + sqr(y - p.y) + sqr(z - p.z);
-        return std::sqrt(squared_length);
+    PBRT_CPU_GPU
+    FloatType inline squared_distance(const Point3 &p) const {
+        return sqr(x - p.x) + sqr(y - p.y) + sqr(z - p.z);
+    }
+
+    PBRT_CPU_GPU
+    FloatType inline distance(const Point3 &p) const {
+        return std::sqrt(this->squared_distance(p));
     }
 
     PBRT_CPU_GPU void display() const {

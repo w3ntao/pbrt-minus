@@ -1,6 +1,24 @@
 #include "pbrt/base/light.h"
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/image_infinite_light.h"
+Light *Light::create_diffuse_area_light(const Transform &_render_from_light,
+                                        const ParameterDict &parameters, const Shape *_shape,
+                                        const GPU::GlobalVariable *global_variable,
+                                        std::vector<void *> &gpu_dynamic_pointers) {
+
+    DiffuseAreaLight *diffuse_are_light;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_are_light, sizeof(DiffuseAreaLight)));
+    Light *light;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
+
+    gpu_dynamic_pointers.push_back(diffuse_are_light);
+    gpu_dynamic_pointers.push_back(light);
+
+    diffuse_are_light->init(_render_from_light, parameters, _shape, global_variable);
+    light->init(diffuse_are_light);
+
+    return light;
+}
 
 PBRT_CPU_GPU
 void Light::init(DiffuseAreaLight *diffuse_area_light) {

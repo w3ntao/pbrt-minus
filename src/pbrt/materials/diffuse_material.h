@@ -18,8 +18,7 @@ class DiffuseMaterial {
     static const DiffuseMaterial *create(const SpectrumTexture *_reflectance,
                                          std::vector<void *> &gpu_dynamic_pointers);
 
-    void init(const ParameterDict &parameters, std::vector<void *> &gpu_dynamic_pointers,
-              const RGBColorSpace *color_space);
+    void init(const ParameterDict &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_GPU
     DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;

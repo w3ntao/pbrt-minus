@@ -22,8 +22,7 @@ const DiffuseMaterial *DiffuseMaterial::create(const SpectrumTexture *_reflectan
 }
 
 void DiffuseMaterial::init(const ParameterDict &parameters,
-                           std::vector<void *> &gpu_dynamic_pointers,
-                           const RGBColorSpace *color_space) {
+                           std::vector<void *> &gpu_dynamic_pointers) {
     auto key = "reflectance";
 
     if (parameters.has_rgb(key)) {
@@ -34,8 +33,8 @@ void DiffuseMaterial::init(const ParameterDict &parameters,
         CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
 
         auto rgb_val = parameters.get_rgb(key, std::nullopt);
-        spectrum_constant_texture->init(
-            Spectrum::create_rgb_albedo_spectrum(rgb_val, gpu_dynamic_pointers, color_space));
+        spectrum_constant_texture->init(Spectrum::create_rgb_albedo_spectrum(
+            rgb_val, gpu_dynamic_pointers, parameters.rgb_color_space));
         spectrum_texture->init(spectrum_constant_texture);
 
         reflectance = spectrum_texture;

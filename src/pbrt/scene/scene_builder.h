@@ -27,7 +27,6 @@
 
 #include "pbrt/light_samplers/uniform_light_sampler.h"
 
-#include "pbrt/materials/coated_diffuse_material.h"
 #include "pbrt/materials/diffuse_material.h"
 #include "pbrt/materials/dielectric_material.h"
 
@@ -219,7 +218,8 @@ class SceneBuilder {
             gpu_dynamic_pointers.push_back(ptr);
         }
 
-        auto texture = SpectrumTexture::create_constant_texture(0.5, gpu_dynamic_pointers);
+        auto texture =
+            SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
         graphics_state.material = Material::create_diffuse_material(texture, gpu_dynamic_pointers);
     }
 
@@ -249,8 +249,8 @@ class SceneBuilder {
     }
 
     void build_camera() {
-        auto parameters =
-            ParameterDict(sub_vector(camera_tokens, 2), named_spectrum_texture, this->root);
+        auto parameters = ParameterDict(sub_vector(camera_tokens, 2), named_spectrum_texture, root,
+                                        renderer->global_variables->rgb_color_space);
         const auto camera_type = camera_tokens[1].values[0];
         if (camera_type == "perspective") {
             auto camera_from_world = graphics_state.transform;
@@ -288,8 +288,8 @@ class SceneBuilder {
     }
 
     void build_film() {
-        auto parameters =
-            ParameterDict(sub_vector(film_tokens, 2), named_spectrum_texture, this->root);
+        auto parameters = ParameterDict(sub_vector(film_tokens, 2), named_spectrum_texture, root,
+                                        renderer->global_variables->rgb_color_space);
 
         auto _resolution_x = parameters.get_integer("xresolution")[0];
         auto _resolution_y = parameters.get_integer("yresolution")[0];
@@ -355,8 +355,8 @@ class SceneBuilder {
 
     void build_sampler() {
         // TODO: sampler is not parsed, only pixelsamples read
-        const auto parameters =
-            ParameterDict(sub_vector(sampler_tokens, 2), named_spectrum_texture, this->root);
+        const auto parameters = ParameterDict(sub_vector(sampler_tokens, 2), named_spectrum_texture,
+                                              root, renderer->global_variables->rgb_color_space);
         auto samples_from_parameters = parameters.get_integer("pixelsamples");
 
         if (!samples_per_pixel) {
@@ -509,13 +509,13 @@ class SceneBuilder {
             return;
         }
 
-        const std::string error =
-            "parse_tokens(): unknown Integrator name: `" + integrator_name.value() + "`";
-        throw std::runtime_error(error.c_str());
+        printf("\n%s(): unknown Integrator: %s\n\n", __func__, integrator_name.value().c_str());
+        REPORT_FATAL_ERROR();
     }
 
     void parse_light_source(const std::vector<Token> &tokens) {
-        auto parameters = ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root);
+        auto parameters = ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root,
+                                        renderer->global_variables->rgb_color_space);
 
         auto texture_file = root + "/" + parameters.get_string("filename", {});
 
@@ -561,24 +561,14 @@ class SceneBuilder {
             throw std::runtime_error("expect Keyword(Material)");
         }
 
-        const auto parameters =
-            ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, this->root);
+        const auto parameters = ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root,
+                                              renderer->global_variables->rgb_color_space);
         auto type_of_material = tokens[1].values[0];
 
         if (type_of_material == "coateddiffuse") {
-            CoatedDiffuseMaterial *coated_diffuse_material;
-            Material *material;
-            CHECK_CUDA_ERROR(
-                cudaMallocManaged(&coated_diffuse_material, sizeof(CoatedDiffuseMaterial)));
-            CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+            graphics_state.material =
+                Material::create_coated_diffuse_material(parameters, gpu_dynamic_pointers);
 
-            coated_diffuse_material->init(parameters, gpu_dynamic_pointers);
-            material->init(coated_diffuse_material);
-
-            graphics_state.material = material;
-
-            gpu_dynamic_pointers.push_back(coated_diffuse_material);
-            gpu_dynamic_pointers.push_back(material);
             return;
         }
 
@@ -588,8 +578,7 @@ class SceneBuilder {
             CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material, sizeof(DiffuseMaterial)));
             CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
 
-            diffuse_material->init(parameters, gpu_dynamic_pointers,
-                                   renderer->global_variables->rgb_color_space);
+            diffuse_material->init(parameters, gpu_dynamic_pointers);
             material->init(diffuse_material);
 
             graphics_state.material = material;
@@ -657,9 +646,9 @@ class SceneBuilder {
                 "world_area_light_source: only `diffuse` supported at the moment");
         }
 
-        graphics_state.area_light_entity =
-            AreaLightEntity(tokens[1].values[0], ParameterDict(sub_vector(tokens, 2),
-                                                               named_spectrum_texture, this->root));
+        graphics_state.area_light_entity = AreaLightEntity(
+            tokens[1].values[0], ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root,
+                                               renderer->global_variables->rgb_color_space));
     }
 
     void parse_shape(const std::vector<Token> &tokens) {
@@ -667,8 +656,8 @@ class SceneBuilder {
             throw std::runtime_error("expect Keyword(Shape)");
         }
 
-        const auto parameters =
-            ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, this->root);
+        const auto parameters = ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root,
+                                              renderer->global_variables->rgb_color_space);
 
         auto type_of_shape = tokens[1].values[0];
         if (type_of_shape == "trianglemesh") {
@@ -711,16 +700,33 @@ class SceneBuilder {
         }
 
         if (type_of_shape == "sphere") {
-            auto shape_sphere = Shape::create_sphere(
+            auto sphere = Shape::create_sphere(
                 get_render_from_object(), get_render_from_object().inverse(),
                 graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
 
             if (graphics_state.area_light_entity) {
-                printf("\nbuilding Sphere: ignore area light for the moment\n\n");
-            } else {
-                auto primitive = Primitive::create_simple_primitive(
-                    shape_sphere, graphics_state.material, gpu_dynamic_pointers);
+                auto diffuse_light = Light::create_diffuse_area_light(
+                    get_render_from_object(), graphics_state.area_light_entity->parameters, sphere,
+                    renderer->global_variables, gpu_dynamic_pointers);
 
+                gpu_lights.push_back(diffuse_light);
+
+                GeometricPrimitive *geometric_primitive;
+                CHECK_CUDA_ERROR(
+                    cudaMallocManaged(&geometric_primitive, sizeof(GeometricPrimitive)));
+                Primitive *primitive;
+                CHECK_CUDA_ERROR(cudaMallocManaged(&primitive, sizeof(Primitive)));
+
+                gpu_dynamic_pointers.push_back(geometric_primitive);
+                gpu_dynamic_pointers.push_back(primitive);
+
+                geometric_primitive->init(sphere, graphics_state.material, diffuse_light);
+                primitive->init(geometric_primitive);
+
+                gpu_primitives.push_back(primitive);
+            } else {
+                auto primitive = Primitive::create_simple_primitive(sphere, graphics_state.material,
+                                                                    gpu_dynamic_pointers);
                 gpu_primitives.push_back(primitive);
             }
 
@@ -742,8 +748,8 @@ class SceneBuilder {
         auto texture_type = tokens[3].values[0];
 
         if (color_type == "spectrum") {
-            auto parameters =
-                ParameterDict(sub_vector(tokens, 4), named_spectrum_texture, this->root);
+            auto parameters = ParameterDict(sub_vector(tokens, 4), named_spectrum_texture, root,
+                                            renderer->global_variables->rgb_color_space);
             if (texture_type == "imagemap") {
                 auto image_texture = SpectrumImageTexture::create(
                     parameters, gpu_dynamic_pointers, renderer->global_variables->rgb_color_space);

@@ -12,6 +12,8 @@
 #include "pbrt/base/interaction.h"
 
 class FloatConstantTexture;
+
+class Spectrum;
 class SpectrumConstantTexture;
 class SpectrumImageTexture;
 class SpectrumScaleTexture;
@@ -69,7 +71,10 @@ class SpectrumTexture {
     };
 
     static const SpectrumTexture *
-    create_constant_texture(FloatType val, std::vector<void *> &gpu_dynamic_pointers);
+    create_constant_float_val_texture(FloatType val, std::vector<void *> &gpu_dynamic_pointers);
+
+    static const SpectrumTexture *
+    create_constant_texture(const Spectrum *spectrum, std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const SpectrumConstantTexture *constant_texture);
 

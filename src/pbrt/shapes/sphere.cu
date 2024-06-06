@@ -1,7 +1,10 @@
 #include "pbrt/shapes/sphere.h"
 
+#include "pbrt/base/shape.h"
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/scene/parameter_dict.h"
+
+#include "pbrt/util/sampling.h"
 #include "pbrt/util/util.h"
 
 const Sphere *Sphere::create(const Transform &render_from_object,
@@ -46,7 +49,7 @@ Bounds3f Sphere::bounds() const {
         Bounds3f(Point3f(-radius, -radius, z_min), Point3f(radius, radius, z_max)));
 }
 
-PBRT_CPU_GPU
+PBRT_GPU
 cuda::std::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r,
                                                                  FloatType tMax) const {
     FloatType phi;
@@ -150,4 +153,117 @@ cuda::std::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r,
     }
 
     return QuadricIntersection{FloatType(tShapeHit), pHit, phi};
+}
+
+PBRT_GPU
+cuda::std::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
+    Point3f pObj = Point3f(0, 0, 0) + radius * sample_uniform_sphere(u);
+
+    // Reproject _pObj_ to sphere surface and compute _pObjError_
+    pObj *= radius / pObj.distance(Point3f(0, 0, 0));
+
+    Vector3f pObjError = gamma(5) * pObj.to_vector3().abs();
+
+    // Compute surface normal for sphere sample and return _ShapeSample_
+    Normal3f nObj(pObj.x, pObj.y, pObj.z);
+    Normal3f n = render_from_object(nObj).normalize();
+
+    if (reverse_orientation) {
+        n *= -1;
+    }
+
+    // Compute $(u, v)$ coordinates for sphere sample
+    FloatType theta = safe_acos(pObj.z / radius);
+    FloatType phi = std::atan2(pObj.y, pObj.x);
+    if (phi < 0) {
+        phi += 2 * compute_pi();
+    }
+
+    Point2f uv(phi / phi_max, (theta - theta_z_min) / (theta_z_max - theta_z_min));
+
+    Point3fi pi = render_from_object(Point3fi(pObj, pObjError));
+
+    return ShapeSample{.interaction = Interaction(pi, n, uv), .pdf = FloatType(1) / area()};
+}
+
+PBRT_GPU
+cuda::std::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, Point2f u) const {
+    // Sample uniformly on sphere if $\pt{}$ is inside it
+    Point3f pCenter = render_from_object(Point3f(0, 0, 0));
+    Point3f pOrigin = ctx.offset_ray_origin(pCenter);
+
+    if (pOrigin.squared_distance(pCenter) <= sqr(radius)) {
+        // Sample shape by area and compute incident direction _wi_
+        auto ss = this->sample(u);
+        Vector3f wi = ss->interaction.p() - ctx.p();
+        if (wi.squared_length() == 0) {
+            return {};
+        }
+
+        wi = wi.normalize();
+
+        // Convert area sampling PDF in _ss_ to solid angle measure
+        ss->pdf /= ss->interaction.n.abs_dot(-wi) / ctx.p().squared_distance(ss->interaction.p());
+
+        if (is_inf(ss->pdf)) {
+            return {};
+        }
+
+        return ss;
+    }
+
+    // Sample sphere uniformly inside subtended cone
+    // Compute quantities related to the $\theta_\roman{max}$ for cone
+    FloatType sinThetaMax = radius / ctx.p().distance(pCenter);
+
+    FloatType sin2ThetaMax = sqr(sinThetaMax);
+    FloatType cosThetaMax = safe_sqrt(1 - sin2ThetaMax);
+    FloatType oneMinusCosThetaMax = 1 - cosThetaMax;
+
+    // Compute $\theta$ and $\phi$ values for sample in cone
+    FloatType cosTheta = (cosThetaMax - 1) * u[0] + 1;
+    FloatType sin2Theta = 1 - sqr(cosTheta);
+    if (sin2ThetaMax < 0.00068523f /* sin^2(1.5 deg) */) {
+        // Compute cone sample via Taylor series expansion for small angles
+        sin2Theta = sin2ThetaMax * u[0];
+        cosTheta = std::sqrt(1 - sin2Theta);
+        oneMinusCosThetaMax = sin2ThetaMax / 2;
+    }
+
+    // Compute angle $\alpha$ from center of sphere to sampled point on surface
+    FloatType cosAlpha =
+        sin2Theta / sinThetaMax + cosTheta * safe_sqrt(1 - sin2Theta / sqr(sinThetaMax));
+    FloatType sinAlpha = safe_sqrt(1 - sqr(cosAlpha));
+
+    // Compute surface normal and sampled point on sphere
+    FloatType phi = u[1] * 2 * compute_pi();
+    Vector3f w = SphericalDirection(sinAlpha, cosAlpha, phi);
+
+    Frame samplingFrame = Frame::from_z((pCenter - ctx.p()).normalize());
+
+    Normal3f n(samplingFrame.from_local(-w));
+
+    Point3f p = pCenter + radius * Point3f(n.x, n.y, n.z);
+    if (reverse_orientation) {
+        n *= -1;
+    }
+
+    // Return _ShapeSample_ for sampled point on sphere
+    // Compute _pError_ for sampled point on sphere
+    Vector3f pError = gamma(5) * p.to_vector3().abs();
+
+    // Compute $(u,v)$ coordinates for sampled point on sphere
+    Point3f pObj = object_from_render(p);
+
+    FloatType theta = safe_acos(pObj.z / radius);
+    FloatType spherePhi = std::atan2(pObj.y, pObj.x);
+
+    if (spherePhi < 0) {
+        spherePhi += 2 * compute_pi();
+    }
+
+    Point2f uv(spherePhi / phi_max, (theta - theta_z_min) / (theta_z_max - theta_z_min));
+
+    return ShapeSample{.interaction = Interaction(Point3fi(p, pError), n, uv),
+                       .pdf = 1 / (2 * compute_pi() * oneMinusCosThetaMax)};
 }
