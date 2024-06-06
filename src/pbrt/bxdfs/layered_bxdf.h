@@ -2,6 +2,7 @@
 
 #include "pbrt/base/media.h"
 #include "pbrt/bxdfs/top_or_bottom_bxdf.h"
+#include "pbrt/util/hash.h"
 #include "pbrt/util/macro.h"
 
 // LayeredBxDF Definition
@@ -84,7 +85,7 @@ class LayeredBxDF {
         }
 
         curandState rand_state;
-        // TODO: build a deterministic RNG like PBRT-v4
+        curand_init(pstd::hash(wi), pstd::hash(wo), 0, &rand_state);
         auto r = [&rand_state]() {
             return std::min<FloatType>(curand_uniform(&rand_state), OneMinusEpsilon);
         };
@@ -274,7 +275,7 @@ class LayeredBxDF {
         bool specularPath = bs->is_specular();
 
         curandState rand_state;
-        // TODO: build a deterministic RNG like PBRT-v4
+        curand_init(pstd::hash(wo), pstd::hash(uc, u), 0, &rand_state);
 
         auto r = [&rand_state]() {
             return std::min<FloatType>(curand_uniform(&rand_state), OneMinusEpsilon);
@@ -388,7 +389,7 @@ class LayeredBxDF {
         }
 
         curandState rand_state;
-        // TODO: build a deterministic RNG like PBRT-v4
+        curand_init(pstd::hash(wi), pstd::hash(wo), 0, &rand_state);
         auto r = [&rand_state]() {
             return std::min<FloatType>(curand_uniform(&rand_state), OneMinusEpsilon);
         };
