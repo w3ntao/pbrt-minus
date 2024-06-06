@@ -20,12 +20,27 @@ void DielectricMaterial::init(const ParameterDict &parameters,
         eta = Spectrum::create_constant_spectrum(1.5, gpu_dynamic_pointers);
     }
 
-    auto float_u_roughness = parameters.get_float("uroughness", 0.0);
-    auto float_v_roughness = parameters.get_float("uroughness", 0.0);
+    auto uroughness_key = "uroughness";
+    if (parameters.has_float_texture(uroughness_key)) {
+        u_roughness = parameters.get_float_texture(uroughness_key);
+    } else if (parameters.has_floats(uroughness_key)) {
+        auto uroughness_val = parameters.get_float(uroughness_key, {});
+        u_roughness = FloatTexture::create(uroughness_val, gpu_dynamic_pointers);
+    } else {
+        auto roughness_val = parameters.get_float("roughness", 0.0);
+        u_roughness = FloatTexture::create(roughness_val, gpu_dynamic_pointers);
+    }
 
-    u_roughness = FloatTexture::create(float_u_roughness, gpu_dynamic_pointers);
-    v_roughness = FloatTexture::create(float_v_roughness, gpu_dynamic_pointers);
-
+    auto vroughness_key = "vroughness";
+    if (parameters.has_float_texture(vroughness_key)) {
+        v_roughness = parameters.get_float_texture(vroughness_key);
+    } else if (parameters.has_floats(vroughness_key)) {
+        auto vroughness_val = parameters.get_float(vroughness_key, {});
+        v_roughness = FloatTexture::create(vroughness_val, gpu_dynamic_pointers);
+    } else {
+        auto roughness_val = parameters.get_float("roughness", 0.0);
+        v_roughness = FloatTexture::create(roughness_val, gpu_dynamic_pointers);
+    }
     remap_roughness = parameters.get_bool("remaproughness", true);
 }
 
@@ -35,7 +50,7 @@ DielectricBxDF DielectricMaterial::get_dielectric_bsdf(const MaterialEvalContext
     // Compute index of refraction for dielectric material
     FloatType sampled_eta = (*eta)(lambda[0]);
     if (!eta->is_constant_spectrum()) {
-        lambda.TerminateSecondary();
+        lambda.terminate_secondary();
     }
 
     // Handle edge case in case lambda[0] is beyond the wavelengths stored by the

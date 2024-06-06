@@ -129,17 +129,16 @@ class HLBVH {
     PBRT_GPU
     cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
-    void build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_pointers,
-                   const std::vector<const Primitive *> &gpu_primitives);
+    void build_bvh(const std::vector<const Primitive *> &gpu_primitives,
+                   std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool);
 
   private:
-    uint build_top_bvh_for_treelets(ThreadPool &thread_pool, uint num_dense_treelets,
-                                    const Treelet *treelets);
+    uint build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_treelets,
+                                    ThreadPool &thread_pool);
 
     void build_upper_sah(const TopBVHArgs &args, const Treelet *treelets,
                          std::vector<TopBVHArgs> &next_level_args, std::atomic_int &node_count,
                          uint offset);
-
     PBRT_GPU
     uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,
                                      FloatType split_val);

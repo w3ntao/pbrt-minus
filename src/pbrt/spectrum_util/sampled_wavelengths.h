@@ -82,7 +82,7 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
-    void TerminateSecondary() {
+    void terminate_secondary() {
         if (SecondaryTerminated()) {
             return;
         }

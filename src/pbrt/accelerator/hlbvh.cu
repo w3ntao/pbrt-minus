@@ -339,8 +339,8 @@ PBRT_GPU cuda::std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray,
     return best_intersection;
 };
 
-void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_pointers,
-                      const std::vector<const Primitive *> &gpu_primitives) {
+void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
+                      std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool) {
     auto start_sorting = std::chrono::system_clock::now();
 
     uint num_total_primitives = gpu_primitives.size();
@@ -521,7 +521,8 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
     auto start_top_bvh = std::chrono::system_clock::now();
 
     const uint top_bvh_node_num =
-        build_top_bvh_for_treelets(thread_pool, dense_treelet_indices.size(), dense_treelets);
+        build_top_bvh_for_treelets(dense_treelets, dense_treelet_indices.size(), thread_pool);
+
     CHECK_CUDA_ERROR(cudaFree(dense_treelets));
 
     auto start_bottom_bvh = std::chrono::system_clock::now();
@@ -586,8 +587,8 @@ void HLBVH::build_bvh(ThreadPool &thread_pool, std::vector<void *> &gpu_dynamic_
            duration_sorting.count(), duration_top_bvh.count(), duration_bottom_bvh.count());
 }
 
-uint HLBVH::build_top_bvh_for_treelets(ThreadPool &thread_pool, uint num_dense_treelets,
-                                       const Treelet *treelets) {
+uint HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_treelets,
+                                       ThreadPool &thread_pool) {
     std::vector<uint> treelet_indices;
     treelet_indices.reserve(num_dense_treelets);
     for (uint idx = 0; idx < num_dense_treelets; idx++) {

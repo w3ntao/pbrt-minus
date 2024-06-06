@@ -8,9 +8,11 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
     if (eta == 1 || mfDistrib.EffectivelySmooth()) {
         // Sample perfect specular dielectric BSDF
         // FloatType R = FrDielectric(CosTheta(wo), eta), T = 1 - R;
-        FloatType R = FrDielectric(wo.cos_theta(), eta), T = 1 - R;
+        FloatType R = FrDielectric(wo.cos_theta(), eta);
+        FloatType T = 1 - R;
         // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission
-        FloatType pr = R, pt = T;
+        FloatType pr = R;
+        FloatType pt = T;
 
         if (!(sampleFlags & BxDFReflTransFlags::Reflection)) {
             pr = 0;

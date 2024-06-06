@@ -71,6 +71,8 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/primitives/geometric_primitive.cu
 
+        src/pbrt/scene/scene_builder.cu
+
         src/pbrt/shapes/loop_subdivide.cu
         src/pbrt/shapes/tri_quad_mesh.cu
         src/pbrt/shapes/sphere.cu

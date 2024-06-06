@@ -95,7 +95,7 @@ CoatedDiffuseBxDF CoatedDiffuseMaterial::get_coated_diffuse_bsdf(const MaterialE
     FloatType sampledEta = (*eta)(lambda[0]);
 
     if (!eta->is_constant_spectrum()) {
-        lambda.TerminateSecondary();
+        lambda.terminate_secondary();
     }
     if (sampledEta == 0) {
         sampledEta = 1;

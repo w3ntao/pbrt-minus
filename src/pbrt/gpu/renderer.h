@@ -75,7 +75,7 @@ class Renderer {
     }
 };
 
-__global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {
+__global__ static void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= mesh->triangles_num) {
         return;
@@ -176,7 +176,7 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     pixels[idx].init_zero();
 }
 
-__global__ void parallel_render(Renderer *renderer, int num_samples) {
+__global__ static void parallel_render(Renderer *renderer, int num_samples) {
     auto camera_base = renderer->camera->get_camerabase();
 
     uint width = camera_base->resolution.x;

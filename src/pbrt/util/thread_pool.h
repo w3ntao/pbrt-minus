@@ -10,7 +10,6 @@ class ThreadPool {
   public:
     ThreadPool() : quit(false), num_active_jobs(0) {
         const uint num_threads = std::thread::hardware_concurrency();
-
         for (uint i = 0; i < num_threads; ++i) {
             threads.emplace_back([this] {
                 while (true) {
@@ -60,7 +59,7 @@ class ThreadPool {
     }
 
     void parallel_execute(const int start, const int end,
-                          const std::function<void(int)> function_ptr) {
+                          const std::function<void(int)> &function_ptr) {
         {
             std::unique_lock<std::mutex> lock(mtx);
             for (int i = start; i < end; ++i) {
@@ -75,6 +74,21 @@ class ThreadPool {
             std::unique_lock<std::mutex> lock(mtx);
             cv.wait(lock, [this] { return num_active_jobs == 0; });
 
+            break;
+        }
+    }
+
+    void submit(const std::function<void()> &function_ptr) {
+        std::unique_lock<std::mutex> lock(mtx);
+        job_queue.emplace(std::move([function_ptr] { function_ptr(); }));
+        num_active_jobs += 1;
+        cv.notify_all();
+    }
+
+    void sync() {
+        while (true) {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait(lock, [this] { return num_active_jobs == 0; });
             break;
         }
     }

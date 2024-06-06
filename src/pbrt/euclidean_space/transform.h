@@ -140,8 +140,9 @@ class Transform {
         auto direction = (look - position).normalize();
 
         if (up.normalize().cross(direction).length() == 0.0) {
-            throw std::invalid_argument(
-                "LookAt: `up` vector and viewing direction are pointing in the same direction");
+            printf("%s(): `up` vector and viewing direction are pointing in the same direction\n\n",
+                   __func__);
+            REPORT_FATAL_ERROR();
         }
 
         auto right = up.normalize().cross(direction).normalize();

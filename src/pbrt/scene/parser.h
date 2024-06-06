@@ -4,7 +4,7 @@
 
 #include "pbrt/scene/lexer.h"
 
-std::vector<Token> parse_pbrt_into_token(const std::string &filename) {
+static std::vector<Token> parse_pbrt_into_token(const std::string &filename) {
     auto lexer = Lexer(filename);
 
     std::vector<Token> tokens;
