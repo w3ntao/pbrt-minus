@@ -595,51 +595,24 @@ uint HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_t
         treelet_indices.emplace_back(idx);
     }
 
-    std::vector<TopBVHArgs> next_level_args = {TopBVHArgs{
-        .build_node_idx = 0,
-        .treelet_indices = treelet_indices,
-    }};
+    std::atomic_int node_count = 1; // the first index used for the root
 
-    uint depth = 0;
-    std::atomic_int node_count = 1; // for the root
-    uint current_node_num = 0;
+    thread_pool.submit([this, _treelet_indices = std::move(treelet_indices), &treelets, &node_count,
+                        &thread_pool] {
+        build_upper_sah(0, _treelet_indices, treelets, std::ref(node_count), std::ref(thread_pool),
+                        true);
+    });
+    thread_pool.sync();
 
-    while (node_count.load() > current_node_num) {
-        if (DEBUGGING) {
-            printf("HLBVH: building top BVH: depth %d: nodes: %zu\n", depth,
-                   next_level_args.size());
-        }
-        depth += 1;
-
-        const auto current_level_args = std::move(next_level_args);
-        next_level_args =
-            std::vector<TopBVHArgs>((node_count.load() - current_node_num) * 2, TopBVHArgs{});
-
-        current_node_num = node_count.load();
-
-        thread_pool.parallel_execute(
-            0, current_level_args.size(),
-            [this, &current_level_args, &next_level_args, &treelets, &node_count,
-             current_node_num](const int idx) {
-                if (current_level_args[idx].treelet_indices.empty()) {
-                    return;
-                }
-                this->build_upper_sah(current_level_args[idx], treelets, std::ref(next_level_args),
-                                      std::ref(node_count), current_node_num);
-            });
-    }
-    printf("HLBVH: build top BVH with SAH: (number of buckets: %d)\n", NUM_BUCKETS);
-    printf("HLBVH: top BVH nodes: %u, max depth: %u\n", node_count.load(), depth);
+    printf("HLBVH: build top BVH with SAH in %d buckets\n", NUM_BUCKETS);
+    printf("HLBVH: top BVH nodes: %u\n", node_count.load());
 
     return node_count.load();
 }
 
-void HLBVH::build_upper_sah(const TopBVHArgs &args, const Treelet *treelets,
-                            std::vector<TopBVHArgs> &next_level_args, std::atomic_int &node_count,
-                            uint offset) {
-    const auto treelet_indices = args.treelet_indices;
-    const auto build_node_idx = args.build_node_idx;
-
+void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indices,
+                            const Treelet *treelets, std::atomic_int &node_count,
+                            ThreadPool &thread_pool, bool spawn) {
     if (treelet_indices.size() == 1) {
         uint treelet_idx = treelet_indices[0];
         const auto &current_treelet = treelets[treelet_idx];
@@ -670,6 +643,9 @@ void HLBVH::build_upper_sah(const TopBVHArgs &args, const Treelet *treelets,
         std::vector<uint> treelet_indices;
     };
     BVHSplitBucket buckets[NUM_BUCKETS];
+    for (auto &bucket : buckets) {
+        bucket.treelet_indices.reserve(treelet_indices.size() / NUM_BUCKETS * 2);
+    }
 
     const auto base_val = bounds_of_centroid.p_min[split_axis];
     const auto span = bounds_of_centroid.p_max[split_axis] - bounds_of_centroid.p_min[split_axis];
@@ -779,17 +755,38 @@ void HLBVH::build_upper_sah(const TopBVHArgs &args, const Treelet *treelets,
         }
     }
 
+    treelet_indices.clear();
+
     const uint left_build_node_idx = node_count.fetch_add(2);
     const uint right_build_node_idx = left_build_node_idx + 1;
 
     build_nodes[build_node_idx].init_interior(split_axis, left_build_node_idx,
                                               full_bounds_of_current_level);
 
-    next_level_args[left_build_node_idx - offset].build_node_idx = left_build_node_idx;
-    next_level_args[left_build_node_idx - offset].treelet_indices = left_indices;
+    const uint MIN_SIZE_TO_SPAWN = 32;
+    // don't bother to send jobs into queue when the size is too small
 
-    next_level_args[right_build_node_idx - offset].build_node_idx = right_build_node_idx;
-    next_level_args[right_build_node_idx - offset].treelet_indices = right_indices;
+    if (spawn && left_indices.size() >= MIN_SIZE_TO_SPAWN) {
+        thread_pool.submit([this, left_build_node_idx, _left_indices = std::move(left_indices),
+                            &treelets, &node_count, &thread_pool] {
+            build_upper_sah(left_build_node_idx, _left_indices, treelets, std::ref(node_count),
+                            std::ref(thread_pool), true);
+        });
+    } else {
+        build_upper_sah(left_build_node_idx, std::move(left_indices), treelets,
+                        std::ref(node_count), std::ref(thread_pool), false);
+    }
+
+    if (spawn && right_indices.size() >= MIN_SIZE_TO_SPAWN) {
+        thread_pool.submit([this, right_build_node_idx, _right_indices = std::move(right_indices),
+                            &treelets, &node_count, &thread_pool] {
+            build_upper_sah(right_build_node_idx, _right_indices, treelets, std::ref(node_count),
+                            std::ref(thread_pool), true);
+        });
+    } else {
+        build_upper_sah(right_build_node_idx, std::move(right_indices), treelets,
+                        std::ref(node_count), std::ref(thread_pool), false);
+    }
 }
 
 PBRT_GPU

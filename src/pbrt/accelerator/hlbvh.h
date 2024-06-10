@@ -11,18 +11,19 @@
 class ThreadPool;
 
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
-const uint BIT_LENGTH_OF_TREELET_MASK = 21;
+const uint BIT_LENGTH_OF_TREELET_MASK = 24;
 const uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_OF_TREELET_MASK;
 
 constexpr uint MAX_TREELET_NUM = 1 << BIT_LENGTH_OF_TREELET_MASK;
 /*
- 2 ^ 12 = 4096
- 2 ^ 15 = 32768
- 2 ^ 18 = 262144
- 2 ^ 21 = 2097152
- 2 ^ 24 = 16777216
- 2 ^ 27 = 134217728
- 2 ^ 30 = 1073741824
+ total treelets:        ->    splits for each dimension:
+ 2 ^ 12 = 4096                2 ^ 4  = 16
+ 2 ^ 15 = 32768               2 ^ 5  = 32
+ 2 ^ 18 = 262144              2 ^ 6  = 64
+ 2 ^ 21 = 2097152             2 ^ 7  = 128
+ 2 ^ 24 = 16777216            2 ^ 8  = 256
+ 2 ^ 27 = 134217728           2 ^ 9  = 512
+ 2 ^ 30 = 1073741824          2 ^ 10 = 1024
 */
 
 constexpr uint32_t TREELET_MASK = (MAX_TREELET_NUM - 1) << MASK_OFFSET_BIT;
@@ -47,11 +48,6 @@ struct Treelet {
     uint first_primitive_offset;
     uint n_primitives;
     Bounds3f bounds;
-};
-
-struct TopBVHArgs {
-    uint build_node_idx;
-    std::vector<uint> treelet_indices;
 };
 
 struct BottomBVHArgs {
@@ -136,9 +132,10 @@ class HLBVH {
     uint build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_treelets,
                                     ThreadPool &thread_pool);
 
-    void build_upper_sah(const TopBVHArgs &args, const Treelet *treelets,
-                         std::vector<TopBVHArgs> &next_level_args, std::atomic_int &node_count,
-                         uint offset);
+    void build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indices,
+                         const Treelet *treelets, std::atomic_int &node_count,
+                         ThreadPool &thread_pool, bool spawn);
+
     PBRT_GPU
     uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,
                                      FloatType split_val);
