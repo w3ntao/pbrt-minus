@@ -81,8 +81,8 @@ class SceneBuilder {
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
 
-    std::map<std::string, const SpectrumTexture *> named_spectrum_texture;
     std::map<std::string, const Material *> named_material;
+    std::map<std::string, const SpectrumTexture *> named_spectrum_texture;
 
     explicit SceneBuilder(const CommandLineOption &command_line_option);
 
@@ -91,6 +91,11 @@ class SceneBuilder {
             CHECK_CUDA_ERROR(cudaFree(ptr));
         }
         CHECK_CUDA_ERROR(cudaGetLastError());
+    }
+
+    ParameterDict build_parameter_dictionary(const std::vector<Token> &tokens) {
+        return ParameterDict(tokens, pre_computed_spectrum.named_spectra, named_spectrum_texture,
+                             root, renderer->global_variables->rgb_color_space);
     }
 
     void build_camera();

@@ -23,42 +23,53 @@ struct MaterialEvalContext : public TextureEvalContext {
     Vector3f dpdus;
 };
 
-class DiffuseMaterial;
-class DielectricMaterial;
 class CoatedDiffuseMaterial;
+class ConductorMaterial;
+class DielectricMaterial;
+class DiffuseMaterial;
 class ParameterDict;
 
 class Material {
   public:
     enum class Type {
+        coated_diffuse,
+        conductor,
         diffuse,
         dielectric,
-        coated_diffuse,
     };
-
-    static const Material *create_diffuse_material(const SpectrumTexture *texture,
-                                                   std::vector<void *> &gpu_dynamic_pointers);
 
     static const Material *
     create_coated_diffuse_material(const ParameterDict &parameters,
                                    std::vector<void *> &gpu_dynamic_pointers);
 
-    void init(const DiffuseMaterial *diffuse_material);
+    static const Material *create_conductor_material(const ParameterDict &parameters,
+                                                     std::vector<void *> &gpu_dynamic_pointers);
 
-    void init(const DielectricMaterial *dielectric_material);
+    static const Material *create_diffuse_material(const SpectrumTexture *texture,
+                                                   std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const CoatedDiffuseMaterial *coated_diffuse_material);
 
+    void init(const ConductorMaterial *conductor_material);
+
+    void init(const DielectricMaterial *dielectric_material);
+
+    void init(const DiffuseMaterial *diffuse_material);
+
     PBRT_GPU
-    DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
+    ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,
+                                     SampledWavelengths &lambda) const;
+
+    PBRT_GPU
+    CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
+                                              SampledWavelengths &lambda) const;
 
     PBRT_GPU
     DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
                                        SampledWavelengths &lambda) const;
 
     PBRT_GPU
-    CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
-                                              SampledWavelengths &lambda) const;
+    DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     Type get_material_type() const {

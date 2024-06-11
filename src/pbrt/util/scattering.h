@@ -3,6 +3,8 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/vector3.h"
+
+#include "pbrt/util/complex.h"
 #include "pbrt/util/macro.h"
 #include "pbrt/util/sampling.h"
 
@@ -54,6 +56,33 @@ inline FloatType HenyeyGreenstein(FloatType cosTheta, FloatType g) {
     return 1.0 / (4.0 * compute_pi()) * (1 - sqr(g)) / (denom * safe_sqrt(denom));
 }
 
+PBRT_CPU_GPU inline FloatType FrComplex(FloatType cosTheta_i, pstd::complex<FloatType> eta) {
+    using Complex = pstd::complex<FloatType>;
+    cosTheta_i = clamp<FloatType>(cosTheta_i, 0, 1);
+
+    // Compute complex $\cos\,\theta_\roman{t}$ for Fresnel equations using Snell's law
+    FloatType sin2Theta_i = 1 - sqr(cosTheta_i);
+    Complex sin2Theta_t = sin2Theta_i / (eta * eta);
+
+    // Complex cosTheta_t = pstd::sqrt(1 - sin2Theta_t);
+    Complex cosTheta_t = (1 - sin2Theta_t).sqrt();
+
+    Complex r_parl = (eta * cosTheta_i - cosTheta_t) / (eta * cosTheta_i + cosTheta_t);
+    Complex r_perp = (cosTheta_i - eta * cosTheta_t) / (cosTheta_i + eta * cosTheta_t);
+
+    return (r_parl.norm() + r_perp.norm()) / 2;
+}
+
+PBRT_CPU_GPU inline SampledSpectrum FrComplex(FloatType cosTheta_i, SampledSpectrum eta,
+                                              SampledSpectrum k) {
+    SampledSpectrum result;
+    for (int i = 0; i < NSpectrumSamples; ++i) {
+        result[i] = FrComplex(cosTheta_i, pstd::complex<FloatType>(eta[i], k[i]));
+    }
+
+    return result;
+}
+
 PBRT_CPU_GPU
 inline FloatType FrDielectric(FloatType cosTheta_i, FloatType eta) {
     cosTheta_i = clamp<FloatType>(cosTheta_i, -1, 1);
@@ -86,7 +115,7 @@ class TrowbridgeReitzDistribution {
 
     PBRT_CPU_GPU
     TrowbridgeReitzDistribution(FloatType ax, FloatType ay) : alpha_x(ax), alpha_y(ay) {
-        if (!EffectivelySmooth()) {
+        if (!effectively_smooth()) {
             // If one direction has some roughness, then the other can't
             // have zero (or very low) roughness; the computation of |e| in
             // D() blows up in that case.
@@ -115,7 +144,7 @@ class TrowbridgeReitzDistribution {
     }
 
     PBRT_CPU_GPU
-    bool EffectivelySmooth() const {
+    bool effectively_smooth() const {
         return std::max(alpha_x, alpha_y) < 1e-3f;
     }
 

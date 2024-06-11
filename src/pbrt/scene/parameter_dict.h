@@ -7,10 +7,11 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/scene/tokenizer.h"
 #include "pbrt/spectrum_util/rgb.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
 
-class SpectrumTexture;
 class FloatTexture;
+class RGBColorSpace;
+class Spectrum;
+class SpectrumTexture;
 
 class ParameterDict {
   public:
@@ -18,7 +19,8 @@ class ParameterDict {
 
     explicit ParameterDict(
         const std::vector<Token> &tokens,
-        const std::map<std::string, const SpectrumTexture *> &named_spectrum_texture,
+        const std::map<std::string, const Spectrum *> &_named_spectra,
+        const std::map<std::string, const SpectrumTexture *> &_named_spectrum_texture,
         const std::string &_root, const RGBColorSpace *_rgb_color_space)
         : root(_root), rgb_color_space(_rgb_color_space) {
         // the 1st token is Keyword
@@ -99,6 +101,12 @@ class ParameterDict {
                 continue;
             }
 
+            if (variable_type == "spectrum") {
+                auto spectrum_name = tokens[idx + 1].values[0];
+                spectra[variable_name] = _named_spectra.at(spectrum_name);
+                continue;
+            }
+
             if (variable_type == "string") {
                 strings[variable_name] = tokens[idx + 1].values[0];
                 continue;
@@ -107,17 +115,15 @@ class ParameterDict {
             if (variable_type == "texture") {
                 auto target_texture_name = tokens[idx + 1].values[0];
 
-                if (named_spectrum_texture.find(target_texture_name) ==
-                    named_spectrum_texture.end()) {
+                if (_named_spectrum_texture.find(target_texture_name) ==
+                    _named_spectrum_texture.end()) {
                     printf("texture not found in spectrum texture: %s\n\n",
                            target_texture_name.c_str());
                     REPORT_FATAL_ERROR();
                 }
 
-                spectrum_textures[variable_name] = named_spectrum_texture.at(target_texture_name);
+                spectrum_textures[variable_name] = _named_spectrum_texture.at(target_texture_name);
                 continue;
-
-                REPORT_FATAL_ERROR();
             }
 
             printf("\n%s(): unknown variable type: %s\n", __func__, variable_type.c_str());
@@ -141,6 +147,10 @@ class ParameterDict {
 
     bool has_float_texture(const std::string &key) const {
         return float_textures.find(key) != float_textures.end();
+    }
+
+    bool has_spectrum(const std::string &key) const {
+        return spectra.find(key) != spectra.end();
     }
 
     bool has_spectrum_texture(const std::string &key) const {
@@ -227,6 +237,10 @@ class ParameterDict {
         return float_textures.at(key);
     }
 
+    const Spectrum *get_spectrum(const std::string &key) const {
+        return spectra.at(key);
+    }
+
     const SpectrumTexture *get_spectrum_texture(const std::string &key) const {
         return spectrum_textures.at(key);
     }
@@ -262,15 +276,26 @@ class ParameterDict {
             stream << "\n";
         }
 
-        if (!parameters.strings.empty()) {
-            stream << "String:\n";
-            parameters.print_dict_of_single_var(stream, parameters.strings);
+        if (!parameters.spectra.empty()) {
+            stream << "spectrum:\n";
+            parameters.print_dict_of_single_var(stream, parameters.spectra);
+            stream << "\n";
+        }
+        if (!parameters.spectrum_textures.empty()) {
+            stream << "spectrum texture:\n";
+            parameters.print_dict_of_single_var(stream, parameters.spectrum_textures);
             stream << "\n";
         }
 
         if (!parameters.rgbs.empty()) {
             stream << "RGB:\n";
             parameters.print_dict_of_single_var(stream, parameters.rgbs);
+            stream << "\n";
+        }
+
+        if (!parameters.strings.empty()) {
+            stream << "String:\n";
+            parameters.print_dict_of_single_var(stream, parameters.strings);
             stream << "\n";
         }
 
@@ -295,6 +320,7 @@ class ParameterDict {
     std::map<std::string, std::string> strings;
     std::map<std::string, RGB> rgbs;
     std::map<std::string, const FloatTexture *> float_textures;
+    std::map<std::string, const Spectrum *> spectra;
     std::map<std::string, const SpectrumTexture *> spectrum_textures;
 
     template <typename T>

@@ -418,20 +418,20 @@ class LayeredBxDF {
                 // Sample _tInterface_ to get direction into the layers
                 auto trans = BxDFReflTransFlags::Transmission;
                 cuda::std::optional<BSDFSample> wos, wis;
-                wos = tInterface.Sample_f(wo, r(), {r(), r()}, mode, trans);
-                wis = tInterface.Sample_f(wi, r(), {r(), r()}, !mode, trans);
+                wos = tInterface.sample_f(wo, r(), {r(), r()}, mode, trans);
+                wis = tInterface.sample_f(wi, r(), {r(), r()}, !mode, trans);
 
                 // Update _pdfSum_ accounting for TRT scattering events
                 if (wos && wos->f.is_positive() && wos->pdf > 0 && wis && wis->f.is_positive() &&
                     wis->pdf > 0) {
-                    if (!IsNonSpecular(tInterface.Flags()))
+                    if (!_is_non_specular(tInterface.flags())) {
                         pdfSum += rInterface.pdf(-wos->wi, -wis->wi, mode);
-                    else {
+                    } else {
                         // Use multiple importance sampling to estimate pdf product
                         cuda::std::optional<BSDFSample> rs =
-                            rInterface.Sample_f(-wos->wi, r(), {r(), r()}, mode);
+                            rInterface.sample_f(-wos->wi, r(), {r(), r()}, mode);
                         if (rs && rs->f.is_positive() && rs->pdf > 0) {
-                            if (!IsNonSpecular(rInterface.Flags()))
+                            if (!_is_non_specular(rInterface.flags()))
                                 pdfSum += tInterface.pdf(-rs->wi, wi, mode);
                             else {
                                 // Compute MIS-weighted estimate of Equation
@@ -461,7 +461,7 @@ class LayeredBxDF {
 
                 FloatType uc = r();
                 Point2f u(r(), r());
-                cuda::std::optional<BSDFSample> wos = toInterface.Sample_f(wo, uc, u, mode);
+                cuda::std::optional<BSDFSample> wos = toInterface.sample_f(wo, uc, u, mode);
                 if (!wos || !wos->f.is_positive() || wos->pdf == 0 || wos->wi.z == 0 ||
                     wos->is_reflection()) {
                     continue;
@@ -469,15 +469,15 @@ class LayeredBxDF {
 
                 uc = r();
                 u = Point2f(r(), r());
-                cuda::std::optional<BSDFSample> wis = tiInterface.Sample_f(wi, uc, u, !mode);
+                cuda::std::optional<BSDFSample> wis = tiInterface.sample_f(wi, uc, u, !mode);
                 if (!wis || !wis->f.is_positive() || wis->pdf == 0 || wis->wi.z == 0 ||
                     wis->is_reflection()) {
                     continue;
                 }
 
-                if (_is_specular(toInterface.Flags())) {
+                if (_is_specular(toInterface.flags())) {
                     pdfSum += tiInterface.pdf(-wos->wi, wi, mode);
-                } else if (IsSpecular(tiInterface.Flags())) {
+                } else if (_is_specular(tiInterface.flags())) {
                     pdfSum += toInterface.pdf(wo, -wis->wi, mode);
                 } else {
                     pdfSum += (toInterface.pdf(wo, -wis->wi, mode) +

@@ -9,8 +9,9 @@
 #include "pbrt/base/material.h"
 
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
-#include "pbrt/bxdfs/diffuse_bxdf.h"
+#include "pbrt/bxdfs/conductor_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
+#include "pbrt/bxdfs/diffuse_bxdf.h"
 
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/image_infinite_light.h"
@@ -30,9 +31,10 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
     auto ray = primary_ray;
 
     BSDF bsdf;
-    DiffuseBxDF diffuse_bxdf;
-    DielectricBxDF dielectric_bxdf;
     CoatedDiffuseBxDF coated_diffuse_bxdf;
+    ConductorBxDF conductor_bxdf;
+    DielectricBxDF dielectric_bxdf;
+    DiffuseBxDF diffuse_bxdf;
 
     while (beta.is_positive()) {
         auto si = base->bvh->intersect(ray.ray, Infinity);
@@ -62,19 +64,28 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
         }
 
         switch (isect.material->get_material_type()) {
-        case (Material::Type::diffuse): {
-            isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
-            break;
-        }
-        case (Material::Type::dielectric): {
-            isect.init_dielectric_bsdf(bsdf, dielectric_bxdf, ray, lambda, base->camera, sampler);
-            break;
-        }
+
         case (Material::Type::coated_diffuse): {
             isect.init_coated_diffuse_bsdf(bsdf, coated_diffuse_bxdf, ray, lambda, base->camera,
                                            sampler);
             break;
         }
+
+        case (Material::Type::conductor): {
+            isect.init_conductor_bsdf(bsdf, conductor_bxdf, ray, lambda, base->camera, sampler);
+            break;
+        }
+
+        case (Material::Type::dielectric): {
+            isect.init_dielectric_bsdf(bsdf, dielectric_bxdf, ray, lambda, base->camera, sampler);
+            break;
+        }
+
+        case (Material::Type::diffuse): {
+            isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
+            break;
+        }
+
         default: {
             REPORT_FATAL_ERROR();
         }

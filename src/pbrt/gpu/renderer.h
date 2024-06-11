@@ -28,7 +28,7 @@
 
 #include "pbrt/shapes/triangle.h"
 
-#include "pbrt/spectrum_util/spectrum_constants.h"
+#include "pbrt/spectrum_util/spectrum_constants_cie.h"
 #include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"

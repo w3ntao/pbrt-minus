@@ -1,6 +1,6 @@
 #include "pbrt/spectra/piecewise_linear_spectrum.h"
 #include "pbrt/base/spectrum.h"
-#include "pbrt/spectrum_util/spectrum_constants.h"
+#include "pbrt/spectrum_util/spectrum_constants_cie.h"
 
 PBRT_CPU_GPU
 SampledSpectrum PiecewiseLinearSpectrum::sample(const SampledWavelengths &lambda) const {
@@ -8,7 +8,7 @@ SampledSpectrum PiecewiseLinearSpectrum::sample(const SampledWavelengths &lambda
     for (int idx = 0; idx < NSpectrumSamples; ++idx) {
         s[idx] = (*this)(lambda[idx]);
     }
-    
+
     return s;
 }
 

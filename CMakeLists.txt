@@ -55,7 +55,10 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/texture.cu
 
         src/pbrt/accelerator/hlbvh.cu
+
+        src/pbrt/bxdfs/conductor_bxdf.cu
         src/pbrt/bxdfs/dielectric_bxdf.cu
+
         src/pbrt/euclidean_space/squared_matrix.cu
 
         src/pbrt/integrators/integrator_base.cu
@@ -65,12 +68,14 @@ add_executable(${PROJ_NAME}
         src/pbrt/lights/diffuse_area_light.cu
         src/pbrt/lights/image_infinite_light.cu
 
+        src/pbrt/materials/conductor_material.cu
         src/pbrt/materials/coated_diffuse_material.cu
         src/pbrt/materials/dielectric_material.cu
         src/pbrt/materials/diffuse_material.cu
 
         src/pbrt/primitives/geometric_primitive.cu
 
+        src/pbrt/scene/precomputed_spectrum.cu
         src/pbrt/scene/scene_builder.cu
 
         src/pbrt/shapes/loop_subdivide.cu

@@ -11,13 +11,21 @@ PBRT_CPU_GPU inline void swap(T &a, T &b) {
     b = std::move(tmp);
 }
 
-PBRT_CPU_GPU
-inline double copysign(double mag, double sign) {
-#if defined(__CUDA_ARCH__)
+PBRT_CPU_GPU inline float copysign(float mag, float sign) {
+#ifdef PBRT_IS_GPU_CODE
+    return ::copysignf(mag, sign);
+#else
+    return std::copysign(mag, sign);
+#endif
+}
+
+PBRT_CPU_GPU inline double copysign(double mag, double sign) {
+#ifdef PBRT_IS_GPU_CODE
     return ::copysign(mag, sign);
 #else
     return std::copysign(mag, sign);
 #endif
 }
+
 } // namespace pstd
 // namespace pstd

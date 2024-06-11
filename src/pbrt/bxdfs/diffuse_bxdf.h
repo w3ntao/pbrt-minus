@@ -44,8 +44,8 @@ class DiffuseBxDF {
     PBRT_GPU
     cuda::std::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode = TransportMode::Radiance,
-             BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
-        if (!(sampleFlags & BxDFReflTransFlags::Reflection)) {
+             BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const {
+        if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
             return {};
         }
 

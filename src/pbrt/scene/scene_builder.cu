@@ -75,8 +75,8 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
 }
 
 void SceneBuilder::build_camera() {
-    auto parameters = ParameterDict(sub_vector(camera_tokens, 2), named_spectrum_texture, root,
-                                    renderer->global_variables->rgb_color_space);
+    const auto parameters = build_parameter_dictionary(sub_vector(camera_tokens, 2));
+
     const auto camera_type = camera_tokens[1].values[0];
     if (camera_type == "perspective") {
         auto camera_from_world = graphics_state.transform;
@@ -114,8 +114,7 @@ void SceneBuilder::build_filter() {
 }
 
 void SceneBuilder::build_film() {
-    auto parameters = ParameterDict(sub_vector(film_tokens, 2), named_spectrum_texture, root,
-                                    renderer->global_variables->rgb_color_space);
+    const auto parameters = build_parameter_dictionary(sub_vector(film_tokens, 2));
 
     auto _resolution_x = parameters.get_integer("xresolution")[0];
     auto _resolution_y = parameters.get_integer("yresolution")[0];
@@ -129,7 +128,7 @@ void SceneBuilder::build_film() {
         printf("output filename extension: only PNG is supported for the moment\n");
         output_filename = p.replace_extension(".png").filename();
     }
-    
+
     FloatType iso = 100;
     FloatType white_balance_val = 0.0;
     FloatType exposure_time = 1.0;
@@ -171,8 +170,8 @@ void SceneBuilder::build_film() {
 
 void SceneBuilder::build_sampler() {
     // TODO: sampler is not parsed, only pixelsamples read
-    const auto parameters = ParameterDict(sub_vector(sampler_tokens, 2), named_spectrum_texture,
-                                          root, renderer->global_variables->rgb_color_space);
+    const auto parameters = build_parameter_dictionary(sub_vector(sampler_tokens, 2));
+
     auto samples_from_parameters = parameters.get_integer("pixelsamples");
 
     if (!samples_per_pixel) {
@@ -213,6 +212,10 @@ void SceneBuilder::build_sampler() {
 
 const Material *SceneBuilder::create_material(const std::string &type_of_material,
                                               const ParameterDict &parameters) {
+    if (type_of_material == "conductor") {
+        return Material::create_conductor_material(parameters, gpu_dynamic_pointers);
+    }
+
     if (type_of_material == "coateddiffuse") {
         return Material::create_coated_diffuse_material(parameters, gpu_dynamic_pointers);
     }
@@ -367,8 +370,7 @@ void SceneBuilder::build_integrator() {
 }
 
 void SceneBuilder::parse_light_source(const std::vector<Token> &tokens) {
-    auto parameters = ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root,
-                                    renderer->global_variables->rgb_color_space);
+    const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
     auto texture_file = root + "/" + parameters.get_string("filename", {});
 
@@ -399,8 +401,7 @@ void SceneBuilder::parse_make_named_material(const std::vector<Token> &tokens) {
 
     const auto material_name = tokens[1].values[0];
 
-    const auto parameters = ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root,
-                                          renderer->global_variables->rgb_color_space);
+    const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
     auto type_of_material = parameters.get_string("type", std::nullopt);
 
@@ -413,8 +414,9 @@ void SceneBuilder::parse_material(const std::vector<Token> &tokens) {
     }
 
     auto type_of_material = tokens[1].values[0];
-    const auto parameters = ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root,
-                                          renderer->global_variables->rgb_color_space);
+
+    const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
+
     graphics_state.material = create_material(type_of_material, parameters);
 }
 
@@ -465,8 +467,9 @@ void SceneBuilder::parse_area_light_source(const std::vector<Token> &tokens) {
     }
 
     graphics_state.area_light_entity = AreaLightEntity(
-        tokens[1].values[0], ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root,
-                                           renderer->global_variables->rgb_color_space));
+        tokens[1].values[0],
+        ParameterDict(sub_vector(tokens, 2), pre_computed_spectrum.named_spectra,
+                      named_spectrum_texture, root, renderer->global_variables->rgb_color_space));
 }
 
 void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
@@ -474,8 +477,7 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         REPORT_FATAL_ERROR();
     }
 
-    const auto parameters = ParameterDict(sub_vector(tokens, 2), named_spectrum_texture, root,
-                                          renderer->global_variables->rgb_color_space);
+    const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
     auto type_of_shape = tokens[1].values[0];
     if (type_of_shape == "trianglemesh") {
@@ -565,8 +567,8 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
     auto texture_type = tokens[3].values[0];
 
     if (color_type == "spectrum") {
-        auto parameters = ParameterDict(sub_vector(tokens, 4), named_spectrum_texture, root,
-                                        renderer->global_variables->rgb_color_space);
+        const auto parameters = build_parameter_dictionary(sub_vector(tokens, 4));
+
         if (texture_type == "imagemap") {
             auto image_texture = SpectrumImageTexture::create(
                 parameters, gpu_dynamic_pointers, renderer->global_variables->rgb_color_space);

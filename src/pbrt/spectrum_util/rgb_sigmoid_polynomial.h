@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pbrt/util/utility_math.h"
-#include "spectrum_constants.h"
+#include "spectrum_constants_cie.h"
 
 class RGBSigmoidPolynomial {
   public:

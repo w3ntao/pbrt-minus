@@ -17,13 +17,13 @@ class DielectricBxDF {
     BxDFFlags flags() const {
         BxDFFlags _flags = (eta == 1) ? BxDFFlags::Transmission
                                       : (BxDFFlags::Reflection | BxDFFlags::Transmission);
-        return _flags | (mfDistrib.EffectivelySmooth() ? BxDFFlags::Specular : BxDFFlags::Glossy);
+        return _flags | (mfDistrib.effectively_smooth() ? BxDFFlags::Specular : BxDFFlags::Glossy);
     }
 
     PBRT_CPU_GPU
     cuda::std::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
-             BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
+             BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
 
     PBRT_CPU_GPU
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;

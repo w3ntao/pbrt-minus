@@ -14,7 +14,9 @@ class Light;
 class Material;
 class Sampler;
 class SampledWavelengths;
+
 class CoatedDiffuseBxDF;
+class ConductorBxDF;
 
 class Interaction {
   public:
@@ -112,8 +114,13 @@ class SurfaceInteraction : public Interaction {
     void set_intersection_properties(const Material *_material, const Light *_area_light);
 
     PBRT_GPU
-    void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const DifferentialRay &ray,
-                           SampledWavelengths &lambda, const Camera *camera, Sampler *sampler);
+    void init_coated_diffuse_bsdf(BSDF &bsdf, CoatedDiffuseBxDF &coated_diffuse_bxdf,
+                                  const DifferentialRay &ray, SampledWavelengths &lambda,
+                                  const Camera *camera, Sampler *sampler);
+
+    PBRT_GPU
+    void init_conductor_bsdf(BSDF &bsdf, ConductorBxDF &conductor_bxdf, const DifferentialRay &ray,
+                             SampledWavelengths &lambda, const Camera *camera, Sampler *sampler);
 
     PBRT_GPU
     void init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielectric_bxdf,
@@ -121,9 +128,8 @@ class SurfaceInteraction : public Interaction {
                               const Camera *camera, Sampler *sampler);
 
     PBRT_GPU
-    void init_coated_diffuse_bsdf(BSDF &bsdf, CoatedDiffuseBxDF &coated_diffuse_bxdf,
-                                  const DifferentialRay &ray, SampledWavelengths &lambda,
-                                  const Camera *camera, Sampler *sampler);
+    void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const DifferentialRay &ray,
+                           SampledWavelengths &lambda, const Camera *camera, Sampler *sampler);
 
     PBRT_GPU SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
 };

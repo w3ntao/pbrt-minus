@@ -6,9 +6,10 @@
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/macro.h"
 
-class DiffuseBxDF;
-class DielectricBxDF;
 class CoatedDiffuseBxDF;
+class ConductorBxDF;
+class DielectricBxDF;
+class DiffuseBxDF;
 
 enum BxDFFlags {
     Unset = 0,
@@ -150,22 +151,26 @@ class BxDF {
   public:
     enum class Type {
         null,
-        diffuse_bxdf,
-        dielectric_bxdf,
-        coated_diffuse_bxdf,
+        coated_diffuse,
+        conductor,
+        dielectric,
+        diffuse,
     };
 
     PBRT_GPU
     BxDF() : type(Type::null), ptr(nullptr) {}
 
     PBRT_GPU
-    void init(const DiffuseBxDF *diffuse_bxdf);
+    void init(const ConductorBxDF *conductor_bxdf);
+
+    PBRT_GPU
+    void init(const CoatedDiffuseBxDF *coated_diffuse_bxdf);
 
     PBRT_GPU
     void init(const DielectricBxDF *dielectric_bxdf);
 
     PBRT_GPU
-    void init(const CoatedDiffuseBxDF *coated_diffuse_bxdf);
+    void init(const DiffuseBxDF *diffuse_bxdf);
 
     PBRT_CPU_GPU
     BxDFFlags flags() const;

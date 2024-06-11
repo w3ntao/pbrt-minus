@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pbrt/spectrum_util/xyz.h"
-#include "pbrt/spectrum_util/spectrum_constants.h"
+#include "pbrt/spectrum_util/spectrum_constants_cie.h"
 
 class SampledSpectrum {
   public:
@@ -27,6 +27,15 @@ class SampledSpectrum {
         }
 
         return false;
+    }
+
+    PBRT_CPU_GPU SampledSpectrum sqrt() const {
+        SampledSpectrum result;
+        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+            result[idx] = std::sqrt(values[idx]);
+        }
+
+        return result;
     }
 
     PBRT_CPU_GPU SampledSpectrum clamp(FloatType low, FloatType high) const {

@@ -12,11 +12,13 @@ class BSDF {
   public:
     PBRT_GPU void init_frame(const Normal3f &ns, const Vector3f &dpdus);
 
-    PBRT_GPU void init_bxdf(const DiffuseBxDF *diffuse_bxdf);
+    PBRT_GPU void init_bxdf(const CoatedDiffuseBxDF *coated_diffuse_bxdf);
+
+    PBRT_GPU void init_bxdf(const ConductorBxDF *conductor_bxdf);
 
     PBRT_GPU void init_bxdf(const DielectricBxDF *dielectric_bxdf);
 
-    PBRT_GPU void init_bxdf(const CoatedDiffuseBxDF *coated_diffuse_bxdf);
+    PBRT_GPU void init_bxdf(const DiffuseBxDF *diffuse_bxdf);
 
     PBRT_GPU
     SampledSpectrum f(const Vector3f &woRender, const Vector3f &wiRender,

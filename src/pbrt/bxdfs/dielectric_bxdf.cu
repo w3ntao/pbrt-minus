@@ -4,8 +4,8 @@
 PBRT_CPU_GPU
 cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
                                                          TransportMode mode,
-                                                         BxDFReflTransFlags sampleFlags) const {
-    if (eta == 1 || mfDistrib.EffectivelySmooth()) {
+                                                         BxDFReflTransFlags sample_flags) const {
+    if (eta == 1 || mfDistrib.effectively_smooth()) {
         // Sample perfect specular dielectric BSDF
         // FloatType R = FrDielectric(CosTheta(wo), eta), T = 1 - R;
         FloatType R = FrDielectric(wo.cos_theta(), eta);
@@ -14,11 +14,11 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
         FloatType pr = R;
         FloatType pt = T;
 
-        if (!(sampleFlags & BxDFReflTransFlags::Reflection)) {
+        if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
             pr = 0;
         }
 
-        if (!(sampleFlags & BxDFReflTransFlags::Transmission)) {
+        if (!(sample_flags & BxDFReflTransFlags::Transmission)) {
             pt = 0;
         }
 
@@ -60,11 +60,11 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
         FloatType T = 1 - R;
         // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission
         FloatType pr = R, pt = T;
-        if (!(sampleFlags & BxDFReflTransFlags::Reflection)) {
+        if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
             pr = 0;
         }
 
-        if (!(sampleFlags & BxDFReflTransFlags::Transmission)) {
+        if (!(sample_flags & BxDFReflTransFlags::Transmission)) {
             pt = 0;
         }
 
@@ -120,7 +120,7 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
 
 PBRT_CPU_GPU
 SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
-    if (eta == 1 || mfDistrib.EffectivelySmooth()) {
+    if (eta == 1 || mfDistrib.effectively_smooth()) {
         return SampledSpectrum(0.f);
     }
 
@@ -173,7 +173,7 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
 PBRT_CPU_GPU
 FloatType DielectricBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                               BxDFReflTransFlags sampleFlags) const {
-    if (eta == 1 || mfDistrib.EffectivelySmooth()) {
+    if (eta == 1 || mfDistrib.effectively_smooth()) {
         return 0;
     }
 

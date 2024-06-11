@@ -3,7 +3,7 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/euclidean_space/point3.h"
-#include "pbrt/spectrum_util/spectrum_constants.h"
+#include "pbrt/spectrum_util/spectrum_constants_cie.h"
 #include "pbrt/util/utility_math.h"
 #include "pbrt/euclidean_space/bounds2.h"
 

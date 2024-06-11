@@ -1,40 +1,51 @@
 #include "pbrt/base/bxdf.h"
 
-#include "pbrt/bxdfs/diffuse_bxdf.h"
-#include "pbrt/bxdfs/dielectric_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
+#include "pbrt/bxdfs/conductor_bxdf.h"
+#include "pbrt/bxdfs/dielectric_bxdf.h"
+#include "pbrt/bxdfs/diffuse_bxdf.h"
 
 PBRT_GPU
-void BxDF::init(const DiffuseBxDF *diffuse_bxdf) {
-    type = Type::diffuse_bxdf;
-    ptr = diffuse_bxdf;
-}
-
-PBRT_GPU
-void BxDF::init(const DielectricBxDF *dielectric_bxdf) {
-    type = Type::dielectric_bxdf;
-    ptr = dielectric_bxdf;
+void BxDF::init(const ConductorBxDF *conductor_bxdf) {
+    type = Type::conductor;
+    ptr = conductor_bxdf;
 }
 
 PBRT_GPU
 void BxDF::init(const CoatedDiffuseBxDF *coated_diffuse_bxdf) {
-    type = Type::coated_diffuse_bxdf;
+    type = Type::coated_diffuse;
     ptr = coated_diffuse_bxdf;
+}
+
+PBRT_GPU
+void BxDF::init(const DielectricBxDF *dielectric_bxdf) {
+    type = Type::dielectric;
+    ptr = dielectric_bxdf;
+}
+
+PBRT_GPU
+void BxDF::init(const DiffuseBxDF *diffuse_bxdf) {
+    type = Type::diffuse;
+    ptr = diffuse_bxdf;
 }
 
 PBRT_CPU_GPU
 BxDFFlags BxDF::flags() const {
     switch (type) {
-    case (Type::diffuse_bxdf): {
-        return ((DiffuseBxDF *)ptr)->flags();
+    case (Type::coated_diffuse): {
+        return ((CoatedDiffuseBxDF *)ptr)->flags();
     }
 
-    case (Type::dielectric_bxdf): {
+    case (Type::conductor): {
+        return ((ConductorBxDF *)ptr)->flags();
+    }
+
+    case (Type::dielectric): {
         return ((DielectricBxDF *)ptr)->flags();
     }
 
-    case (Type::coated_diffuse_bxdf): {
-        return ((CoatedDiffuseBxDF *)ptr)->flags();
+    case (Type::diffuse): {
+        return ((DiffuseBxDF *)ptr)->flags();
     }
     }
 
@@ -45,16 +56,20 @@ BxDFFlags BxDF::flags() const {
 PBRT_GPU
 SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     switch (type) {
-    case (Type::diffuse_bxdf): {
-        return ((DiffuseBxDF *)ptr)->f(wo, wi, mode);
+    case (Type::coated_diffuse): {
+        return ((CoatedDiffuseBxDF *)ptr)->f(wo, wi, mode);
     }
 
-    case (Type::dielectric_bxdf): {
+    case (Type::conductor): {
+        return ((ConductorBxDF *)ptr)->f(wo, wi, mode);
+    }
+
+    case (Type::dielectric): {
         return ((DielectricBxDF *)ptr)->f(wo, wi, mode);
     }
 
-    case (Type::coated_diffuse_bxdf): {
-        return ((CoatedDiffuseBxDF *)ptr)->f(wo, wi, mode);
+    case (Type::diffuse): {
+        return ((DiffuseBxDF *)ptr)->f(wo, wi, mode);
     }
     }
 
@@ -67,16 +82,20 @@ cuda::std::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2
                                                TransportMode mode,
                                                BxDFReflTransFlags sampleFlags) const {
     switch (type) {
-    case (Type::diffuse_bxdf): {
-        return ((DiffuseBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
+    case (Type::coated_diffuse): {
+        return ((CoatedDiffuseBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
 
-    case (Type::dielectric_bxdf): {
+    case (Type::conductor): {
+        return ((ConductorBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
+    }
+
+    case (Type::dielectric): {
         return ((DielectricBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
 
-    case (Type::coated_diffuse_bxdf): {
-        return ((CoatedDiffuseBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
+    case (Type::diffuse): {
+        return ((DiffuseBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
     }
 
@@ -88,11 +107,19 @@ PBRT_GPU
 FloatType BxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                     BxDFReflTransFlags sampleFlags) const {
     switch (type) {
-    case (Type::diffuse_bxdf): {
+    case (Type::coated_diffuse): {
+        return ((CoatedDiffuseBxDF *)ptr)->pdf(wo, wi, mode, sampleFlags);
+    }
+
+    case (Type::conductor): {
+        return ((ConductorBxDF *)ptr)->pdf(wo, wi, mode, sampleFlags);
+    }
+
+    case (Type::diffuse): {
         return ((DiffuseBxDF *)ptr)->pdf(wo, wi, mode, sampleFlags);
     }
 
-    case (Type::dielectric_bxdf): {
+    case (Type::dielectric): {
         return ((DielectricBxDF *)ptr)->pdf(wo, wi, mode, sampleFlags);
     }
     }
