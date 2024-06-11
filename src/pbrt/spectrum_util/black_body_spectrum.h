@@ -27,26 +27,25 @@ class BlackbodySpectrum {
     BlackbodySpectrum(FloatType T) : T(T) {
         // Compute blackbody normalization constant for given temperature
         FloatType lambdaMax = 2.8977721e-3f / T;
-        normalizationFactor = 1 / Blackbody(lambdaMax * 1e9f, T);
+        normalization_factor = 1 / Blackbody(lambdaMax * 1e9f, T);
     }
 
     PBRT_CPU_GPU
     FloatType operator()(FloatType lambda) const {
-        return Blackbody(lambda, T) * normalizationFactor;
+        return Blackbody(lambda, T) * normalization_factor;
     }
 
     PBRT_CPU_GPU
     SampledSpectrum sample(const SampledWavelengths &lambda) const {
-        FloatType values[NSpectrumSamples];
-
+        SampledSpectrum result;
         for (int i = 0; i < NSpectrumSamples; ++i) {
-            values[i] = Blackbody(lambda[i], T) * normalizationFactor;
+            result[i] = Blackbody(lambda[i], T) * normalization_factor;
         }
 
-        return SampledSpectrum(values);
+        return result;
     }
 
   private:
     FloatType T;
-    FloatType normalizationFactor;
+    FloatType normalization_factor;
 };

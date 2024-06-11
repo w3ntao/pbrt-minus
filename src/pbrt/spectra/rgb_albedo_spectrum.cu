@@ -9,11 +9,10 @@ void RGBAlbedoSpectrum::init(const RGBColorSpace *cs, const RGB rgb) {
 
 PBRT_CPU_GPU
 SampledSpectrum RGBAlbedoSpectrum::sample(const SampledWavelengths &lambda) const {
-    FloatType values[NSpectrumSamples];
-
+    SampledSpectrum result;
     for (int i = 0; i < NSpectrumSamples; ++i) {
-        values[i] = rsp(lambda[i]);
+        result[i] = rsp(lambda[i]);
     }
 
-    return SampledSpectrum(values);
+    return result;
 }

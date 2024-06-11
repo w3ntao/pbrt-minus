@@ -12,13 +12,6 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    SampledSpectrum(const FloatType _values[NSpectrumSamples]) {
-        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
-            values[idx] = _values[idx];
-        }
-    }
-
-    PBRT_CPU_GPU
     SampledSpectrum(const FloatType val) {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             values[idx] = val;
@@ -37,12 +30,12 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU SampledSpectrum clamp(FloatType low, FloatType high) const {
-        FloatType _values[NSpectrumSamples];
+        SampledSpectrum result;
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
-            _values[idx] = ::clamp(values[idx], low, high);
+            result[idx] = ::clamp(values[idx], low, high);
         }
 
-        return SampledSpectrum(_values);
+        return result;
     }
 
     PBRT_CPU_GPU
@@ -57,13 +50,12 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator+(const SampledSpectrum &s) const {
-        FloatType sum[NSpectrumSamples];
-
+        SampledSpectrum sum;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             sum[i] = values[i] + s.values[i];
         }
 
-        return SampledSpectrum(sum);
+        return sum;
     }
 
     PBRT_CPU_GPU
@@ -73,13 +65,12 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator-(const SampledSpectrum &s) const {
-        FloatType difference[NSpectrumSamples];
-
+        SampledSpectrum difference;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             difference[i] = values[i] - s.values[i];
         }
 
-        return SampledSpectrum(difference);
+        return difference;
     }
 
     PBRT_CPU_GPU
@@ -89,24 +80,22 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator*(const SampledSpectrum &s) const {
-        FloatType product[NSpectrumSamples];
-
+        SampledSpectrum product;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             product[i] = values[i] * s.values[i];
         }
 
-        return SampledSpectrum(product);
+        return product;
     }
 
     PBRT_CPU_GPU
     SampledSpectrum operator*(FloatType a) const {
-        FloatType product[NSpectrumSamples];
-
+        SampledSpectrum product;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             product[i] = values[i] * a;
         }
 
-        return SampledSpectrum(product);
+        return product;
     }
 
     PBRT_CPU_GPU
@@ -126,24 +115,22 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator/(const SampledSpectrum &s) const {
-        FloatType quotient[NSpectrumSamples];
-
+        SampledSpectrum quotient;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = values[i] / s.values[i];
         }
 
-        return SampledSpectrum(quotient);
+        return quotient;
     }
 
     PBRT_CPU_GPU
     SampledSpectrum operator/(FloatType a) const {
-        FloatType quotient[NSpectrumSamples];
-
+        SampledSpectrum quotient;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = values[i] / a;
         }
 
-        return SampledSpectrum(quotient);
+        return quotient;
     }
 
     PBRT_CPU_GPU
@@ -158,13 +145,13 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum operator-() const {
-        FloatType ret[NSpectrumSamples];
+        SampledSpectrum result;
 
         for (uint i = 0; i < NSpectrumSamples; ++i) {
-            ret[i] = -values[i];
+            result[i] = -values[i];
         }
 
-        return SampledSpectrum(ret);
+        return result;
     }
 
     PBRT_CPU_GPU
@@ -237,13 +224,12 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU SampledSpectrum safe_div(const SampledSpectrum &divisor) const {
-        FloatType quotient[NSpectrumSamples];
-
+        SampledSpectrum quotient;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = divisor[i] == 0.0 ? 0.0 : values[i] / divisor[i];
         }
 
-        return SampledSpectrum(quotient);
+        return quotient;
     }
 
   private:

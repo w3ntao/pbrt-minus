@@ -73,12 +73,12 @@ class SampledWavelengths {
 
     PBRT_CPU_GPU
     SampledSpectrum pdf_as_sampled_spectrum() const {
-        FloatType _pdf[NSpectrumSamples];
+        SampledSpectrum result;
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
-            _pdf[idx] = pdf[idx];
+            result[idx] = pdf[idx];
         }
 
-        return SampledSpectrum(_pdf);
+        return result;
     }
 
     PBRT_CPU_GPU

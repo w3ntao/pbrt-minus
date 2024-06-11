@@ -48,7 +48,7 @@ class DenselySampledSpectrum {
 
     PBRT_CPU_GPU
     SampledSpectrum sample(const SampledWavelengths &lambda) const {
-        FloatType sampled_values[NSpectrumSamples];
+        SampledSpectrum sampled_values;
 
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             int floor = std::floor(lambda[i]);
@@ -61,7 +61,7 @@ class DenselySampledSpectrum {
             }
         }
 
-        return SampledSpectrum(sampled_values);
+        return sampled_values;
     }
 
     PBRT_CPU_GPU

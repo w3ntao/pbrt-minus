@@ -16,11 +16,10 @@ FloatType RGBIlluminantSpectrum::operator()(FloatType lambda) const {
 
 PBRT_CPU_GPU
 SampledSpectrum RGBIlluminantSpectrum::sample(const SampledWavelengths &lambda) const {
-    FloatType s[NSpectrumSamples];
-
+    SampledSpectrum s;
     for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
         s[idx] = scale * rsp(lambda[idx]);
     }
 
-    return illuminant->sample(lambda) * SampledSpectrum(s);
+    return illuminant->sample(lambda) * s;
 }
