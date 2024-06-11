@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "pbrt/spectrum_util/spectrum_constants.h"
 #include "pbrt/spectrum_util/black_body_spectrum.h"
 
@@ -13,19 +15,6 @@ class DenselySampledSpectrum {
     PBRT_CPU_GPU
     void init_from_spectrum(const Spectrum *spectrum);
 
-    PBRT_CPU_GPU
-    void init_from_pls_lambdas_values(const FloatType *_lambdas, const FloatType *_values,
-                                      uint _length) {
-        for (uint lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
-            values[lambda - LAMBDA_MIN] =
-                piecewise_linear_spectrum_eval(lambda, _lambdas, _values, _length);
-        }
-    }
-
-    PBRT_CPU_GPU
-    void init_from_pls_interleaved_samples(const FloatType *samples, uint num_samples,
-                                           bool normalize, const Spectrum *cie_y);
-
     template <typename F>
     PBRT_CPU_GPU void init_with_sample_function(F func, uint lambda_min = LAMBDA_MIN,
                                                 uint lambda_max = LAMBDA_MAX) {
@@ -33,10 +22,6 @@ class DenselySampledSpectrum {
             values[lambda - lambda_min] = func(lambda);
         }
     }
-
-    PBRT_CPU_GPU
-    void init_cie_d(FloatType temperature, const FloatType *cie_s0, const FloatType *cie_s1,
-                    const FloatType *cie_s2, const FloatType *cie_lambda);
 
     PBRT_CPU_GPU
     bool operator==(const DenselySampledSpectrum &_spectrum) const {
@@ -88,17 +73,4 @@ class DenselySampledSpectrum {
 
   private:
     FloatType values[LAMBDA_RANGE];
-
-    PBRT_CPU_GPU
-    FloatType piecewise_linear_spectrum_eval(FloatType lambda, const FloatType *lambdas,
-                                             const FloatType *_values, uint length) {
-        if (lambda < LAMBDA_MIN || lambda > LAMBDA_MAX) {
-            return 0.0;
-        }
-
-        uint idx = find_interval(length, [&](uint i) { return lambdas[i] <= lambda; });
-        FloatType t = (lambda - lambdas[idx]) / (lambdas[idx + 1] - lambdas[idx]);
-
-        return lerp(t, _values[idx], _values[idx + 1]);
-    }
 };

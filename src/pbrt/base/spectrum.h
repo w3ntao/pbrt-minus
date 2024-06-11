@@ -8,8 +8,9 @@
 class RGB;
 class RGBColorSpace;
 
-class DenselySampledSpectrum;
 class ConstantSpectrum;
+class DenselySampledSpectrum;
+class PiecewiseLinearSpectrum;
 class RGBIlluminantSpectrum;
 class RGBAlbedoSpectrum;
 
@@ -26,7 +27,13 @@ class Spectrum {
         constant_spectrum,
         rgb_illuminant_spectrum,
         rgb_albedo_spectrum,
+        piecewise_linear_spectrum,
     };
+
+    static const Spectrum *create_cie_d(FloatType temperature, const FloatType *cie_s0,
+                                        const FloatType *cie_s1, const FloatType *cie_s2,
+                                        const FloatType *cie_lambda,
+                                        std::vector<void *> &gpu_dynamic_pointer);
 
     static const Spectrum *create_constant_spectrum(FloatType val,
                                                     std::vector<void *> &gpu_dynamic_pointers);
@@ -34,6 +41,15 @@ class Spectrum {
     static const Spectrum *create_rgb_albedo_spectrum(const RGB &val,
                                                       std::vector<void *> &gpu_dynamic_pointers,
                                                       const RGBColorSpace *color_space);
+
+    static const Spectrum *create_piecewise_linear_spectrum_from_lambdas_and_values(
+        const std::vector<FloatType> &cpu_lambdas, const std::vector<FloatType> &cpu_values,
+        std::vector<void *> &gpu_dynamic_pointers);
+
+    static const Spectrum *
+    create_piecewise_linear_spectrum_from_interleaved(const std::vector<FloatType> &samples,
+                                                      bool normalize, const Spectrum *cie_y,
+                                                      std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     void init(const DenselySampledSpectrum *densely_sampled_spectrum);
@@ -46,6 +62,9 @@ class Spectrum {
 
     PBRT_CPU_GPU
     void init(const RGBAlbedoSpectrum *rgb_albedo_spectrum);
+
+    PBRT_CPU_GPU
+    void init(const PiecewiseLinearSpectrum *piecewise_linear_spectrum);
 
     PBRT_CPU_GPU bool is_constant_spectrum() const {
         return type == Type::constant_spectrum;

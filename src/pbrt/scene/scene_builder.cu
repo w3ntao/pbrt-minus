@@ -129,25 +129,15 @@ void SceneBuilder::build_film() {
         printf("output filename extension: only PNG is supported for the moment\n");
         output_filename = p.replace_extension(".png").filename();
     }
-
-    DenselySampledSpectrum *_d_illum_dense;
-    Spectrum *d_illum;
-
-    CHECK_CUDA_ERROR(cudaMallocManaged(&_d_illum_dense, sizeof(DenselySampledSpectrum)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&d_illum, sizeof(Spectrum)));
-
-    gpu_dynamic_pointers.push_back(d_illum);
-    gpu_dynamic_pointers.push_back(_d_illum_dense);
-
+    
     FloatType iso = 100;
     FloatType white_balance_val = 0.0;
     FloatType exposure_time = 1.0;
     FloatType imaging_ratio = exposure_time * iso / 100.0;
 
-    _d_illum_dense->init_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, CIE_S0,
-                               CIE_S1, CIE_S2, CIE_S_lambda);
-
-    d_illum->init(_d_illum_dense);
+    auto d_illum =
+        Spectrum::create_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, CIE_S0,
+                               CIE_S1, CIE_S2, CIE_S_lambda, gpu_dynamic_pointers);
 
     const Spectrum *cie_xyz[3];
     renderer->global_variables->get_cie_xyz(cie_xyz);

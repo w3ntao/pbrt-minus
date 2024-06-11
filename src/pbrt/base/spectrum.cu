@@ -2,8 +2,59 @@
 
 #include "pbrt/spectra/densely_sampled_spectrum.h"
 #include "pbrt/spectra/constant_spectrum.h"
+#include "pbrt/spectra/piecewise_linear_spectrum.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
+
+const Spectrum *Spectrum::create_cie_d(FloatType temperature, const FloatType *cie_s0,
+                                       const FloatType *cie_s1, const FloatType *cie_s2,
+                                       const FloatType *cie_lambda,
+                                       std::vector<void *> &gpu_dynamic_pointer) {
+    FloatType cct = temperature * 1.4388f / 1.4380f;
+    if (cct < 4000) {
+        // CIE D ill-defined, use blackbody
+        BlackbodySpectrum bb = BlackbodySpectrum(cct);
+
+        DenselySampledSpectrum *densely_sampled_spectrum;
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged(&densely_sampled_spectrum, sizeof(DenselySampledSpectrum)));
+        densely_sampled_spectrum->init_with_sample_function(
+            [=](FloatType lambda) { return bb(lambda); });
+
+        Spectrum *spectrum;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
+        spectrum->init(densely_sampled_spectrum);
+
+        gpu_dynamic_pointer.push_back(densely_sampled_spectrum);
+        gpu_dynamic_pointer.push_back(spectrum);
+
+        return spectrum;
+    }
+
+    // Convert CCT to xy
+    FloatType x = cct <= 7000 ? -4.607f * 1e9f / std::pow(cct, 3) + 2.9678f * 1e6f / sqr(cct) +
+                                    0.09911f * 1e3f / cct + 0.244063f
+                              : -2.0064f * 1e9f / std::pow(cct, 3) + 1.9018f * 1e6f / sqr(cct) +
+                                    0.24748f * 1e3f / cct + 0.23704f;
+
+    FloatType y = -3 * x * x + 2.870f * x - 0.275f;
+
+    // Interpolate D spectrum
+    FloatType M = 0.0241f + 0.2562f * x - 0.7341f * y;
+    FloatType M1 = (-1.3515f - 1.7703f * x + 5.9114f * y) / M;
+    FloatType M2 = (0.0300f - 31.4424f * x + 30.0717f * y) / M;
+
+    std::vector<FloatType> cpu_cie_lambdas(nCIES);
+    std::vector<FloatType> cpu_values(nCIES);
+
+    for (uint idx = 0; idx < nCIES; ++idx) {
+        cpu_cie_lambdas.push_back(cie_lambda[idx]);
+        cpu_values.push_back((cie_s0[idx] + cie_s1[idx] * M1 + cie_s2[idx] * M2) * 0.01);
+    }
+
+    return Spectrum::create_piecewise_linear_spectrum_from_lambdas_and_values(
+        cpu_cie_lambdas, cpu_values, gpu_dynamic_pointer);
+}
 
 const Spectrum *Spectrum::create_constant_spectrum(FloatType val,
                                                    std::vector<void *> &gpu_dynamic_pointers) {
@@ -39,6 +90,46 @@ const Spectrum *Spectrum::create_rgb_albedo_spectrum(const RGB &val,
     return spectrum;
 }
 
+const Spectrum *Spectrum::create_piecewise_linear_spectrum_from_lambdas_and_values(
+    const std::vector<FloatType> &cpu_lambdas, const std::vector<FloatType> &cpu_values,
+    std::vector<void *> &gpu_dynamic_pointers) {
+    PiecewiseLinearSpectrum *piecewise_linear_spectrum;
+    CHECK_CUDA_ERROR(
+        cudaMallocManaged(&piecewise_linear_spectrum, sizeof(PiecewiseLinearSpectrum)));
+    piecewise_linear_spectrum->init_from_lambdas_values(cpu_lambdas, cpu_values,
+                                                        gpu_dynamic_pointers);
+
+    Spectrum *spectrum;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
+    spectrum->init(piecewise_linear_spectrum);
+
+    gpu_dynamic_pointers.push_back(piecewise_linear_spectrum);
+    gpu_dynamic_pointers.push_back(spectrum);
+
+    return spectrum;
+}
+
+const Spectrum *Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+    const std::vector<FloatType> &samples, bool normalize, const Spectrum *cie_y,
+    std::vector<void *> &gpu_dynamic_pointers) {
+
+    PiecewiseLinearSpectrum *piecewise_linear_spectrum;
+    CHECK_CUDA_ERROR(
+        cudaMallocManaged(&piecewise_linear_spectrum, sizeof(PiecewiseLinearSpectrum)));
+
+    piecewise_linear_spectrum->init_from_interleaved(samples, normalize, cie_y,
+                                                     gpu_dynamic_pointers);
+
+    Spectrum *spectrum;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
+    spectrum->init(piecewise_linear_spectrum);
+
+    gpu_dynamic_pointers.push_back(piecewise_linear_spectrum);
+    gpu_dynamic_pointers.push_back(spectrum);
+
+    return spectrum;
+}
+
 PBRT_CPU_GPU
 void Spectrum::init(const DenselySampledSpectrum *densely_sampled_spectrum) {
     type = Type::densely_sampled_spectrum;
@@ -64,14 +155,24 @@ void Spectrum::init(const RGBAlbedoSpectrum *rgb_albedo_spectrum) {
 }
 
 PBRT_CPU_GPU
+void Spectrum::init(const PiecewiseLinearSpectrum *piecewise_linear_spectrum) {
+    type = Type::piecewise_linear_spectrum;
+    ptr = piecewise_linear_spectrum;
+}
+
+PBRT_CPU_GPU
 FloatType Spectrum::operator()(FloatType lambda) const {
     switch (type) {
+    case (Type::constant_spectrum): {
+        return ((ConstantSpectrum *)ptr)->operator()(lambda);
+    }
+
     case (Type::densely_sampled_spectrum): {
         return ((DenselySampledSpectrum *)ptr)->operator()(lambda);
     }
 
-    case (Type::constant_spectrum): {
-        return ((ConstantSpectrum *)ptr)->operator()(lambda);
+    case (Type::piecewise_linear_spectrum): {
+        return ((PiecewiseLinearSpectrum *)ptr)->operator()(lambda);
     }
 
     case (Type::rgb_illuminant_spectrum): {
@@ -99,14 +200,18 @@ FloatType Spectrum::to_photometric(const Spectrum *cie_y) const {
 PBRT_CPU_GPU
 SampledSpectrum Spectrum::sample(const SampledWavelengths &lambda) const {
     switch (type) {
-    case (Type::densely_sampled_spectrum): {
-        return ((DenselySampledSpectrum *)ptr)->sample(lambda);
-    }
 
     case (Type::constant_spectrum): {
         return ((ConstantSpectrum *)ptr)->sample(lambda);
     }
 
+    case (Type::densely_sampled_spectrum): {
+        return ((DenselySampledSpectrum *)ptr)->sample(lambda);
+    }
+
+    case (Type::piecewise_linear_spectrum): {
+        return ((PiecewiseLinearSpectrum *)ptr)->sample(lambda);
+    }
     case (Type::rgb_illuminant_spectrum): {
         return ((RGBIlluminantSpectrum *)ptr)->sample(lambda);
     }

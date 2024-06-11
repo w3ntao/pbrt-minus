@@ -78,8 +78,10 @@ add_executable(${PROJ_NAME}
         src/pbrt/shapes/sphere.cu
 
         src/pbrt/spectra/densely_sampled_spectrum.cu
+        src/pbrt/spectra/piecewise_linear_spectrum.cu
         src/pbrt/spectra/rgb_illuminant_spectrum.cu
         src/pbrt/spectra/rgb_albedo_spectrum.cu
+
         src/pbrt/spectrum_util/rgb_to_spectrum_data.cu
 
         src/pbrt/textures/gpu_image.cu
