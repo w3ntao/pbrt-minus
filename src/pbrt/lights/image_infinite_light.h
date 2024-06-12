@@ -13,7 +13,7 @@ class Ray;
 class SampledWavelengths;
 class SampledSpectrum;
 class GPUImage;
-class ParameterDict;
+class ParameterDictionary;
 class RGBColorSpace;
 
 class ImageInfiniteLight : LightBase {

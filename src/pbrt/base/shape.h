@@ -12,7 +12,7 @@ class Sphere;
 class Triangle;
 
 class Transform;
-class ParameterDict;
+class ParameterDictionary;
 
 struct ShapeSampleContext {
     Point3fi pi;
@@ -69,7 +69,7 @@ class Shape {
 
     static const Shape *create_sphere(const Transform &render_from_object,
                                       const Transform &object_from_render, bool reverse_orientation,
-                                      const ParameterDict &parameters,
+                                      const ParameterDictionary &parameters,
                                       std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU

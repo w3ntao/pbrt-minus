@@ -15,7 +15,7 @@
 
 #include "pbrt/scene/command_line_option.h"
 #include "pbrt/scene/parser.h"
-#include "pbrt/scene/parameter_dict.h"
+#include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/scene/precomputed_spectrum.h"
 
 #include "pbrt/util/std_container.h"
@@ -23,9 +23,9 @@
 
 struct AreaLightEntity {
     std::string name;
-    ParameterDict parameters;
+    ParameterDictionary parameters;
 
-    AreaLightEntity(const std::string &_name, const ParameterDict &_parameters)
+    AreaLightEntity(const std::string &_name, const ParameterDictionary &_parameters)
         : name(_name), parameters(_parameters) {}
 };
 
@@ -97,10 +97,11 @@ class SceneBuilder {
         return integrator_name == "ambientocclusion" || integrator_name == "surfacenormal";
     }
 
-    ParameterDict build_parameter_dictionary(const std::vector<Token> &tokens) {
-        return ParameterDict(tokens, pre_computed_spectrum.named_spectra, named_spectrum_texture,
-                             root, renderer->global_variables->rgb_color_space,
-                             this->should_ignore_material_and_texture());
+    ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
+        return ParameterDictionary(tokens, pre_computed_spectrum.named_spectra,
+                                   named_spectrum_texture, root,
+                                   renderer->global_variables->rgb_color_space,
+                                   this->should_ignore_material_and_texture());
     }
 
     void build_camera();
@@ -114,7 +115,7 @@ class SceneBuilder {
     void build_integrator();
 
     const Material *create_material(const std::string &type_of_material,
-                                    const ParameterDict &parameters);
+                                    const ParameterDictionary &parameters);
 
     void parse_area_light_source(const std::vector<Token> &tokens);
 

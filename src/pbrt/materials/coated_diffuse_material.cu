@@ -3,11 +3,11 @@
 #include "pbrt/base/material.h"
 #include "pbrt/base/texture.h"
 #include "pbrt/base/spectrum.h"
-#include "pbrt/scene/parameter_dict.h"
+#include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/textures/spectrum_constant_texture.h"
 
-void CoatedDiffuseMaterial::init(const ParameterDict &parameters,
+void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
                                  std::vector<void *> &gpu_dynamic_pointers) {
 
     auto reflectance_key = "reflectance";

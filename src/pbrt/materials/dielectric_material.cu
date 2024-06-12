@@ -6,10 +6,10 @@
 
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 #include "pbrt/spectra/constant_spectrum.h"
-#include "pbrt/scene/parameter_dict.h"
+#include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/textures/float_constant_texture.h"
 
-void DielectricMaterial::init(const ParameterDict &parameters,
+void DielectricMaterial::init(const ParameterDictionary &parameters,
                               std::vector<void *> &gpu_dynamic_pointers) {
     if (parameters.has_floats("eta")) {
         // this part is not implemented

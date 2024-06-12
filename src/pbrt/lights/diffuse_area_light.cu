@@ -5,11 +5,12 @@
 
 #include "pbrt/gpu/global_variable.h"
 
-#include "pbrt/scene/parameter_dict.h"
+#include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 
-void DiffuseAreaLight::init(const Transform &_render_from_light, const ParameterDict &parameters,
-                            const Shape *_shape, const GPU::GlobalVariable *global_variable) {
+void DiffuseAreaLight::init(const Transform &_render_from_light,
+                            const ParameterDictionary &parameters, const Shape *_shape,
+                            const GPU::GlobalVariable *global_variable) {
     auto rgb_l = parameters.get_rgb("L", std::nullopt);
 
     auto rgb_illuminant_spectrum_l = RGBIlluminantSpectrum(rgb_l, global_variable->rgb_color_space);

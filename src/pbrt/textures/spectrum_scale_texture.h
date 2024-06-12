@@ -6,11 +6,11 @@ class SpectrumTexture;
 class TextureEvalContext;
 class SampledWavelengths;
 class SampledSpectrum;
-class ParameterDict;
+class ParameterDictionary;
 
 class SpectrumScaleTexture {
   public:
-    void init(const ParameterDict &parameters);
+    void init(const ParameterDictionary &parameters);
 
     PBRT_CPU_GPU
     SampledSpectrum evaluate(const TextureEvalContext &ctx, const SampledWavelengths &lambda) const;

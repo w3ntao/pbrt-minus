@@ -1,9 +1,9 @@
 #include "pbrt/textures/spectrum_scale_texture.h"
 
 #include "pbrt/base/texture.h"
-#include "pbrt/scene/parameter_dict.h"
+#include "pbrt/scene/parameter_dictionary.h"
 
-void SpectrumScaleTexture::init(const ParameterDict &parameters) {
+void SpectrumScaleTexture::init(const ParameterDictionary &parameters) {
     texture = parameters.get_spectrum_texture("tex");
     scale = parameters.get_float("scale", 1.0);
 }

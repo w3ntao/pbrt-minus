@@ -3,7 +3,7 @@
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/base/texture.h"
-#include "pbrt/scene/parameter_dict.h"
+#include "pbrt/scene/parameter_dictionary.h"
 
 // TexCoord2D Definition
 struct TexCoord2D {
@@ -14,7 +14,7 @@ struct TexCoord2D {
 // UVMapping Definition
 class UVMapping {
   public:
-    UVMapping(const ParameterDict &parameters) {
+    UVMapping(const ParameterDictionary &parameters) {
         su = parameters.get_float("uscale", 1.0);
         sv = parameters.get_float("vscale", 1.0);
         du = parameters.get_float("udelta", 0.0);

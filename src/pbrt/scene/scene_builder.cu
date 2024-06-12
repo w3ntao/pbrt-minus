@@ -211,7 +211,7 @@ void SceneBuilder::build_sampler() {
 }
 
 const Material *SceneBuilder::create_material(const std::string &type_of_material,
-                                              const ParameterDict &parameters) {
+                                              const ParameterDictionary &parameters) {
     if (type_of_material == "conductor") {
         return Material::create_conductor_material(parameters, gpu_dynamic_pointers);
     }

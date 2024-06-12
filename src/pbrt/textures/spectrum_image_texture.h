@@ -8,7 +8,7 @@
 
 class SpectrumImageTexture : ImageTextureBase {
   public:
-    static const SpectrumImageTexture *create(const ParameterDict &parameters,
+    static const SpectrumImageTexture *create(const ParameterDictionary &parameters,
                                               std::vector<void *> &gpu_dynamic_pointers,
                                               const RGBColorSpace *_color_space);
 
@@ -19,6 +19,6 @@ class SpectrumImageTexture : ImageTextureBase {
     SpectrumType spectrum_type;
     const RGBColorSpace *color_space;
 
-    void init(const ParameterDict &parameters, std::vector<void *> &gpu_dynamic_pointers,
+    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers,
               const RGBColorSpace *_color_space);
 };

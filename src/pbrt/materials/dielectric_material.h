@@ -8,14 +8,14 @@
 class DielectricBxDF;
 class FloatTexture;
 class MaterialEvalContext;
-class ParameterDict;
+class ParameterDictionary;
 class SampledWavelengths;
 class Spectrum;
 class SpectrumTexture;
 
 class DielectricMaterial {
   public:
-    void init(const ParameterDict &parameters, std::vector<void *> &gpu_dynamic_pointers);
+    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_GPU
     DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,

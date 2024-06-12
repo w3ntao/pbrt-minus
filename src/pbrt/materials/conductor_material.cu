@@ -8,9 +8,9 @@
 
 #include "pbrt/bxdfs/conductor_bxdf.h"
 
-#include "pbrt/scene/parameter_dict.h"
+#include "pbrt/scene/parameter_dictionary.h"
 
-void ConductorMaterial::init(const ParameterDict &parameters,
+void ConductorMaterial::init(const ParameterDictionary &parameters,
                              std::vector<void *> &gpu_dynamic_pointers) {
     auto key_eta = "eta";
     if (parameters.has_spectrum_texture(key_eta)) {

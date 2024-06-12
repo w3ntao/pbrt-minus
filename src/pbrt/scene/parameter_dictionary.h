@@ -13,11 +13,11 @@ class RGBColorSpace;
 class Spectrum;
 class SpectrumTexture;
 
-class ParameterDict {
+class ParameterDictionary {
   public:
-    ParameterDict() = default;
+    ParameterDictionary() = default;
 
-    explicit ParameterDict(
+    explicit ParameterDictionary(
         const std::vector<Token> &tokens,
         const std::map<std::string, const Spectrum *> &_named_spectra,
         const std::map<std::string, const SpectrumTexture *> &_named_spectrum_texture,
@@ -252,7 +252,7 @@ class ParameterDict {
         return spectrum_textures.at(key);
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const ParameterDict &parameters) {
+    friend std::ostream &operator<<(std::ostream &stream, const ParameterDictionary &parameters) {
         if (!parameters.integers.empty()) {
             stream << "integers:\n";
             parameters.print_dict_of_vector(stream, parameters.integers);

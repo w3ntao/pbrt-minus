@@ -5,7 +5,7 @@
 #include "pbrt/base/light.h"
 #include "pbrt/spectra/densely_sampled_spectrum.h"
 
-class ParameterDict;
+class ParameterDictionary;
 class RGBColorSpace;
 class Spectrum;
 class Shape;
@@ -16,7 +16,7 @@ class GlobalVariable;
 
 class DiffuseAreaLight : public LightBase {
   public:
-    void init(const Transform &_render_from_light, const ParameterDict &parameters,
+    void init(const Transform &_render_from_light, const ParameterDictionary &parameters,
               const Shape *_shape, const GPU::GlobalVariable *global_variable);
 
     PBRT_GPU

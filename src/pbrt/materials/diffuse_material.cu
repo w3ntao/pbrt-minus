@@ -5,7 +5,7 @@
 #include "pbrt/base/texture.h"
 
 #include "pbrt/bxdfs/diffuse_bxdf.h"
-#include "pbrt/scene/parameter_dict.h"
+#include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
@@ -21,7 +21,7 @@ const DiffuseMaterial *DiffuseMaterial::create(const SpectrumTexture *_reflectan
     return diffuse_material;
 }
 
-void DiffuseMaterial::init(const ParameterDict &parameters,
+void DiffuseMaterial::init(const ParameterDictionary &parameters,
                            std::vector<void *> &gpu_dynamic_pointers) {
     auto key = "reflectance";
 

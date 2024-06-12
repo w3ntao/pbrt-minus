@@ -1,7 +1,7 @@
 #include "pbrt/textures/spectrum_image_texture.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 
-const SpectrumImageTexture *SpectrumImageTexture::create(const ParameterDict &parameters,
+const SpectrumImageTexture *SpectrumImageTexture::create(const ParameterDictionary &parameters,
                                                          std::vector<void *> &gpu_dynamic_pointers,
                                                          const RGBColorSpace *_color_space) {
     SpectrumImageTexture *texture;
@@ -13,7 +13,7 @@ const SpectrumImageTexture *SpectrumImageTexture::create(const ParameterDict &pa
     return texture;
 }
 
-void SpectrumImageTexture::init(const ParameterDict &parameters,
+void SpectrumImageTexture::init(const ParameterDictionary &parameters,
                                 std::vector<void *> &gpu_dynamic_pointers,
                                 const RGBColorSpace *_color_space) {
     mipmap = MIPMap::create(parameters, gpu_dynamic_pointers, _color_space);

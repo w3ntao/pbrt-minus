@@ -11,11 +11,11 @@ class SampledWavelengths;
 class FloatTexture;
 class SpectrumTexture;
 
-class ParameterDict;
+class ParameterDictionary;
 
 class ConductorMaterial {
   public:
-    void init(const ParameterDict &parameters, std::vector<void *> &gpu_dynamic_pointers);
+    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_GPU
     ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda);

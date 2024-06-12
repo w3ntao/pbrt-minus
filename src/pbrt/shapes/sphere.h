@@ -9,13 +9,13 @@
 
 class ShapeSample;
 class ShapeSampleContext;
-class ParameterDict;
+class ParameterDictionary;
 
 class Sphere {
   public:
     static const Sphere *create(const Transform &render_from_object,
                                 const Transform &object_from_render, bool reverse_orientation,
-                                const ParameterDict &parameters,
+                                const ParameterDictionary &parameters,
                                 std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const Transform &_render_from_object, const Transform &_object_from_render,

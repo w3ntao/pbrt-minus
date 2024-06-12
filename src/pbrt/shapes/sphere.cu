@@ -2,14 +2,14 @@
 
 #include "pbrt/base/shape.h"
 #include "pbrt/euclidean_space/transform.h"
-#include "pbrt/scene/parameter_dict.h"
+#include "pbrt/scene/parameter_dictionary.h"
 
 #include "pbrt/util/sampling.h"
 #include "pbrt/util/util.h"
 
 const Sphere *Sphere::create(const Transform &render_from_object,
                              const Transform &object_from_render, bool reverse_orientation,
-                             const ParameterDict &parameters,
+                             const ParameterDictionary &parameters,
                              std::vector<void *> &gpu_dynamic_pointers) {
     auto radius = parameters.get_float("radius", 1.0);
     auto z_min = parameters.get_float("zmin", -radius);

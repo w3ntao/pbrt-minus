@@ -5,7 +5,7 @@
 
 const Shape *Shape::create_sphere(const Transform &render_from_object,
                                   const Transform &object_from_render, bool reverse_orientation,
-                                  const ParameterDict &parameters,
+                                  const ParameterDictionary &parameters,
                                   std::vector<void *> &gpu_dynamic_pointers) {
     auto sphere = Sphere::create(render_from_object, object_from_render, reverse_orientation,
                                  parameters, gpu_dynamic_pointers);

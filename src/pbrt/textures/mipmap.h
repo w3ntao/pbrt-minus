@@ -45,7 +45,7 @@ struct MIPMapFilterOptions {
 
 class MIPMap {
   public:
-    static const MIPMap *create(const ParameterDict &parameters,
+    static const MIPMap *create(const ParameterDictionary &parameters,
                                 std::vector<void *> &gpu_dynamic_pointers,
                                 const RGBColorSpace *_color_space) {
         MIPMap *mipmap;
@@ -66,7 +66,7 @@ class MIPMap {
     WrapMode wrap_mode;
     MIPMapFilterOptions options;
 
-    void init(const ParameterDict &parameters, std::vector<void *> &gpu_dynamic_pointers,
+    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers,
               const RGBColorSpace *_color_space) {
         auto max_anisotropy = parameters.get_float("maxanisotropy", 8.0);
         auto filter_string = parameters.get_string("filter", "bilinear");

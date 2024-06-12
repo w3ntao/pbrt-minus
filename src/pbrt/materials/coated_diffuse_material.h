@@ -7,11 +7,11 @@ class FloatTexture;
 class MaterialEvalContext;
 class Spectrum;
 class SpectrumTexture;
-class ParameterDict;
+class ParameterDictionary;
 
 class CoatedDiffuseMaterial {
   public:
-    void init(const ParameterDict &parameters, std::vector<void *> &gpu_dynamic_pointers);
+    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_GPU
     CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,

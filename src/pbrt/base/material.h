@@ -27,7 +27,7 @@ class CoatedDiffuseMaterial;
 class ConductorMaterial;
 class DielectricMaterial;
 class DiffuseMaterial;
-class ParameterDict;
+class ParameterDictionary;
 
 class Material {
   public:
@@ -39,10 +39,10 @@ class Material {
     };
 
     static const Material *
-    create_coated_diffuse_material(const ParameterDict &parameters,
+    create_coated_diffuse_material(const ParameterDictionary &parameters,
                                    std::vector<void *> &gpu_dynamic_pointers);
 
-    static const Material *create_conductor_material(const ParameterDict &parameters,
+    static const Material *create_conductor_material(const ParameterDictionary &parameters,
                                                      std::vector<void *> &gpu_dynamic_pointers);
 
     static const Material *create_diffuse_material(const SpectrumTexture *texture,

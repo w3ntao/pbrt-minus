@@ -10,7 +10,7 @@
 #include "pbrt/materials/dielectric_material.h"
 
 const Material *
-Material::create_coated_diffuse_material(const ParameterDict &parameters,
+Material::create_coated_diffuse_material(const ParameterDictionary &parameters,
                                          std::vector<void *> &gpu_dynamic_pointers) {
     CoatedDiffuseMaterial *coated_diffuse_material;
     Material *material;
@@ -26,7 +26,7 @@ Material::create_coated_diffuse_material(const ParameterDict &parameters,
     return material;
 }
 
-const Material *Material::create_conductor_material(const ParameterDict &parameters,
+const Material *Material::create_conductor_material(const ParameterDictionary &parameters,
                                                     std::vector<void *> &gpu_dynamic_pointers) {
     ConductorMaterial *conductor_material;
     CHECK_CUDA_ERROR(cudaMallocManaged(&conductor_material, sizeof(ConductorMaterial)));
