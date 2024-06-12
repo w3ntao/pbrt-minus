@@ -31,17 +31,25 @@ $ make -j
 You should find executable at `pbrt-minus/build/pbrt-minus`
 
 
-### preview
+### gallery
 
 scenes: https://github.com/w3ntao/pbrt-minus-scenes \
 (currently most scenes are borrowed from https://github.com/mmp/pbrt-v4-scenes)
 
-![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/ganesha-simple-path-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/ganesha-simplepath-512.png)
 
-![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/cornell-box-simple-path-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-silver-simplepath-512.png)
 
-![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/crown-ao-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-rough-glass-simplepath-512.png)
 
-![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/lte-orb-rough-glass-ao-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-simplepath-512.png)
 
-![](https://github.com/w3ntao/pbrt-minus-preview/blob/main/killeroo-coated-gold-surfacenormal-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-specular-simplepath-512.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/veach-mis-colorized-simplepath-512.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/killeroo-simple-simplepath-512.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/dragon_10-ambientocclusion-512.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/crown-surfacenormal-512.png)
