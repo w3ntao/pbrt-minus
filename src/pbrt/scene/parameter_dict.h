@@ -21,7 +21,8 @@ class ParameterDict {
         const std::vector<Token> &tokens,
         const std::map<std::string, const Spectrum *> &_named_spectra,
         const std::map<std::string, const SpectrumTexture *> &_named_spectrum_texture,
-        const std::string &_root, const RGBColorSpace *_rgb_color_space)
+        const std::string &_root, const RGBColorSpace *_rgb_color_space,
+        bool ignore_material_and_texture)
         : root(_root), rgb_color_space(_rgb_color_space) {
         // the 1st token is Keyword
         // the 2nd token is String
@@ -35,6 +36,12 @@ class ParameterDict {
 
             auto variable_type = tokens[idx].values[0];
             auto variable_name = tokens[idx].values[1];
+
+            if (ignore_material_and_texture) {
+                if (variable_type == "spectrum" || variable_type == "texture") {
+                    continue;
+                }
+            }
 
             if (variable_type == "bool") {
                 auto value_in_str = tokens[idx + 1].values[0];

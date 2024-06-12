@@ -93,9 +93,14 @@ class SceneBuilder {
         CHECK_CUDA_ERROR(cudaGetLastError());
     }
 
+    bool should_ignore_material_and_texture() const {
+        return integrator_name == "ambientocclusion" || integrator_name == "surfacenormal";
+    }
+
     ParameterDict build_parameter_dictionary(const std::vector<Token> &tokens) {
         return ParameterDict(tokens, pre_computed_spectrum.named_spectra, named_spectrum_texture,
-                             root, renderer->global_variables->rgb_color_space);
+                             root, renderer->global_variables->rgb_color_space,
+                             this->should_ignore_material_and_texture());
     }
 
     void build_camera();

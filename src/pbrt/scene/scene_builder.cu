@@ -466,10 +466,8 @@ void SceneBuilder::parse_area_light_source(const std::vector<Token> &tokens) {
         throw std::runtime_error("parse_area_light_source: only `diffuse` supported at the moment");
     }
 
-    graphics_state.area_light_entity = AreaLightEntity(
-        tokens[1].values[0],
-        ParameterDict(sub_vector(tokens, 2), pre_computed_spectrum.named_spectra,
-                      named_spectrum_texture, root, renderer->global_variables->rgb_color_space));
+    graphics_state.area_light_entity =
+        AreaLightEntity(tokens[1].values[0], build_parameter_dictionary(sub_vector(tokens, 2)));
 }
 
 void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
@@ -814,9 +812,10 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
     case TokenType::Keyword: {
         const auto keyword = first_token.values[0];
 
-        if (integrator_name == "ambientocclusion" || integrator_name == "surfacenormal") {
+        if (this->should_ignore_material_and_texture()) {
             static std::set<std::string> ignored_keywords;
             if (keyword == "AreaLightSource" || keyword == "LightSource" || keyword == "Material" ||
+                keyword == "MakeNamedMaterial" || keyword == "NamedMaterial" ||
                 keyword == "Texture") {
 
                 if (ignored_keywords.find(keyword) == ignored_keywords.end()) {
