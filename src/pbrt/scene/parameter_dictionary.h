@@ -1,9 +1,12 @@
 #pragma once
 
+#include <filesystem>
+#include <fstream>
 #include <map>
 #include <optional>
 #include <vector>
 
+#include "pbrt/base/spectrum.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/scene/tokenizer.h"
 #include "pbrt/spectrum_util/rgb.h"
@@ -22,7 +25,7 @@ class ParameterDictionary {
         const std::map<std::string, const Spectrum *> &_named_spectra,
         const std::map<std::string, const SpectrumTexture *> &_named_spectrum_texture,
         const std::string &_root, const RGBColorSpace *_rgb_color_space,
-        bool ignore_material_and_texture)
+        bool ignore_material_and_texture, std::vector<void *> &gpu_dynamic_pointers)
         : root(_root), rgb_color_space(_rgb_color_space) {
         // the 1st token is Keyword
         // the 2nd token is String
@@ -109,8 +112,23 @@ class ParameterDictionary {
             }
 
             if (variable_type == "spectrum") {
-                auto spectrum_name = tokens[idx + 1].values[0];
-                spectra[variable_name] = _named_spectra.at(spectrum_name);
+                auto val_in_str = tokens[idx + 1].values[0];
+
+                auto file_path = root + "/" + val_in_str;
+                if (std::filesystem::is_regular_file(file_path)) {
+                    auto spectrum_samples = read_spectrum_file(file_path);
+
+                    auto built_spectrum =
+                        Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+                            std::vector(std::begin(spectrum_samples), std::end(spectrum_samples)),
+                            false, nullptr, gpu_dynamic_pointers);
+
+                    spectra[variable_name] = built_spectrum;
+                    continue;
+                }
+
+                // otherwise it's a named spectrum
+                spectra[variable_name] = _named_spectra.at(val_in_str);
                 continue;
             }
 
@@ -348,5 +366,24 @@ class ParameterDictionary {
             }
             stream << "}\n";
         }
+    }
+
+    std::vector<FloatType> read_spectrum_file(const std::string &filename) {
+        std::string token;
+        std::ifstream file(filename);
+
+        std::vector<FloatType> values;
+
+        while (std::getline(file, token)) {
+            std::istringstream line(token);
+            while (line >> token) {
+                values.push_back(std::stod(token));
+            }
+            if (file.unget().get() == '\n') {
+                // if it's '\n', do nothing
+            }
+        }
+
+        return values;
     }
 };

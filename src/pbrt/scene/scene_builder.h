@@ -101,7 +101,7 @@ class SceneBuilder {
         return ParameterDictionary(tokens, pre_computed_spectrum.named_spectra,
                                    named_spectrum_texture, root,
                                    renderer->global_variables->rgb_color_space,
-                                   this->should_ignore_material_and_texture());
+                                   should_ignore_material_and_texture(), gpu_dynamic_pointers);
     }
 
     void build_camera();
@@ -173,7 +173,7 @@ class SceneBuilder {
 
   public:
     static void render_pbrt(const CommandLineOption &command_line_option) {
-        if (!std::filesystem::exists(command_line_option.input_file)) {
+        if (!std::filesystem::is_regular_file(command_line_option.input_file)) {
             std::cout << "file not found: `" + command_line_option.input_file + "`\n\n";
             exit(1);
         }
