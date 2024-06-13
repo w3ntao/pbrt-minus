@@ -38,9 +38,9 @@ class Spectrum {
     static const Spectrum *create_constant_spectrum(FloatType val,
                                                     std::vector<void *> &gpu_dynamic_pointers);
 
-    static const Spectrum *create_rgb_albedo_spectrum(const RGB &val,
-                                                      std::vector<void *> &gpu_dynamic_pointers,
-                                                      const RGBColorSpace *color_space);
+    static const Spectrum *create_from_rgb(const RGB &val, SpectrumType spectrum_type,
+                                           const RGBColorSpace *color_space,
+                                           std::vector<void *> &gpu_dynamic_pointers);
 
     static const Spectrum *create_piecewise_linear_spectrum_from_lambdas_and_values(
         const std::vector<FloatType> &cpu_lambdas, const std::vector<FloatType> &cpu_values,

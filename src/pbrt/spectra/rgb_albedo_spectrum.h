@@ -10,7 +10,7 @@ class SampledWavelengths;
 class RGBAlbedoSpectrum {
   public:
     PBRT_CPU_GPU
-    void init(const RGBColorSpace *cs, RGB rgb);
+    void init(const RGB &rgb, const RGBColorSpace *cs);
 
     PBRT_CPU_GPU FloatType operator()(FloatType lambda) const {
         return rsp(lambda);

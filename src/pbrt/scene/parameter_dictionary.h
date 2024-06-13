@@ -17,6 +17,10 @@ class Spectrum;
 class SpectrumTexture;
 class Token;
 
+namespace GPU {
+class GlobalVariable;
+}
+
 class ParameterDictionary {
   public:
     ParameterDictionary() = default;
@@ -25,10 +29,10 @@ class ParameterDictionary {
         const std::vector<Token> &tokens,
         const std::map<std::string, const Spectrum *> &_named_spectra,
         const std::map<std::string, const SpectrumTexture *> &_named_spectrum_texture,
-        const std::string &_root, const RGBColorSpace *_rgb_color_space,
+        const std::string &_root, const GPU::GlobalVariable *_global_variables,
         bool ignore_material_and_texture, std::vector<void *> &gpu_dynamic_pointers);
 
-    const RGBColorSpace *rgb_color_space = nullptr;
+    const GPU::GlobalVariable *global_variables = nullptr;
 
     bool has_floats(const std::string &key) const {
         return floats.find(key) != floats.end();
@@ -91,7 +95,7 @@ class ParameterDictionary {
     std::string get_string(const std::string &key, std::optional<std::string> default_val) const {
         if (strings.find(key) == strings.end()) {
             if (!default_val.has_value()) {
-                printf("%s(): key not available\n", __func__);
+                printf("%s(): key `%s` not available\n", __func__, key.c_str());
                 REPORT_FATAL_ERROR();
             }
 
@@ -101,17 +105,38 @@ class ParameterDictionary {
         return strings.at(key);
     }
 
-    std::vector<Point2f> get_point2(const std::string &key) const {
+    std::vector<Point2f> get_point2_array(const std::string &key) const {
         if (point2s.find(key) == point2s.end()) {
-            return {};
+            printf("%s(): key not available: %s\n", __func__, key.c_str());
+            REPORT_FATAL_ERROR();
         }
 
         return point2s.at(key);
     }
 
-    std::vector<Point3f> get_point3(const std::string &key) const {
+    Point3f get_point3(const std::string &key, const std::optional<Point3f> default_val) const {
         if (point3s.find(key) == point3s.end()) {
-            return {};
+            if (!default_val.has_value()) {
+                printf("%s(): key not available: %s\n", __func__, key.c_str());
+                REPORT_FATAL_ERROR();
+            }
+
+            return default_val.value();
+        }
+
+        auto val = point3s.at(key);
+        if (val.size() > 1) {
+            printf("%s(): key `%s` is with multiple matched value\n", __func__, key.c_str());
+            REPORT_FATAL_ERROR();
+        }
+
+        return val[0];
+    }
+
+    std::vector<Point3f> get_point3_array(const std::string &key) const {
+        if (point3s.find(key) == point3s.end()) {
+            printf("%s(): key not available: %s\n", __func__, key.c_str());
+            REPORT_FATAL_ERROR();
         }
 
         return point3s.at(key);

@@ -3,6 +3,7 @@
 #include "pbrt/base/material.h"
 #include "pbrt/base/texture.h"
 #include "pbrt/base/spectrum.h"
+#include "pbrt/gpu/global_variable.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/textures/spectrum_constant_texture.h"
@@ -16,8 +17,9 @@ void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
     } else if (parameters.has_rgb(reflectance_key)) {
         auto rgb_val = parameters.get_rgb(reflectance_key, {});
 
-        auto rgb_albedo_spectrum = Spectrum::create_rgb_albedo_spectrum(
-            rgb_val, gpu_dynamic_pointers, parameters.rgb_color_space);
+        auto rgb_albedo_spectrum = Spectrum::create_from_rgb(
+            rgb_val, SpectrumType::Albedo, parameters.global_variables->rgb_color_space,
+            gpu_dynamic_pointers);
 
         reflectance =
             SpectrumTexture::create_constant_texture(rgb_albedo_spectrum, gpu_dynamic_pointers);

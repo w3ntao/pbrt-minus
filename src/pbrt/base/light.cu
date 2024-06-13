@@ -1,10 +1,11 @@
 #include "pbrt/base/light.h"
+
 #include "pbrt/lights/diffuse_area_light.h"
+#include "pbrt/lights/distant_light.h"
 #include "pbrt/lights/image_infinite_light.h"
 
-Light *Light::create_diffuse_area_light(const Transform &_render_from_light,
-                                        const ParameterDictionary &parameters, const Shape *_shape,
-                                        const GPU::GlobalVariable *global_variable,
+Light *Light::create_diffuse_area_light(const Shape *_shape, const Transform &_render_from_light,
+                                        const ParameterDictionary &parameters,
                                         std::vector<void *> &gpu_dynamic_pointers) {
 
     DiffuseAreaLight *diffuse_are_light;
@@ -15,10 +16,16 @@ Light *Light::create_diffuse_area_light(const Transform &_render_from_light,
     gpu_dynamic_pointers.push_back(diffuse_are_light);
     gpu_dynamic_pointers.push_back(light);
 
-    diffuse_are_light->init(_render_from_light, parameters, _shape, global_variable);
+    diffuse_are_light->init(_shape, _render_from_light, parameters);
     light->init(diffuse_are_light);
 
     return light;
+}
+
+PBRT_CPU_GPU
+void Light::init(DistantLight *distant_light) {
+    type = Type::distant_light;
+    ptr = distant_light;
 }
 
 PBRT_CPU_GPU
@@ -31,6 +38,26 @@ PBRT_CPU_GPU
 void Light::init(ImageInfiniteLight *image_infinite_light) {
     type = Type::image_infinite_light;
     ptr = image_infinite_light;
+}
+
+PBRT_CPU_GPU
+LightType Light::get_light_type() const {
+    switch (type) {
+    case (Type::diffuse_area_light): {
+        return ((DiffuseAreaLight *)ptr)->get_light_type();
+    }
+
+    case (Type::distant_light): {
+        return ((DistantLight *)ptr)->get_light_type();
+    }
+
+    case (Type::image_infinite_light): {
+        return ((ImageInfiniteLight *)ptr)->get_light_type();
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return {};
 }
 
 PBRT_GPU
@@ -63,6 +90,11 @@ cuda::std::optional<LightLiSample> Light::sample_li(const LightSampleContext ctx
     case (Type::diffuse_area_light): {
         return ((DiffuseAreaLight *)ptr)->sample_li(ctx, u, lambda);
     }
+
+    case (Type::distant_light): {
+        return ((DistantLight *)ptr)->sample_li(ctx, u, lambda);
+    }
+
     case (Type::image_infinite_light): {
         return ((ImageInfiniteLight *)ptr)->sample_li(ctx, u, lambda);
     }
@@ -77,8 +109,15 @@ void Light::preprocess(const Bounds3<FloatType> &scene_bounds) {
         // do nothing
         return;
     }
+
+    case (Type::distant_light): {
+        ((DistantLight *)ptr)->preprocess(scene_bounds);
+        return;
+    }
+
     case (Type::image_infinite_light): {
-        return ((ImageInfiniteLight *)ptr)->preprocess(scene_bounds);
+        ((ImageInfiniteLight *)ptr)->preprocess(scene_bounds);
+        return;
     }
     }
 

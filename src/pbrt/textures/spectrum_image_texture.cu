@@ -39,7 +39,7 @@ SampledSpectrum SpectrumImageTexture::evaluate(const TextureEvalContext &ctx,
     switch (spectrum_type) {
     case (SpectrumType::Albedo): {
         RGBAlbedoSpectrum rgb_albedo_spectrum;
-        rgb_albedo_spectrum.init(color_space, rgb.clamp(0.0, 1.0));
+        rgb_albedo_spectrum.init(rgb.clamp(0.0, 1.0), color_space);
         return rgb_albedo_spectrum.sample(lambda);
     }
     }

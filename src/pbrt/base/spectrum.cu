@@ -72,22 +72,46 @@ const Spectrum *Spectrum::create_constant_spectrum(FloatType val,
     return spectrum;
 }
 
-const Spectrum *Spectrum::create_rgb_albedo_spectrum(const RGB &val,
-                                                     std::vector<void *> &gpu_dynamic_pointers,
-                                                     const RGBColorSpace *color_space) {
-    RGBAlbedoSpectrum *rgb_albedo_spectrum;
-    Spectrum *spectrum;
+const Spectrum *Spectrum::create_from_rgb(const RGB &val, SpectrumType spectrum_type,
+                                          const RGBColorSpace *color_space,
+                                          std::vector<void *> &gpu_dynamic_pointers) {
+    switch (spectrum_type) {
+    case (SpectrumType::Albedo): {
+        RGBAlbedoSpectrum *rgb_albedo_spectrum;
+        Spectrum *spectrum;
 
-    CHECK_CUDA_ERROR(cudaMallocManaged(&rgb_albedo_spectrum, sizeof(RGBAlbedoSpectrum)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&rgb_albedo_spectrum, sizeof(RGBAlbedoSpectrum)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
 
-    rgb_albedo_spectrum->init(color_space, val);
-    spectrum->init(rgb_albedo_spectrum);
+        rgb_albedo_spectrum->init(val, color_space);
+        spectrum->init(rgb_albedo_spectrum);
 
-    gpu_dynamic_pointers.push_back(rgb_albedo_spectrum);
-    gpu_dynamic_pointers.push_back(spectrum);
+        gpu_dynamic_pointers.push_back(rgb_albedo_spectrum);
+        gpu_dynamic_pointers.push_back(spectrum);
 
-    return spectrum;
+        return spectrum;
+    }
+
+    case (SpectrumType::Illuminant): {
+        RGBIlluminantSpectrum *rgb_illuminant_spectrum;
+        Spectrum *spectrum;
+
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged(&rgb_illuminant_spectrum, sizeof(RGBIlluminantSpectrum)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
+
+        rgb_illuminant_spectrum->init(val, color_space);
+        spectrum->init(rgb_illuminant_spectrum);
+
+        gpu_dynamic_pointers.push_back(rgb_illuminant_spectrum);
+        gpu_dynamic_pointers.push_back(spectrum);
+
+        return spectrum;
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return nullptr;
 }
 
 const Spectrum *Spectrum::create_piecewise_linear_spectrum_from_lambdas_and_values(

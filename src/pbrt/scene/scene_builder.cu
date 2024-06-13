@@ -7,6 +7,7 @@
 #include "pbrt/integrators/random_walk.h"
 #include "pbrt/integrators/simple_path.h"
 
+#include "pbrt/lights/distant_light.h"
 #include "pbrt/lights/image_infinite_light.h"
 
 #include "pbrt/materials/coated_diffuse_material.h"
@@ -372,26 +373,34 @@ void SceneBuilder::build_integrator() {
 void SceneBuilder::parse_light_source(const std::vector<Token> &tokens) {
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
-    auto texture_file = root + "/" + parameters.get_string("filename", {});
+    const auto light_source_type = tokens[1].values[0];
+    if (light_source_type == "distant") {
+        auto distant_light =
+            DistantLight::create(this->get_render_from_object(), parameters, gpu_dynamic_pointers);
 
-    auto scale = parameters.get_float("scale", 1.0);
+        Light *light;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
+        gpu_dynamic_pointers.push_back(light);
 
-    const Spectrum *cie_xyz[3];
-    renderer->global_variables->get_cie_xyz(cie_xyz);
-    const auto cie_y = cie_xyz[1];
+        light->init(distant_light);
+        gpu_lights.push_back(light);
+        return;
+    }
 
-    scale /= renderer->global_variables->rgb_color_space->illuminant->to_photometric(cie_y);
+    if (light_source_type == "infinite") {
+        auto image_infinite_light =
+            ImageInfiniteLight::create(get_render_from_object(), parameters, gpu_dynamic_pointers);
 
-    auto image_infinite_light = ImageInfiniteLight::create(
-        get_render_from_object(), texture_file, scale, renderer->global_variables->rgb_color_space,
-        gpu_dynamic_pointers);
+        Light *light;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
+        gpu_dynamic_pointers.push_back(light);
 
-    Light *infinite_light;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&infinite_light, sizeof(Light)));
-    gpu_dynamic_pointers.push_back(infinite_light);
+        light->init(image_infinite_light);
+        gpu_lights.push_back(light);
+        return;
+    }
 
-    infinite_light->init(image_infinite_light);
-    gpu_lights.push_back(infinite_light);
+    REPORT_FATAL_ERROR();
 }
 
 void SceneBuilder::parse_make_named_material(const std::vector<Token> &tokens) {
@@ -480,9 +489,9 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     auto type_of_shape = tokens[1].values[0];
 
     if (type_of_shape == "trianglemesh") {
-        auto uv = parameters.get_point2("uv");
+        auto uv = parameters.get_point2_array("uv");
         auto indices = parameters.get_integer("indices");
-        auto points = parameters.get_point3("P");
+        auto points = parameters.get_point3_array("P");
 
         add_triangle_mesh(points, indices, uv);
 
@@ -508,7 +517,7 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     if (type_of_shape == "loopsubdiv") {
         auto levels = parameters.get_integer("levels")[0];
         auto indices = parameters.get_integer("indices");
-        auto points = parameters.get_point3("P");
+        auto points = parameters.get_point3_array("P");
 
         const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);
 
@@ -539,11 +548,11 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         return;
     }
 
-    // otherweise: build AreaDiffuseLight
+    // otherwise: build AreaDiffuseLight
 
     auto diffuse_light = Light::create_diffuse_area_light(
-        get_render_from_object(), graphics_state.area_light_entity->parameters, built_shape,
-        renderer->global_variables, gpu_dynamic_pointers);
+        built_shape, get_render_from_object(), graphics_state.area_light_entity->parameters,
+        gpu_dynamic_pointers);
 
     gpu_lights.push_back(diffuse_light);
 
@@ -730,9 +739,8 @@ void SceneBuilder::add_triangle_mesh(const std::vector<Point3f> &points,
                                                sizeof(GeometricPrimitive) * num_triangles));
 
             for (uint idx = 0; idx < num_triangles; idx++) {
-                diffuse_area_lights[idx].init(render_from_object,
-                                              graphics_state.area_light_entity->parameters,
-                                              &shapes[idx], renderer->global_variables);
+                diffuse_area_lights[idx].init(&shapes[idx], render_from_object,
+                                              graphics_state.area_light_entity->parameters);
             }
 
             GPU::init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num_triangles);
@@ -794,6 +802,10 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
     }
 
     case TokenType::AttributeEnd: {
+        if (pushed_graphics_state.empty()) {
+            REPORT_FATAL_ERROR();
+        }
+
         graphics_state = pushed_graphics_state.top();
         pushed_graphics_state.pop();
         return;
@@ -837,6 +849,21 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
 
         if (keyword == "Camera") {
             camera_tokens = tokens;
+
+            auto camera_from_world = graphics_state.transform;
+            named_coordinate_systems["camera"] = camera_from_world.inverse();
+
+            return;
+        }
+
+        if (keyword == "CoordSysTransform") {
+            auto coord_sys_name = tokens[1].values[0];
+            if (named_coordinate_systems.find(coord_sys_name) == named_coordinate_systems.end()) {
+                printf("\ncoordinate system `%s` not available\n", coord_sys_name.c_str());
+                REPORT_FATAL_ERROR();
+            }
+
+            graphics_state.transform = named_coordinate_systems.at(coord_sys_name);
             return;
         }
 

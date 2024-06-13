@@ -5,12 +5,15 @@
 namespace GPU {
 
 struct GlobalVariable {
+    // TODO: rename this to GlobalSpectra
     void init(const Spectrum *_cie_xyz[3], const Spectrum *cie_illum_d6500,
               const RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_table,
               RGBtoSpectrumData::Gamut gamut) {
         for (uint idx = 0; idx < 3; idx++) {
             cie_xyz[idx] = _cie_xyz[idx];
         }
+
+        cie_y = cie_xyz[1];
 
         if (gamut == RGBtoSpectrumData::Gamut::sRGB) {
             rgb_color_space->init(Point2f(0.64, 0.33), Point2f(0.3, 0.6), Point2f(0.15, 0.06),
@@ -23,6 +26,7 @@ struct GlobalVariable {
             "\nGlobalVariable::init(): this color space is not implemented\n\n");
     }
 
+    // TODO: delete get_cie_xyz()
     PBRT_CPU_GPU void get_cie_xyz(const Spectrum *out[3]) const {
         for (uint idx = 0; idx < 3; idx++) {
             out[idx] = cie_xyz[idx];
@@ -31,5 +35,6 @@ struct GlobalVariable {
 
     RGBColorSpace *rgb_color_space;
     const Spectrum *cie_xyz[3];
+    const Spectrum *cie_y;
 };
 } // namespace GPU

@@ -16,11 +16,10 @@ class GPUImage;
 class ParameterDictionary;
 class RGBColorSpace;
 
-class ImageInfiniteLight : LightBase {
+class ImageInfiniteLight : public LightBase {
   public:
     static ImageInfiniteLight *create(const Transform &_render_from_light,
-                                      const std::string &image_filename, FloatType _scale,
-                                      const RGBColorSpace *_color_space,
+                                      const ParameterDictionary &parameters,
                                       std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_GPU

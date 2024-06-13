@@ -66,6 +66,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/integrators/simple_path.cu
 
         src/pbrt/lights/diffuse_area_light.cu
+        src/pbrt/lights/distant_light.cu
         src/pbrt/lights/image_infinite_light.cu
 
         src/pbrt/materials/conductor_material.cu

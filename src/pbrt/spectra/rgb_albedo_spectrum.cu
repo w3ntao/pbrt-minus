@@ -3,7 +3,7 @@
 #include "pbrt/spectrum_util/rgb_color_space.h"
 
 PBRT_CPU_GPU
-void RGBAlbedoSpectrum::init(const RGBColorSpace *cs, const RGB rgb) {
+void RGBAlbedoSpectrum::init(const RGB &rgb, const RGBColorSpace *cs) {
     rsp = cs->to_rgb_coefficients(rgb);
 }
 

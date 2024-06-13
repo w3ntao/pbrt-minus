@@ -16,9 +16,9 @@ class SurfaceNormalIntegrator {
         base = _base;
 
         auto scale = 0.01;
-        rgb_spectra[0].init(rgb_color_space, RGB(scale, 0, 0));
-        rgb_spectra[1].init(rgb_color_space, RGB(0, scale, 0));
-        rgb_spectra[2].init(rgb_color_space, RGB(0, 0, scale));
+        rgb_spectra[0].init(RGB(scale, 0, 0), rgb_color_space);
+        rgb_spectra[1].init(RGB(0, scale, 0), rgb_color_space);
+        rgb_spectra[2].init(RGB(0, 0, scale), rgb_color_space);
     }
 
     PBRT_GPU SampledSpectrum li(const DifferentialRay &ray, SampledWavelengths &lambda) const {

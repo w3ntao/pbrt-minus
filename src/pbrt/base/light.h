@@ -17,6 +17,7 @@ class GlobalVariable;
 
 class Light;
 class DiffuseAreaLight;
+class DistantLight;
 class ImageInfiniteLight;
 class Shape;
 class ParameterDictionary;
@@ -31,6 +32,11 @@ enum class LightType {
 struct LightBase {
     LightType light_type;
     Transform render_from_light;
+
+    PBRT_CPU_GPU
+    LightType get_light_type() const {
+        return light_type;
+    }
 };
 
 struct SampledLight {
@@ -67,14 +73,17 @@ class Light {
   public:
     enum class Type {
         diffuse_area_light,
+        distant_light,
         image_infinite_light,
     };
 
-    static Light *create_diffuse_area_light(const Transform &_render_from_light,
+    static Light *create_diffuse_area_light(const Shape *_shape,
+                                            const Transform &_render_from_light,
                                             const ParameterDictionary &parameters,
-                                            const Shape *_shape,
-                                            const GPU::GlobalVariable *global_variable,
                                             std::vector<void *> &gpu_dynamic_pointers);
+
+    PBRT_CPU_GPU
+    void init(DistantLight *distant_light);
 
     PBRT_CPU_GPU
     void init(DiffuseAreaLight *diffuse_area_light);
@@ -83,19 +92,7 @@ class Light {
     void init(ImageInfiniteLight *image_infinite_light);
 
     PBRT_CPU_GPU
-    LightType get_light_type() const {
-        switch (type) {
-        case (Type::diffuse_area_light): {
-            return LightType::area;
-        }
-        case (Type::image_infinite_light): {
-            return LightType::infinite;
-        }
-        }
-
-        REPORT_FATAL_ERROR();
-        return {};
-    }
+    LightType get_light_type() const;
 
     PBRT_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,

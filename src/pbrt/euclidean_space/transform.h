@@ -172,6 +172,15 @@ class Transform {
     }
 
     PBRT_CPU_GPU
+    Transform(const FloatType _m[4][4]) {
+        for (uint x = 0; x < 4; ++x) {
+            for (uint y = 0; y < 4; ++y) {
+                m[y][x] = _m[y][x];
+            }
+        }
+    }
+
+    PBRT_CPU_GPU
     Transform(const SquareMatrix<4> &_m) : m(_m), inv_m(m.inverse()) {}
 
     PBRT_CPU_GPU

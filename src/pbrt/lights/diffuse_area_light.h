@@ -16,8 +16,8 @@ class GlobalVariable;
 
 class DiffuseAreaLight : public LightBase {
   public:
-    void init(const Transform &_render_from_light, const ParameterDictionary &parameters,
-              const Shape *_shape, const GPU::GlobalVariable *global_variable);
+    void init(const Shape *_shape, const Transform &_render_from_light,
+              const ParameterDictionary &parameters);
 
     PBRT_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,

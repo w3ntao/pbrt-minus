@@ -99,8 +99,7 @@ class SceneBuilder {
 
     ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
         return ParameterDictionary(tokens, pre_computed_spectrum.named_spectra,
-                                   named_spectrum_texture, root,
-                                   renderer->global_variables->rgb_color_space,
+                                   named_spectrum_texture, root, renderer->global_variables,
                                    should_ignore_material_and_texture(), gpu_dynamic_pointers);
     }
 

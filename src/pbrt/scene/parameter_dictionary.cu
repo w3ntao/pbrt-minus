@@ -25,9 +25,9 @@ std::vector<FloatType> read_spectrum_file(const std::string &filename) {
 ParameterDictionary::ParameterDictionary(
     const std::vector<Token> &tokens, const std::map<std::string, const Spectrum *> &_named_spectra,
     const std::map<std::string, const SpectrumTexture *> &_named_spectrum_texture,
-    const std::string &_root, const RGBColorSpace *_rgb_color_space,
+    const std::string &_root, const GPU::GlobalVariable *_global_variables,
     bool ignore_material_and_texture, std::vector<void *> &gpu_dynamic_pointers)
-    : root(_root), rgb_color_space(_rgb_color_space) {
+    : root(_root), global_variables(_global_variables) {
     // the 1st token is Keyword
     // the 2nd token is String
     // e.g. { Shape "trianglemesh" }, { Camera "perspective" }
