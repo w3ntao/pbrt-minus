@@ -478,6 +478,7 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
     auto type_of_shape = tokens[1].values[0];
+
     if (type_of_shape == "trianglemesh") {
         auto uv = parameters.get_point2("uv");
         auto indices = parameters.get_integer("indices");
@@ -492,7 +493,6 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         auto file_path = get_file_full_path(parameters.get_string("filename", std::nullopt));
         auto ply_mesh = TriQuadMesh::read_ply(file_path);
 
-        // TODO: displacement texture is not implemented here
         if (!ply_mesh.triIndices.empty()) {
             add_triangle_mesh(ply_mesh.p, ply_mesh.triIndices, ply_mesh.uv);
         }
@@ -517,46 +517,48 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         return;
     }
 
-    if (type_of_shape == "sphere") {
-        auto sphere = Shape::create_sphere(
-            get_render_from_object(), get_render_from_object().inverse(),
-            graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
-
-        if (graphics_state.area_light_entity) {
-            auto diffuse_light = Light::create_diffuse_area_light(
-                get_render_from_object(), graphics_state.area_light_entity->parameters, sphere,
-                renderer->global_variables, gpu_dynamic_pointers);
-
-            gpu_lights.push_back(diffuse_light);
-
-            GeometricPrimitive *geometric_primitive;
-            CHECK_CUDA_ERROR(cudaMallocManaged(&geometric_primitive, sizeof(GeometricPrimitive)));
-            Primitive *primitive;
-            CHECK_CUDA_ERROR(cudaMallocManaged(&primitive, sizeof(Primitive)));
-
-            gpu_dynamic_pointers.push_back(geometric_primitive);
-            gpu_dynamic_pointers.push_back(primitive);
-
-            geometric_primitive->init(sphere, graphics_state.material, diffuse_light);
-            primitive->init(geometric_primitive);
-
-            gpu_primitives.push_back(primitive);
-        } else {
-            auto primitive = Primitive::create_simple_primitive(sphere, graphics_state.material,
-                                                                gpu_dynamic_pointers);
-            gpu_primitives.push_back(primitive);
-        }
-
-        return;
-    }
+    const Shape *built_shape;
 
     if (type_of_shape == "disk") {
-        printf("\nignore Shape::%s for the moment\n\n", type_of_shape.c_str());
+        built_shape = Shape::create_disk(
+            get_render_from_object(), get_render_from_object().inverse(),
+            graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
+    } else if (type_of_shape == "sphere") {
+        built_shape = Shape::create_sphere(
+            get_render_from_object(), get_render_from_object().inverse(),
+            graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
+    } else {
+        std::cout << "\n" << __func__ << "(): unknown shape: `" << type_of_shape << "`\n\n\n";
+        REPORT_FATAL_ERROR();
+    }
+
+    if (!graphics_state.area_light_entity) {
+        auto primitive = Primitive::create_simple_primitive(built_shape, graphics_state.material,
+                                                            gpu_dynamic_pointers);
+        gpu_primitives.push_back(primitive);
         return;
     }
 
-    std::cout << "\n" << __func__ << "(): unknown shape: `" << type_of_shape << "`\n\n\n";
-    REPORT_FATAL_ERROR();
+    // otherweise: build AreaDiffuseLight
+
+    auto diffuse_light = Light::create_diffuse_area_light(
+        get_render_from_object(), graphics_state.area_light_entity->parameters, built_shape,
+        renderer->global_variables, gpu_dynamic_pointers);
+
+    gpu_lights.push_back(diffuse_light);
+
+    GeometricPrimitive *geometric_primitive;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&geometric_primitive, sizeof(GeometricPrimitive)));
+    Primitive *primitive;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&primitive, sizeof(Primitive)));
+
+    gpu_dynamic_pointers.push_back(geometric_primitive);
+    gpu_dynamic_pointers.push_back(primitive);
+
+    geometric_primitive->init(built_shape, graphics_state.material, diffuse_light);
+    primitive->init(geometric_primitive);
+
+    gpu_primitives.push_back(primitive);
 }
 
 void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {

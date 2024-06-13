@@ -8,6 +8,7 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/ray.h"
 
+class Disk;
 class Sphere;
 class Triangle;
 
@@ -63,9 +64,15 @@ struct ShapeSample {
 class Shape {
   public:
     enum class Type {
-        triangle,
+        disk,
         sphere,
+        triangle,
     };
+    
+    static const Shape *create_disk(const Transform &render_from_object,
+                                    const Transform &object_from_render, bool reverse_orientation,
+                                    const ParameterDictionary &parameters,
+                                    std::vector<void *> &gpu_dynamic_pointers);
 
     static const Shape *create_sphere(const Transform &render_from_object,
                                       const Transform &object_from_render, bool reverse_orientation,
@@ -73,10 +80,13 @@ class Shape {
                                       std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
-    void init(const Triangle *triangle);
+    void init(const Disk *disk);
 
     PBRT_CPU_GPU
     void init(const Sphere *sphere);
+
+    PBRT_CPU_GPU
+    void init(const Triangle *triangle);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const;
@@ -91,9 +101,9 @@ class Shape {
     cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f u) const;
+    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
 
   private:
     Type type;
-    const void *shape;
+    const void *ptr;
 };

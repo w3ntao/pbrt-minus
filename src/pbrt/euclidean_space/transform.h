@@ -177,6 +177,17 @@ class Transform {
     PBRT_CPU_GPU
     Transform(const SquareMatrix<4> &_m, const SquareMatrix<4> &_inv_m) : m(_m), inv_m(_inv_m) {}
 
+    bool swaps_handedness() const {
+        SquareMatrix<3> s;
+        for (uint x = 0; x < 3; ++x) {
+            for (uint y = 0; y < 3; ++y) {
+                s[x][y] = m[x][y];
+            }
+        }
+
+        return s.determinant() < 0;
+    }
+
     PBRT_CPU_GPU bool is_identity() const {
         if (m != inv_m) {
             return false;

@@ -58,7 +58,6 @@ class SceneBuilder {
         throw std::runtime_error("get_dirname() fails");
     }
 
-  public:
     std::optional<int> samples_per_pixel;
     std::optional<std::string> integrator_name;
 
@@ -84,6 +83,7 @@ class SceneBuilder {
     std::map<std::string, const Material *> named_material;
     std::map<std::string, const SpectrumTexture *> named_spectrum_texture;
 
+  public:
     explicit SceneBuilder(const CommandLineOption &command_line_option);
 
     ~SceneBuilder() {

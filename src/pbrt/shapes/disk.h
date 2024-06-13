@@ -1,0 +1,70 @@
+#pragma once
+
+#include <vector>
+
+#include "pbrt/euclidean_space/transform.h"
+#include "pbrt/util/macro.h"
+
+class ShapeSample;
+class ShapeSampleContext;
+class ParameterDictionary;
+
+class Disk {
+  public:
+    static const Disk *create(const Transform &render_from_object,
+                              const Transform &object_from_render, bool reverse_orientation,
+                              const ParameterDictionary &parameters,
+                              std::vector<void *> &gpu_dynamic_pointers);
+
+    PBRT_CPU_GPU
+    FloatType area() const {
+        return 0.5 * phi_max * (sqr(radius) - sqr(inner_radius));
+    }
+
+    PBRT_CPU_GPU
+    Bounds3f bounds() const {
+        return render_from_object(
+            Bounds3f(Point3f(-radius, -radius, height), Point3f(radius, radius, height)));
+    }
+
+    PBRT_GPU
+    bool fast_intersect(const Ray &ray, FloatType t_max) const {
+        return basic_intersect(ray, t_max).has_value();
+    }
+
+    PBRT_GPU
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const {
+        auto isect = basic_intersect(ray, t_max);
+        if (!isect) {
+            return {};
+        }
+
+        SurfaceInteraction intr = interaction_from_intersection(*isect, -ray.d);
+        return ShapeIntersection{intr, isect->t_hit};
+    }
+
+    PBRT_GPU
+    cuda::std::optional<ShapeSample> sample(const Point2f &u) const;
+
+    PBRT_GPU
+    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
+
+  private:
+    // Disk Private Members
+    Transform render_from_object;
+    Transform object_from_render;
+    bool reverse_orientation;
+    bool transform_wwapsHandedness;
+
+    FloatType height;
+    FloatType radius;
+    FloatType inner_radius;
+    FloatType phi_max;
+
+    PBRT_CPU_GPU
+    cuda::std::optional<QuadricIntersection> basic_intersect(const Ray &r, FloatType tMax) const;
+
+    PBRT_CPU_GPU
+    SurfaceInteraction interaction_from_intersection(const QuadricIntersection &isect,
+                                                     const Vector3f &wo) const;
+};

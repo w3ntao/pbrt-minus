@@ -50,7 +50,7 @@ class Sphere {
     cuda::std::optional<ShapeSample> sample(const Point2f &u) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, Point2f u) const;
+    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
 
   private:
     FloatType radius;

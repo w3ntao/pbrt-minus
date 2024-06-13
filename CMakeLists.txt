@@ -78,9 +78,10 @@ add_executable(${PROJ_NAME}
         src/pbrt/scene/precomputed_spectrum.cu
         src/pbrt/scene/scene_builder.cu
 
+        src/pbrt/shapes/disk.cu
         src/pbrt/shapes/loop_subdivide.cu
-        src/pbrt/shapes/tri_quad_mesh.cu
         src/pbrt/shapes/sphere.cu
+        src/pbrt/shapes/tri_quad_mesh.cu
 
         src/pbrt/spectra/densely_sampled_spectrum.cu
         src/pbrt/spectra/piecewise_linear_spectrum.cu

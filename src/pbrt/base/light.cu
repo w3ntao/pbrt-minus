@@ -1,6 +1,7 @@
 #include "pbrt/base/light.h"
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/image_infinite_light.h"
+
 Light *Light::create_diffuse_area_light(const Transform &_render_from_light,
                                         const ParameterDictionary &parameters, const Shape *_shape,
                                         const GPU::GlobalVariable *global_variable,

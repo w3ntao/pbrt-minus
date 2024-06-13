@@ -187,7 +187,8 @@ cuda::std::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, Point2f u) const {
+cuda::std::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx,
+                                                const Point2f &u) const {
     // Sample uniformly on sphere if $\pt{}$ is inside it
     Point3f pCenter = render_from_object(Point3f(0, 0, 0));
     Point3f pOrigin = ctx.offset_ray_origin(pCenter);
