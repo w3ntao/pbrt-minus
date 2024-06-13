@@ -75,6 +75,7 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/primitives/geometric_primitive.cu
 
+        src/pbrt/scene/parameter_dictionary.cu
         src/pbrt/scene/precomputed_spectrum.cu
         src/pbrt/scene/scene_builder.cu
 
