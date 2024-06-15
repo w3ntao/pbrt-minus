@@ -21,12 +21,10 @@ class RGBIlluminantSpectrum {
     FloatType operator()(FloatType lambda) const;
 
     PBRT_CPU_GPU
-    SampledSpectrum sample(const SampledWavelengths &lambda) const;
+    FloatType to_photometric(const Spectrum *cie_y) const;
 
     PBRT_CPU_GPU
-    FloatType to_photometric(const Spectrum *cie_y) const {
-        return illuminant->inner_product(cie_y);
-    }
+    SampledSpectrum sample(const SampledWavelengths &lambda) const;
 
   private:
     FloatType scale;

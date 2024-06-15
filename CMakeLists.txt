@@ -77,7 +77,6 @@ add_executable(${PROJ_NAME}
         src/pbrt/primitives/geometric_primitive.cu
 
         src/pbrt/scene/parameter_dictionary.cu
-        src/pbrt/scene/precomputed_spectrum.cu
         src/pbrt/scene/scene_builder.cu
 
         src/pbrt/shapes/disk.cu
@@ -90,6 +89,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/spectra/rgb_illuminant_spectrum.cu
         src/pbrt/spectra/rgb_albedo_spectrum.cu
 
+        src/pbrt/spectrum_util/global_spectra.cu
         src/pbrt/spectrum_util/rgb_to_spectrum_data.cu
 
         src/pbrt/textures/gpu_image.cu

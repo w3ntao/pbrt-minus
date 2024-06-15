@@ -11,14 +11,11 @@
 template <typename T>
 class Bounds3;
 
-namespace GPU {
-class GlobalVariable;
-}
-
-class Light;
 class DiffuseAreaLight;
 class DistantLight;
+class GlobalSpectra;
 class ImageInfiniteLight;
+class Light;
 class Shape;
 class ParameterDictionary;
 

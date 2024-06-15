@@ -73,7 +73,7 @@ class Spectrum {
     PBRT_CPU_GPU FloatType operator()(FloatType lambda) const;
 
     PBRT_CPU_GPU
-    FloatType inner_product(const Spectrum *spectrum) const {
+    FloatType inner_product(const Spectrum *const spectrum) const {
         FloatType sum = 0;
         for (int lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
             sum += (*this)(lambda) * (*spectrum)(lambda);
@@ -86,12 +86,10 @@ class Spectrum {
     SampledSpectrum sample(const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    XYZ to_xyz(const Spectrum *cie_xyz[3]) const {
-        auto x = cie_xyz[0];
-        auto y = cie_xyz[1];
-        auto z = cie_xyz[2];
-
-        return XYZ(inner_product(x), inner_product(y), inner_product(z)) / CIE_Y_integral;
+    XYZ to_xyz(const Spectrum *const cie_xyz[3]) const {
+        return XYZ(inner_product(cie_xyz[0]), inner_product(cie_xyz[1]),
+                   inner_product(cie_xyz[2])) /
+               CIE_Y_integral;
     }
 
     PBRT_CPU_GPU

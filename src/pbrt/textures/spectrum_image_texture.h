@@ -9,8 +9,8 @@
 class SpectrumImageTexture : ImageTextureBase {
   public:
     static const SpectrumImageTexture *create(const ParameterDictionary &parameters,
-                                              std::vector<void *> &gpu_dynamic_pointers,
-                                              const RGBColorSpace *_color_space);
+                                              const RGBColorSpace *_color_space,
+                                              std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     SampledSpectrum evaluate(const TextureEvalContext &ctx, const SampledWavelengths &lambda) const;

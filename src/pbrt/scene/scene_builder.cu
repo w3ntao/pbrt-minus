@@ -1,5 +1,7 @@
 #include "pbrt/scene/scene_builder.h"
 
+#include <set>
+
 #include "pbrt/filters/box.h"
 
 #include "pbrt/integrators/ambient_occlusion.h"
@@ -7,12 +9,15 @@
 #include "pbrt/integrators/random_walk.h"
 #include "pbrt/integrators/simple_path.h"
 
+#include "pbrt/spectrum_util/global_spectra.h"
+#include "pbrt/spectrum_util/spectrum_constants_metal.h"
+
 #include "pbrt/lights/distant_light.h"
 #include "pbrt/lights/image_infinite_light.h"
 
 #include "pbrt/materials/coated_diffuse_material.h"
-#include "pbrt/materials/diffuse_material.h"
 #include "pbrt/materials/dielectric_material.h"
+#include "pbrt/materials/diffuse_material.h"
 
 #include "pbrt/shapes/loop_subdivide.h"
 #include "pbrt/shapes/tri_quad_mesh.h"
@@ -20,6 +25,8 @@
 #include "pbrt/textures/spectrum_constant_texture.h"
 #include "pbrt/textures/spectrum_image_texture.h"
 #include "pbrt/textures/spectrum_scale_texture.h"
+
+#include "pbrt/util/std_container.h"
 
 static std::vector<uint> group_tokens(const std::vector<Token> &tokens) {
     std::vector<uint> keyword_range;
@@ -37,30 +44,31 @@ static std::vector<uint> group_tokens(const std::vector<Token> &tokens) {
 
 SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
     : samples_per_pixel(command_line_option.samples_per_pixel),
-      output_filename(command_line_option.output_file),
-      pre_computed_spectrum(PreComputedSpectrum(thread_pool)) {
-    GPU::GlobalVariable *global_variables;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&global_variables, sizeof(GPU::GlobalVariable)));
+      output_filename(command_line_option.output_file) {
 
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&(global_variables->rgb_color_space), sizeof(RGBColorSpace)));
+    global_spectra =
+        GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, thread_pool, gpu_dynamic_pointers);
 
-    global_variables->init(pre_computed_spectrum.cie_xyz, pre_computed_spectrum.illum_d65,
-                           pre_computed_spectrum.rgb_to_spectrum_table,
-                           RGBtoSpectrumData::Gamut::sRGB);
+    auto ag_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+        std::vector(std::begin(Ag_eta), std::end(Ag_eta)), false, nullptr, gpu_dynamic_pointers);
 
-    CHECK_CUDA_ERROR(cudaMallocManaged(&renderer, sizeof(GPU::Renderer)));
+    auto ag_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+        std::vector(std::begin(Ag_k), std::end(Ag_k)), false, nullptr, gpu_dynamic_pointers);
+
+    named_spectra = {
+        {"metal-Ag-eta", ag_eta},
+        {"metal-Ag-k", ag_k},
+    };
+
+    // TODO: move these into Renderer
+    CHECK_CUDA_ERROR(cudaMallocManaged(&renderer, sizeof(Renderer)));
     CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->bvh), sizeof(HLBVH)));
     CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->camera), sizeof(Camera)));
     CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->film), sizeof(Film)));
     CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->filter), sizeof(Filter)));
     CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->integrator), sizeof(Integrator)));
 
-    renderer->global_variables = global_variables;
-
     for (auto ptr : std::vector<void *>({
-             global_variables,
-             global_variables->rgb_color_space,
              renderer,
              renderer->bvh,
              renderer->camera,
@@ -139,10 +147,7 @@ void SceneBuilder::build_film() {
         Spectrum::create_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, CIE_S0,
                                CIE_S1, CIE_S2, CIE_S_lambda, gpu_dynamic_pointers);
 
-    const Spectrum *cie_xyz[3];
-    renderer->global_variables->get_cie_xyz(cie_xyz);
-
-    renderer->sensor.init_cie_1931(cie_xyz, renderer->global_variables->rgb_color_space,
+    renderer->sensor.init_cie_1931(global_spectra->cie_xyz, global_spectra->rgb_color_space,
                                    white_balance_val == 0 ? nullptr : d_illum, imaging_ratio);
 
     Pixel *gpu_pixels;
@@ -164,7 +169,7 @@ void SceneBuilder::build_film() {
     gpu_dynamic_pointers.push_back(rgb_film);
 
     rgb_film->init(gpu_pixels, &(renderer->sensor), film_resolution.value(),
-                   renderer->global_variables->rgb_color_space);
+                   global_spectra->rgb_color_space);
 
     renderer->film->init(rgb_film);
 }
@@ -221,6 +226,7 @@ const Material *SceneBuilder::create_material(const std::string &type_of_materia
         return Material::create_coated_diffuse_material(parameters, gpu_dynamic_pointers);
     }
 
+    // TODO: move this part into Material
     if (type_of_material == "dielectric") {
         DielectricMaterial *dielectric_material;
         Material *material;
@@ -237,6 +243,7 @@ const Material *SceneBuilder::create_material(const std::string &type_of_materia
         return material;
     }
 
+    // TODO: move this part into Material
     if (type_of_material == "diffuse") {
         DiffuseMaterial *diffuse_material;
         Material *material;
@@ -316,11 +323,9 @@ void SceneBuilder::build_integrator() {
     }
 
     if (integrator_name == "ambientocclusion") {
-        auto illuminant_spectrum = renderer->global_variables->rgb_color_space->illuminant;
+        auto illuminant_spectrum = global_spectra->rgb_color_space->illuminant;
 
-        const Spectrum *cie_xyz[3];
-        renderer->global_variables->get_cie_xyz(cie_xyz);
-        const auto cie_y = cie_xyz[1];
+        const auto cie_y = global_spectra->cie_y;
         auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(cie_y);
 
         AmbientOcclusionIntegrator *ambient_occlusion_integrator;
@@ -339,8 +344,7 @@ void SceneBuilder::build_integrator() {
             cudaMallocManaged(&surface_normal_integrator, sizeof(SurfaceNormalIntegrator)));
         gpu_dynamic_pointers.push_back(surface_normal_integrator);
 
-        surface_normal_integrator->init(integrator_base,
-                                        renderer->global_variables->rgb_color_space);
+        surface_normal_integrator->init(integrator_base, global_spectra->rgb_color_space);
         renderer->integrator->init(surface_normal_integrator);
         return;
     }
@@ -528,6 +532,7 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
 
     const Shape *built_shape;
 
+    // TODO: build Specific shapes in Shape
     if (type_of_shape == "disk") {
         built_shape = Shape::create_disk(
             get_render_from_object(), get_render_from_object().inverse(),
@@ -578,9 +583,11 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
     if (color_type == "spectrum") {
         const auto parameters = build_parameter_dictionary(sub_vector(tokens, 4));
 
+        // TODO: build Specific texture in SpectrumTexture
+
         if (texture_type == "imagemap") {
             auto image_texture = SpectrumImageTexture::create(
-                parameters, gpu_dynamic_pointers, renderer->global_variables->rgb_color_space);
+                parameters, global_spectra->rgb_color_space, gpu_dynamic_pointers);
 
             SpectrumTexture *spectrum_texture;
             CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));

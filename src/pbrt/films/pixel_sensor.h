@@ -16,7 +16,7 @@ class PixelSensor {
         xyz_from_sensor_rgb = _xyz_from_sensor_rgb;
     }
 
-    PBRT_CPU_GPU void init_cie_1931(const Spectrum *cie_xyz[3],
+    PBRT_CPU_GPU void init_cie_1931(const Spectrum *const cie_xyz[3],
                                     const RGBColorSpace *output_color_space,
                                     const Spectrum *sensor_illum, FloatType imaging_ratio) {
         xyz_from_sensor_rgb = SquareMatrix<3>::identity();

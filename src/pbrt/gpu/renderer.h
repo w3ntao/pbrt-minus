@@ -17,8 +17,6 @@
 #include "pbrt/films/pixel_sensor.h"
 #include "pbrt/films/rgb_film.h"
 
-#include "pbrt/gpu/global_variable.h"
-
 #include "pbrt/lights/diffuse_area_light.h"
 
 #include "pbrt/primitives/simple_primitives.h"
@@ -28,13 +26,11 @@
 
 #include "pbrt/shapes/triangle.h"
 
-#include "pbrt/spectrum_util/spectrum_constants_cie.h"
 #include "pbrt/spectrum_util/color_encoding.h"
+#include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include "pbrt/spectra/densely_sampled_spectrum.h"
-
-namespace GPU {
+#include "pbrt/spectrum_util/spectrum_constants_cie.h"
 
 class Renderer {
   public:
@@ -44,12 +40,11 @@ class Renderer {
     Film *film;
     HLBVH *bvh;
     Sampler *samplers;
-
-    const GlobalVariable *global_variables;
-
+    
     PixelSensor sensor;
 
-    PBRT_GPU void evaluate_pixel_sample(const Point2i p_pixel, const int num_samples) {
+    PBRT_GPU
+    void evaluate_pixel_sample(const Point2i p_pixel, const int num_samples) {
         int width = camera->get_camerabase()->resolution.x;
         const uint pixel_index = p_pixel.y * width + p_pixel.x;
 
@@ -74,6 +69,8 @@ class Renderer {
         }
     }
 };
+
+namespace GPU {
 
 __global__ static void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;

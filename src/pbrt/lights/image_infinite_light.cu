@@ -3,17 +3,17 @@
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/euclidean_space/vector3.h"
 
-#include "pbrt/gpu/global_variable.h"
-
 #include "pbrt/scene/parameter_dictionary.h"
 
+#include "pbrt/spectra/rgb_illuminant_spectrum.h"
+
+#include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 
 #include "pbrt/textures/gpu_image.h"
 #include "pbrt/util/macro.h"
 #include "pbrt/util/math.h"
-#include "pbrt/spectra/rgb_illuminant_spectrum.h"
 
 ImageInfiniteLight *ImageInfiniteLight::create(const Transform &_render_from_light,
                                                const ParameterDictionary &parameters,
@@ -23,11 +23,9 @@ ImageInfiniteLight *ImageInfiniteLight::create(const Transform &_render_from_lig
 
     auto scale = parameters.get_float("scale", 1.0);
 
-    const Spectrum *cie_xyz[3];
-    parameters.global_variables->get_cie_xyz(cie_xyz);
-    const auto cie_y = cie_xyz[1];
+    const auto cie_y = parameters.global_spectra->cie_y;
 
-    scale /= parameters.global_variables->rgb_color_space->illuminant->to_photometric(cie_y);
+    scale /= parameters.global_spectra->rgb_color_space->illuminant->to_photometric(cie_y);
 
     ImageInfiniteLight *image_infinite_light;
     CHECK_CUDA_ERROR(cudaMallocManaged(&image_infinite_light, sizeof(ImageInfiniteLight)));
@@ -39,7 +37,7 @@ ImageInfiniteLight *ImageInfiniteLight::create(const Transform &_render_from_lig
     image_infinite_light->image = GPUImage::create_from_file(texture_file, gpu_dynamic_pointers);
     image_infinite_light->scale = scale;
 
-    image_infinite_light->color_space = parameters.global_variables->rgb_color_space;
+    image_infinite_light->color_space = parameters.global_spectra->rgb_color_space;
 
     image_infinite_light->scene_radius = NAN;
     image_infinite_light->scene_center = Point3f(NAN, NAN, NAN);

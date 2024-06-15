@@ -3,10 +3,10 @@
 #include "pbrt/base/shape.h"
 #include "pbrt/base/spectrum.h"
 
-#include "pbrt/gpu/global_variable.h"
-
 #include "pbrt/scene/parameter_dictionary.h"
+
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
+#include "pbrt/spectrum_util/global_spectra.h"
 
 void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_light,
                             const ParameterDictionary &parameters) {
@@ -14,7 +14,7 @@ void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_l
 
     // TODO: rewrite this part: change RGBIlluminantSpectrum to RGBIlluminantSpectrum*
     auto rgb_illuminant_spectrum_l =
-        RGBIlluminantSpectrum(rgb_l, parameters.global_variables->rgb_color_space);
+        RGBIlluminantSpectrum(rgb_l, parameters.global_spectra->rgb_color_space);
 
     scale = parameters.get_float("scale", 1.0);
     two_sided = parameters.get_bool("twosided", false);
@@ -23,7 +23,7 @@ void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_l
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
     }
 
-    const auto cie_y = parameters.global_variables->cie_xyz[1];
+    const auto cie_y = parameters.global_spectra->cie_xyz[1];
     scale /= rgb_illuminant_spectrum_l.to_photometric(cie_y);
 
     auto phi_v = parameters.get_float("power", -1.0);

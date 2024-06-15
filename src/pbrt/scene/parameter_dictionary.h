@@ -12,14 +12,11 @@
 #include "pbrt/spectrum_util/rgb.h"
 
 class FloatTexture;
+class GlobalSpectra;
 class RGBColorSpace;
 class Spectrum;
 class SpectrumTexture;
 class Token;
-
-namespace GPU {
-class GlobalVariable;
-}
 
 class ParameterDictionary {
   public:
@@ -29,10 +26,10 @@ class ParameterDictionary {
         const std::vector<Token> &tokens,
         const std::map<std::string, const Spectrum *> &_named_spectra,
         const std::map<std::string, const SpectrumTexture *> &_named_spectrum_texture,
-        const std::string &_root, const GPU::GlobalVariable *_global_variables,
+        const std::string &_root, const GlobalSpectra *_global_spectra,
         bool ignore_material_and_texture, std::vector<void *> &gpu_dynamic_pointers);
 
-    const GPU::GlobalVariable *global_variables = nullptr;
+    const GlobalSpectra *global_spectra = nullptr;
 
     bool has_floats(const std::string &key) const {
         return floats.find(key) != floats.end();
@@ -107,8 +104,7 @@ class ParameterDictionary {
 
     std::vector<Point2f> get_point2_array(const std::string &key) const {
         if (point2s.find(key) == point2s.end()) {
-            printf("%s(): key not available: %s\n", __func__, key.c_str());
-            REPORT_FATAL_ERROR();
+            return {};
         }
 
         return point2s.at(key);
@@ -135,8 +131,7 @@ class ParameterDictionary {
 
     std::vector<Point3f> get_point3_array(const std::string &key) const {
         if (point3s.find(key) == point3s.end()) {
-            printf("%s(): key not available: %s\n", __func__, key.c_str());
-            REPORT_FATAL_ERROR();
+            return {};
         }
 
         return point3s.at(key);

@@ -3,7 +3,6 @@
 #include <chrono>
 #include <filesystem>
 #include <map>
-#include <set>
 #include <stack>
 
 #include "pbrt/base/light.h"
@@ -14,12 +13,12 @@
 #include "pbrt/gpu/renderer.h"
 
 #include "pbrt/scene/command_line_option.h"
-#include "pbrt/scene/parser.h"
 #include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/scene/precomputed_spectrum.h"
+#include "pbrt/scene/parser.h"
 
-#include "pbrt/util/std_container.h"
 #include "pbrt/util/thread_pool.h"
+
+class GlobalSpectra;
 
 struct AreaLightEntity {
     std::string name;
@@ -61,10 +60,14 @@ class SceneBuilder {
     std::optional<int> samples_per_pixel;
     std::optional<std::string> integrator_name;
 
-    GPU::Renderer *renderer = nullptr;
+    Renderer *renderer = nullptr;
+    const GlobalSpectra *global_spectra = nullptr;
 
-    PreComputedSpectrum pre_computed_spectrum;
     std::vector<void *> gpu_dynamic_pointers;
+
+    std::map<std::string, const Material *> named_material;
+    std::map<std::string, const Spectrum *> named_spectra;
+    std::map<std::string, const SpectrumTexture *> named_spectrum_texture;
 
     std::optional<Point2i> film_resolution = std::nullopt;
     std::string output_filename;
@@ -79,9 +82,6 @@ class SceneBuilder {
     std::stack<GraphicsState> pushed_graphics_state;
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
-
-    std::map<std::string, const Material *> named_material;
-    std::map<std::string, const SpectrumTexture *> named_spectrum_texture;
 
   public:
     explicit SceneBuilder(const CommandLineOption &command_line_option);
@@ -98,9 +98,9 @@ class SceneBuilder {
     }
 
     ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
-        return ParameterDictionary(tokens, pre_computed_spectrum.named_spectra,
-                                   named_spectrum_texture, root, renderer->global_variables,
-                                   should_ignore_material_and_texture(), gpu_dynamic_pointers);
+        return ParameterDictionary(tokens, named_spectra, named_spectrum_texture, root,
+                                   global_spectra, should_ignore_material_and_texture(),
+                                   gpu_dynamic_pointers);
     }
 
     void build_camera();
@@ -170,7 +170,6 @@ class SceneBuilder {
 
     void render() const;
 
-  public:
     static void render_pbrt(const CommandLineOption &command_line_option) {
         if (!std::filesystem::is_regular_file(command_line_option.input_file)) {
             std::cout << "file not found: `" + command_line_option.input_file + "`\n\n";

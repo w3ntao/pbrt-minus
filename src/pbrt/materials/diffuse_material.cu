@@ -6,11 +6,12 @@
 
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 
-#include "pbrt/gpu/global_variable.h"
-
 #include "pbrt/scene/parameter_dictionary.h"
+
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
+#include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
+
 #include "pbrt/textures/spectrum_constant_texture.h"
 
 const DiffuseMaterial *DiffuseMaterial::create(const SpectrumTexture *_reflectance,
@@ -36,7 +37,7 @@ void DiffuseMaterial::init(const ParameterDictionary &parameters,
 
         auto rgb_val = parameters.get_rgb(key, std::nullopt);
         spectrum_constant_texture->init(Spectrum::create_from_rgb(
-            rgb_val, SpectrumType::Albedo, parameters.global_variables->rgb_color_space,
+            rgb_val, SpectrumType::Albedo, parameters.global_spectra->rgb_color_space,
             gpu_dynamic_pointers));
 
         spectrum_texture->init(spectrum_constant_texture);

@@ -1,9 +1,10 @@
 #include "pbrt/textures/spectrum_image_texture.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 
-const SpectrumImageTexture *SpectrumImageTexture::create(const ParameterDictionary &parameters,
-                                                         std::vector<void *> &gpu_dynamic_pointers,
-                                                         const RGBColorSpace *_color_space) {
+const SpectrumImageTexture *
+SpectrumImageTexture::create(const ParameterDictionary &parameters,
+                             const RGBColorSpace *_color_space,
+                             std::vector<void *> &gpu_dynamic_pointers) {
     SpectrumImageTexture *texture;
     CHECK_CUDA_ERROR(cudaMallocManaged(&texture, sizeof(SpectrumImageTexture)));
     texture->init(parameters, gpu_dynamic_pointers, _color_space);

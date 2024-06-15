@@ -5,14 +5,11 @@
 #include "pbrt/base/light.h"
 #include "pbrt/spectra/densely_sampled_spectrum.h"
 
+class GlobalSpectra;
 class ParameterDictionary;
 class RGBColorSpace;
 class Spectrum;
 class Shape;
-
-namespace GPU {
-class GlobalVariable;
-}
 
 class DiffuseAreaLight : public LightBase {
   public:

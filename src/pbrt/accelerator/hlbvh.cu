@@ -604,7 +604,7 @@ uint HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_t
     });
     thread_pool.sync();
 
-    printf("HLBVH: build top BVH with SAH in %d buckets\n", NUM_BUCKETS);
+    printf("HLBVH: build top BVH with SAH using %d buckets\n", NUM_BUCKETS);
     printf("HLBVH: top BVH nodes: %u\n", node_count.load());
 
     return node_count.load();

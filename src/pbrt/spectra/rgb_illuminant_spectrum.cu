@@ -15,6 +15,11 @@ FloatType RGBIlluminantSpectrum::operator()(FloatType lambda) const {
 }
 
 PBRT_CPU_GPU
+FloatType RGBIlluminantSpectrum::to_photometric(const Spectrum *cie_y) const {
+    return illuminant->inner_product(cie_y);
+}
+
+PBRT_CPU_GPU
 SampledSpectrum RGBIlluminantSpectrum::sample(const SampledWavelengths &lambda) const {
     SampledSpectrum s;
     for (uint idx = 0; idx < NSpectrumSamples; ++idx) {

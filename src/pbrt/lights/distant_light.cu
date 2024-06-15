@@ -2,7 +2,7 @@
 
 #include "pbrt/base/spectrum.h"
 #include "pbrt/euclidean_space/transform.h"
-#include "pbrt/gpu/global_variable.h"
+#include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 
@@ -21,10 +21,10 @@ DistantLight *DistantLight::create(const Transform &renderFromLight,
         auto rgb_l = parameters.get_rgb("L", std::nullopt);
 
         lemit = Spectrum::create_from_rgb(rgb_l, SpectrumType::Illuminant,
-                                          parameters.global_variables->rgb_color_space,
+                                          parameters.global_spectra->rgb_color_space,
                                           gpu_dynamic_pointers);
     } else {
-        lemit = parameters.global_variables->rgb_color_space->illuminant;
+        lemit = parameters.global_spectra->rgb_color_space->illuminant;
     }
 
     auto sc = parameters.get_float("scale", 1.0);
@@ -41,7 +41,7 @@ DistantLight *DistantLight::create(const Transform &renderFromLight,
 
     Transform finalRenderFromLight = renderFromLight * t;
 
-    sc /= lemit->to_photometric(parameters.global_variables->cie_y);
+    sc /= lemit->to_photometric(parameters.global_spectra->cie_y);
 
     auto E_v = parameters.get_float("illuminance", -1);
     if (E_v > 0) {
