@@ -1,6 +1,7 @@
 #include "pbrt/base/texture.h"
 
 #include "pbrt/spectra/constant_spectrum.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
 
 #include "pbrt/textures/float_constant_texture.h"
 #include "pbrt/textures/spectrum_constant_texture.h"
@@ -26,6 +27,43 @@ const FloatTexture *FloatTexture::create(FloatType val, std::vector<void *> &gpu
 void FloatTexture::init(const FloatConstantTexture *constant_texture) {
     type = Type::constant;
     ptr = constant_texture;
+}
+
+const SpectrumTexture *SpectrumTexture::create(const std::string &type_of_texture,
+                                               const ParameterDictionary &parameters,
+                                               const RGBColorSpace *color_space,
+                                               std::vector<void *> &gpu_dynamic_pointers) {
+    if (type_of_texture == "imagemap") {
+        auto image_texture =
+            SpectrumImageTexture::create(parameters, color_space, gpu_dynamic_pointers);
+
+        SpectrumTexture *spectrum_texture;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
+        gpu_dynamic_pointers.push_back(spectrum_texture);
+
+        spectrum_texture->init(image_texture);
+        return spectrum_texture;
+    }
+
+    if (type_of_texture == "scale") {
+        SpectrumScaleTexture *scale_texture;
+        SpectrumTexture *spectrum_texture;
+
+        CHECK_CUDA_ERROR(cudaMallocManaged(&scale_texture, sizeof(SpectrumScaleTexture)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
+
+        gpu_dynamic_pointers.push_back(scale_texture);
+        gpu_dynamic_pointers.push_back(spectrum_texture);
+
+        scale_texture->init(parameters);
+        spectrum_texture->init(scale_texture);
+        return spectrum_texture;
+    }
+
+    printf("\nTexture `%s` not implemented\n", type_of_texture.c_str());
+
+    REPORT_FATAL_ERROR();
+    return nullptr;
 }
 
 const SpectrumTexture *

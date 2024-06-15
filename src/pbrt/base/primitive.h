@@ -23,6 +23,10 @@ class Primitive {
     static const Primitive *create_simple_primitive(const Shape *shape, const Material *material,
                                                     std::vector<void *> &gpu_dynamic_pointers);
 
+    static const Primitive *create_geometric_primitive(const Shape *shape, const Material *material,
+                                                       const Light *diffuse_area_light,
+                                                       std::vector<void *> &gpu_dynamic_pointers);
+
     PBRT_CPU_GPU
     void init(const SimplePrimitive *simple_primitive);
 

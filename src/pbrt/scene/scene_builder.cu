@@ -12,21 +12,128 @@
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/spectrum_constants_metal.h"
 
-#include "pbrt/lights/distant_light.h"
-#include "pbrt/lights/image_infinite_light.h"
-
-#include "pbrt/materials/coated_diffuse_material.h"
-#include "pbrt/materials/dielectric_material.h"
-#include "pbrt/materials/diffuse_material.h"
-
 #include "pbrt/shapes/loop_subdivide.h"
 #include "pbrt/shapes/tri_quad_mesh.h"
 
 #include "pbrt/textures/spectrum_constant_texture.h"
-#include "pbrt/textures/spectrum_image_texture.h"
-#include "pbrt/textures/spectrum_scale_texture.h"
 
 #include "pbrt/util/std_container.h"
+
+__global__ static void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= mesh->triangles_num) {
+        return;
+    }
+
+    triangles[worker_idx].init(worker_idx, mesh);
+}
+
+template <typename TypeOfLight>
+static __global__ void init_lights(Light *lights, TypeOfLight *concrete_shapes, uint num) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num) {
+        return;
+    }
+
+    lights[worker_idx].init(&concrete_shapes[worker_idx]);
+}
+
+template <typename TypeOfShape>
+static __global__ void init_shapes(Shape *shapes, const TypeOfShape *concrete_shapes, uint num) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num) {
+        return;
+    }
+
+    shapes[worker_idx].init(&concrete_shapes[worker_idx]);
+}
+
+static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives,
+                                              const Shape *shapes, const Material *material,
+                                              uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    simple_primitives[idx].init(&shapes[idx], material);
+}
+
+static __global__ void init_geometric_primitives(GeometricPrimitive *geometric_primitives,
+                                                 const Shape *shapes, const Material *material,
+                                                 const Light *area_light, uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    geometric_primitives[idx].init(&shapes[idx], material, &area_light[idx]);
+}
+
+template <typename TypeOfPrimitive>
+static __global__ void init_primitives(Primitive *primitives, TypeOfPrimitive *_primitives,
+                                       uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    primitives[idx].init(&_primitives[idx]);
+}
+
+static __global__ void init_independent_samplers(IndependentSampler *samplers,
+                                                 uint samples_per_pixel, uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    samplers[idx].init(samples_per_pixel);
+}
+
+template <typename T>
+static __global__ void init_samplers(Sampler *samplers, T *_samplers, uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    samplers[idx].init(&_samplers[idx]);
+}
+
+template <typename T>
+static __global__ void apply_transform(T *data, const Transform transform, uint length) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= length) {
+        return;
+    }
+
+    data[idx] = transform(data[idx]);
+}
+
+static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= dimension.x * dimension.y) {
+        return;
+    }
+
+    pixels[idx].init_zero();
+}
+
+__global__ static void parallel_render(Renderer *renderer, int num_samples) {
+    auto camera_base = renderer->camera->get_camerabase();
+
+    uint width = camera_base->resolution.x;
+    uint height = camera_base->resolution.y;
+
+    uint x = threadIdx.x + blockIdx.x * blockDim.x;
+    uint y = threadIdx.y + blockIdx.y * blockDim.y;
+    if (x >= width || y >= height) {
+        return;
+    }
+
+    renderer->evaluate_pixel_sample(Point2i(x, y), num_samples);
+}
 
 static std::vector<uint> group_tokens(const std::vector<Token> &tokens) {
     std::vector<uint> keyword_range;
@@ -159,7 +266,7 @@ void SceneBuilder::build_film() {
         uint threads = 1024;
         uint blocks = divide_and_ceil(uint(film_resolution->x * film_resolution->y), threads);
 
-        GPU::init_pixels<<<blocks, threads>>>(gpu_pixels, film_resolution.value());
+        init_pixels<<<blocks, threads>>>(gpu_pixels, film_resolution.value());
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
@@ -201,67 +308,19 @@ void SceneBuilder::build_sampler() {
         uint threads = 1024;
         uint blocks = divide_and_ceil(total_pixel_num, threads);
 
-        GPU::init_independent_samplers<<<blocks, threads>>>(
-            independent_samplers, samples_per_pixel.value(), total_pixel_num);
+        init_independent_samplers<<<blocks, threads>>>(independent_samplers,
+                                                       samples_per_pixel.value(), total_pixel_num);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        GPU::init_samplers<<<blocks, threads>>>(renderer->samplers, independent_samplers,
-                                                total_pixel_num);
+        init_samplers<<<blocks, threads>>>(renderer->samplers, independent_samplers,
+                                           total_pixel_num);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     gpu_dynamic_pointers.push_back(renderer->samplers);
     gpu_dynamic_pointers.push_back(independent_samplers);
-}
-
-const Material *SceneBuilder::create_material(const std::string &type_of_material,
-                                              const ParameterDictionary &parameters) {
-    if (type_of_material == "conductor") {
-        return Material::create_conductor_material(parameters, gpu_dynamic_pointers);
-    }
-
-    if (type_of_material == "coateddiffuse") {
-        return Material::create_coated_diffuse_material(parameters, gpu_dynamic_pointers);
-    }
-
-    // TODO: move this part into Material
-    if (type_of_material == "dielectric") {
-        DielectricMaterial *dielectric_material;
-        Material *material;
-
-        CHECK_CUDA_ERROR(cudaMallocManaged(&dielectric_material, sizeof(DielectricMaterial)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
-
-        gpu_dynamic_pointers.push_back(dielectric_material);
-        gpu_dynamic_pointers.push_back(material);
-
-        dielectric_material->init(parameters, gpu_dynamic_pointers);
-        material->init(dielectric_material);
-
-        return material;
-    }
-
-    // TODO: move this part into Material
-    if (type_of_material == "diffuse") {
-        DiffuseMaterial *diffuse_material;
-        Material *material;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material, sizeof(DiffuseMaterial)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
-
-        gpu_dynamic_pointers.push_back(diffuse_material);
-        gpu_dynamic_pointers.push_back(material);
-
-        diffuse_material->init(parameters, gpu_dynamic_pointers);
-        material->init(diffuse_material);
-
-        return material;
-    }
-
-    printf("%s(): unknown Material name: `%s`", __func__, type_of_material.c_str());
-    REPORT_FATAL_ERROR();
-    return nullptr;
 }
 
 void SceneBuilder::build_integrator() {
@@ -378,33 +437,10 @@ void SceneBuilder::parse_light_source(const std::vector<Token> &tokens) {
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
     const auto light_source_type = tokens[1].values[0];
-    if (light_source_type == "distant") {
-        auto distant_light =
-            DistantLight::create(this->get_render_from_object(), parameters, gpu_dynamic_pointers);
 
-        Light *light;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
-        gpu_dynamic_pointers.push_back(light);
-
-        light->init(distant_light);
-        gpu_lights.push_back(light);
-        return;
-    }
-
-    if (light_source_type == "infinite") {
-        auto image_infinite_light =
-            ImageInfiniteLight::create(get_render_from_object(), parameters, gpu_dynamic_pointers);
-
-        Light *light;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
-        gpu_dynamic_pointers.push_back(light);
-
-        light->init(image_infinite_light);
-        gpu_lights.push_back(light);
-        return;
-    }
-
-    REPORT_FATAL_ERROR();
+    auto light = Light::create(light_source_type, get_render_from_object(), parameters,
+                               gpu_dynamic_pointers);
+    gpu_lights.push_back(light);
 }
 
 void SceneBuilder::parse_make_named_material(const std::vector<Token> &tokens) {
@@ -418,7 +454,8 @@ void SceneBuilder::parse_make_named_material(const std::vector<Token> &tokens) {
 
     auto type_of_material = parameters.get_string("type", std::nullopt);
 
-    named_material[material_name] = create_material(type_of_material, parameters);
+    named_material[material_name] =
+        Material::create(type_of_material, parameters, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::parse_material(const std::vector<Token> &tokens) {
@@ -430,7 +467,7 @@ void SceneBuilder::parse_material(const std::vector<Token> &tokens) {
 
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
-    graphics_state.material = create_material(type_of_material, parameters);
+    graphics_state.material = Material::create(type_of_material, parameters, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::parse_named_material(const std::vector<Token> &tokens) {
@@ -492,6 +529,8 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
 
     auto type_of_shape = tokens[1].values[0];
 
+    // TODO: rewrite the building of plymesh, loopsubdiv, trianglemesh
+
     if (type_of_shape == "trianglemesh") {
         auto uv = parameters.get_point2_array("uv");
         auto indices = parameters.get_integer("indices");
@@ -530,96 +569,54 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         return;
     }
 
-    const Shape *built_shape;
-
-    // TODO: build Specific shapes in Shape
-    if (type_of_shape == "disk") {
-        built_shape = Shape::create_disk(
-            get_render_from_object(), get_render_from_object().inverse(),
+    if (type_of_shape == "disk" || type_of_shape == "sphere") {
+        auto shape = Shape::create(
+            type_of_shape, get_render_from_object(), get_render_from_object().inverse(),
             graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
-    } else if (type_of_shape == "sphere") {
-        built_shape = Shape::create_sphere(
-            get_render_from_object(), get_render_from_object().inverse(),
-            graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
-    } else {
-        std::cout << "\n" << __func__ << "(): unknown shape: `" << type_of_shape << "`\n\n\n";
-        REPORT_FATAL_ERROR();
-    }
 
-    if (!graphics_state.area_light_entity) {
-        auto primitive = Primitive::create_simple_primitive(built_shape, graphics_state.material,
-                                                            gpu_dynamic_pointers);
+        if (!graphics_state.area_light_entity) {
+            auto primitive = Primitive::create_simple_primitive(shape, graphics_state.material,
+                                                                gpu_dynamic_pointers);
+            gpu_primitives.push_back(primitive);
+            return;
+        }
+
+        // otherwise: build AreaDiffuseLight
+
+        auto diffuse_area_light = Light::create_diffuse_area_light(
+            shape, get_render_from_object(), graphics_state.area_light_entity->parameters,
+            gpu_dynamic_pointers);
+
+        gpu_lights.push_back(diffuse_area_light);
+
+        auto primitive = Primitive::create_geometric_primitive(
+            shape, graphics_state.material, diffuse_area_light, gpu_dynamic_pointers);
+
         gpu_primitives.push_back(primitive);
+
         return;
     }
 
-    // otherwise: build AreaDiffuseLight
-
-    auto diffuse_light = Light::create_diffuse_area_light(
-        built_shape, get_render_from_object(), graphics_state.area_light_entity->parameters,
-        gpu_dynamic_pointers);
-
-    gpu_lights.push_back(diffuse_light);
-
-    GeometricPrimitive *geometric_primitive;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&geometric_primitive, sizeof(GeometricPrimitive)));
-    Primitive *primitive;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&primitive, sizeof(Primitive)));
-
-    gpu_dynamic_pointers.push_back(geometric_primitive);
-    gpu_dynamic_pointers.push_back(primitive);
-
-    geometric_primitive->init(built_shape, graphics_state.material, diffuse_light);
-    primitive->init(geometric_primitive);
-
-    gpu_primitives.push_back(primitive);
+    printf("\nShape `%s` not implemented\n", type_of_shape.c_str());
+    REPORT_FATAL_ERROR();
 }
 
 void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
     auto texture_name = tokens[1].values[0];
     auto color_type = tokens[2].values[0];
     auto texture_type = tokens[3].values[0];
+    const auto parameters = build_parameter_dictionary(sub_vector(tokens, 4));
 
     if (color_type == "spectrum") {
-        const auto parameters = build_parameter_dictionary(sub_vector(tokens, 4));
+        auto spectrum_texture = SpectrumTexture::create(
+            texture_type, parameters, global_spectra->rgb_color_space, gpu_dynamic_pointers);
 
-        // TODO: build Specific texture in SpectrumTexture
+        named_spectrum_texture[texture_name] = spectrum_texture;
 
-        if (texture_type == "imagemap") {
-            auto image_texture = SpectrumImageTexture::create(
-                parameters, global_spectra->rgb_color_space, gpu_dynamic_pointers);
-
-            SpectrumTexture *spectrum_texture;
-            CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
-            spectrum_texture->init(image_texture);
-
-            named_spectrum_texture[texture_name] = spectrum_texture;
-
-            gpu_dynamic_pointers.push_back(spectrum_texture);
-            return;
-        }
-
-        if (texture_type == "scale") {
-            SpectrumScaleTexture *scale_texture;
-            SpectrumTexture *spectrum_texture;
-
-            CHECK_CUDA_ERROR(cudaMallocManaged(&scale_texture, sizeof(SpectrumScaleTexture)));
-            CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
-
-            scale_texture->init(parameters);
-            spectrum_texture->init(scale_texture);
-
-            named_spectrum_texture[texture_name] = spectrum_texture;
-
-            gpu_dynamic_pointers.push_back(scale_texture);
-            gpu_dynamic_pointers.push_back(spectrum_texture);
-
-            return;
-        }
-
-        REPORT_FATAL_ERROR();
+        return;
     }
 
+    printf("\ncolor type `%s` not implemented\n", color_type.c_str());
     REPORT_FATAL_ERROR();
 }
 
@@ -669,7 +666,7 @@ void SceneBuilder::add_triangle_mesh(const std::vector<Point3f> &points,
 
     uint batch = 256;
     uint total_jobs = points.size() / batch + 1;
-    GPU::apply_transform<<<total_jobs, batch>>>(gpu_points, render_from_object, points.size());
+    apply_transform<<<total_jobs, batch>>>(gpu_points, render_from_object, points.size());
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -700,11 +697,11 @@ void SceneBuilder::add_triangle_mesh(const std::vector<Point3f> &points,
         uint threads = 1024;
         uint blocks = divide_and_ceil(num_triangles, threads);
 
-        GPU::init_triangles_from_mesh<<<blocks, threads>>>(triangles, mesh);
+        init_triangles_from_mesh<<<blocks, threads>>>(triangles, mesh);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        GPU::init_shapes<<<blocks, threads>>>(shapes, triangles, num_triangles);
+        init_shapes<<<blocks, threads>>>(shapes, triangles, num_triangles);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -715,12 +712,12 @@ void SceneBuilder::add_triangle_mesh(const std::vector<Point3f> &points,
             Primitive *primitives;
             CHECK_CUDA_ERROR(cudaMallocManaged(&primitives, sizeof(Primitive) * num_triangles));
 
-            GPU::init_simple_primitives<<<blocks, threads>>>(
-                simple_primitives, shapes, graphics_state.material, num_triangles);
+            init_simple_primitives<<<blocks, threads>>>(simple_primitives, shapes,
+                                                        graphics_state.material, num_triangles);
             CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-            GPU::init_primitives<<<blocks, threads>>>(primitives, simple_primitives, num_triangles);
+            init_primitives<<<blocks, threads>>>(primitives, simple_primitives, num_triangles);
             CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -750,11 +747,11 @@ void SceneBuilder::add_triangle_mesh(const std::vector<Point3f> &points,
                                               graphics_state.area_light_entity->parameters);
             }
 
-            GPU::init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num_triangles);
+            init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num_triangles);
             CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-            GPU::init_geometric_primitives<<<blocks, threads>>>(
+            init_geometric_primitives<<<blocks, threads>>>(
                 geometric_primitives, shapes, graphics_state.material, lights, num_triangles);
             CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
@@ -762,8 +759,7 @@ void SceneBuilder::add_triangle_mesh(const std::vector<Point3f> &points,
             Primitive *primitives;
             CHECK_CUDA_ERROR(cudaMallocManaged(&primitives, sizeof(Primitive) * num_triangles));
 
-            GPU::init_primitives<<<blocks, threads>>>(primitives, geometric_primitives,
-                                                      num_triangles);
+            init_primitives<<<blocks, threads>>>(primitives, geometric_primitives, num_triangles);
             CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -1001,6 +997,7 @@ void SceneBuilder::preprocess() {
 }
 
 void SceneBuilder::render() const {
+    // TODO: move this part into Renderer
     auto start_rendering = std::chrono::system_clock::now();
 
     int thread_width = 8;
@@ -1015,7 +1012,7 @@ void SceneBuilder::render() const {
                 divide_and_ceil(uint(film_resolution->y), uint(thread_height)), 1);
     dim3 threads(thread_width, thread_height, 1);
 
-    GPU::parallel_render<<<blocks, threads>>>(renderer, samples_per_pixel.value());
+    parallel_render<<<blocks, threads>>>(renderer, samples_per_pixel.value());
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 

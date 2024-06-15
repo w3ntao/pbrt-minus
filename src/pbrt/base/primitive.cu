@@ -19,6 +19,23 @@ const Primitive *Primitive::create_simple_primitive(const Shape *shape, const Ma
     return primitive;
 }
 
+const Primitive *Primitive::create_geometric_primitive(const Shape *shape, const Material *material,
+                                                       const Light *diffuse_area_light,
+                                                       std::vector<void *> &gpu_dynamic_pointers) {
+    GeometricPrimitive *geometric_primitive;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&geometric_primitive, sizeof(GeometricPrimitive)));
+    Primitive *primitive;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&primitive, sizeof(Primitive)));
+
+    gpu_dynamic_pointers.push_back(geometric_primitive);
+    gpu_dynamic_pointers.push_back(primitive);
+
+    geometric_primitive->init(shape, material, diffuse_area_light);
+    primitive->init(geometric_primitive);
+
+    return primitive;
+}
+
 PBRT_CPU_GPU
 void Primitive::init(const SimplePrimitive *simple_primitive) {
     type = Type::simple_primitive;

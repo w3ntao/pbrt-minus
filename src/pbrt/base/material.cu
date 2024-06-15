@@ -9,37 +9,75 @@
 #include "pbrt/materials/diffuse_material.h"
 #include "pbrt/materials/dielectric_material.h"
 
-const Material *
-Material::create_coated_diffuse_material(const ParameterDictionary &parameters,
-                                         std::vector<void *> &gpu_dynamic_pointers) {
-    CoatedDiffuseMaterial *coated_diffuse_material;
-    Material *material;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&coated_diffuse_material, sizeof(CoatedDiffuseMaterial)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+const Material *Material::create(const std::string &type_of_material,
+                                 const ParameterDictionary &parameters,
+                                 std::vector<void *> &gpu_dynamic_pointers) {
+    if (type_of_material == "coateddiffuse") {
+        CoatedDiffuseMaterial *coated_diffuse_material;
+        Material *material;
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged(&coated_diffuse_material, sizeof(CoatedDiffuseMaterial)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
 
-    coated_diffuse_material->init(parameters, gpu_dynamic_pointers);
-    material->init(coated_diffuse_material);
+        coated_diffuse_material->init(parameters, gpu_dynamic_pointers);
+        material->init(coated_diffuse_material);
 
-    gpu_dynamic_pointers.push_back(coated_diffuse_material);
-    gpu_dynamic_pointers.push_back(material);
+        gpu_dynamic_pointers.push_back(coated_diffuse_material);
+        gpu_dynamic_pointers.push_back(material);
 
-    return material;
-}
+        return material;
+    }
 
-const Material *Material::create_conductor_material(const ParameterDictionary &parameters,
-                                                    std::vector<void *> &gpu_dynamic_pointers) {
-    ConductorMaterial *conductor_material;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&conductor_material, sizeof(ConductorMaterial)));
-    conductor_material->init(parameters, gpu_dynamic_pointers);
+    if (type_of_material == "conductor") {
+        ConductorMaterial *conductor_material;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&conductor_material, sizeof(ConductorMaterial)));
+        conductor_material->init(parameters, gpu_dynamic_pointers);
 
-    Material *material;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
-    material->init(conductor_material);
+        Material *material;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+        material->init(conductor_material);
 
-    gpu_dynamic_pointers.push_back(conductor_material);
-    gpu_dynamic_pointers.push_back(material);
+        gpu_dynamic_pointers.push_back(conductor_material);
+        gpu_dynamic_pointers.push_back(material);
 
-    return material;
+        return material;
+    }
+
+    if (type_of_material == "dielectric") {
+        DielectricMaterial *dielectric_material;
+        Material *material;
+
+        CHECK_CUDA_ERROR(cudaMallocManaged(&dielectric_material, sizeof(DielectricMaterial)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+
+        gpu_dynamic_pointers.push_back(dielectric_material);
+        gpu_dynamic_pointers.push_back(material);
+
+        dielectric_material->init(parameters, gpu_dynamic_pointers);
+        material->init(dielectric_material);
+
+        return material;
+    }
+
+    if (type_of_material == "diffuse") {
+        DiffuseMaterial *diffuse_material;
+        Material *material;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material, sizeof(DiffuseMaterial)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+
+        gpu_dynamic_pointers.push_back(diffuse_material);
+        gpu_dynamic_pointers.push_back(material);
+
+        diffuse_material->init(parameters, gpu_dynamic_pointers);
+        material->init(diffuse_material);
+
+        return material;
+    }
+
+    printf("\nMaterial `%s` not implemented\n", type_of_material.c_str());
+
+    REPORT_FATAL_ERROR();
+    return nullptr;
 }
 
 const Material *Material::create_diffuse_material(const SpectrumTexture *texture,

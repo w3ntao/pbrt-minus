@@ -112,10 +112,7 @@ class SceneBuilder {
     void build_sampler();
 
     void build_integrator();
-
-    const Material *create_material(const std::string &type_of_material,
-                                    const ParameterDictionary &parameters);
-
+    
     void parse_area_light_source(const std::vector<Token> &tokens);
 
     void parse_light_source(const std::vector<Token> &tokens);

@@ -4,7 +4,39 @@
 #include "pbrt/lights/distant_light.h"
 #include "pbrt/lights/image_infinite_light.h"
 
-Light *Light::create_diffuse_area_light(const Shape *_shape, const Transform &_render_from_light,
+Light *Light::create(const std::string &type_of_light, const Transform &renderFromLight,
+                     const ParameterDictionary &parameters,
+                     std::vector<void *> &gpu_dynamic_pointers) {
+    if (type_of_light == "distant") {
+        auto distant_light =
+            DistantLight::create(renderFromLight, parameters, gpu_dynamic_pointers);
+
+        Light *light;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
+        gpu_dynamic_pointers.push_back(light);
+
+        light->init(distant_light);
+        return light;
+    }
+
+    if (type_of_light == "infinite") {
+        auto image_infinite_light =
+            ImageInfiniteLight::create(renderFromLight, parameters, gpu_dynamic_pointers);
+
+        Light *light;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
+        gpu_dynamic_pointers.push_back(light);
+
+        light->init(image_infinite_light);
+        return light;
+    }
+
+    printf("\nLight `%s` not implemented\n", type_of_light.c_str());
+    REPORT_FATAL_ERROR();
+    return nullptr;
+}
+
+Light *Light::create_diffuse_area_light(const Shape *_shape, const Transform &render_from_light,
                                         const ParameterDictionary &parameters,
                                         std::vector<void *> &gpu_dynamic_pointers) {
 
@@ -16,7 +48,7 @@ Light *Light::create_diffuse_area_light(const Shape *_shape, const Transform &_r
     gpu_dynamic_pointers.push_back(diffuse_are_light);
     gpu_dynamic_pointers.push_back(light);
 
-    diffuse_are_light->init(_shape, _render_from_light, parameters);
+    diffuse_are_light->init(_shape, render_from_light, parameters);
     light->init(diffuse_are_light);
 
     return light;

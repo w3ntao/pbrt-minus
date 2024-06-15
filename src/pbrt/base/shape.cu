@@ -4,35 +4,38 @@
 #include "pbrt/shapes/sphere.h"
 #include "pbrt/shapes/triangle.h"
 
-const Shape *Shape::create_disk(const Transform &render_from_object,
-                                const Transform &object_from_render, bool reverse_orientation,
-                                const ParameterDictionary &parameters,
-                                std::vector<void *> &gpu_dynamic_pointers) {
-    auto disk = Disk::create(render_from_object, object_from_render, reverse_orientation,
-                             parameters, gpu_dynamic_pointers);
-
-    Shape *shape;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&shape, sizeof(Shape)));
-    gpu_dynamic_pointers.push_back(shape);
-
-    shape->init(disk);
-
-    return shape;
-}
-
-const Shape *Shape::create_sphere(const Transform &render_from_object,
-                                  const Transform &object_from_render, bool reverse_orientation,
-                                  const ParameterDictionary &parameters,
-                                  std::vector<void *> &gpu_dynamic_pointers) {
-    auto sphere = Sphere::create(render_from_object, object_from_render, reverse_orientation,
+const Shape *Shape::create(const std::string &type_of_shape, const Transform &render_from_object,
+                           const Transform &object_from_render, bool reverse_orientation,
+                           const ParameterDictionary &parameters,
+                           std::vector<void *> &gpu_dynamic_pointers) {
+    if (type_of_shape == "disk") {
+        auto disk = Disk::create(render_from_object, object_from_render, reverse_orientation,
                                  parameters, gpu_dynamic_pointers);
 
-    Shape *shape;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&shape, sizeof(Shape)));
-    gpu_dynamic_pointers.push_back(shape);
+        Shape *shape;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&shape, sizeof(Shape)));
+        gpu_dynamic_pointers.push_back(shape);
 
-    shape->init(sphere);
-    return shape;
+        shape->init(disk);
+        return shape;
+    }
+
+    if (type_of_shape == "sphere") {
+        auto sphere = Sphere::create(render_from_object, object_from_render, reverse_orientation,
+                                     parameters, gpu_dynamic_pointers);
+
+        Shape *shape;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&shape, sizeof(Shape)));
+        gpu_dynamic_pointers.push_back(shape);
+
+        shape->init(sphere);
+        return shape;
+    }
+
+    printf("\nShape `%s` not implemented\n", type_of_shape.c_str());
+
+    REPORT_FATAL_ERROR();
+    return nullptr;
 }
 
 PBRT_CPU_GPU

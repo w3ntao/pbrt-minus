@@ -38,13 +38,10 @@ class Material {
         dielectric,
     };
 
-    static const Material *
-    create_coated_diffuse_material(const ParameterDictionary &parameters,
-                                   std::vector<void *> &gpu_dynamic_pointers);
-
-    static const Material *create_conductor_material(const ParameterDictionary &parameters,
-                                                     std::vector<void *> &gpu_dynamic_pointers);
-
+    static const Material *create(const std::string &type_of_material,
+                                  const ParameterDictionary &parameters,
+                                  std::vector<void *> &gpu_dynamic_pointers);
+    
     static const Material *create_diffuse_material(const SpectrumTexture *texture,
                                                    std::vector<void *> &gpu_dynamic_pointers);
 

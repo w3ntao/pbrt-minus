@@ -13,6 +13,10 @@
 
 class FloatConstantTexture;
 
+class ParameterDictionary;
+
+class RGBColorSpace;
+
 class Spectrum;
 class SpectrumConstantTexture;
 class SpectrumImageTexture;
@@ -69,6 +73,11 @@ class SpectrumTexture {
         image,
         scale,
     };
+
+    static const SpectrumTexture *create(const std::string &type_of_texture,
+                                         const ParameterDictionary &parameters,
+                                         const RGBColorSpace *color_space,
+                                         std::vector<void *> &gpu_dynamic_pointers);
 
     static const SpectrumTexture *
     create_constant_float_val_texture(FloatType val, std::vector<void *> &gpu_dynamic_pointers);

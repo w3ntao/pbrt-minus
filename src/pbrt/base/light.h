@@ -74,8 +74,11 @@ class Light {
         image_infinite_light,
     };
 
-    static Light *create_diffuse_area_light(const Shape *_shape,
-                                            const Transform &_render_from_light,
+    static Light *create(const std::string &type_of_light, const Transform &renderFromLight,
+                         const ParameterDictionary &parameters,
+                         std::vector<void *> &gpu_dynamic_pointers);
+
+    static Light *create_diffuse_area_light(const Shape *_shape, const Transform &render_from_light,
                                             const ParameterDictionary &parameters,
                                             std::vector<void *> &gpu_dynamic_pointers);
 
