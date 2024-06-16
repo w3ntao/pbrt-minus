@@ -61,6 +61,8 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/euclidean_space/squared_matrix.cu
 
+        src/pbrt/gpu/renderer.cu
+
         src/pbrt/integrators/integrator_base.cu
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu

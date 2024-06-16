@@ -17,23 +17,32 @@
 #include "pbrt/films/pixel_sensor.h"
 #include "pbrt/films/rgb_film.h"
 
-#include "pbrt/lights/diffuse_area_light.h"
-
-#include "pbrt/primitives/simple_primitives.h"
-#include "pbrt/primitives/geometric_primitive.h"
-
 #include "pbrt/samplers/independent_sampler.h"
 
-#include "pbrt/shapes/triangle.h"
+struct Renderer {
+    static Renderer *create(std::vector<void *> &gpu_dynamic_pointers) {
+        Renderer *renderer;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&renderer, sizeof(Renderer)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->bvh), sizeof(HLBVH)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->camera), sizeof(Camera)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->film), sizeof(Film)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->filter), sizeof(Filter)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->integrator), sizeof(Integrator)));
 
-#include "pbrt/spectrum_util/color_encoding.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include "pbrt/spectrum_util/spectrum_constants_cie.h"
+        for (auto ptr : std::vector<void *>({
+                 renderer,
+                 renderer->bvh,
+                 renderer->camera,
+                 renderer->film,
+                 renderer->filter,
+                 renderer->integrator,
+             })) {
+            gpu_dynamic_pointers.push_back(ptr);
+        }
 
-class Renderer {
-  public:
+        return renderer;
+    }
+
     Integrator *integrator;
     Camera *camera;
     Filter *filter;
@@ -44,7 +53,7 @@ class Renderer {
     PixelSensor sensor;
 
     PBRT_GPU
-    void evaluate_pixel_sample(const Point2i p_pixel, const int num_samples) {
+    void evaluate_pixel_sample(const Point2i p_pixel, const uint num_samples) {
         int width = camera->get_camerabase()->resolution.x;
         const uint pixel_index = p_pixel.y * width + p_pixel.x;
 
@@ -68,4 +77,7 @@ class Renderer {
             film->add_sample(p_pixel, radiance_l, lambda, camera_sample.filter_weight);
         }
     }
+
+    void render(const std::string &output_filename, const Point2i &film_resolution,
+                uint samples_per_pixel);
 };

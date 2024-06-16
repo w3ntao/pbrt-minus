@@ -9,11 +9,18 @@
 #include "pbrt/integrators/random_walk.h"
 #include "pbrt/integrators/simple_path.h"
 
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/spectrum_constants_metal.h"
+#include "pbrt/lights/diffuse_area_light.h"
+
+#include "pbrt/primitives/simple_primitives.h"
+#include "pbrt/primitives/geometric_primitive.h"
 
 #include "pbrt/shapes/loop_subdivide.h"
+#include "pbrt/shapes/triangle.h"
 #include "pbrt/shapes/tri_quad_mesh.h"
+
+#include "pbrt/spectrum_util/global_spectra.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
+#include "pbrt/spectrum_util/spectrum_constants_metal.h"
 
 #include "pbrt/textures/spectrum_constant_texture.h"
 
@@ -120,21 +127,6 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     pixels[idx].init_zero();
 }
 
-__global__ static void parallel_render(Renderer *renderer, int num_samples) {
-    auto camera_base = renderer->camera->get_camerabase();
-
-    uint width = camera_base->resolution.x;
-    uint height = camera_base->resolution.y;
-
-    uint x = threadIdx.x + blockIdx.x * blockDim.x;
-    uint y = threadIdx.y + blockIdx.y * blockDim.y;
-    if (x >= width || y >= height) {
-        return;
-    }
-
-    renderer->evaluate_pixel_sample(Point2i(x, y), num_samples);
-}
-
 static std::vector<uint> group_tokens(const std::vector<Token> &tokens) {
     std::vector<uint> keyword_range;
     for (int idx = 0; idx < tokens.size(); ++idx) {
@@ -167,24 +159,7 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
         {"metal-Ag-k", ag_k},
     };
 
-    // TODO: move these into Renderer
-    CHECK_CUDA_ERROR(cudaMallocManaged(&renderer, sizeof(Renderer)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->bvh), sizeof(HLBVH)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->camera), sizeof(Camera)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->film), sizeof(Film)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->filter), sizeof(Filter)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->integrator), sizeof(Integrator)));
-
-    for (auto ptr : std::vector<void *>({
-             renderer,
-             renderer->bvh,
-             renderer->camera,
-             renderer->film,
-             renderer->filter,
-             renderer->integrator,
-         })) {
-        gpu_dynamic_pointers.push_back(ptr);
-    }
+    renderer = Renderer::create(gpu_dynamic_pointers);
 
     auto texture = SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
     graphics_state.material = Material::create_diffuse_material(texture, gpu_dynamic_pointers);
@@ -531,12 +506,15 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
 
     // TODO: rewrite the building of plymesh, loopsubdiv, trianglemesh
 
+    const auto render_from_object = get_render_from_object();
+    const bool reverse_orientation = graphics_state.reverse_orientation;
+
     if (type_of_shape == "trianglemesh") {
         auto uv = parameters.get_point2_array("uv");
         auto indices = parameters.get_integer("indices");
         auto points = parameters.get_point3_array("P");
 
-        add_triangle_mesh(points, indices, uv);
+        add_triangle_mesh(render_from_object, reverse_orientation, points, indices, uv);
 
         return;
     }
@@ -546,7 +524,8 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         auto ply_mesh = TriQuadMesh::read_ply(file_path);
 
         if (!ply_mesh.triIndices.empty()) {
-            add_triangle_mesh(ply_mesh.p, ply_mesh.triIndices, ply_mesh.uv);
+            add_triangle_mesh(render_from_object, reverse_orientation, ply_mesh.p,
+                              ply_mesh.triIndices, ply_mesh.uv);
         }
 
         if (!ply_mesh.quadIndices.empty()) {
@@ -564,27 +543,29 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
 
         const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);
 
-        add_triangle_mesh(loop_subdivide_data.p_limit, loop_subdivide_data.vertex_indices,
-                          std::vector<Point2f>());
+        add_triangle_mesh(render_from_object, reverse_orientation, loop_subdivide_data.p_limit,
+                          loop_subdivide_data.vertex_indices, {});
+
         return;
     }
 
     if (type_of_shape == "disk" || type_of_shape == "sphere") {
-        auto shape = Shape::create(
-            type_of_shape, get_render_from_object(), get_render_from_object().inverse(),
-            graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
+        auto shape =
+            Shape::create(type_of_shape, render_from_object, render_from_object.inverse(),
+                          graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
 
         if (!graphics_state.area_light_entity) {
             auto primitive = Primitive::create_simple_primitive(shape, graphics_state.material,
                                                                 gpu_dynamic_pointers);
             gpu_primitives.push_back(primitive);
+
             return;
         }
 
         // otherwise: build AreaDiffuseLight
 
         auto diffuse_area_light = Light::create_diffuse_area_light(
-            shape, get_render_from_object(), graphics_state.area_light_entity->parameters,
+            shape, render_from_object, graphics_state.area_light_entity->parameters,
             gpu_dynamic_pointers);
 
         gpu_lights.push_back(diffuse_area_light);
@@ -647,18 +628,14 @@ void SceneBuilder::parse_translate(const std::vector<Token> &tokens) {
     for (int idx = 1; idx < tokens.size(); idx++) {
         data.push_back(tokens[idx].to_float());
     }
-
-    assert(data.size() == 16);
-
+    
     graphics_state.transform *= Transform::translate(data[0], data[1], data[2]);
 }
 
-void SceneBuilder::add_triangle_mesh(const std::vector<Point3f> &points,
+void SceneBuilder::add_triangle_mesh(const Transform &render_from_object, bool reverse_orientation,
+                                     const std::vector<Point3f> &points,
                                      const std::vector<int> &indices,
                                      const std::vector<Point2f> &uv) {
-    const auto render_from_object = get_render_from_object();
-    const bool reverse_orientation = graphics_state.reverse_orientation;
-
     Point3f *gpu_points;
     CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_points, sizeof(Point3f) * points.size()));
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
@@ -997,36 +974,15 @@ void SceneBuilder::preprocess() {
 }
 
 void SceneBuilder::render() const {
-    // TODO: move this part into Renderer
-    auto start_rendering = std::chrono::system_clock::now();
+    auto start = std::chrono::system_clock::now();
 
-    int thread_width = 8;
-    int thread_height = 8;
+    renderer->render(output_filename, film_resolution.value(), samples_per_pixel.value());
 
-    std::cout << "\n";
-    std::cout << "rendering a " << film_resolution->x << "x" << film_resolution->y
-              << " image (samples per pixel: " << samples_per_pixel.value() << ") ";
-    std::cout << "in " << thread_width << "x" << thread_height << " blocks.\n" << std::flush;
+    const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
 
-    dim3 blocks(divide_and_ceil(uint(film_resolution->x), uint(thread_width)),
-                divide_and_ceil(uint(film_resolution->y), uint(thread_height)), 1);
-    dim3 threads(thread_width, thread_height, 1);
-
-    parallel_render<<<blocks, threads>>>(renderer, samples_per_pixel.value());
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-    const std::chrono::duration<FloatType> duration_rendering{std::chrono::system_clock::now() -
-                                                              start_rendering};
-
-    std::cout << std::fixed << std::setprecision(1) << "rendering took "
-              << duration_rendering.count() << " seconds.\n"
+    std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count()
+              << " seconds.\n"
               << std::flush;
-
-    renderer->film->write_to_png(output_filename, film_resolution.value());
-
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     std::cout << "image saved to `" << output_filename << "`\n";
 }

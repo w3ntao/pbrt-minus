@@ -112,7 +112,7 @@ class SceneBuilder {
     void build_sampler();
 
     void build_integrator();
-    
+
     void parse_area_light_source(const std::vector<Token> &tokens);
 
     void parse_light_source(const std::vector<Token> &tokens);
@@ -152,7 +152,8 @@ class SceneBuilder {
 
     void parse_translate(const std::vector<Token> &tokens);
 
-    void add_triangle_mesh(const std::vector<Point3f> &points, const std::vector<int> &indices,
+    void add_triangle_mesh(const Transform &render_from_object, bool reverse_orientation,
+                           const std::vector<Point3f> &points, const std::vector<int> &indices,
                            const std::vector<Point2f> &uv);
 
     void parse_tokens(const std::vector<Token> &tokens);

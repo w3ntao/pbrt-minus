@@ -75,10 +75,7 @@ void ImageInfiniteLight::preprocess(const Bounds3f &scene_bounds) {
 
 PBRT_GPU
 SampledSpectrum ImageInfiniteLight::ImageLe(Point2f uv, const SampledWavelengths &lambda) const {
-    auto rgb = image->bilerp(uv, WrapMode::OctahedralSphere);
-
-    // rgb = rgb.clamp(0, Infinity);
-    // TODO: without clamp(), the result looks closer to original PBRT
+    const auto rgb = image->bilerp(uv, WrapMode::OctahedralSphere).clamp(0, Infinity);
 
     auto spec = RGBIlluminantSpectrum(rgb, color_space);
 
