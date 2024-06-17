@@ -1,13 +1,17 @@
 #include "pbrt/base/shape.h"
 
+#include "pbrt/scene/parameter_dictionary.h"
+
 #include "pbrt/shapes/disk.h"
+#include "pbrt/shapes/loop_subdivide.h"
 #include "pbrt/shapes/sphere.h"
 #include "pbrt/shapes/triangle.h"
+#include "pbrt/shapes/tri_quad_mesh.h"
 
-const Shape *Shape::create(const std::string &type_of_shape, const Transform &render_from_object,
-                           const Transform &object_from_render, bool reverse_orientation,
-                           const ParameterDictionary &parameters,
-                           std::vector<void *> &gpu_dynamic_pointers) {
+std::pair<const Shape *, uint>
+Shape::create(const std::string &type_of_shape, const Transform &render_from_object,
+              const Transform &object_from_render, bool reverse_orientation,
+              const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers) {
     if (type_of_shape == "disk") {
         auto disk = Disk::create(render_from_object, object_from_render, reverse_orientation,
                                  parameters, gpu_dynamic_pointers);
@@ -17,7 +21,7 @@ const Shape *Shape::create(const std::string &type_of_shape, const Transform &re
         gpu_dynamic_pointers.push_back(shape);
 
         shape->init(disk);
-        return shape;
+        return {shape, 1};
     }
 
     if (type_of_shape == "sphere") {
@@ -29,13 +33,57 @@ const Shape *Shape::create(const std::string &type_of_shape, const Transform &re
         gpu_dynamic_pointers.push_back(shape);
 
         shape->init(sphere);
-        return shape;
+        return {shape, 1};
+    }
+
+    if (type_of_shape == "plymesh") {
+        auto file_path = parameters.root + "/" + parameters.get_string("filename", std::nullopt);
+        auto ply_mesh = TriQuadMesh::read_ply(file_path);
+
+        const Shape *shapes = nullptr;
+        uint num_shapes = 0;
+
+        if (!ply_mesh.triIndices.empty()) {
+            auto result = TriangleMesh::build_triangles(render_from_object, reverse_orientation,
+                                                        ply_mesh.p, ply_mesh.triIndices,
+                                                        ply_mesh.uv, gpu_dynamic_pointers);
+            shapes = result.first;
+            num_shapes = result.second;
+        }
+
+        if (!ply_mesh.quadIndices.empty()) {
+            printf("\n%s(): Shape::plymesh.quadIndices not implemented\n", __func__);
+            REPORT_FATAL_ERROR();
+        }
+
+        return {shapes, num_shapes};
+    }
+
+    if (type_of_shape == "trianglemesh") {
+        auto uv = parameters.get_point2_array("uv");
+        auto indices = parameters.get_integer("indices");
+        auto points = parameters.get_point3_array("P");
+
+        return TriangleMesh::build_triangles(render_from_object, reverse_orientation, points,
+                                             indices, uv, gpu_dynamic_pointers);
+    }
+
+    if (type_of_shape == "loopsubdiv") {
+        auto levels = parameters.get_integer("levels")[0];
+        auto indices = parameters.get_integer("indices");
+        auto points = parameters.get_point3_array("P");
+
+        const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);
+
+        return TriangleMesh::build_triangles(
+            render_from_object, reverse_orientation, loop_subdivide_data.p_limit,
+            loop_subdivide_data.vertex_indices, {}, gpu_dynamic_pointers);
     }
 
     printf("\nShape `%s` not implemented\n", type_of_shape.c_str());
 
     REPORT_FATAL_ERROR();
-    return nullptr;
+    return {nullptr, NAN};
 }
 
 PBRT_CPU_GPU
@@ -144,12 +192,12 @@ cuda::std::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
         return ((Disk *)ptr)->sample(ctx, u);
     }
 
-    case (Type::triangle): {
-        return ((Triangle *)ptr)->sample(ctx, u);
-    }
-
     case (Type::sphere): {
         return ((Sphere *)ptr)->sample(ctx, u);
+    }
+
+    case (Type::triangle): {
+        return ((Triangle *)ptr)->sample(ctx, u);
     }
     }
 

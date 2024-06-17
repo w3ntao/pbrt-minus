@@ -3,10 +3,10 @@
 #include <cuda/std/optional>
 #include <vector>
 
-#include "pbrt/util/macro.h"
-#include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/ray.h"
+#include "pbrt/euclidean_space/bounds3.h"
+#include "pbrt/util/macro.h"
 
 class Disk;
 class Sphere;
@@ -69,11 +69,10 @@ class Shape {
         triangle,
     };
 
-    static const Shape *create(const std::string &type_of_shape,
-                               const Transform &render_from_object,
-                               const Transform &object_from_render, bool reverse_orientation,
-                               const ParameterDictionary &parameters,
-                               std::vector<void *> &gpu_dynamic_pointers);
+    static std::pair<const Shape *, uint>
+    create(const std::string &type_of_shape, const Transform &render_from_object,
+           const Transform &object_from_render, bool reverse_orientation,
+           const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     void init(const Disk *disk);

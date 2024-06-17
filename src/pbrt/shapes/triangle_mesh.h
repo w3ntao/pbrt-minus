@@ -2,6 +2,10 @@
 
 #include "pbrt/euclidean_space/transform.h"
 
+#include <vector>
+
+class Shape;
+
 class TriangleMesh {
   public:
     uint triangles_num = 0;
@@ -15,6 +19,11 @@ class TriangleMesh {
 
     bool reverse_orientation;
     bool transformSwapsHandedness;
+
+    static std::pair<const Shape *, uint>
+    build_triangles(const Transform &render_from_object, bool reverse_orientation,
+                    const std::vector<Point3f> &points, const std::vector<int> &indices,
+                    const std::vector<Point2f> &uv, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     void init(bool _reverse_orientation, const int *_vertex_indices, uint num_indices,

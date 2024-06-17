@@ -152,10 +152,6 @@ class SceneBuilder {
 
     void parse_translate(const std::vector<Token> &tokens);
 
-    void add_triangle_mesh(const Transform &render_from_object, bool reverse_orientation,
-                           const std::vector<Point3f> &points, const std::vector<int> &indices,
-                           const std::vector<Point2f> &uv);
-
     void parse_tokens(const std::vector<Token> &tokens);
 
     Transform get_render_from_object() const {

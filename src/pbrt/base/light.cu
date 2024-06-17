@@ -1,8 +1,20 @@
 #include "pbrt/base/light.h"
 
+#include "pbrt/base/shape.h"
+
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/distant_light.h"
 #include "pbrt/lights/image_infinite_light.h"
+
+template <typename TypeOfLight>
+static __global__ void init_lights(Light *lights, TypeOfLight *concrete_shapes, uint num) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num) {
+        return;
+    }
+
+    lights[worker_idx].init(&concrete_shapes[worker_idx]);
+}
 
 Light *Light::create(const std::string &type_of_light, const Transform &renderFromLight,
                      const ParameterDictionary &parameters,
@@ -36,22 +48,31 @@ Light *Light::create(const std::string &type_of_light, const Transform &renderFr
     return nullptr;
 }
 
-Light *Light::create_diffuse_area_light(const Shape *_shape, const Transform &render_from_light,
-                                        const ParameterDictionary &parameters,
-                                        std::vector<void *> &gpu_dynamic_pointers) {
+Light *Light::create_diffuse_area_lights(const Shape *shapes, const uint num,
+                                         const Transform &render_from_light,
+                                         const ParameterDictionary &parameters,
+                                         std::vector<void *> &gpu_dynamic_pointers) {
+    const uint threads = 1024;
+    const uint blocks = divide_and_ceil(num, threads);
 
-    DiffuseAreaLight *diffuse_are_light;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_are_light, sizeof(DiffuseAreaLight)));
-    Light *light;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
+    // build DiffuseAreaLight
+    DiffuseAreaLight *diffuse_area_lights;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_area_lights, sizeof(DiffuseAreaLight) * num));
+    Light *lights;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&lights, sizeof(Light) * num));
 
-    gpu_dynamic_pointers.push_back(diffuse_are_light);
-    gpu_dynamic_pointers.push_back(light);
+    gpu_dynamic_pointers.push_back(diffuse_area_lights);
+    gpu_dynamic_pointers.push_back(lights);
 
-    diffuse_are_light->init(_shape, render_from_light, parameters);
-    light->init(diffuse_are_light);
+    for (uint idx = 0; idx < num; idx++) {
+        diffuse_area_lights[idx].init(&shapes[idx], render_from_light, parameters);
+    }
 
-    return light;
+    init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    return lights;
 }
 
 PBRT_CPU_GPU

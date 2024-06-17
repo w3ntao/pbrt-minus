@@ -1,39 +1,94 @@
 #include "pbrt/base/primitive.h"
 
+#include "pbrt/base/light.h"
+
 #include "pbrt/primitives/simple_primitives.h"
 #include "pbrt/primitives/geometric_primitive.h"
 
-const Primitive *Primitive::create_simple_primitive(const Shape *shape, const Material *material,
-                                                    std::vector<void *> &gpu_dynamic_pointers) {
-    SimplePrimitive *simple_primitive;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&simple_primitive, sizeof(SimplePrimitive)));
-    Primitive *primitive;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&primitive, sizeof(Primitive)));
+static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives,
+                                              const Shape *shapes, const Material *material,
+                                              uint num) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= num) {
+        return;
+    }
 
-    gpu_dynamic_pointers.push_back(simple_primitive);
-    gpu_dynamic_pointers.push_back(primitive);
-
-    simple_primitive->init(shape, material);
-    primitive->init(simple_primitive);
-
-    return primitive;
+    simple_primitives[idx].init(&shapes[idx], material);
 }
 
-const Primitive *Primitive::create_geometric_primitive(const Shape *shape, const Material *material,
-                                                       const Light *diffuse_area_light,
-                                                       std::vector<void *> &gpu_dynamic_pointers) {
-    GeometricPrimitive *geometric_primitive;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&geometric_primitive, sizeof(GeometricPrimitive)));
-    Primitive *primitive;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&primitive, sizeof(Primitive)));
+static __global__ void init_geometric_primitives(GeometricPrimitive *geometric_primitives,
+                                                 const Shape *shapes, const Material *material,
+                                                 const Light *diffuse_area_lights, uint num) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= num) {
+        return;
+    }
 
-    gpu_dynamic_pointers.push_back(geometric_primitive);
-    gpu_dynamic_pointers.push_back(primitive);
+    geometric_primitives[idx].init(&shapes[idx], material, &diffuse_area_lights[idx]);
+}
 
-    geometric_primitive->init(shape, material, diffuse_area_light);
-    primitive->init(geometric_primitive);
+template <typename TypeOfPrimitive>
+static __global__ void init_primitives(Primitive *primitives, TypeOfPrimitive *_primitives,
+                                       uint num) {
+    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= num) {
+        return;
+    }
 
-    return primitive;
+    primitives[idx].init(&_primitives[idx]);
+}
+
+const Primitive *Primitive::create_simple_primitives(const Shape *shapes, const Material *material,
+                                                     uint num,
+                                                     std::vector<void *> &gpu_dynamic_pointers) {
+    const uint threads = 1024;
+    const uint blocks = divide_and_ceil(num, threads);
+
+    SimplePrimitive *simple_primitives;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&simple_primitives, sizeof(SimplePrimitive) * num));
+    Primitive *primitives;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&primitives, sizeof(Primitive) * num));
+
+    init_simple_primitives<<<blocks, threads>>>(simple_primitives, shapes, material, num);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    init_primitives<<<blocks, threads>>>(primitives, simple_primitives, num);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    gpu_dynamic_pointers.push_back(simple_primitives);
+    gpu_dynamic_pointers.push_back(primitives);
+
+    return primitives;
+}
+
+const Primitive *Primitive::create_geometric_primitives(const Shape *shapes,
+                                                        const Material *material,
+                                                        const Light *diffuse_area_light, uint num,
+                                                        std::vector<void *> &gpu_dynamic_pointers) {
+    const uint threads = 1024;
+    const uint blocks = divide_and_ceil(num, threads);
+
+    GeometricPrimitive *geometric_primitives;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&geometric_primitives, sizeof(GeometricPrimitive) * num));
+
+    Primitive *primitives;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&primitives, sizeof(Primitive) * num));
+
+    gpu_dynamic_pointers.push_back(geometric_primitives);
+    gpu_dynamic_pointers.push_back(primitives);
+
+    init_geometric_primitives<<<blocks, threads>>>(geometric_primitives, shapes, material,
+                                                   diffuse_area_light, num);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    init_primitives<<<blocks, threads>>>(primitives, geometric_primitives, num);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    return primitives;
 }
 
 PBRT_CPU_GPU

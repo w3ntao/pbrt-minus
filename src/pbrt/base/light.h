@@ -78,9 +78,10 @@ class Light {
                          const ParameterDictionary &parameters,
                          std::vector<void *> &gpu_dynamic_pointers);
 
-    static Light *create_diffuse_area_light(const Shape *_shape, const Transform &render_from_light,
-                                            const ParameterDictionary &parameters,
-                                            std::vector<void *> &gpu_dynamic_pointers);
+    static Light *create_diffuse_area_lights(const Shape *shapes, const uint num,
+                                             const Transform &render_from_light,
+                                             const ParameterDictionary &parameters,
+                                             std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     void init(DistantLight *distant_light);

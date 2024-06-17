@@ -2,21 +2,14 @@
 
 #include <set>
 
+#include "pbrt/base/material.h"
+
 #include "pbrt/filters/box.h"
 
 #include "pbrt/integrators/ambient_occlusion.h"
 #include "pbrt/integrators/surface_normal.h"
 #include "pbrt/integrators/random_walk.h"
 #include "pbrt/integrators/simple_path.h"
-
-#include "pbrt/lights/diffuse_area_light.h"
-
-#include "pbrt/primitives/simple_primitives.h"
-#include "pbrt/primitives/geometric_primitive.h"
-
-#include "pbrt/shapes/loop_subdivide.h"
-#include "pbrt/shapes/triangle.h"
-#include "pbrt/shapes/tri_quad_mesh.h"
 
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
@@ -26,72 +19,10 @@
 
 #include "pbrt/util/std_container.h"
 
-__global__ static void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= mesh->triangles_num) {
-        return;
-    }
-
-    triangles[worker_idx].init(worker_idx, mesh);
-}
-
-template <typename TypeOfLight>
-static __global__ void init_lights(Light *lights, TypeOfLight *concrete_shapes, uint num) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= num) {
-        return;
-    }
-
-    lights[worker_idx].init(&concrete_shapes[worker_idx]);
-}
-
-template <typename TypeOfShape>
-static __global__ void init_shapes(Shape *shapes, const TypeOfShape *concrete_shapes, uint num) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= num) {
-        return;
-    }
-
-    shapes[worker_idx].init(&concrete_shapes[worker_idx]);
-}
-
-static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives,
-                                              const Shape *shapes, const Material *material,
-                                              uint length) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= length) {
-        return;
-    }
-
-    simple_primitives[idx].init(&shapes[idx], material);
-}
-
-static __global__ void init_geometric_primitives(GeometricPrimitive *geometric_primitives,
-                                                 const Shape *shapes, const Material *material,
-                                                 const Light *area_light, uint length) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= length) {
-        return;
-    }
-
-    geometric_primitives[idx].init(&shapes[idx], material, &area_light[idx]);
-}
-
-template <typename TypeOfPrimitive>
-static __global__ void init_primitives(Primitive *primitives, TypeOfPrimitive *_primitives,
-                                       uint length) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= length) {
-        return;
-    }
-
-    primitives[idx].init(&_primitives[idx]);
-}
-
 static __global__ void init_independent_samplers(IndependentSampler *samplers,
-                                                 uint samples_per_pixel, uint length) {
+                                                 uint samples_per_pixel, uint num) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= length) {
+    if (idx >= num) {
         return;
     }
 
@@ -106,16 +37,6 @@ static __global__ void init_samplers(Sampler *samplers, T *_samplers, uint lengt
     }
 
     samplers[idx].init(&_samplers[idx]);
-}
-
-template <typename T>
-static __global__ void apply_transform(T *data, const Transform transform, uint length) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= length) {
-        return;
-    }
-
-    data[idx] = transform(data[idx]);
 }
 
 static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
@@ -205,6 +126,7 @@ void SceneBuilder::build_filter() {
 }
 
 void SceneBuilder::build_film() {
+    // TODO: move film initialization into RGBFilm
     const auto parameters = build_parameter_dictionary(sub_vector(film_tokens, 2));
 
     auto _resolution_x = parameters.get_integer("xresolution")[0];
@@ -501,85 +423,38 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     }
 
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
-
     auto type_of_shape = tokens[1].values[0];
-
-    // TODO: rewrite the building of plymesh, loopsubdiv, trianglemesh
-
     const auto render_from_object = get_render_from_object();
-    const bool reverse_orientation = graphics_state.reverse_orientation;
 
-    if (type_of_shape == "trianglemesh") {
-        auto uv = parameters.get_point2_array("uv");
-        auto indices = parameters.get_integer("indices");
-        auto points = parameters.get_point3_array("P");
+    auto result =
+        Shape::create(type_of_shape, render_from_object, render_from_object.inverse(),
+                      graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
+    auto shapes = result.first;
+    auto num_shapes = result.second;
 
-        add_triangle_mesh(render_from_object, reverse_orientation, points, indices, uv);
+    if (!graphics_state.area_light_entity) {
+        auto simple_primitives = Primitive::create_simple_primitives(
+            shapes, graphics_state.material, num_shapes, gpu_dynamic_pointers);
 
-        return;
-    }
-
-    if (type_of_shape == "plymesh") {
-        auto file_path = get_file_full_path(parameters.get_string("filename", std::nullopt));
-        auto ply_mesh = TriQuadMesh::read_ply(file_path);
-
-        if (!ply_mesh.triIndices.empty()) {
-            add_triangle_mesh(render_from_object, reverse_orientation, ply_mesh.p,
-                              ply_mesh.triIndices, ply_mesh.uv);
-        }
-
-        if (!ply_mesh.quadIndices.empty()) {
-            printf("\n%s(): Shape::plymesh.quadIndices not implemented\n", __func__);
-            REPORT_FATAL_ERROR();
+        for (uint idx = 0; idx < num_shapes; ++idx) {
+            gpu_primitives.push_back(&simple_primitives[idx]);
         }
 
         return;
     }
 
-    if (type_of_shape == "loopsubdiv") {
-        auto levels = parameters.get_integer("levels")[0];
-        auto indices = parameters.get_integer("indices");
-        auto points = parameters.get_point3_array("P");
+    auto diffuse_area_lights = Light::create_diffuse_area_lights(
+        shapes, num_shapes, render_from_object, graphics_state.area_light_entity->parameters,
+        gpu_dynamic_pointers);
 
-        const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);
+    auto geometric_primitives = Primitive::create_geometric_primitives(
+        shapes, graphics_state.material, diffuse_area_lights, num_shapes, gpu_dynamic_pointers);
 
-        add_triangle_mesh(render_from_object, reverse_orientation, loop_subdivide_data.p_limit,
-                          loop_subdivide_data.vertex_indices, {});
-
-        return;
+    // otherwise: build AreaDiffuseLight
+    for (uint idx = 0; idx < num_shapes; ++idx) {
+        gpu_lights.push_back(&diffuse_area_lights[idx]);
+        gpu_primitives.push_back(&geometric_primitives[idx]);
     }
-
-    if (type_of_shape == "disk" || type_of_shape == "sphere") {
-        auto shape =
-            Shape::create(type_of_shape, render_from_object, render_from_object.inverse(),
-                          graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
-
-        if (!graphics_state.area_light_entity) {
-            auto primitive = Primitive::create_simple_primitive(shape, graphics_state.material,
-                                                                gpu_dynamic_pointers);
-            gpu_primitives.push_back(primitive);
-
-            return;
-        }
-
-        // otherwise: build AreaDiffuseLight
-
-        auto diffuse_area_light = Light::create_diffuse_area_light(
-            shape, render_from_object, graphics_state.area_light_entity->parameters,
-            gpu_dynamic_pointers);
-
-        gpu_lights.push_back(diffuse_area_light);
-
-        auto primitive = Primitive::create_geometric_primitive(
-            shape, graphics_state.material, diffuse_area_light, gpu_dynamic_pointers);
-
-        gpu_primitives.push_back(primitive);
-
-        return;
-    }
-
-    printf("\nShape `%s` not implemented\n", type_of_shape.c_str());
-    REPORT_FATAL_ERROR();
 }
 
 void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
@@ -628,148 +503,8 @@ void SceneBuilder::parse_translate(const std::vector<Token> &tokens) {
     for (int idx = 1; idx < tokens.size(); idx++) {
         data.push_back(tokens[idx].to_float());
     }
-    
+
     graphics_state.transform *= Transform::translate(data[0], data[1], data[2]);
-}
-
-void SceneBuilder::add_triangle_mesh(const Transform &render_from_object, bool reverse_orientation,
-                                     const std::vector<Point3f> &points,
-                                     const std::vector<int> &indices,
-                                     const std::vector<Point2f> &uv) {
-    Point3f *gpu_points;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_points, sizeof(Point3f) * points.size()));
-    CHECK_CUDA_ERROR(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
-                                cudaMemcpyHostToDevice));
-
-    uint batch = 256;
-    uint total_jobs = points.size() / batch + 1;
-    apply_transform<<<total_jobs, batch>>>(gpu_points, render_from_object, points.size());
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-    int *gpu_indices;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_indices, sizeof(int) * indices.size()));
-    CHECK_CUDA_ERROR(cudaMemcpy(gpu_indices, indices.data(), sizeof(int) * indices.size(),
-                                cudaMemcpyHostToDevice));
-
-    Point2f *gpu_uv = nullptr;
-    if (!uv.empty()) {
-        CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_uv, sizeof(Point2f) * uv.size()));
-        CHECK_CUDA_ERROR(
-            cudaMemcpy(gpu_uv, uv.data(), sizeof(Point2f) * uv.size(), cudaMemcpyHostToDevice));
-        gpu_dynamic_pointers.push_back(gpu_uv);
-    }
-
-    TriangleMesh *mesh;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&mesh, sizeof(TriangleMesh)));
-    mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, gpu_uv);
-
-    uint num_triangles = mesh->triangles_num;
-    Triangle *triangles;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&triangles, sizeof(Triangle) * num_triangles));
-    Shape *shapes;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&shapes, sizeof(Shape) * num_triangles));
-
-    {
-        uint threads = 1024;
-        uint blocks = divide_and_ceil(num_triangles, threads);
-
-        init_triangles_from_mesh<<<blocks, threads>>>(triangles, mesh);
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-        init_shapes<<<blocks, threads>>>(shapes, triangles, num_triangles);
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-        if (!graphics_state.area_light_entity) {
-            SimplePrimitive *simple_primitives;
-            CHECK_CUDA_ERROR(
-                cudaMallocManaged(&simple_primitives, sizeof(SimplePrimitive) * num_triangles));
-            Primitive *primitives;
-            CHECK_CUDA_ERROR(cudaMallocManaged(&primitives, sizeof(Primitive) * num_triangles));
-
-            init_simple_primitives<<<blocks, threads>>>(simple_primitives, shapes,
-                                                        graphics_state.material, num_triangles);
-            CHECK_CUDA_ERROR(cudaGetLastError());
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-            init_primitives<<<blocks, threads>>>(primitives, simple_primitives, num_triangles);
-            CHECK_CUDA_ERROR(cudaGetLastError());
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-            gpu_primitives.reserve(gpu_primitives.size() + num_triangles);
-            for (uint idx = 0; idx < num_triangles; idx++) {
-                gpu_primitives.push_back(&primitives[idx]);
-            }
-
-            gpu_dynamic_pointers.push_back(simple_primitives);
-            gpu_dynamic_pointers.push_back(primitives);
-
-        } else {
-            // build light
-            DiffuseAreaLight *diffuse_area_lights;
-            CHECK_CUDA_ERROR(
-                cudaMallocManaged(&diffuse_area_lights, sizeof(DiffuseAreaLight) * num_triangles));
-
-            Light *lights;
-            CHECK_CUDA_ERROR(cudaMallocManaged(&lights, sizeof(Light) * num_triangles));
-
-            GeometricPrimitive *geometric_primitives;
-            CHECK_CUDA_ERROR(cudaMallocManaged(&geometric_primitives,
-                                               sizeof(GeometricPrimitive) * num_triangles));
-
-            for (uint idx = 0; idx < num_triangles; idx++) {
-                diffuse_area_lights[idx].init(&shapes[idx], render_from_object,
-                                              graphics_state.area_light_entity->parameters);
-            }
-
-            init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num_triangles);
-            CHECK_CUDA_ERROR(cudaGetLastError());
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-            init_geometric_primitives<<<blocks, threads>>>(
-                geometric_primitives, shapes, graphics_state.material, lights, num_triangles);
-            CHECK_CUDA_ERROR(cudaGetLastError());
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-            Primitive *primitives;
-            CHECK_CUDA_ERROR(cudaMallocManaged(&primitives, sizeof(Primitive) * num_triangles));
-
-            init_primitives<<<blocks, threads>>>(primitives, geometric_primitives, num_triangles);
-            CHECK_CUDA_ERROR(cudaGetLastError());
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-            gpu_primitives.reserve(gpu_primitives.size() + num_triangles);
-            for (uint idx = 0; idx < num_triangles; idx++) {
-                gpu_primitives.push_back(&primitives[idx]);
-            }
-
-            gpu_lights.reserve(gpu_lights.size() + num_triangles);
-            for (uint idx = 0; idx < num_triangles; idx++) {
-                gpu_lights.push_back(&lights[idx]);
-            }
-
-            for (auto ptr : std::vector<void *>({
-                     diffuse_area_lights,
-                     lights,
-                     geometric_primitives,
-                     primitives,
-                 })) {
-                gpu_dynamic_pointers.push_back(ptr);
-            }
-        }
-    }
-
-    for (auto ptr : std::vector<void *>({
-             gpu_indices,
-             gpu_points,
-             mesh,
-             triangles,
-             shapes,
-         })) {
-        gpu_dynamic_pointers.push_back(ptr);
-    }
 }
 
 void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
