@@ -1,0 +1,140 @@
+LookAt 278 273 -800  278 273 0   0 1 0
+
+Camera "perspective" "float fov" [37.5]
+
+Film "rgb"
+    "string filename" ["cornell-box-specular.png"]
+    "integer xresolution" [ 1080 ]
+    "integer yresolution" [ 1080 ]
+
+Integrator "simplepath"
+
+WorldBegin
+
+# color grey
+Material "diffuse"
+    "rgb reflectance" [ 0.73 0.73 0.73 ]
+
+# light source
+AttributeBegin
+   AreaLightSource "diffuse" "rgb L" [1 1 1] "float scale" [20]
+
+   Shape "trianglemesh"
+   "integer indices" [ 0 1 2  2 3 0 ]
+   "point3 P" [
+      343.0 548.7 227.0
+      343.0 548.7 332.0
+      213.0 548.7 332.0
+      213.0 548.7 227.0 ]
+AttributeEnd
+
+#red wall
+AttributeBegin
+Material "diffuse"
+    "rgb reflectance" [ 0.65 0.05 0.05 ]
+
+Shape "trianglemesh"
+   "integer indices" [ 0 1 2  2 3 0 ]
+   "point3 P" [
+      552.8   0.0   0.0
+      549.6   0.0 559.2
+      556.0 548.8 559.2
+      556.0 548.8   0.0 ]
+AttributeEnd
+
+# green wall
+AttributeBegin
+Material "diffuse"
+    "rgb reflectance" [ 0.12 0.45 0.15 ]
+
+Shape "trianglemesh"
+   "integer indices" [ 0 1 2  2 3 0 ]
+   "point3 P" [
+      0.0   0.0 559.2
+      0.0   0.0   0.0
+      0.0 548.8   0.0
+      0.0 548.8 559.2 ]
+AttributeEnd
+
+# everything else is grey
+AttributeBegin
+   Shape "trianglemesh"
+   "integer indices" [ 0 1 2  2 3 0 ]
+   "point3 P" [
+      552.8 0.0   0.0
+      0.0 0.0   0.0
+      0.0 0.0 559.2
+    549.6 0.0 559.2 ]
+AttributeEnd
+
+
+AttributeBegin
+   Shape "trianglemesh"
+   "integer indices" [ 0 1 2  2 3 0 ]
+   "point3 P" [
+    556.0 548.8 0.0
+    556.0 548.8 559.2
+      0.0 548.8 559.2
+      0.0 548.8   0.0 ]
+AttributeEnd
+
+
+AttributeBegin
+   Shape "trianglemesh"
+   "integer indices" [ 0 1 2  2 3 0 ]
+   "point3 P" [
+    549.6   0.0 559.2
+      0.0   0.0 559.2
+      0.0 548.8 559.2
+    556.0 548.8 559.2]
+AttributeEnd
+
+# sphere
+AttributeBegin
+Material "dielectric"
+    "bool remaproughness" [ false ]
+    #"float vroughness" [ 0.01 ]
+    #"float uroughness" [ 0.01 ]
+
+    Translate 186 90 168
+    Shape "sphere"
+        "float radius" [ 90 ]
+AttributeEnd
+
+# tall block
+AttributeBegin
+    Material "conductor"
+    "float roughness" [ 0.0025 ]
+    "spectrum k" [ "metal-Ag-k" ]
+    "spectrum eta" [ "metal-Ag-eta" ]
+
+   Shape "trianglemesh"
+   "integer indices" [
+      3 2 0 2 1 0
+      7 6 4 6 5 4
+      11 10 8 10 9 8
+      15 14 12 14 13 12
+      19 18 16 18 17 16
+   ]
+   "point3 P" [
+    423.0 330.0 247.0
+    265.0 330.0 296.0
+    314.0 330.0 456.0
+    472.0 330.0 406.0
+    423.0   0.0 247.0
+    423.0 330.0 247.0
+    472.0 330.0 406.0
+    472.0   0.0 406.0
+    472.0   0.0 406.0
+    472.0 330.0 406.0
+    314.0 330.0 456.0
+    314.0   0.0 456.0
+    314.0   0.0 456.0
+    314.0 330.0 456.0
+    265.0 330.0 296.0
+    265.0   0.0 296.0
+    265.0   0.0 296.0
+    265.0 330.0 296.0
+    423.0 330.0 247.0
+    423.0   0.0 247.0]
+AttributeEnd
