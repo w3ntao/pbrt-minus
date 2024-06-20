@@ -12,6 +12,10 @@
 
 class SurfaceNormalIntegrator {
   public:
+    static const SurfaceNormalIntegrator *create(const ParameterDictionary &parameters,
+                                                 const IntegratorBase *integrator_base,
+                                                 std::vector<void *> &gpu_dynamic_pointers);
+
     void init(const IntegratorBase *_base, const RGBColorSpace *rgb_color_space) {
         base = _base;
 

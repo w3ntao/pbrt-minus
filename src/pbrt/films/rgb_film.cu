@@ -12,20 +12,12 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     pixels[idx].init_zero();
 }
 
-RGBFilm *RGBFilm::create(const ParameterDictionary &parameters, std::string output_filename,
+RGBFilm *RGBFilm::create(const ParameterDictionary &parameters,
                          std::vector<void *> &gpu_dynamic_pointers) {
-    auto _resolution_x = parameters.get_integer("xresolution")[0];
-    auto _resolution_y = parameters.get_integer("yresolution")[0];
+    auto resolution_x = parameters.get_integer("xresolution")[0];
+    auto resolution_y = parameters.get_integer("yresolution")[0];
 
-    auto film_resolution = Point2i(_resolution_x, _resolution_y);
-    if (output_filename.empty()) {
-        output_filename = parameters.get_string("filename", std::nullopt);
-    }
-
-    if (std::filesystem::path p(output_filename); p.extension() != ".png") {
-        printf("output filename extension: only PNG is supported for the moment\n");
-        output_filename = p.replace_extension(".png").filename();
-    }
+    auto film_resolution = Point2i(resolution_x, resolution_y);
 
     FloatType iso = 100;
     FloatType white_balance_val = 0.0;

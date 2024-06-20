@@ -6,10 +6,9 @@
 
 #include "pbrt/filters/box.h"
 
-#include "pbrt/integrators/ambient_occlusion.h"
-#include "pbrt/integrators/surface_normal.h"
-#include "pbrt/integrators/random_walk.h"
-#include "pbrt/integrators/simple_path.h"
+#include "pbrt/integrators/integrator_base.h"
+
+#include "pbrt/light_samplers/uniform_light_sampler.h"
 
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
@@ -119,16 +118,21 @@ void SceneBuilder::build_filter() {
 void SceneBuilder::build_film() {
     const auto parameters = build_parameter_dictionary(sub_vector(film_tokens, 2));
 
-    auto _resolution_x = parameters.get_integer("xresolution")[0];
-    auto _resolution_y = parameters.get_integer("yresolution")[0];
+    auto resolution_x = parameters.get_integer("xresolution")[0];
+    auto resolution_y = parameters.get_integer("yresolution")[0];
 
-    film_resolution = Point2i(_resolution_x, _resolution_y);
+    film_resolution = Point2i(resolution_x, resolution_y);
 
     if (output_filename.empty()) {
         output_filename = parameters.get_string("filename", std::nullopt);
     }
 
-    auto rgb_film = RGBFilm::create(parameters, output_filename, gpu_dynamic_pointers);
+    if (std::filesystem::path p(output_filename); p.extension() != ".png") {
+        printf("output filename extension: only PNG is supported for the moment\n");
+        output_filename = p.replace_extension(".png").filename();
+    }
+
+    auto rgb_film = RGBFilm::create(parameters, gpu_dynamic_pointers);
 
     renderer->film->init(rgb_film);
 }
@@ -176,6 +180,8 @@ void SceneBuilder::build_sampler() {
 }
 
 void SceneBuilder::build_integrator() {
+    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
+
     IntegratorBase *integrator_base;
     CHECK_CUDA_ERROR(cudaMallocManaged(&integrator_base, sizeof(IntegratorBase)));
 
@@ -222,67 +228,8 @@ void SceneBuilder::build_integrator() {
         gpu_dynamic_pointers.push_back(ptr);
     }
 
-    if (!integrator_name.has_value()) {
-        printf("Integrator not set, changed to AmbientOcclusion\n");
-        integrator_name = "ambientocclusion";
-    }
-
-    if (integrator_name == "volpath") {
-        printf("Integrator `%s` not implemented, changed to AmbientOcclusion\n",
-               integrator_name->c_str());
-        integrator_name = "ambientocclusion";
-    }
-
-    if (integrator_name == "ambientocclusion") {
-        auto illuminant_spectrum = global_spectra->rgb_color_space->illuminant;
-
-        const auto cie_y = global_spectra->cie_y;
-        auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(cie_y);
-
-        AmbientOcclusionIntegrator *ambient_occlusion_integrator;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&ambient_occlusion_integrator, sizeof(AmbientOcclusionIntegrator)));
-        gpu_dynamic_pointers.push_back(ambient_occlusion_integrator);
-
-        ambient_occlusion_integrator->init(integrator_base, illuminant_spectrum, illuminant_scale);
-        renderer->integrator->init(ambient_occlusion_integrator);
-        return;
-    }
-
-    if (integrator_name == "surfacenormal") {
-        SurfaceNormalIntegrator *surface_normal_integrator;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&surface_normal_integrator, sizeof(SurfaceNormalIntegrator)));
-        gpu_dynamic_pointers.push_back(surface_normal_integrator);
-
-        surface_normal_integrator->init(integrator_base, global_spectra->rgb_color_space);
-        renderer->integrator->init(surface_normal_integrator);
-        return;
-    }
-
-    if (integrator_name == "randomwalk") {
-        RandomWalkIntegrator *random_walk_integrator;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&random_walk_integrator, sizeof(RandomWalkIntegrator)));
-        gpu_dynamic_pointers.push_back(random_walk_integrator);
-
-        random_walk_integrator->init(integrator_base, 5);
-        renderer->integrator->init(random_walk_integrator);
-        return;
-    }
-
-    if (integrator_name == "simplepath") {
-        SimplePathIntegrator *simple_path_integrator;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&simple_path_integrator, sizeof(SimplePathIntegrator)));
-        gpu_dynamic_pointers.push_back(simple_path_integrator);
-
-        simple_path_integrator->init(integrator_base, 5);
-        renderer->integrator->init(simple_path_integrator);
-
-        return;
-    }
-
-    printf("\n%s(): unknown Integrator: %s\n\n", __func__, integrator_name.value().c_str());
-    REPORT_FATAL_ERROR();
+    renderer->integrator =
+        Integrator::create(parameters, integrator_name, integrator_base, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::parse_light_source(const std::vector<Token> &tokens) {
@@ -550,6 +497,7 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
 
         if (keyword == "Integrator") {
             integrator_name = tokens[1].values[0];
+            integrator_tokens = tokens;
             return;
         }
 

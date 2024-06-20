@@ -16,6 +16,19 @@
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/image_infinite_light.h"
 
+const SimplePathIntegrator *
+SimplePathIntegrator::create(const ParameterDictionary &parameters,
+                             const IntegratorBase *integrator_base,
+                             std::vector<void *> &gpu_dynamic_pointers) {
+    SimplePathIntegrator *simple_path_integrator;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&simple_path_integrator, sizeof(SimplePathIntegrator)));
+    gpu_dynamic_pointers.push_back(simple_path_integrator);
+
+    simple_path_integrator->init(integrator_base, 5);
+
+    return simple_path_integrator;
+}
+
 void SimplePathIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
     base = _base;
     max_depth = _max_depth;

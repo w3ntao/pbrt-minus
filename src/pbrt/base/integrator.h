@@ -1,10 +1,15 @@
 #pragma once
 
+#include <optional>
+#include <vector>
+
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 
 class DifferentialRay;
-class SampledWavelengths;
 class HLBVH;
+class IntegratorBase;
+class ParameterDictionary;
+class SampledWavelengths;
 class Sampler;
 
 class AmbientOcclusionIntegrator;
@@ -20,6 +25,11 @@ class Integrator {
         random_walk,
         simple_path,
     };
+
+    static const Integrator *create(const ParameterDictionary &parameters,
+                                    const std::optional<std::string> &_integrator_name,
+                                    const IntegratorBase *integrator_base,
+                                    std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator);
 

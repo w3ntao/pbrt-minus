@@ -22,7 +22,7 @@ struct Pixel {
 
 class RGBFilm {
   public:
-    static RGBFilm *create(const ParameterDictionary &parameters, std::string output_filename,
+    static RGBFilm *create(const ParameterDictionary &parameters,
                            std::vector<void *> &gpu_dynamic_pointers);
 
     void init(Pixel *_pixels, const PixelSensor *_sensor, const Point2i _resolution,

@@ -71,8 +71,10 @@ class SceneBuilder {
 
     std::optional<Point2i> film_resolution = std::nullopt;
     std::string output_filename;
+
     std::vector<Token> camera_tokens;
     std::vector<Token> film_tokens;
+    std::vector<Token> integrator_tokens;
     std::vector<Token> sampler_tokens;
 
     std::vector<const Primitive *> gpu_primitives;
