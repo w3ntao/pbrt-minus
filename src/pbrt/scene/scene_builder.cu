@@ -132,9 +132,7 @@ void SceneBuilder::build_film() {
         output_filename = p.replace_extension(".png").filename();
     }
 
-    auto rgb_film = RGBFilm::create(parameters, gpu_dynamic_pointers);
-
-    renderer->film->init(rgb_film);
+    renderer->film = Film::create_rgb_film(parameters, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::build_sampler() {
@@ -602,7 +600,7 @@ void SceneBuilder::parse_file(const std::string &_filename) {
 
 void SceneBuilder::preprocess() {
     renderer->bvh = HLBVH::create(gpu_primitives, gpu_dynamic_pointers, thread_pool);
-    
+
     auto full_bounds = renderer->bvh->bounds();
     for (auto light : gpu_lights) {
         light->preprocess(full_bounds);

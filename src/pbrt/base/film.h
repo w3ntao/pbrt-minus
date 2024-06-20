@@ -1,9 +1,12 @@
 #pragma once
 
+#include <vector>
+
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/rgb.h"
 
+class ParameterDictionary;
 class RGBFilm;
 
 class Film {
@@ -11,6 +14,9 @@ class Film {
     enum class Type {
         rgb,
     };
+
+    static Film *create_rgb_film(const ParameterDictionary &parameters,
+                                 std::vector<void *> &gpu_dynamic_pointers);
 
     void init(RGBFilm *rgb_film);
 

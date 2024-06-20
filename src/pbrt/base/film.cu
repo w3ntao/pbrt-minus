@@ -5,6 +5,19 @@
 #include "pbrt/films/rgb_film.h"
 #include "ext/lodepng/lodepng.h"
 
+Film *Film::create_rgb_film(const ParameterDictionary &parameters,
+                            std::vector<void *> &gpu_dynamic_pointers) {
+    Film *film;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&film, sizeof(Film)));
+    gpu_dynamic_pointers.push_back(film);
+
+    auto rgb_film = RGBFilm::create(parameters, gpu_dynamic_pointers);
+
+    film->init(rgb_film);
+
+    return film;
+}
+
 void Film::init(RGBFilm *rgb_film) {
     ptr = rgb_film;
     type = Type::rgb;
