@@ -601,8 +601,8 @@ void SceneBuilder::parse_file(const std::string &_filename) {
 }
 
 void SceneBuilder::preprocess() {
-    renderer->bvh->build_bvh(gpu_primitives, gpu_dynamic_pointers, thread_pool);
-
+    renderer->bvh = HLBVH::create(gpu_primitives, gpu_dynamic_pointers, thread_pool);
+    
     auto full_bounds = renderer->bvh->bounds();
     for (auto light : gpu_lights) {
         light->preprocess(full_bounds);

@@ -143,97 +143,15 @@ __global__ void init_bvh_args(BottomBVHArgs *bvh_args_array, const BVHBuildNode 
     // 2 pointers: one for left and another right child
 }
 
-PBRT_GPU
-void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= array_length) {
-        return;
-    }
+const HLBVH *HLBVH::create(const std::vector<const Primitive *> &gpu_primitives,
+                           std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool) {
+    HLBVH *bvh;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&bvh, sizeof(HLBVH)));
+    gpu_dynamic_pointers.push_back(bvh);
 
-    const auto &args = bvh_args_array[worker_idx];
+    bvh->build_bvh(gpu_primitives, gpu_dynamic_pointers, thread_pool);
 
-    if (!args.expand_leaf) {
-        return;
-    }
-
-    const auto &node = build_nodes[args.build_node_idx];
-    uint left_child_idx = args.left_child_idx + 0;
-    uint right_child_idx = args.left_child_idx + 1;
-
-    Bounds3f bounds_of_centroid;
-    for (uint morton_idx = node.first_primitive_idx;
-         morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
-        bounds_of_centroid += morton_primitives[morton_idx].centroid;
-    }
-
-    auto split_dimension = bounds_of_centroid.max_dimension();
-    auto split_val = bounds_of_centroid.centroid()[split_dimension];
-
-    uint mid_idx = partition_morton_primitives(node.first_primitive_idx,
-                                               node.first_primitive_idx + node.num_primitives,
-                                               split_dimension, split_val);
-
-    if (DEBUGGING) {
-        bool kill_thread = false;
-
-        if (mid_idx < node.first_primitive_idx ||
-            mid_idx > node.first_primitive_idx + node.num_primitives) {
-            printf("ERROR in partitioning at node[%u]: mid_idx out of bound\n",
-                   args.build_node_idx);
-            kill_thread = true;
-        }
-
-        for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
-            if (morton_primitives[morton_idx].centroid[split_dimension] >= split_val) {
-                printf("ERROR in partitioning (1st half) at node[%u], idx: %u\n",
-                       args.build_node_idx, morton_idx);
-                kill_thread = true;
-            }
-        }
-
-        for (uint morton_idx = mid_idx; morton_idx < node.first_primitive_idx + node.num_primitives;
-             morton_idx++) {
-            if (morton_primitives[morton_idx].centroid[split_dimension] < split_val) {
-                printf("ERROR in partitioning (2nd half) at node[%u], idx: %u\n",
-                       args.build_node_idx, morton_idx);
-                kill_thread = true;
-            }
-        }
-
-        if (kill_thread) {
-            REPORT_FATAL_ERROR();
-        }
-    }
-
-    if (mid_idx == node.first_primitive_idx ||
-        mid_idx == node.first_primitive_idx + node.num_primitives) {
-        // all primitives' centroids grouped either left or right half
-        // there is no need to separate them
-
-        build_nodes[left_child_idx].num_primitives = 0;
-        build_nodes[right_child_idx].num_primitives = 0;
-
-        return;
-    }
-
-    Bounds3f left_bounds;
-    for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
-        left_bounds += morton_primitives[morton_idx].bounds;
-    }
-
-    Bounds3f right_bounds;
-    for (uint morton_idx = mid_idx; morton_idx < node.first_primitive_idx + node.num_primitives;
-         morton_idx++) {
-        right_bounds += morton_primitives[morton_idx].bounds;
-    }
-
-    build_nodes[left_child_idx].init_leaf(node.first_primitive_idx,
-                                          mid_idx - node.first_primitive_idx, left_bounds);
-    build_nodes[right_child_idx].init_leaf(
-        mid_idx, node.num_primitives - (mid_idx - node.first_primitive_idx), right_bounds);
-
-    build_nodes[args.build_node_idx].init_interior(split_dimension, left_child_idx,
-                                                   left_bounds + right_bounds);
+    return bvh;
 }
 
 PBRT_GPU bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
@@ -338,6 +256,99 @@ PBRT_GPU cuda::std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray,
 
     return best_intersection;
 };
+
+PBRT_GPU
+void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= array_length) {
+        return;
+    }
+
+    const auto &args = bvh_args_array[worker_idx];
+
+    if (!args.expand_leaf) {
+        return;
+    }
+
+    const auto &node = build_nodes[args.build_node_idx];
+    uint left_child_idx = args.left_child_idx + 0;
+    uint right_child_idx = args.left_child_idx + 1;
+
+    Bounds3f bounds_of_centroid;
+    for (uint morton_idx = node.first_primitive_idx;
+         morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
+        bounds_of_centroid += morton_primitives[morton_idx].centroid;
+    }
+
+    auto split_dimension = bounds_of_centroid.max_dimension();
+    auto split_val = bounds_of_centroid.centroid()[split_dimension];
+
+    uint mid_idx = partition_morton_primitives(node.first_primitive_idx,
+                                               node.first_primitive_idx + node.num_primitives,
+                                               split_dimension, split_val);
+
+    if (DEBUGGING) {
+        bool kill_thread = false;
+
+        if (mid_idx < node.first_primitive_idx ||
+            mid_idx > node.first_primitive_idx + node.num_primitives) {
+            printf("ERROR in partitioning at node[%u]: mid_idx out of bound\n",
+                   args.build_node_idx);
+            kill_thread = true;
+        }
+
+        for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
+            if (morton_primitives[morton_idx].centroid[split_dimension] >= split_val) {
+                printf("ERROR in partitioning (1st half) at node[%u], idx: %u\n",
+                       args.build_node_idx, morton_idx);
+                kill_thread = true;
+            }
+        }
+
+        for (uint morton_idx = mid_idx; morton_idx < node.first_primitive_idx + node.num_primitives;
+             morton_idx++) {
+            if (morton_primitives[morton_idx].centroid[split_dimension] < split_val) {
+                printf("ERROR in partitioning (2nd half) at node[%u], idx: %u\n",
+                       args.build_node_idx, morton_idx);
+                kill_thread = true;
+            }
+        }
+
+        if (kill_thread) {
+            REPORT_FATAL_ERROR();
+        }
+    }
+
+    if (mid_idx == node.first_primitive_idx ||
+        mid_idx == node.first_primitive_idx + node.num_primitives) {
+        // all primitives' centroids grouped either left or right half
+        // there is no need to separate them
+
+        build_nodes[left_child_idx].num_primitives = 0;
+        build_nodes[right_child_idx].num_primitives = 0;
+
+        return;
+    }
+
+    Bounds3f left_bounds;
+    for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
+        left_bounds += morton_primitives[morton_idx].bounds;
+    }
+
+    Bounds3f right_bounds;
+    for (uint morton_idx = mid_idx; morton_idx < node.first_primitive_idx + node.num_primitives;
+         morton_idx++) {
+        right_bounds += morton_primitives[morton_idx].bounds;
+    }
+
+    build_nodes[left_child_idx].init_leaf(node.first_primitive_idx,
+                                          mid_idx - node.first_primitive_idx, left_bounds);
+    build_nodes[right_child_idx].init_leaf(
+        mid_idx, node.num_primitives - (mid_idx - node.first_primitive_idx), right_bounds);
+
+    build_nodes[args.build_node_idx].init_interior(split_dimension, left_child_idx,
+                                                   left_bounds + right_bounds);
+}
 
 void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
                       std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool) {

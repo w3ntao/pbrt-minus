@@ -24,14 +24,12 @@ struct Renderer {
         CHECK_CUDA_ERROR(cudaMallocManaged(&renderer, sizeof(Renderer)));
 
         // TODO: rewrite cuda malloc for renderer's pointers
-        CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->bvh), sizeof(HLBVH)));
         CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->camera), sizeof(Camera)));
         CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->film), sizeof(Film)));
         CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->filter), sizeof(Filter)));
 
         for (auto ptr : std::vector<void *>({
                  renderer,
-                 renderer->bvh,
                  renderer->camera,
                  renderer->film,
                  renderer->filter,
@@ -46,7 +44,7 @@ struct Renderer {
     Camera *camera;
     Filter *filter;
     Film *film;
-    HLBVH *bvh;
+    const HLBVH *bvh;
     Sampler *samplers;
 
     PBRT_GPU

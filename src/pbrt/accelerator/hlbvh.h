@@ -101,11 +101,8 @@ struct BVHBuildNode {
 
 class HLBVH {
   public:
-    void init(const Primitive **_primitives, MortonPrimitive *gpu_morton_primitives) {
-        primitives = _primitives;
-        morton_primitives = gpu_morton_primitives;
-        build_nodes = nullptr;
-    }
+    static const HLBVH *create(const std::vector<const Primitive *> &gpu_primitives,
+                               std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const {
@@ -117,18 +114,24 @@ class HLBVH {
     }
 
     PBRT_GPU
-    void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length);
-
-    PBRT_GPU
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
     cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
+    PBRT_GPU
+    void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length);
+
+  private:
+    void init(const Primitive **_primitives, MortonPrimitive *gpu_morton_primitives) {
+        primitives = _primitives;
+        morton_primitives = gpu_morton_primitives;
+        build_nodes = nullptr;
+    }
+
     void build_bvh(const std::vector<const Primitive *> &gpu_primitives,
                    std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool);
 
-  private:
     uint build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_treelets,
                                     ThreadPool &thread_pool);
 
