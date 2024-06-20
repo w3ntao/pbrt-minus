@@ -14,7 +14,6 @@
 
 #include "pbrt/cameras/perspective.h"
 
-#include "pbrt/films/pixel_sensor.h"
 #include "pbrt/films/rgb_film.h"
 
 #include "pbrt/samplers/independent_sampler.h"
@@ -49,8 +48,6 @@ struct Renderer {
     Film *film;
     HLBVH *bvh;
     Sampler *samplers;
-
-    PixelSensor sensor;
 
     PBRT_GPU
     void evaluate_pixel_sample(const Point2i p_pixel, const uint num_samples) {

@@ -7,6 +7,8 @@
 #include "pbrt/spectrum_util/rgb.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 
+class ParameterDictionary;
+
 struct Pixel {
     RGB rgb_sum;
     FloatType weight_sum;
@@ -20,6 +22,9 @@ struct Pixel {
 
 class RGBFilm {
   public:
+    static RGBFilm *create(const ParameterDictionary &parameters, std::string output_filename,
+                           std::vector<void *> &gpu_dynamic_pointers);
+
     void init(Pixel *_pixels, const PixelSensor *_sensor, const Point2i _resolution,
               const RGBColorSpace *rgb_color_space) {
         pixels = _pixels;
