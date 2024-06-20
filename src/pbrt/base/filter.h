@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/point2.h"
 
@@ -22,6 +23,9 @@ class Filter {
     enum class Type {
         box,
     };
+
+    static const Filter *create_box_filter(FloatType radius,
+                                           std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const BoxFilter *box_filter);
 

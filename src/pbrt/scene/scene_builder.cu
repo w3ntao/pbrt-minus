@@ -107,12 +107,7 @@ void SceneBuilder::build_camera() {
 }
 
 void SceneBuilder::build_filter() {
-    BoxFilter *box_filter;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&box_filter, sizeof(BoxFilter)));
-    gpu_dynamic_pointers.push_back(box_filter);
-
-    box_filter->init(0.5);
-    renderer->filter->init(box_filter);
+    renderer->filter = Filter::create_box_filter(0.5, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::build_film() {
