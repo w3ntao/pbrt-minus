@@ -5,7 +5,7 @@
 
 class PerspectiveCamera {
   public:
-    void init(const Point2i resolution, const CameraTransform camera_transform, FloatType fov,
+    void init(const Point2i &resolution, const CameraTransform &camera_transform, FloatType fov,
               FloatType _lens_radius) {
         camera_base.init(resolution, camera_transform);
         lens_radius = _lens_radius;

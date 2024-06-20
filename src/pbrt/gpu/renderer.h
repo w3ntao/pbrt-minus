@@ -23,23 +23,15 @@ struct Renderer {
         Renderer *renderer;
         CHECK_CUDA_ERROR(cudaMallocManaged(&renderer, sizeof(Renderer)));
 
-        // TODO: rewrite cuda malloc for renderer's pointers
-        CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->camera), sizeof(Camera)));
-
-        for (auto ptr : std::vector<void *>({
-                 renderer,
-                 renderer->camera,
-             })) {
-            gpu_dynamic_pointers.push_back(ptr);
-        }
+        gpu_dynamic_pointers.push_back(renderer);
 
         return renderer;
     }
 
     const Integrator *integrator;
     Camera *camera;
-    const Filter *filter;
     Film *film;
+    const Filter *filter;
     const HLBVH *bvh;
     Sampler *samplers;
 

@@ -4,11 +4,13 @@
 
 #include "pbrt/base/material.h"
 
-#include "pbrt/filters/box.h"
+#include "pbrt/gpu/renderer.h"
 
 #include "pbrt/integrators/integrator_base.h"
 
 #include "pbrt/light_samplers/uniform_light_sampler.h"
+
+#include "pbrt/samplers/independent_sampler.h"
 
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
@@ -93,17 +95,14 @@ void SceneBuilder::build_camera() {
 
         FloatType fov = parameters.get_float("fov", 90);
 
-        PerspectiveCamera *perspective_camera;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&perspective_camera, sizeof(PerspectiveCamera)));
-        gpu_dynamic_pointers.push_back(perspective_camera);
+        renderer->camera = Camera::create_perspective_camera(
+            film_resolution.value(), camera_transform, fov, 0.0, gpu_dynamic_pointers);
 
-        perspective_camera->init(film_resolution.value(), camera_transform, fov, 0.0);
-        renderer->camera->init(perspective_camera);
         return;
     }
 
-    std::cerr << "Camera type `" << camera_type << "` not implemented\n";
-    throw std::runtime_error("camera type not implemented");
+    printf("\n%s(): Camera type `%s` not implemented.\n", __func__, camera_type.c_str());
+    REPORT_FATAL_ERROR();
 }
 
 void SceneBuilder::build_filter() {

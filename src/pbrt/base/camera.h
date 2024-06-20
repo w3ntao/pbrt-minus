@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
@@ -136,6 +137,11 @@ class Camera {
     enum class Type {
         perspective,
     };
+
+    static Camera *create_perspective_camera(const Point2i &resolution,
+                                             const CameraTransform &camera_transform, FloatType fov,
+                                             FloatType lens_radius,
+                                             std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const PerspectiveCamera *perspective_camera);
 

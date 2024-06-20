@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <filesystem>
 #include <map>
 #include <stack>
@@ -10,8 +9,6 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
 
-#include "pbrt/gpu/renderer.h"
-
 #include "pbrt/scene/command_line_option.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/scene/parser.h"
@@ -19,6 +16,8 @@
 #include "pbrt/util/thread_pool.h"
 
 class GlobalSpectra;
+class Primitive;
+class Renderer;
 
 struct AreaLightEntity {
     std::string name;
