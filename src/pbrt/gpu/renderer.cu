@@ -1,5 +1,10 @@
 #include "pbrt/gpu/renderer.h"
 
+#include "pbrt/base/camera.h"
+#include "pbrt/base/film.h"
+#include "pbrt/base/integrator.h"
+#include "pbrt/base/sampler.h"
+
 __global__ static void parallel_render(Renderer *renderer, uint num_samples) {
     auto camera_base = renderer->camera->get_camerabase();
 
@@ -13,6 +18,32 @@ __global__ static void parallel_render(Renderer *renderer, uint num_samples) {
     }
 
     renderer->evaluate_pixel_sample(Point2i(x, y), num_samples);
+}
+
+PBRT_GPU
+void Renderer::evaluate_pixel_sample(const Point2i p_pixel, const uint num_samples) {
+    int width = camera->get_camerabase()->resolution.x;
+    const uint pixel_index = p_pixel.y * width + p_pixel.x;
+
+    auto sampler = &samplers[pixel_index];
+
+    for (uint i = 0; i < num_samples; ++i) {
+        sampler->start_pixel_sample(pixel_index, i, 0);
+
+        auto camera_sample = sampler->get_camera_sample(p_pixel, filter);
+        auto lu = sampler->get_1d();
+        auto lambda = SampledWavelengths::sample_visible(lu);
+
+        auto ray = camera->generate_camera_differential_ray(camera_sample);
+
+        auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, sampler);
+
+        if (radiance_l.has_nan()) {
+            printf("%s(): pixel(%d, %d), samples %u: has NAN\n", __func__, p_pixel.x, p_pixel.y, i);
+        }
+
+        film->add_sample(p_pixel, radiance_l, lambda, camera_sample.filter_weight);
+    }
 }
 
 void Renderer::render(const std::string &output_filename, const Point2i &film_resolution,

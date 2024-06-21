@@ -2,15 +2,21 @@
 
 #include <set>
 
+#include "pbrt/accelerator/hlbvh.h"
+
+#include "pbrt/base/film.h"
+#include "pbrt/base/filter.h"
+#include "pbrt/base/integrator.h"
 #include "pbrt/base/material.h"
+#include "pbrt/base/sampler.h"
+#include "pbrt/base/shape.h"
+#include "pbrt/base/primitive.h"
 
 #include "pbrt/gpu/renderer.h"
 
 #include "pbrt/integrators/integrator_base.h"
 
 #include "pbrt/light_samplers/uniform_light_sampler.h"
-
-#include "pbrt/samplers/independent_sampler.h"
 
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
@@ -19,26 +25,6 @@
 #include "pbrt/textures/spectrum_constant_texture.h"
 
 #include "pbrt/util/std_container.h"
-
-static __global__ void init_independent_samplers(IndependentSampler *samplers,
-                                                 uint samples_per_pixel, uint num) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= num) {
-        return;
-    }
-
-    samplers[idx].init(samples_per_pixel);
-}
-
-template <typename T>
-static __global__ void init_samplers(Sampler *samplers, T *_samplers, uint length) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= length) {
-        return;
-    }
-
-    samplers[idx].init(&_samplers[idx]);
-}
 
 static std::vector<uint> group_tokens(const std::vector<Token> &tokens) {
     std::vector<uint> keyword_range;
@@ -131,11 +117,12 @@ void SceneBuilder::build_film() {
 
 void SceneBuilder::build_sampler() {
     // TODO: sampler is not parsed, only pixelsamples read
+    // TODO: progress 2024/06/22: rewrite this Samplers initialization
     const auto parameters = build_parameter_dictionary(sub_vector(sampler_tokens, 2));
 
     auto samples_from_parameters = parameters.get_integer("pixelsamples");
 
-    if (!samples_per_pixel) {
+    if (!samples_per_pixel.has_value()) {
         if (!samples_from_parameters.empty()) {
             samples_per_pixel = samples_from_parameters[0];
         } else {
@@ -144,31 +131,13 @@ void SceneBuilder::build_sampler() {
         }
     }
 
+    const std::string type_sampler = "stratified";
+    // const std::string type_sampler = "independent";
     uint total_pixel_num = film_resolution->x * film_resolution->y;
 
-    IndependentSampler *independent_samplers;
-
-    CHECK_CUDA_ERROR(cudaMallocManaged(&(renderer->samplers), sizeof(Sampler) * total_pixel_num));
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&independent_samplers, sizeof(IndependentSampler) * total_pixel_num));
-
-    {
-        uint threads = 1024;
-        uint blocks = divide_and_ceil(total_pixel_num, threads);
-
-        init_independent_samplers<<<blocks, threads>>>(independent_samplers,
-                                                       samples_per_pixel.value(), total_pixel_num);
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-        init_samplers<<<blocks, threads>>>(renderer->samplers, independent_samplers,
-                                           total_pixel_num);
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    }
-
-    gpu_dynamic_pointers.push_back(renderer->samplers);
-    gpu_dynamic_pointers.push_back(independent_samplers);
+    renderer->samplers = Sampler::create(type_sampler, samples_per_pixel.value(), total_pixel_num,
+                                         gpu_dynamic_pointers);
+    samples_per_pixel = renderer->samplers->get_samples_per_pixel();
 }
 
 void SceneBuilder::build_integrator() {

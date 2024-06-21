@@ -5,15 +5,23 @@
 
 class Filter;
 class IndependentSampler;
+class StratifiedSampler;
 
 class Sampler {
   public:
     enum class Type {
-        independent_sampler,
+        independent,
+        stratified,
     };
+
+    static Sampler *create(const std::string &type_sampler, uint samples_per_pixel,
+                           uint total_pixel_num, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     void init(IndependentSampler *independent_sampler);
+
+    PBRT_CPU_GPU
+    void init(StratifiedSampler *stratified_sampler);
 
     PBRT_GPU
     void start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension);
