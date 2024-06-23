@@ -41,22 +41,22 @@ More scenes could be found at https://github.com/w3ntao/pbrt-minus-scenes.
 All rendered with scenes from https://github.com/w3ntao/pbrt-minus-scenes \
 (which is basically a subset of https://github.com/mmp/pbrt-v4-scenes).
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/ganesha-simplepath-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/ganesha-simplepath-stratified-1024.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-silver-simplepath-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-silver-simplepath-stratified-1024.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-rough-glass-simplepath-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-rough-glass-simplepath-stratified-1024.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-simplepath-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-simplepath-stratified-1024.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-specular-simplepath-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-specular-simplepath-stratified-1024.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/veach-mis-colorized-simplepath-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/veach-mis-colorized-simplepath-stratified-1024.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/killeroo-gold-simplepath-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/killeroo-gold-simplepath-stratified-1024.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/killeroo-simple-simplepath-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/killeroo-simple-simplepath-stratified-1024.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/dragon_10-ambientocclusion-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/dragon_10-ambientocclusion-stratified-1024.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/crown-surfacenormal-512.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/crown-surfacenormal-stratified-1024.png)
