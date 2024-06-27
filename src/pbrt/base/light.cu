@@ -7,21 +7,21 @@
 #include "pbrt/lights/image_infinite_light.h"
 
 template <typename TypeOfLight>
-static __global__ void init_lights(Light *lights, TypeOfLight *concrete_shapes, uint num) {
+static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
     }
 
-    lights[worker_idx].init(&concrete_shapes[worker_idx]);
+    lights[worker_idx].init(&concrete_lights[worker_idx]);
 }
 
-Light *Light::create(const std::string &type_of_light, const Transform &renderFromLight,
+Light *Light::create(const std::string &type_of_light, const Transform &render_from_light,
                      const ParameterDictionary &parameters,
                      std::vector<void *> &gpu_dynamic_pointers) {
     if (type_of_light == "distant") {
         auto distant_light =
-            DistantLight::create(renderFromLight, parameters, gpu_dynamic_pointers);
+            DistantLight::create(render_from_light, parameters, gpu_dynamic_pointers);
 
         Light *light;
         CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
@@ -33,7 +33,7 @@ Light *Light::create(const std::string &type_of_light, const Transform &renderFr
 
     if (type_of_light == "infinite") {
         auto image_infinite_light =
-            ImageInfiniteLight::create(renderFromLight, parameters, gpu_dynamic_pointers);
+            ImageInfiniteLight::create(render_from_light, parameters, gpu_dynamic_pointers);
 
         Light *light;
         CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
@@ -43,7 +43,7 @@ Light *Light::create(const std::string &type_of_light, const Transform &renderFr
         return light;
     }
 
-    printf("\nLight `%s` not implemented\n", type_of_light.c_str());
+    printf("\n%s(): Light `%s` not implemented\n", __func__, type_of_light.c_str());
     REPORT_FATAL_ERROR();
     return nullptr;
 }
@@ -123,6 +123,7 @@ SampledSpectrum Light::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
     }
 
     REPORT_FATAL_ERROR();
+    return {};
 }
 
 PBRT_GPU
@@ -134,10 +135,11 @@ SampledSpectrum Light::le(const Ray &ray, const SampledWavelengths &lambda) cons
     }
 
     REPORT_FATAL_ERROR();
+    return {};
 }
 
 PBRT_GPU
-cuda::std::optional<LightLiSample> Light::sample_li(const LightSampleContext ctx, const Point2f u,
+cuda::std::optional<LightLiSample> Light::sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                     SampledWavelengths &lambda) const {
     switch (type) {
     case (Type::diffuse_area_light): {
@@ -154,6 +156,23 @@ cuda::std::optional<LightLiSample> Light::sample_li(const LightSampleContext ctx
     }
 
     REPORT_FATAL_ERROR();
+    return {};
+}
+
+PBRT_GPU
+FloatType Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+                        bool allow_incomplete_pdf) const {
+    switch (type) {
+    case (Type::diffuse_area_light): {
+        return ((DiffuseAreaLight *)ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
+    }
+
+    case (Type::image_infinite_light): {
+        return ((ImageInfiniteLight *)ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
+    }
+    }
+    REPORT_FATAL_ERROR();
+    return NAN;
 }
 
 void Light::preprocess(const Bounds3<FloatType> &scene_bounds) {

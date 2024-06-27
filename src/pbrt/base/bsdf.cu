@@ -9,21 +9,21 @@ void BSDF::init_frame(const Normal3f &ns, const Vector3f &dpdus) {
 }
 
 PBRT_GPU
-void BSDF::init_bxdf(const ConductorBxDF *conductor_bxdf) {
+void BSDF::init_bxdf(ConductorBxDF *conductor_bxdf) {
     bxdf.init(conductor_bxdf);
 }
 
-PBRT_GPU void BSDF::init_bxdf(const CoatedDiffuseBxDF *coated_diffuse_bxdf) {
+PBRT_GPU void BSDF::init_bxdf(CoatedDiffuseBxDF *coated_diffuse_bxdf) {
     bxdf.init(coated_diffuse_bxdf);
 }
 
 PBRT_GPU
-void BSDF::init_bxdf(const DielectricBxDF *dielectric_bxdf) {
+void BSDF::init_bxdf(DielectricBxDF *dielectric_bxdf) {
     bxdf.init(dielectric_bxdf);
 }
 
 PBRT_GPU
-void BSDF::init_bxdf(const DiffuseBxDF *diffuse_bxdf) {
+void BSDF::init_bxdf(DiffuseBxDF *diffuse_bxdf) {
     bxdf.init(diffuse_bxdf);
 }
 
@@ -61,4 +61,17 @@ cuda::std::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, FloatT
 
     bs->wi = local_to_render(bs->wi);
     return bs;
+}
+
+PBRT_GPU
+FloatType BSDF::pdf(const Vector3f &woRender, const Vector3f &wiRender, TransportMode mode,
+                    BxDFReflTransFlags sampleFlags) const {
+    Vector3f wo = render_to_local(woRender);
+    Vector3f wi = render_to_local(wiRender);
+
+    if (wo.z == 0) {
+        return 0;
+    }
+
+    return bxdf.pdf(wo, wi, mode, sampleFlags);
 }

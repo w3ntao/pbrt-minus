@@ -54,12 +54,14 @@ void Film::write_to_png(const std::string &filename, const Point2i &resolution) 
     SRGBColorEncoding srgb_encoding;
     std::vector<unsigned char> png_pixels(width * height * 4);
 
+    uint nan_pixels = 0;
+
     for (uint y = 0; y < height; y++) {
         for (uint x = 0; x < width; x++) {
             uint index = y * width + x;
             auto rgb = get_pixel_rgb(Point2i(x, y));
             if (rgb.has_nan()) {
-                printf("writer_to_file(): pixel(%d, %d): has a NAN component\n", x, y);
+                nan_pixels += 1;
             }
 
             png_pixels[4 * index + 0] = srgb_encoding.from_linear(rgb.r);
@@ -67,6 +69,11 @@ void Film::write_to_png(const std::string &filename, const Point2i &resolution) 
             png_pixels[4 * index + 2] = srgb_encoding.from_linear(rgb.b);
             png_pixels[4 * index + 3] = 255;
         }
+    }
+
+    if (nan_pixels > 0) {
+        printf("%s(): %d/%d (roughly 1/%.1f) pixel has NAN component\n", __func__, nan_pixels,
+               width * height, FloatType(width * height) / nan_pixels);
     }
 
     // Encode the image

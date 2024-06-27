@@ -27,6 +27,27 @@ const Disk *Disk::create(const Transform &render_from_object, const Transform &o
 }
 
 PBRT_GPU
+FloatType Disk::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
+    // Intersect sample ray with shape geometry
+    Ray ray = ctx.spawn_ray(wi);
+
+    auto isect = intersect(ray);
+    if (!isect) {
+        return 0;
+    }
+
+    // Compute PDF in solid angle measure from shape intersection point
+    FloatType pdf = (1.0 / area()) / (isect->interaction.n.abs_dot(-wi) /
+                                      ctx.p().squared_distance(isect->interaction.p()));
+
+    if (isinf(pdf)) {
+        pdf = 0;
+    }
+
+    return pdf;
+}
+
+PBRT_GPU
 cuda::std::optional<ShapeSample> Disk::sample(const Point2f &u) const {
     Point2f pd = sample_uniform_disk_concentric(u);
     Point3f pObj(pd.x * radius, pd.y * radius, height);

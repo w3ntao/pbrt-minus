@@ -137,7 +137,7 @@ class Vector3 {
 
     PBRT_CPU_GPU
     inline T dot(const Vector3 &right) const {
-        return x * right.x + y * right.y + z * right.z;
+        return FMA(x, right.x, sum_of_products(y, right.y, z, right.z));
     }
 
     PBRT_CPU_GPU
@@ -146,6 +146,7 @@ class Vector3 {
     }
 
     PBRT_CPU_GPU Vector3 cross(const Vector3 &right) const {
+        // TODO: rewrite this with difference_of_products()
         return Vector3(y * right.z - z * right.y, -(x * right.z - z * right.x),
                        x * right.y - y * right.x);
     }

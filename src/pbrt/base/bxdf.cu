@@ -6,25 +6,25 @@
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 
 PBRT_GPU
-void BxDF::init(const ConductorBxDF *conductor_bxdf) {
+void BxDF::init(ConductorBxDF *conductor_bxdf) {
     type = Type::conductor;
     ptr = conductor_bxdf;
 }
 
 PBRT_GPU
-void BxDF::init(const CoatedDiffuseBxDF *coated_diffuse_bxdf) {
+void BxDF::init(CoatedDiffuseBxDF *coated_diffuse_bxdf) {
     type = Type::coated_diffuse;
     ptr = coated_diffuse_bxdf;
 }
 
 PBRT_GPU
-void BxDF::init(const DielectricBxDF *dielectric_bxdf) {
+void BxDF::init(DielectricBxDF *dielectric_bxdf) {
     type = Type::dielectric;
     ptr = dielectric_bxdf;
 }
 
 PBRT_GPU
-void BxDF::init(const DiffuseBxDF *diffuse_bxdf) {
+void BxDF::init(DiffuseBxDF *diffuse_bxdf) {
     type = Type::diffuse;
     ptr = diffuse_bxdf;
 }
@@ -51,6 +51,29 @@ BxDFFlags BxDF::flags() const {
 
     REPORT_FATAL_ERROR();
     return {};
+}
+
+PBRT_GPU
+void BxDF::regularize() {
+    switch (type) {
+    case (Type::coated_diffuse): {
+        ((CoatedDiffuseBxDF *)ptr)->regularize();
+        return;
+    }
+
+    case (Type::conductor): {
+        return ((ConductorBxDF *)ptr)->regularize();
+    }
+
+    case (Type::dielectric): {
+        return ((DielectricBxDF *)ptr)->regularize();
+    }
+
+    case (Type::diffuse): {
+        return ((DiffuseBxDF *)ptr)->regularize();
+    }
+    }
+    REPORT_FATAL_ERROR();
 }
 
 PBRT_GPU

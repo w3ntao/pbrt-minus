@@ -268,3 +268,41 @@ cuda::std::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx,
     return ShapeSample{.interaction = Interaction(Point3fi(p, pError), n, uv),
                        .pdf = 1 / (2 * compute_pi() * oneMinusCosThetaMax)};
 }
+
+PBRT_GPU
+FloatType Sphere::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
+    Point3f pCenter = render_from_object(Point3f(0, 0, 0));
+    Point3f pOrigin = ctx.offset_ray_origin(pCenter);
+
+    if (pOrigin.squared_distance(pCenter) <= sqr(radius)) {
+        // Return solid angle PDF for point inside sphere
+        // Intersect sample ray with shape geometry
+        Ray ray = ctx.spawn_ray(wi);
+        auto isect = this->intersect(ray);
+        if (!isect) {
+            return 0;
+        }
+
+        // Compute PDF in solid angle measure from shape intersection point
+        FloatType pdf = (1.0 / area()) / (isect->interaction.n.abs_dot(-wi) /
+                                          ctx.p().squared_distance(isect->interaction.p()));
+
+        if (isinf(pdf)) {
+            pdf = 0;
+        }
+
+        return pdf;
+    }
+
+    // Compute general solid angle sphere PDF
+    FloatType sin2ThetaMax = radius * radius / ctx.p().squared_distance(pCenter);
+    FloatType cosThetaMax = safe_sqrt(1 - sin2ThetaMax);
+    FloatType oneMinusCosThetaMax = 1 - cosThetaMax;
+
+    // Compute more accurate _oneMinusCosThetaMax_ for small solid angle
+    if (sin2ThetaMax < 0.00068523f /* sin^2(1.5 deg) */) {
+        oneMinusCosThetaMax = sin2ThetaMax / 2;
+    }
+
+    return 1.0 / (2.0 * compute_pi() * oneMinusCosThetaMax);
+}

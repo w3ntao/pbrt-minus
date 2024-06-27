@@ -111,12 +111,13 @@ struct BSDFSample {
     // BSDFSample Public Methods
 
     PBRT_CPU_GPU
-    BSDFSample() : pdf(0), eta(1), pdfIsProportional(false) {}
+    BSDFSample() : pdf(0), eta(1), pdf_is_proportional(false) {}
 
     PBRT_CPU_GPU
     BSDFSample(SampledSpectrum f, Vector3f wi, FloatType pdf, BxDFFlags flags, FloatType eta = 1,
-               bool pdfIsProportional = false)
-        : f(f), wi(wi), pdf(pdf), flags(flags), eta(eta), pdfIsProportional(pdfIsProportional) {}
+               bool _pdf_is_proportional = false)
+        : f(f), wi(wi), pdf(pdf), flags(flags), eta(eta),
+          pdf_is_proportional(_pdf_is_proportional) {}
 
     PBRT_CPU_GPU
     bool is_reflection() const {
@@ -144,7 +145,7 @@ struct BSDFSample {
     FloatType pdf = 0;
     BxDFFlags flags;
     FloatType eta = 1;
-    bool pdfIsProportional = false;
+    bool pdf_is_proportional = false;
 };
 
 class BxDF {
@@ -161,19 +162,22 @@ class BxDF {
     BxDF() : type(Type::null), ptr(nullptr) {}
 
     PBRT_GPU
-    void init(const ConductorBxDF *conductor_bxdf);
+    void init(ConductorBxDF *conductor_bxdf);
 
     PBRT_GPU
-    void init(const CoatedDiffuseBxDF *coated_diffuse_bxdf);
+    void init(CoatedDiffuseBxDF *coated_diffuse_bxdf);
 
     PBRT_GPU
-    void init(const DielectricBxDF *dielectric_bxdf);
+    void init(DielectricBxDF *dielectric_bxdf);
 
     PBRT_GPU
-    void init(const DiffuseBxDF *diffuse_bxdf);
+    void init(DiffuseBxDF *diffuse_bxdf);
 
     PBRT_CPU_GPU
     BxDFFlags flags() const;
+
+    PBRT_GPU
+    void regularize();
 
     PBRT_GPU
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;
@@ -187,12 +191,12 @@ class BxDF {
     FloatType pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     bool has_type_null() const {
         return type == Type::null;
     }
 
   private:
     Type type;
-    const void *ptr;
+    void *ptr;
 };

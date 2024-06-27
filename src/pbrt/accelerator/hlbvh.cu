@@ -356,6 +356,12 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
 
     uint num_total_primitives = gpu_primitives.size();
 
+    if (num_total_primitives <= 0) {
+        printf("\n%s(): there is 0 primitives in the scenes\n", __func__);
+
+        REPORT_FATAL_ERROR();
+    }
+
     printf("\ntotal primitives: %u\n", num_total_primitives);
 
     MortonPrimitive *gpu_morton_primitives;

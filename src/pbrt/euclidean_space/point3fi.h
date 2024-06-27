@@ -13,7 +13,8 @@ class Point3fi : public Point3<Interval> {
     using Point3<Interval>::operator*;
     using Point3<Interval>::operator*=;
 
-    Point3fi() = default;
+    PBRT_CPU_GPU
+    Point3fi() {}
 
     PBRT_CPU_GPU
     Point3fi(Interval x, Interval y, Interval z) : Point3<Interval>(x, y, z) {}

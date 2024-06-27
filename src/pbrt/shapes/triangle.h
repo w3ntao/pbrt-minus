@@ -45,7 +45,8 @@ class Triangle {
     }
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const {
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray,
+                                                     FloatType t_max = Infinity) const {
         Point3f points[3];
         get_points(points);
 
@@ -57,6 +58,64 @@ class Triangle {
         SurfaceInteraction si = interaction_from_intersection(tri_intersection.value(), -ray.d);
 
         return ShapeIntersection(si, tri_intersection->t);
+    }
+
+    PBRT_GPU
+    FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
+        FloatType solidAngle = solid_angle(ctx.p());
+        // Return PDF based on uniform area sampling for challenging triangles
+        if (solidAngle < MinSphericalSampleArea || solidAngle > MaxSphericalSampleArea) {
+            // Intersect sample ray with shape geometry
+            Ray ray = ctx.spawn_ray(wi);
+
+            auto isect = intersect(ray);
+            if (!isect) {
+                return 0;
+            }
+
+            // Compute PDF in solid angle measure from shape intersection point
+            FloatType pdf = (1 / area()) / (isect->interaction.n.abs_dot(-wi) /
+                                            ctx.p().squared_distance(isect->interaction.p()));
+
+            if (isinf(pdf)) {
+                pdf = 0;
+            }
+
+            return pdf;
+        }
+
+        FloatType pdf = 1 / solidAngle;
+        // Adjust PDF for warp product sampling of triangle $\cos\theta$ factor
+        if (ctx.ns != Normal3f(0, 0, 0)) {
+            // Get triangle vertices in _p0_, _p1_, and _p2_
+            /*
+            const TriangleMesh *mesh = GetMesh();
+            const int *v = &mesh->vertexIndices[3 * triIndex];
+
+
+            Point3f p0 = mesh->p[v[0]], p1 = mesh->p[v[1]], p2 = mesh->p[v[2]];
+            */
+            Point3f points[3];
+            get_points(points);
+            const auto p0 = points[0];
+            const auto p1 = points[1];
+            const auto p2 = points[2];
+
+            Point2f u = InvertSphericalTriangleSample(points, ctx.p(), wi);
+
+            // Compute $\cos\theta$-based weights _w_ at sample domain corners
+            Point3f rp = ctx.p();
+            Vector3f wi[3] = {(p0 - rp).normalize(), (p1 - rp).normalize(), (p2 - rp).normalize()};
+
+            FloatType w[4] = {std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[1])),
+                              std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[1])),
+                              std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[0])),
+                              std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[2]))};
+
+            pdf *= bilinear_pdf(u, w);
+        }
+
+        return pdf;
     }
 
     PBRT_GPU

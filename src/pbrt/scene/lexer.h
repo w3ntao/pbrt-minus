@@ -46,8 +46,10 @@ class Lexer {
     int position;
     std::optional<char> current_char;
     int line_number;
+    bool in_bracket = false;
 
-    Lexer(const std::string &filename) : position(0), current_char(std::nullopt), line_number(1) {
+    Lexer(const std::string &filename)
+        : position(0), current_char(std::nullopt), line_number(1), in_bracket(false) {
         std::ifstream file_stream(filename);
         std::stringstream buffer;
         buffer << file_stream.rdbuf();
@@ -104,7 +106,7 @@ class Lexer {
                 continue;
             }
 
-            std::cout << "\n" << __func__ << "(): unknown token type: " << token.type << "\n";
+            std::cout << "\n" << __func__ << "(): error token type: " << token.type << "\n";
             REPORT_FATAL_ERROR();
         }
 
@@ -112,6 +114,8 @@ class Lexer {
     }
 
     Token read_quoted_string() {
+        // you could get String or Variable from this token
+
         int last_position = position - 1;
         read_char(); // consume first quote
 
@@ -123,9 +127,12 @@ class Lexer {
         std::string string_without_quote =
             input.substr(last_position + 1, position - 2 - (last_position + 1));
 
-        if (string_without_quote.find(' ') == std::string::npos) {
+        if (in_bracket || string_without_quote.find(' ') == std::string::npos) {
+            // it's a String with possibly space in it
             return Token(TokenType::String, string_without_quote);
         }
+
+        // otherwise it's a Variable
 
         std::istringstream iss(string_without_quote);
 
@@ -187,12 +194,14 @@ class Lexer {
 
         switch (current_char.value()) {
         case '[': {
+            in_bracket = true;
             auto token = Token(TokenType::List, read_list());
             read_char();
             return token;
         }
 
         case ']': {
+            in_bracket = false;
             read_char();
             return Token(TokenType::RightBracket);
         }

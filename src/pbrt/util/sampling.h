@@ -230,8 +230,10 @@ inline FloatType SampleExponential(FloatType u, FloatType a) {
 }
 
 PBRT_CPU_GPU
-inline FloatType PowerHeuristic(int nf, FloatType fPdf, int ng, FloatType gPdf) {
-    FloatType f = nf * fPdf, g = ng * gPdf;
+inline FloatType power_heuristic(int nf, FloatType fPdf, int ng, FloatType gPdf) {
+    FloatType f = nf * fPdf;
+    FloatType g = ng * gPdf;
+
     if (is_inf(sqr(f))) {
         return 1;
     }
@@ -241,3 +243,7 @@ inline FloatType PowerHeuristic(int nf, FloatType fPdf, int ng, FloatType gPdf) 
 
 PBRT_CPU_GPU
 Vector3f SampleHenyeyGreenstein(Vector3f wo, FloatType g, Point2f u, FloatType *pdf);
+
+PBRT_CPU_GPU
+// Via Jim Arvo's SphTri.C
+Point2f InvertSphericalTriangleSample(const Point3f v[3], const Point3f &p, const Vector3f &w);

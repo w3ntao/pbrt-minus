@@ -21,6 +21,10 @@ struct ShapeSampleContext {
     Normal3f ns;
 
     PBRT_CPU_GPU
+    ShapeSampleContext(const Point3fi &_pi, const Normal3f &_n, const Normal3f &_ns)
+        : pi(_pi), n(_n), ns(_ns) {}
+
+    PBRT_CPU_GPU
     Point3f p() const {
         return pi.to_point3f();
     }
@@ -53,6 +57,13 @@ struct ShapeSampleContext {
     PBRT_CPU_GPU
     inline Point3f offset_ray_origin(const Point3f &pt) const {
         return this->offset_ray_origin(pt - p());
+    }
+
+    PBRT_CPU_GPU
+    inline Ray spawn_ray(const Vector3f &w) const {
+        // Note: doesn't set medium, but that's fine, since this is only
+        // used by shapes to see if ray would have intersected them
+        return Ray(this->offset_ray_origin(w), w);
     }
 };
 
@@ -93,10 +104,14 @@ class Shape {
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray,
+                                                     FloatType t_max = Infinity) const;
 
     PBRT_GPU
     cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
+
+    PBRT_GPU
+    FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
   private:
     Type type;

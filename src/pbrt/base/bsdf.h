@@ -12,13 +12,18 @@ class BSDF {
   public:
     PBRT_GPU void init_frame(const Normal3f &ns, const Vector3f &dpdus);
 
-    PBRT_GPU void init_bxdf(const CoatedDiffuseBxDF *coated_diffuse_bxdf);
+    PBRT_GPU void init_bxdf(CoatedDiffuseBxDF *coated_diffuse_bxdf);
 
-    PBRT_GPU void init_bxdf(const ConductorBxDF *conductor_bxdf);
+    PBRT_GPU void init_bxdf(ConductorBxDF *conductor_bxdf);
 
-    PBRT_GPU void init_bxdf(const DielectricBxDF *dielectric_bxdf);
+    PBRT_GPU void init_bxdf(DielectricBxDF *dielectric_bxdf);
 
-    PBRT_GPU void init_bxdf(const DiffuseBxDF *diffuse_bxdf);
+    PBRT_GPU void init_bxdf(DiffuseBxDF *diffuse_bxdf);
+
+    PBRT_GPU
+    void regularize() {
+        bxdf.regularize();
+    }
 
     PBRT_GPU
     SampledSpectrum f(const Vector3f &woRender, const Vector3f &wiRender,
@@ -31,6 +36,15 @@ class BSDF {
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
 
     PBRT_GPU
+    FloatType pdf(const Vector3f &woRender, const Vector3f &wiRender,
+                  TransportMode mode = TransportMode::Radiance,
+                  BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
+
+    PBRT_CPU_GPU BxDFFlags flags() const {
+        return bxdf.flags();
+    }
+
+    PBRT_CPU_GPU
     bool has_null_bxdf() const {
         return bxdf.has_type_null();
     }

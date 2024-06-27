@@ -150,7 +150,7 @@ class LayeredBxDF {
                         // Account for scattering through _exitInterface_ using _wis_
                         FloatType wt = 1;
                         if (!_is_specular(exitInterface.flags())) {
-                            wt = PowerHeuristic(1, wis->pdf, 1, phase.pdf(-w, -wis->wi));
+                            wt = power_heuristic(1, wis->pdf, 1, phase.pdf(-w, -wis->wi));
                         }
 
                         f += beta * albedo * phase.p(-w, -wis->wi) * wt * Tr(zp - exitZ, wis->wi) *
@@ -175,7 +175,7 @@ class LayeredBxDF {
                             if (fExit.is_positive()) {
                                 FloatType exitPDF = exitInterface.pdf(
                                     -w, wi, mode, BxDFReflTransFlags::Transmission);
-                                FloatType wt = PowerHeuristic(1, ps->pdf, 1, exitPDF);
+                                FloatType wt = power_heuristic(1, ps->pdf, 1, exitPDF);
                                 f += beta * Tr(zp - exitZ, ps->wi) * fExit * wt;
                             }
                         }
@@ -204,8 +204,8 @@ class LayeredBxDF {
                         // Add NEE contribution along presampled _wis_ direction
                         FloatType wt = 1;
                         if (!_is_specular(exitInterface.flags())) {
-                            wt = PowerHeuristic(1, wis->pdf, 1,
-                                                nonExitInterface.pdf(-w, -wis->wi, mode));
+                            wt = power_heuristic(1, wis->pdf, 1,
+                                                 nonExitInterface.pdf(-w, -wis->wi, mode));
                         }
 
                         f += beta * nonExitInterface.f(-w, -wis->wi, mode) *
@@ -232,7 +232,7 @@ class LayeredBxDF {
                             if (!_is_specular(nonExitInterface.flags())) {
                                 FloatType exitPDF = exitInterface.pdf(
                                     -w, wi, mode, BxDFReflTransFlags::Transmission);
-                                wt = PowerHeuristic(1, bs->pdf, 1, exitPDF);
+                                wt = power_heuristic(1, bs->pdf, 1, exitPDF);
                             }
                             f += beta * Tr(thickness, bs->wi) * fExit * wt;
                         }
@@ -268,7 +268,7 @@ class LayeredBxDF {
                 bs->wi = -bs->wi;
             }
 
-            bs->pdfIsProportional = true;
+            bs->pdf_is_proportional = true;
             return bs;
         }
         Vector3f w = bs->wi;
@@ -437,11 +437,11 @@ class LayeredBxDF {
                                 // Compute MIS-weighted estimate of Equation
                                 // (\ref{eq:pdf-triple-canceled-one})
                                 FloatType rPDF = rInterface.pdf(-wos->wi, -wis->wi, mode);
-                                FloatType wt = PowerHeuristic(1, wis->pdf, 1, rPDF);
+                                FloatType wt = power_heuristic(1, wis->pdf, 1, rPDF);
                                 pdfSum += wt * rPDF;
 
                                 FloatType tPDF = tInterface.pdf(-rs->wi, wi, mode);
-                                wt = PowerHeuristic(1, rs->pdf, 1, tPDF);
+                                wt = power_heuristic(1, rs->pdf, 1, tPDF);
                                 pdfSum += wt * tPDF;
                             }
                         }

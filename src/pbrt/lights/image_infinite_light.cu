@@ -69,6 +69,13 @@ cuda::std::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSamp
     return LightLiSample(ImageLe(u, lambda), wi, pdf, interaction);
 }
 
+PBRT_GPU
+FloatType ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+                                     bool allow_incomplete_pdf) const {
+    // allow_incomplete_pdf = false
+    return 1.0 / (4 * compute_pi());
+}
+
 void ImageInfiniteLight::preprocess(const Bounds3f &scene_bounds) {
     scene_bounds.bounding_sphere(&scene_center, &scene_radius);
 }

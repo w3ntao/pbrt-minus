@@ -58,11 +58,7 @@ cuda::std::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSample
                                                                const Point2f &u,
                                                                SampledWavelengths &lambda) const {
     // Sample point on shape for _DiffuseAreaLight_
-    auto shape_ctx = ShapeSampleContext{
-        .pi = ctx.pi,
-        .n = ctx.n,
-        .ns = ctx.ns,
-    };
+    auto shape_ctx = ShapeSampleContext(ctx.pi, ctx.n, ctx.ns);
 
     auto ss = shape->sample(shape_ctx, u);
 
@@ -78,4 +74,12 @@ cuda::std::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSample
     }
 
     return LightLiSample(Le, wi, ss->pdf, ss->interaction);
+}
+
+PBRT_GPU
+FloatType DiffuseAreaLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+                                   bool allow_incomplete_pdf) const {
+    // allow_incomplete_pdf = false
+    ShapeSampleContext shapeCtx(ctx.pi, ctx.n, ctx.ns);
+    return shape->pdf(shapeCtx, wi);
 }

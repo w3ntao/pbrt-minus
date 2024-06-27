@@ -36,7 +36,8 @@ class Sphere {
     }
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const {
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray,
+                                                     FloatType t_max = Infinity) const {
         auto isect = basic_intersect(ray, t_max);
         if (!isect) {
             return {};
@@ -51,6 +52,9 @@ class Sphere {
 
     PBRT_GPU
     cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
+
+    PBRT_GPU
+    FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
   private:
     FloatType radius;

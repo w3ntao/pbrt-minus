@@ -34,8 +34,10 @@ ParameterDictionary::ParameterDictionary(
 
     for (int idx = 0; idx < tokens.size(); idx += 2) {
         if (tokens[idx].type != TokenType::Variable) {
-            std::cout << "tokens[" << idx << "] is not a Variable\n\n";
-            throw std::runtime_error("expect token Variable");
+            std::cout << "tokens[" << idx << "] is not a Variable\n";
+            std::cout << "tokens[" << idx << "]: " << tokens[idx] << "\n";
+
+            REPORT_FATAL_ERROR();
         }
 
         auto variable_type = tokens[idx].values[0];

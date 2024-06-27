@@ -32,6 +32,9 @@ class DiffuseBxDF {
         return BxDFFlags::Unset;
     }
 
+    PBRT_CPU_GPU
+    void regularize() {}
+
     PBRT_GPU SampledSpectrum f(const Vector3f wo, const Vector3f wi,
                                const TransportMode mode) const {
         if (!wo.same_hemisphere(wi)) {

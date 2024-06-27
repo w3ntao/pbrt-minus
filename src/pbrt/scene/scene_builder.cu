@@ -117,7 +117,6 @@ void SceneBuilder::build_film() {
 
 void SceneBuilder::build_sampler() {
     // TODO: sampler is not parsed, only pixelsamples read
-    // TODO: progress 2024/06/22: rewrite this Samplers initialization
     const auto parameters = build_parameter_dictionary(sub_vector(sampler_tokens, 2));
 
     auto samples_from_parameters = parameters.get_integer("pixelsamples");
@@ -335,7 +334,7 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
         return;
     }
 
-    printf("\ncolor type `%s` not implemented\n", color_type.c_str());
+    printf("\n%s(): color type `%s` not implemented\n", __func__, color_type.c_str());
     REPORT_FATAL_ERROR();
 }
 
@@ -371,6 +370,10 @@ void SceneBuilder::parse_translate(const std::vector<Token> &tokens) {
 }
 
 void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
+    if (tokens.empty()) {
+        REPORT_FATAL_ERROR();
+    }
+
     const Token &first_token = tokens[0];
 
     switch (first_token.type) {

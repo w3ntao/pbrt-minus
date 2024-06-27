@@ -41,8 +41,8 @@ class RGBFilm {
 
         auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
 
-        if (rgb.has_nan()) {
-            printf("RGBFilm::add_sample(): pixel(%d, %d): has a NAN component\n", p_film.x,
+        if (DEBUGGING && rgb.has_nan()) {
+            printf("RGBFilm::%s(): pixel(%d, %d): has a NAN component\n", __func__, p_film.x,
                    p_film.y);
         }
 

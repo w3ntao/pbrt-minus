@@ -26,6 +26,11 @@ enum class LightType {
     infinite,
 };
 
+// Light Inline Functions
+PBRT_CPU_GPU inline bool is_deltaLight(LightType type) {
+    return type == LightType::delta_position || type == LightType::delta_direction;
+}
+
 struct LightBase {
     LightType light_type;
     Transform render_from_light;
@@ -58,6 +63,10 @@ struct LightSampleContext {
     Normal3f ns;
 
     PBRT_CPU_GPU
+    LightSampleContext()
+        : pi(Point3fi()), n(Normal3f(NAN, NAN, NAN)), ns(Normal3f(NAN, NAN, NAN)) {}
+
+    PBRT_CPU_GPU
     LightSampleContext(const SurfaceInteraction si) : pi(si.pi), n(si.n), ns(si.shading.n) {}
 
     PBRT_CPU_GPU
@@ -74,7 +83,7 @@ class Light {
         image_infinite_light,
     };
 
-    static Light *create(const std::string &type_of_light, const Transform &renderFromLight,
+    static Light *create(const std::string &type_of_light, const Transform &render_from_light,
                          const ParameterDictionary &parameters,
                          std::vector<void *> &gpu_dynamic_pointers);
 
@@ -103,8 +112,12 @@ class Light {
     SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
 
     PBRT_GPU
-    cuda::std::optional<LightLiSample> sample_li(const LightSampleContext ctx, const Point2f u,
+    cuda::std::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
+
+    PBRT_GPU
+    FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+                     bool allow_incomplete_pdf = false) const;
 
     void preprocess(const Bounds3<FloatType> &scene_bounds);
 

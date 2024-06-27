@@ -13,17 +13,19 @@ class SampledWavelengths;
 class Sampler;
 
 class AmbientOcclusionIntegrator;
-class SurfaceNormalIntegrator;
+class PathIntegrator;
 class RandomWalkIntegrator;
+class SurfaceNormalIntegrator;
 class SimplePathIntegrator;
 
 class Integrator {
   public:
     enum class Type {
-        surface_normal,
         ambient_occlusion,
+        path,
         random_walk,
         simple_path,
+        surface_normal,
     };
 
     static const Integrator *create(const ParameterDictionary &parameters,
@@ -33,9 +35,11 @@ class Integrator {
 
     void init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator);
 
-    void init(const SurfaceNormalIntegrator *surface_normal_integrator);
+    void init(const PathIntegrator *path_integrator);
 
     void init(const RandomWalkIntegrator *random_walk_integrator);
+
+    void init(const SurfaceNormalIntegrator *surface_normal_integrator);
 
     void init(const SimplePathIntegrator *simple_path_integrator);
 

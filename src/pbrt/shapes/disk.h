@@ -28,12 +28,13 @@ class Disk {
     }
 
     PBRT_GPU
-    bool fast_intersect(const Ray &ray, FloatType t_max) const {
+    bool fast_intersect(const Ray &ray, FloatType t_max = Infinity) const {
         return basic_intersect(ray, t_max).has_value();
     }
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const {
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray,
+                                                     FloatType t_max = Infinity) const {
         auto isect = basic_intersect(ray, t_max);
         if (!isect) {
             return {};
@@ -42,6 +43,9 @@ class Disk {
         SurfaceInteraction intr = interaction_from_intersection(*isect, -ray.d);
         return ShapeIntersection{intr, isect->t_hit};
     }
+
+    PBRT_GPU
+    FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
     PBRT_GPU
     cuda::std::optional<ShapeSample> sample(const Point2f &u) const;

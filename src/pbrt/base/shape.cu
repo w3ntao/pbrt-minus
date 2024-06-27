@@ -204,3 +204,23 @@ cuda::std::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
     REPORT_FATAL_ERROR();
     return {};
 }
+
+PBRT_GPU
+FloatType Shape::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
+    switch (type) {
+    case (Type::disk): {
+        return ((Disk *)ptr)->pdf(ctx, wi);
+    }
+
+    case (Type::sphere): {
+        return ((Sphere *)ptr)->pdf(ctx, wi);
+    }
+
+    case (Type::triangle): {
+        return ((Triangle *)ptr)->pdf(ctx, wi);
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return NAN;
+}

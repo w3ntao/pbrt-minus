@@ -67,6 +67,7 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/integrators/ambient_occlusion.cu
         src/pbrt/integrators/integrator_base.cu
+        src/pbrt/integrators/path.cu
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu
         src/pbrt/integrators/surface_normal.cu
