@@ -40,15 +40,10 @@ class XYZ {
         case 2: {
             return z;
         }
-        default: {
-            printf("XYZ: invalid index `%d`", idx);
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("XYZ: invalid index");
-#endif
         }
-        }
+
+        REPORT_FATAL_ERROR();
+        return NAN;
     }
     PBRT_CPU_GPU
     FloatType &operator[](uint8_t idx) {
@@ -62,15 +57,10 @@ class XYZ {
         case 2: {
             return z;
         }
-        default: {
-            printf("XYZ: invalid index `%d`", idx);
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("XYZ: invalid index");
-#endif
         }
-        }
+
+        REPORT_FATAL_ERROR();
+        return x;
     }
 
     PBRT_CPU_GPU

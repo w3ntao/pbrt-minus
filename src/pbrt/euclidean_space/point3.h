@@ -24,15 +24,10 @@ class Point3 {
         case 2: {
             return z;
         }
-        default: {
-            printf("Point3: invalid index `%d`\n\n", index);
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("Point: invalid index\n");
-#endif
         }
-        }
+
+        REPORT_FATAL_ERROR();
+        return x;
     }
 
     PBRT_CPU_GPU T operator[](uint8_t index) const {
@@ -46,14 +41,10 @@ class Point3 {
         case 2: {
             return z;
         }
-        default: {
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("Point: invalid index `" + std::to_string(index) + "`");
-#endif
         }
-        }
+
+        REPORT_FATAL_ERROR();
+        return NAN;
     }
 
     PBRT_CPU_GPU bool operator==(const Point3 &p) const {

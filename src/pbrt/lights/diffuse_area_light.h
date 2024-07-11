@@ -28,6 +28,9 @@ class DiffuseAreaLight : public LightBase {
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf) const;
 
+    PBRT_CPU_GPU
+    SampledSpectrum phi(const SampledWavelengths &lambda) const;
+
   private:
     const Shape *shape;
     bool two_sided;

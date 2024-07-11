@@ -165,6 +165,7 @@ Point2f Sampler::get_2d() {
     }
 
     REPORT_FATAL_ERROR();
+    return Point2f(NAN, NAN);
 }
 
 PBRT_GPU
@@ -180,6 +181,7 @@ Point2f Sampler::get_pixel_2d() {
     }
 
     REPORT_FATAL_ERROR();
+    return Point2f(NAN, NAN);
 }
 
 PBRT_GPU

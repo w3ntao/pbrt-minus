@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/light_samplers/uniform_light_sampler.h"
+#include "pbrt/light_samplers/power_light_sampler.h"
 
 class IntegratorBase;
 class Sampler;

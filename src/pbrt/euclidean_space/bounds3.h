@@ -75,16 +75,10 @@ class Bounds3 {
         case (1): {
             return p_max;
         }
-        default: {
-            printf("Bounds3: invalid index `%d`\n\n", index);
+        }
 
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("Bounds3: invalid index\n\n");
-#endif
-        }
-        }
+        REPORT_FATAL_ERROR();
+        return Point3(NAN, NAN, NAN);
     }
 
     PBRT_CPU_GPU Bounds3 operator+(const Bounds3 &b) const {

@@ -55,4 +55,5 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const DifferentialRay &ray,
     }
 
     REPORT_FATAL_ERROR();
+    return NAN;
 }

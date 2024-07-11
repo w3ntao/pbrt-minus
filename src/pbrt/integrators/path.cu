@@ -70,7 +70,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const DifferentialRay &primary_ray,
                 } else {
                     // Compute MIS weight for infinite light
                     FloatType pdf_light =
-                        base->uniform_light_sampler->pmf(prev_interaction_light_sample_ctx, light) *
+                        base->light_sampler->pmf(prev_interaction_light_sample_ctx, light) *
                         light->pdf_li(prev_interaction_light_sample_ctx, ray.ray.d, true);
                     FloatType weight_bsdf = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
@@ -91,8 +91,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const DifferentialRay &primary_ray,
                 auto area_light = si->interaction.area_light;
 
                 FloatType pdf_light =
-                    base->uniform_light_sampler->pmf(prev_interaction_light_sample_ctx,
-                                                     area_light) *
+                    base->light_sampler->pmf(prev_interaction_light_sample_ctx, area_light) *
                     area_light->pdf_li(prev_interaction_light_sample_ctx, ray.ray.d);
                 FloatType weight_light = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
@@ -196,7 +195,7 @@ SampledSpectrum PathIntegrator::sample_ld(const SurfaceInteraction &intr, const 
 
     // Choose a light source for the direct lighting calculation
     FloatType u = sampler->get_1d();
-    auto sampled_light = base->uniform_light_sampler->sample(ctx, u);
+    auto sampled_light = base->light_sampler->sample(ctx, u);
 
     Point2f uLight = sampler->get_2d();
     if (!sampled_light) {

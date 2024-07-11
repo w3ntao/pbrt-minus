@@ -18,14 +18,10 @@ class Vector2 {
         case 1: {
             return y;
         }
-        default: {
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("Vector2: invalid index `" + std::to_string(index) + "`");
-#endif
         }
-        }
+
+        REPORT_FATAL_ERROR();
+        return x;
     }
 
     PBRT_CPU_GPU

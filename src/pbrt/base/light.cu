@@ -175,6 +175,18 @@ FloatType Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
     return NAN;
 }
 
+PBRT_CPU_GPU
+SampledSpectrum Light::phi(const SampledWavelengths &lambda) const {
+    switch (type) {
+    case (Type::diffuse_area_light): {
+        return ((DiffuseAreaLight *)ptr)->phi(lambda);
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return {};
+}
+
 void Light::preprocess(const Bounds3<FloatType> &scene_bounds) {
     switch (type) {
     case (Type::diffuse_area_light): {

@@ -118,6 +118,8 @@ class Light {
     PBRT_GPU
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf = false) const;
+    PBRT_CPU_GPU
+    SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
     void preprocess(const Bounds3<FloatType> &scene_bounds);
 

@@ -5,8 +5,17 @@
 
 class UniformLightSampler {
   public:
-    const Light **lights;
-    uint light_num;
+    static const UniformLightSampler *create(const Light **lights, const uint light_num,
+                                             std::vector<void *> &gpu_dynamic_pointers) {
+        UniformLightSampler *uniform_light_sampler;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&uniform_light_sampler, sizeof(UniformLightSampler)));
+        gpu_dynamic_pointers.push_back(uniform_light_sampler);
+
+        uniform_light_sampler->lights = lights;
+        uniform_light_sampler->light_num = light_num;
+
+        return uniform_light_sampler;
+    }
 
     PBRT_CPU_GPU
     cuda::std::optional<SampledLight> sample(FloatType u) const {
@@ -36,4 +45,8 @@ class UniformLightSampler {
     FloatType pmf(const LightSampleContext &ctx, const Light *light) const {
         return pmf(light);
     }
+
+  private:
+    const Light **lights;
+    uint light_num;
 };

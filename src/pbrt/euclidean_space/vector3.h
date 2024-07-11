@@ -25,14 +25,10 @@ class Vector3 {
         case 2: {
             return z;
         }
-        default: {
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("Vector3: invalid index `" + std::to_string(index) + "`");
-#endif
         }
-        }
+
+        REPORT_FATAL_ERROR();
+        return x;
     }
 
     PBRT_CPU_GPU T operator[](uint8_t index) const {
@@ -46,14 +42,10 @@ class Vector3 {
         case 2: {
             return z;
         }
-        default: {
-#if defined(__CUDA_ARCH__)
-            asm("trap;");
-#else
-            throw std::runtime_error("Vector3: invalid index `" + std::to_string(index) + "`");
-#endif
         }
-        }
+
+        REPORT_FATAL_ERROR();
+        return NAN;
     }
 
     PBRT_CPU_GPU bool operator==(const Vector3 &v) const {

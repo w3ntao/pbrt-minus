@@ -15,6 +15,7 @@
 
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/image_infinite_light.h"
+#include "pbrt/light_samplers/power_light_sampler.h"
 
 const SimplePathIntegrator *
 SimplePathIntegrator::create(const ParameterDictionary &parameters,
@@ -105,7 +106,7 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
         }
 
         // Sample direct illumination if _sampleLights_ is true
-        auto sampled_light = base->uniform_light_sampler->sample(sampler->get_1d());
+        auto sampled_light = base->light_sampler->sample(sampler->get_1d());
 
         if (sampled_light.has_value()) {
             auto u_light = sampler->get_2d();

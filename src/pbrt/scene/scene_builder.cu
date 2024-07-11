@@ -17,6 +17,7 @@
 #include "pbrt/integrators/integrator_base.h"
 
 #include "pbrt/light_samplers/uniform_light_sampler.h"
+#include "pbrt/light_samplers/power_light_sampler.h"
 
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
@@ -149,11 +150,9 @@ void SceneBuilder::build_integrator() {
     CHECK_CUDA_ERROR(cudaMallocManaged(&light_array, sizeof(Light *) * gpu_lights.size()));
     CHECK_CUDA_ERROR(cudaMemcpy(light_array, gpu_lights.data(), sizeof(Light *) * gpu_lights.size(),
                                 cudaMemcpyHostToDevice));
-
-    UniformLightSampler *uniform_light_sampler;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&uniform_light_sampler, sizeof(UniformLightSampler)));
-    uniform_light_sampler->lights = light_array;
-    uniform_light_sampler->light_num = gpu_lights.size();
+    
+    auto power_light_sampler =
+        PowerLightSampler::create(light_array, gpu_lights.size(), gpu_dynamic_pointers);
 
     std::vector<const Light *> infinite_lights;
     for (auto light : gpu_lights) {
@@ -174,7 +173,7 @@ void SceneBuilder::build_integrator() {
     integrator_base->lights = light_array;
     integrator_base->light_num = gpu_lights.size();
 
-    integrator_base->uniform_light_sampler = uniform_light_sampler;
+    integrator_base->light_sampler = power_light_sampler;
 
     integrator_base->infinite_lights = gpu_infinite_lights;
     integrator_base->infinite_light_num = infinite_lights.size();
@@ -182,7 +181,6 @@ void SceneBuilder::build_integrator() {
     for (auto ptr : std::vector<void *>({
              integrator_base,
              light_array,
-             uniform_light_sampler,
              gpu_infinite_lights,
          })) {
         gpu_dynamic_pointers.push_back(ptr);
