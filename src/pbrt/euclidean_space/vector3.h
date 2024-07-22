@@ -138,9 +138,16 @@ class Vector3 {
     }
 
     PBRT_CPU_GPU Vector3 cross(const Vector3 &right) const {
-        // TODO: rewrite this with difference_of_products()
+        /*
         return Vector3(y * right.z - z * right.y, -(x * right.z - z * right.x),
                        x * right.y - y * right.x);
+        */
+
+        // TODO: this part was not test
+
+        return Vector3(difference_of_products(y, right.z, z, right.y),
+                       difference_of_products(z, right.x, x, right.z),
+                       difference_of_products(x, right.y, y, right.x));
     }
 
     PBRT_CPU_GPU Vector3 face_forward(const Vector3 &v) const {

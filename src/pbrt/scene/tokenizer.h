@@ -9,6 +9,10 @@ enum class TokenType {
     AttributeBegin,
     AttributeEnd,
 
+    ObjectBegin,
+    ObjectEnd,
+    ObjectInstance,
+
     Keyword,
     Number,
     String,
@@ -30,10 +34,12 @@ static std::ostream &operator<<(std::ostream &stream, const TokenType type) {
         stream << "RightBracket";
         break;
     }
+
     case TokenType::WorldBegin: {
         stream << "WorldBegin";
         break;
     }
+
     case TokenType::AttributeBegin: {
         stream << "AttributeBegin";
         break;
@@ -43,6 +49,18 @@ static std::ostream &operator<<(std::ostream &stream, const TokenType type) {
         break;
     }
 
+    case TokenType::ObjectBegin: {
+        stream << "ObjectBegin";
+        break;
+    }
+    case TokenType::ObjectEnd: {
+        stream << "ObjectEnd";
+        break;
+    }
+    case TokenType::ObjectInstance: {
+        stream << "ObjectInstance";
+        break;
+    }
     case TokenType::Keyword: {
         stream << "Keyword";
         break;

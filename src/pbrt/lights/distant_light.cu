@@ -14,16 +14,8 @@ DistantLight *DistantLight::create(const Transform &renderFromLight,
     CHECK_CUDA_ERROR(cudaMallocManaged(&distant_light, sizeof(DistantLight)));
     gpu_dynamic_pointers.push_back(distant_light);
 
-    const Spectrum *lemit = nullptr;
-    if (parameters.has_spectrum("L")) {
-        lemit = parameters.get_spectrum("L");
-    } else if (parameters.has_rgb("L")) {
-        auto rgb_l = parameters.get_rgb("L", std::nullopt);
-
-        lemit = Spectrum::create_from_rgb(rgb_l, SpectrumType::Illuminant,
-                                          parameters.global_spectra->rgb_color_space,
-                                          gpu_dynamic_pointers);
-    } else {
+    auto lemit = parameters.get_spectrum("L", SpectrumType::Illuminant, gpu_dynamic_pointers);
+    if (lemit == nullptr) {
         lemit = parameters.global_spectra->rgb_color_space->illuminant;
     }
 

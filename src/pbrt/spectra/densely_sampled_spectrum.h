@@ -2,8 +2,8 @@
 
 #include <vector>
 
+#include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/spectrum_util/spectrum_constants_cie.h"
-#include "pbrt/spectrum_util/black_body_spectrum.h"
 
 class Spectrum;
 

@@ -65,7 +65,8 @@ Light *Light::create_diffuse_area_lights(const Shape *shapes, const uint num,
     gpu_dynamic_pointers.push_back(lights);
 
     for (uint idx = 0; idx < num; idx++) {
-        diffuse_area_lights[idx].init(&shapes[idx], render_from_light, parameters);
+        diffuse_area_lights[idx].init(&shapes[idx], render_from_light, parameters,
+                                      gpu_dynamic_pointers);
     }
 
     init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num);

@@ -2,7 +2,7 @@
 
 #include "pbrt/base/material.h"
 #include "pbrt/base/spectrum.h"
-#include "pbrt/base/texture.h"
+#include "pbrt/base/spectrum_texture.h"
 
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 
@@ -59,7 +59,7 @@ void DiffuseMaterial::init(const ParameterDictionary &parameters,
         return;
     }
 
-    REPORT_FATAL_ERROR();
+    reflectance = SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
 }
 
 PBRT_GPU

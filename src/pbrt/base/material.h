@@ -6,7 +6,7 @@
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 
 #include "pbrt/base/bsdf.h"
-#include "pbrt/base/texture.h"
+#include "pbrt/base/spectrum_texture.h"
 #include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/euclidean_space/normal3f.h"
 
@@ -41,7 +41,7 @@ class Material {
     static const Material *create(const std::string &type_of_material,
                                   const ParameterDictionary &parameters,
                                   std::vector<void *> &gpu_dynamic_pointers);
-    
+
     static const Material *create_diffuse_material(const SpectrumTexture *texture,
                                                    std::vector<void *> &gpu_dynamic_pointers);
 

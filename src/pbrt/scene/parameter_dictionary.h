@@ -6,6 +6,7 @@
 #include <optional>
 #include <vector>
 
+#include "pbrt/base/spectrum.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/point3.h"
@@ -13,7 +14,6 @@
 
 class FloatTexture;
 class GlobalSpectra;
-class RGBColorSpace;
 class Spectrum;
 class SpectrumTexture;
 class Token;
@@ -25,9 +25,10 @@ class ParameterDictionary {
     explicit ParameterDictionary(
         const std::vector<Token> &tokens,
         const std::map<std::string, const Spectrum *> &_named_spectra,
-        const std::map<std::string, const SpectrumTexture *> &_named_spectrum_texture,
+        const std::map<std::string, const FloatTexture *> &named_float_texture,
+        const std::map<std::string, const SpectrumTexture *> &named_spectrum_texture,
         const std::string &_root, const GlobalSpectra *_global_spectra,
-        bool ignore_material_and_texture, std::vector<void *> &gpu_dynamic_pointers);
+        std::vector<void *> &gpu_dynamic_pointers);
 
     const GlobalSpectra *global_spectra = nullptr;
 
@@ -48,7 +49,7 @@ class ParameterDictionary {
     }
 
     bool has_spectrum(const std::string &key) const {
-        return spectra.find(key) != spectra.end();
+        return named_spectra.find(key) != named_spectra.end();
     }
 
     bool has_spectrum_texture(const std::string &key) const {
@@ -154,9 +155,8 @@ class ParameterDictionary {
         return float_textures.at(key);
     }
 
-    const Spectrum *get_spectrum(const std::string &key) const {
-        return spectra.at(key);
-    }
+    const Spectrum *get_spectrum(const std::string &key, SpectrumType spectrum_type,
+                                 std::vector<void *> &gpu_dynamic_pointers) const;
 
     const SpectrumTexture *get_spectrum_texture(const std::string &key) const {
         return spectrum_textures.at(key);
@@ -193,11 +193,18 @@ class ParameterDictionary {
             stream << "\n";
         }
 
-        if (!parameters.spectra.empty()) {
+        if (!parameters.named_spectra.empty()) {
             stream << "spectrum:\n";
-            parameters.print_dict_of_single_var(stream, parameters.spectra);
+            parameters.print_dict_of_single_var(stream, parameters.named_spectra);
             stream << "\n";
         }
+
+        if (!parameters.float_textures.empty()) {
+            stream << "float texture:\n";
+            parameters.print_dict_of_single_var(stream, parameters.float_textures);
+            stream << "\n";
+        }
+
         if (!parameters.spectrum_textures.empty()) {
             stream << "spectrum texture:\n";
             parameters.print_dict_of_single_var(stream, parameters.spectrum_textures);
@@ -222,6 +229,13 @@ class ParameterDictionary {
             stream << "\n";
         }
 
+        if (!parameters.blackbodies.empty()) {
+            stream << "blackbody:\n";
+            parameters.print_dict_of_single_var(stream, parameters.blackbodies);
+            stream << "\n";
+
+        }
+
         return stream;
     }
 
@@ -236,8 +250,10 @@ class ParameterDictionary {
     std::map<std::string, std::vector<FloatType>> floats;
     std::map<std::string, std::string> strings;
     std::map<std::string, RGB> rgbs;
+    std::map<std::string, FloatType> blackbodies;
+
+    std::map<std::string, const Spectrum *> named_spectra;
     std::map<std::string, const FloatTexture *> float_textures;
-    std::map<std::string, const Spectrum *> spectra;
     std::map<std::string, const SpectrumTexture *> spectrum_textures;
 
     template <typename T>

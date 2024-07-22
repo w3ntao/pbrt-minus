@@ -3,7 +3,6 @@
 #include <cuda/std/optional>
 
 #include "pbrt/base/light.h"
-#include "pbrt/spectra/densely_sampled_spectrum.h"
 
 class GlobalSpectra;
 class ParameterDictionary;
@@ -14,7 +13,7 @@ class Shape;
 class DiffuseAreaLight : public LightBase {
   public:
     void init(const Shape *_shape, const Transform &_render_from_light,
-              const ParameterDictionary &parameters);
+              const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
@@ -34,6 +33,6 @@ class DiffuseAreaLight : public LightBase {
   private:
     const Shape *shape;
     bool two_sided;
-    DenselySampledSpectrum l_emit;
+    const Spectrum *l_emit;
     FloatType scale;
 };

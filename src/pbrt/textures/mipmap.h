@@ -46,11 +46,10 @@ struct MIPMapFilterOptions {
 class MIPMap {
   public:
     static const MIPMap *create(const ParameterDictionary &parameters,
-                                std::vector<void *> &gpu_dynamic_pointers,
-                                const RGBColorSpace *_color_space) {
+                                std::vector<void *> &gpu_dynamic_pointers) {
         MIPMap *mipmap;
         CHECK_CUDA_ERROR(cudaMallocManaged(&mipmap, sizeof(MIPMap)));
-        mipmap->init(parameters, gpu_dynamic_pointers, _color_space);
+        mipmap->init(parameters, gpu_dynamic_pointers);
 
         gpu_dynamic_pointers.push_back(mipmap);
         return mipmap;
@@ -66,8 +65,7 @@ class MIPMap {
     WrapMode wrap_mode;
     MIPMapFilterOptions options;
 
-    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers,
-              const RGBColorSpace *_color_space) {
+    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers) {
         auto max_anisotropy = parameters.get_float("maxanisotropy", 8.0);
         auto filter_string = parameters.get_string("filter", "bilinear");
 

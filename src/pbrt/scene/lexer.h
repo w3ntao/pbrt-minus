@@ -34,6 +34,22 @@ class Lexer {
             return Token(TokenType::AttributeEnd);
         }
 
+        if (identifier == "ObjectBegin") {
+            skip_space();
+            auto object_name = read_next_quoted_string();
+            return Token(TokenType::ObjectBegin, {object_name});
+        }
+
+        if (identifier == "ObjectEnd") {
+            return Token(TokenType::ObjectEnd);
+        }
+
+        if (identifier == "ObjectInstance") {
+            skip_space();
+            auto object_name = read_next_quoted_string();
+            return Token(TokenType::ObjectInstance, {object_name});
+        }
+
         if (identifier == "true" || identifier == "false") {
             return Token(TokenType::String, identifier);
         }
@@ -113,7 +129,7 @@ class Lexer {
         return values;
     }
 
-    Token read_quoted_string() {
+    std::string read_next_quoted_string() {
         // you could get String or Variable from this token
 
         int last_position = position - 1;
@@ -124,23 +140,7 @@ class Lexer {
         }
         read_char(); // consume the last quote
 
-        std::string string_without_quote =
-            input.substr(last_position + 1, position - 2 - (last_position + 1));
-
-        if (in_bracket || string_without_quote.find(' ') == std::string::npos) {
-            // it's a String with possibly space in it
-            return Token(TokenType::String, string_without_quote);
-        }
-
-        // otherwise it's a Variable
-
-        std::istringstream iss(string_without_quote);
-
-        std::vector<std::string> split_strings;
-        copy(std::istream_iterator<std::string>(iss), std::istream_iterator<std::string>(),
-             back_inserter(split_strings));
-
-        return Token(TokenType::Variable, split_strings);
+        return input.substr(last_position + 1, position - 2 - (last_position + 1));
     }
 
     std::string read_identifier() {
@@ -207,7 +207,21 @@ class Lexer {
         }
 
         case '"': {
-            return read_quoted_string();
+            auto string_without_quote = read_next_quoted_string();
+            if (in_bracket || string_without_quote.find(' ') == std::string::npos) {
+                // it's a String with possibly space in it
+                return Token(TokenType::String, string_without_quote);
+            }
+
+            // otherwise it's a Variable
+
+            std::istringstream iss(string_without_quote);
+
+            std::vector<std::string> split_strings;
+            copy(std::istream_iterator<std::string>(iss), std::istream_iterator<std::string>(),
+                 back_inserter(split_strings));
+
+            return Token(TokenType::Variable, split_strings);
         }
         }
 

@@ -37,6 +37,11 @@ class SquareMatrix {
         return SquareMatrix(data);
     }
 
+    PBRT_CPU_GPU static SquareMatrix nan() {
+        FloatType data[N][N] = {NAN};
+        return SquareMatrix(data);
+    }
+
     PBRT_CPU_GPU static SquareMatrix diag(const FloatType data[N]) {
         FloatType m[N][N] = {0.0};
         for (int i = 0; i < N; i++) {

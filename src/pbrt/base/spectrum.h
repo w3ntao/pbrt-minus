@@ -8,6 +8,7 @@
 class RGB;
 class RGBColorSpace;
 
+class BlackbodySpectrum;
 class ConstantSpectrum;
 class DenselySampledSpectrum;
 class PiecewiseLinearSpectrum;
@@ -23,12 +24,15 @@ enum class SpectrumType {
 class Spectrum {
   public:
     enum class Type {
-        densely_sampled_spectrum,
-        constant_spectrum,
-        rgb_illuminant_spectrum,
-        rgb_albedo_spectrum,
-        piecewise_linear_spectrum,
+        black_body,
+        constant,
+        densely_sampled,
+        rgb_illuminant,
+        rgb_albedo,
+        piecewise_linear,
     };
+
+    static const Spectrum *create_black_body(FloatType T, std::vector<void *> &gpu_dynamic_pointer);
 
     static const Spectrum *create_cie_d(FloatType temperature, const FloatType *cie_s0,
                                         const FloatType *cie_s1, const FloatType *cie_s2,
@@ -50,12 +54,14 @@ class Spectrum {
     create_piecewise_linear_spectrum_from_interleaved(const std::vector<FloatType> &samples,
                                                       bool normalize, const Spectrum *cie_y,
                                                       std::vector<void *> &gpu_dynamic_pointers);
-
     PBRT_CPU_GPU
-    void init(const DenselySampledSpectrum *densely_sampled_spectrum);
+    void init(const BlackbodySpectrum *black_body_spectrum);
 
     PBRT_CPU_GPU
     void init(const ConstantSpectrum *constant_spectrum);
+
+    PBRT_CPU_GPU
+    void init(const DenselySampledSpectrum *densely_sampled_spectrum);
 
     PBRT_CPU_GPU
     void init(const RGBIlluminantSpectrum *rgb_illuminant_spectrum);
@@ -67,7 +73,7 @@ class Spectrum {
     void init(const PiecewiseLinearSpectrum *piecewise_linear_spectrum);
 
     PBRT_CPU_GPU bool is_constant_spectrum() const {
-        return type == Type::constant_spectrum;
+        return type == Type::constant;
     }
 
     PBRT_CPU_GPU FloatType operator()(FloatType lambda) const;

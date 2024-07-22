@@ -17,15 +17,10 @@ SpectrumImageTexture::create(const ParameterDictionary &parameters,
 void SpectrumImageTexture::init(const ParameterDictionary &parameters,
                                 std::vector<void *> &gpu_dynamic_pointers,
                                 const RGBColorSpace *_color_space) {
-    mipmap = MIPMap::create(parameters, gpu_dynamic_pointers, _color_space);
-
     color_space = _color_space;
     spectrum_type = SpectrumType::Albedo;
 
-    mapping = UVMapping(parameters);
-
-    scale = parameters.get_float("scale", 1.0);
-    invert = parameters.get_bool("invert", false);
+    init_image_texture_base(parameters, gpu_dynamic_pointers);
 }
 
 PBRT_CPU_GPU

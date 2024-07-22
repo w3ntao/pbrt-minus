@@ -5,6 +5,7 @@
 class HLBVH;
 class Camera;
 class Light;
+class UniformLightSampler;
 class PowerLightSampler;
 class ImageInfiniteLight;
 

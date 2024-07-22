@@ -403,6 +403,74 @@ class Transform {
                           inv_m[2][0] * x + inv_m[2][1] * y + inv_m[2][2] * z);
     }
 
+    PBRT_CPU_GPU
+    Point3fi apply_inverse(const Point3fi &p) const {
+        auto x = p.x.midpoint();
+        auto y = p.y.midpoint();
+        auto z = p.z.midpoint();
+
+        // Compute transformed coordinates from point _pt_
+        FloatType xp = (inv_m[0][0] * x + inv_m[0][1] * y) + (inv_m[0][2] * z + inv_m[0][3]);
+        FloatType yp = (inv_m[1][0] * x + inv_m[1][1] * y) + (inv_m[1][2] * z + inv_m[1][3]);
+        FloatType zp = (inv_m[2][0] * x + inv_m[2][1] * y) + (inv_m[2][2] * z + inv_m[2][3]);
+        FloatType wp = (inv_m[3][0] * x + inv_m[3][1] * y) + (inv_m[3][2] * z + inv_m[3][3]);
+
+        // Compute absolute error for transformed point
+        Vector3f pOutError;
+        if (p.is_exact()) {
+            pOutError.x = gamma(3) * (std::abs(inv_m[0][0] * x) + std::abs(inv_m[0][1] * y) +
+                                      std::abs(inv_m[0][2] * z));
+            pOutError.y = gamma(3) * (std::abs(inv_m[1][0] * x) + std::abs(inv_m[1][1] * y) +
+                                      std::abs(inv_m[1][2] * z));
+            pOutError.z = gamma(3) * (std::abs(inv_m[2][0] * x) + std::abs(inv_m[2][1] * y) +
+                                      std::abs(inv_m[2][2] * z));
+        } else {
+            Vector3f pInError = p.error();
+            pOutError.x = (gamma(3) + 1) * (std::abs(inv_m[0][0]) * pInError.x +
+                                            std::abs(inv_m[0][1]) * pInError.y +
+                                            std::abs(inv_m[0][2]) * pInError.z) +
+                          gamma(3) * (std::abs(inv_m[0][0] * x) + std::abs(inv_m[0][1] * y) +
+                                      std::abs(inv_m[0][2] * z) + std::abs(inv_m[0][3]));
+            pOutError.y = (gamma(3) + 1) * (std::abs(inv_m[1][0]) * pInError.x +
+                                            std::abs(inv_m[1][1]) * pInError.y +
+                                            std::abs(inv_m[1][2]) * pInError.z) +
+                          gamma(3) * (std::abs(inv_m[1][0] * x) + std::abs(inv_m[1][1] * y) +
+                                      std::abs(inv_m[1][2] * z) + std::abs(inv_m[1][3]));
+            pOutError.z = (gamma(3) + 1) * (std::abs(inv_m[2][0]) * pInError.x +
+                                            std::abs(inv_m[2][1]) * pInError.y +
+                                            std::abs(inv_m[2][2]) * pInError.z) +
+                          gamma(3) * (std::abs(inv_m[2][0] * x) + std::abs(inv_m[2][1] * y) +
+                                      std::abs(inv_m[2][2] * z) + std::abs(inv_m[2][3]));
+        }
+
+        if (wp == 1) {
+            return Point3fi(Point3f(xp, yp, zp), pOutError);
+        }
+
+        return Point3fi(Point3f(xp, yp, zp), pOutError) / wp;
+    }
+
+    PBRT_CPU_GPU
+    inline Ray apply_inverse(const Ray &r, FloatType *tMax) const {
+        Point3fi o = apply_inverse(Point3fi(r.o));
+        Vector3f d = apply_inverse(r.d);
+
+        // Offset ray origin to edge of error bounds and compute _tMax_
+        auto lengthSquared = d.squared_length();
+
+        if (lengthSquared > 0) {
+            Vector3f oError(o.x.width() / 2, o.y.width() / 2, o.z.width() / 2);
+            auto dt = d.abs_dot(oError) / lengthSquared;
+
+            o += d * dt;
+            if (tMax) {
+                *tMax -= dt;
+            }
+        }
+
+        return Ray(o.to_point3f(), d);
+    }
+
     friend std::ostream &operator<<(std::ostream &stream, const Transform &transform) {
         stream << "Transform -- m: ";
         stream << transform.m;

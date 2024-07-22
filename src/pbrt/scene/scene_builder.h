@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <map>
+#include <set>
 #include <stack>
 
 #include "pbrt/base/light.h"
@@ -66,6 +67,7 @@ class SceneBuilder {
 
     std::map<std::string, const Material *> named_material;
     std::map<std::string, const Spectrum *> named_spectra;
+    std::map<std::string, const FloatTexture *> named_float_texture;
     std::map<std::string, const SpectrumTexture *> named_spectrum_texture;
 
     std::optional<Point2i> film_resolution = std::nullopt;
@@ -84,6 +86,26 @@ class SceneBuilder {
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
 
+    std::set<std::string> created_material;
+
+    struct InstantiatedPrimitive {
+        const Primitive *primitives = nullptr;
+        uint num;
+
+        InstantiatedPrimitive(const Primitive *_primitives, uint _num)
+            : primitives(_primitives), num(_num) {}
+    };
+
+    struct ActiveInstanceDefinition {
+        ActiveInstanceDefinition() = default;
+        std::string name;
+        std::vector<InstantiatedPrimitive> instantiated_primitives;
+    };
+
+    std::shared_ptr<ActiveInstanceDefinition> active_instance_definition = nullptr;
+
+    std::map<std::string, std::shared_ptr<ActiveInstanceDefinition>> instance_definition;
+
   public:
     explicit SceneBuilder(const CommandLineOption &command_line_option);
 
@@ -94,13 +116,9 @@ class SceneBuilder {
         CHECK_CUDA_ERROR(cudaGetLastError());
     }
 
-    bool should_ignore_material_and_texture() const {
-        return integrator_name == "ambientocclusion" || integrator_name == "surfacenormal";
-    }
-
     ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
-        return ParameterDictionary(tokens, named_spectra, named_spectrum_texture, root,
-                                   global_spectra, should_ignore_material_and_texture(),
+        return ParameterDictionary(tokens, named_spectra, named_float_texture,
+                                   named_spectrum_texture, root, global_spectra,
                                    gpu_dynamic_pointers);
     }
 
@@ -114,26 +132,15 @@ class SceneBuilder {
 
     void build_integrator();
 
+    void parse_keyword(const std::vector<Token> &tokens);
+
     void parse_area_light_source(const std::vector<Token> &tokens);
+
+    void parse_concat_transform(const std::vector<Token> &tokens);
 
     void parse_light_source(const std::vector<Token> &tokens);
 
-    void parse_lookat(const std::vector<Token> &tokens) {
-        if (tokens[0] != Token(TokenType::Keyword, "LookAt")) {
-            throw std::runtime_error("expect Keyword(LookAt)");
-        }
-
-        std::vector<FloatType> data;
-        for (int idx = 1; idx < tokens.size(); idx++) {
-            data.push_back(tokens[idx].to_float());
-        }
-
-        auto position = Point3f(data[0], data[1], data[2]);
-        auto look = Point3f(data[3], data[4], data[5]);
-        auto up = Vector3f(data[6], data[7], data[8]);
-
-        graphics_state.transform = graphics_state.transform * Transform::lookat(position, look, up);
-    }
+    void parse_lookat(const std::vector<Token> &tokens);
 
     void parse_make_named_material(const std::vector<Token> &tokens);
 

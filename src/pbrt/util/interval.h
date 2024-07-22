@@ -101,7 +101,7 @@ class Interval {
     }
 
     PBRT_CPU_GPU
-    Interval operator/(const Interval &i) const {
+    inline Interval operator/(const Interval &i) const {
         if (i.cover(0)) {
             // The interval we're dividing by straddles zero, so just
             // return an interval of everything.
@@ -118,7 +118,19 @@ class Interval {
     }
 
     PBRT_CPU_GPU
-    Interval sqrt() const {
+    inline Interval operator/(FloatType f) const {
+        if (f == 0) {
+            return Interval(-Infinity, Infinity);
+        }
+
+        if (f > 0) {
+            return Interval(div_round_down(low, f), div_round_up(high, f));
+        } else {
+            return Interval(div_round_down(high, f), div_round_up(low, f));
+        }
+    }
+
+    PBRT_CPU_GPU Interval sqrt() const {
         return {sqrt_round_down(low), sqrt_round_up(high)};
     }
 };

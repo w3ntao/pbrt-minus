@@ -1,39 +1,20 @@
-#include "pbrt/base/texture.h"
+#include "pbrt/base/spectrum_texture.h"
 
 #include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 
 #include "pbrt/textures/float_constant_texture.h"
+#include "pbrt/textures/float_image_texture.h"
+
 #include "pbrt/textures/spectrum_constant_texture.h"
 #include "pbrt/textures/spectrum_image_texture.h"
 #include "pbrt/textures/spectrum_scale_texture.h"
 
-const FloatTexture *FloatTexture::create(FloatType val, std::vector<void *> &gpu_dynamic_pointers) {
-    FloatConstantTexture *float_constant_texture;
-    FloatTexture *float_texture;
-
-    CHECK_CUDA_ERROR(cudaMallocManaged(&float_constant_texture, sizeof(FloatConstantTexture)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&float_texture, sizeof(FloatTexture)));
-
-    float_constant_texture->init(val);
-    float_texture->init(float_constant_texture);
-
-    gpu_dynamic_pointers.push_back(float_constant_texture);
-    gpu_dynamic_pointers.push_back(float_texture);
-
-    return float_texture;
-}
-
-void FloatTexture::init(const FloatConstantTexture *constant_texture) {
-    type = Type::constant;
-    ptr = constant_texture;
-}
-
-const SpectrumTexture *SpectrumTexture::create(const std::string &type_of_texture,
+const SpectrumTexture *SpectrumTexture::create(const std::string &texture_type,
                                                const ParameterDictionary &parameters,
                                                const RGBColorSpace *color_space,
                                                std::vector<void *> &gpu_dynamic_pointers) {
-    if (type_of_texture == "imagemap") {
+    if (texture_type == "imagemap") {
         auto image_texture =
             SpectrumImageTexture::create(parameters, color_space, gpu_dynamic_pointers);
 
@@ -45,7 +26,7 @@ const SpectrumTexture *SpectrumTexture::create(const std::string &type_of_textur
         return spectrum_texture;
     }
 
-    if (type_of_texture == "scale") {
+    if (texture_type == "scale") {
         SpectrumScaleTexture *scale_texture;
         SpectrumTexture *spectrum_texture;
 
@@ -60,7 +41,7 @@ const SpectrumTexture *SpectrumTexture::create(const std::string &type_of_textur
         return spectrum_texture;
     }
 
-    printf("\nTexture `%s` not implemented\n", type_of_texture.c_str());
+    printf("\ntexture type `%s` not implemented for SpectrumTexture\n", texture_type.c_str());
 
     REPORT_FATAL_ERROR();
     return nullptr;
@@ -88,6 +69,10 @@ SpectrumTexture::create_constant_float_val_texture(FloatType val,
 const SpectrumTexture *
 SpectrumTexture::create_constant_texture(const Spectrum *spectrum,
                                          std::vector<void *> &gpu_dynamic_pointers) {
+    if (spectrum == nullptr) {
+        REPORT_FATAL_ERROR();
+    }
+
     SpectrumConstantTexture *spectrum_constant_texture;
     SpectrumTexture *spectrum_texture;
 
@@ -117,18 +102,6 @@ void SpectrumTexture::init(const SpectrumImageTexture *image_texture) {
 void SpectrumTexture::init(const SpectrumScaleTexture *scale_texture) {
     type = Type::scale;
     ptr = scale_texture;
-}
-
-PBRT_CPU_GPU
-FloatType FloatTexture::evaluate(const TextureEvalContext &ctx) const {
-    switch (type) {
-    case (Type::constant): {
-        return ((FloatConstantTexture *)ptr)->evaluate(ctx);
-    }
-    }
-
-    REPORT_FATAL_ERROR();
-    return {};
 }
 
 PBRT_CPU_GPU

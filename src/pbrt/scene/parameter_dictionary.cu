@@ -2,6 +2,10 @@
 
 #include "pbrt/base/spectrum.h"
 #include "pbrt/scene/tokenizer.h"
+#include "pbrt/spectra/rgb_illuminant_spectrum.h"
+#include "pbrt/spectrum_util/global_spectra.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
+#include "pbrt/spectra/black_body_spectrum.h"
 
 std::vector<FloatType> read_spectrum_file(const std::string &filename) {
     std::string token;
@@ -24,10 +28,11 @@ std::vector<FloatType> read_spectrum_file(const std::string &filename) {
 
 ParameterDictionary::ParameterDictionary(
     const std::vector<Token> &tokens, const std::map<std::string, const Spectrum *> &_named_spectra,
-    const std::map<std::string, const SpectrumTexture *> &_named_spectrum_texture,
+    const std::map<std::string, const FloatTexture *> &named_float_texture,
+    const std::map<std::string, const SpectrumTexture *> &named_spectrum_texture,
     const std::string &_root, const GlobalSpectra *_global_spectra,
-    bool ignore_material_and_texture, std::vector<void *> &gpu_dynamic_pointers)
-    : root(_root), global_spectra(_global_spectra) {
+    std::vector<void *> &gpu_dynamic_pointers)
+    : root(_root), global_spectra(_global_spectra), named_spectra(_named_spectra) {
     // the 1st token is Keyword
     // the 2nd token is String
     // e.g. { Shape "trianglemesh" }, { Camera "perspective" }
@@ -43,10 +48,12 @@ ParameterDictionary::ParameterDictionary(
         auto variable_type = tokens[idx].values[0];
         auto variable_name = tokens[idx].values[1];
 
-        if (ignore_material_and_texture) {
-            if (variable_type == "spectrum" || variable_type == "texture") {
-                continue;
-            }
+        if (variable_type == "blackbody") {
+            auto value_in_str = tokens[idx + 1].values[0];
+            auto variable_value = std::stod(value_in_str);
+
+            blackbodies[variable_name] = variable_value;
+            continue;
         }
 
         if (variable_type == "bool") {
@@ -125,12 +132,17 @@ ParameterDictionary::ParameterDictionary(
                     std::vector(std::begin(spectrum_samples), std::end(spectrum_samples)), false,
                     nullptr, gpu_dynamic_pointers);
 
-                spectra[variable_name] = built_spectrum;
+                named_spectra[variable_name] = built_spectrum;
                 continue;
             }
 
+            if (_named_spectra.find(val_in_str) == _named_spectra.end()) {
+                printf("\nERROR: spectrum `%s` not found\n", val_in_str.c_str());
+                REPORT_FATAL_ERROR();
+            }
+
             // otherwise it's a named spectrum
-            spectra[variable_name] = _named_spectra.at(val_in_str);
+            named_spectra[variable_name] = _named_spectra.at(val_in_str);
             continue;
         }
 
@@ -142,18 +154,44 @@ ParameterDictionary::ParameterDictionary(
         if (variable_type == "texture") {
             auto target_texture_name = tokens[idx + 1].values[0];
 
-            if (_named_spectrum_texture.find(target_texture_name) ==
-                _named_spectrum_texture.end()) {
-                printf("texture not found in spectrum texture: %s\n\n",
-                       target_texture_name.c_str());
-                REPORT_FATAL_ERROR();
+            if (named_spectrum_texture.find(target_texture_name) != named_spectrum_texture.end()) {
+                spectrum_textures[variable_name] = named_spectrum_texture.at(target_texture_name);
+                continue;
             }
 
-            spectrum_textures[variable_name] = _named_spectrum_texture.at(target_texture_name);
-            continue;
+            if (named_float_texture.find(target_texture_name) != named_float_texture.end()) {
+                float_textures[variable_name] = named_float_texture.at(target_texture_name);
+                continue;
+            }
+
+            printf("texture not found in texture: %s\n\n", target_texture_name.c_str());
+            REPORT_FATAL_ERROR();
         }
 
         printf("\n%s(): unknown variable type: %s\n", __func__, variable_type.c_str());
         REPORT_FATAL_ERROR();
     }
+}
+
+const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
+                                                  SpectrumType spectrum_type,
+                                                  std::vector<void *> &gpu_dynamic_pointers) const {
+    if (named_spectra.find(key) != named_spectra.end()) {
+        return named_spectra.at(key);
+    }
+
+    if (has_rgb(key)) {
+        auto rgb_val = rgbs.at(key);
+        return Spectrum::create_from_rgb(rgb_val, spectrum_type, global_spectra->rgb_color_space,
+                                         gpu_dynamic_pointers);
+    }
+
+    if (blackbodies.find(key) != blackbodies.end()) {
+        auto value = blackbodies.at(key);
+        return Spectrum::create_black_body(value, gpu_dynamic_pointers);
+    }
+
+    printf("%s(): key `%s` not found in Spectrum, RGB, Blackbody\n", __func__, key.c_str());
+
+    return nullptr;
 }

@@ -1,42 +1,49 @@
 #include "pbrt/materials/conductor_material.h"
 
+#include "pbrt/base/float_texture.h"
 #include "pbrt/base/material.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-
 #include "pbrt/base/spectrum.h"
-#include "pbrt/base/texture.h"
 
 #include "pbrt/bxdfs/conductor_bxdf.h"
 
 #include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/spectrum_util/sampled_spectrum.h"
+
+#include "pbrt/spectrum_util/global_spectra.h"
 
 void ConductorMaterial::init(const ParameterDictionary &parameters,
                              std::vector<void *> &gpu_dynamic_pointers) {
     auto key_eta = "eta";
     if (parameters.has_spectrum_texture(key_eta)) {
         REPORT_FATAL_ERROR();
-    } else if (parameters.has_spectrum(key_eta)) {
-        auto spectrum_eta = parameters.get_spectrum(key_eta);
-        eta = SpectrumTexture::create_constant_texture(spectrum_eta, gpu_dynamic_pointers);
-    } else {
-        REPORT_FATAL_ERROR();
     }
+
+    auto spectrum_eta =
+        parameters.get_spectrum(key_eta, SpectrumType::Albedo, gpu_dynamic_pointers);
+
+    if (spectrum_eta == nullptr) {
+        spectrum_eta =
+            parameters.get_spectrum("metal-Cu-eta", SpectrumType::Albedo, gpu_dynamic_pointers);
+    }
+    eta = SpectrumTexture::create_constant_texture(spectrum_eta, gpu_dynamic_pointers);
 
     auto key_k = "k";
     if (parameters.has_spectrum_texture(key_k)) {
         REPORT_FATAL_ERROR();
-    } else if (parameters.has_spectrum(key_k)) {
-        auto spectrum_k = parameters.get_spectrum(key_k);
-        k = SpectrumTexture::create_constant_texture(spectrum_k, gpu_dynamic_pointers);
-    } else {
+    }
+
+    auto spectrum_k = parameters.get_spectrum(key_k, SpectrumType::Albedo, gpu_dynamic_pointers);
+    if (spectrum_k == nullptr) {
         REPORT_FATAL_ERROR();
     }
+    k = SpectrumTexture::create_constant_texture(spectrum_k, gpu_dynamic_pointers);
 
     auto key_reflectance = "reflectance";
     if (parameters.has_spectrum_texture(key_reflectance)) {
         REPORT_FATAL_ERROR();
     } else if (parameters.has_spectrum(key_reflectance)) {
-        auto spectrum_reflectance = parameters.get_spectrum(key_reflectance);
+        auto spectrum_reflectance =
+            parameters.get_spectrum(key_reflectance, SpectrumType::Albedo, gpu_dynamic_pointers);
         reflectance =
             SpectrumTexture::create_constant_texture(spectrum_reflectance, gpu_dynamic_pointers);
     } else {
@@ -48,10 +55,12 @@ void ConductorMaterial::init(const ParameterDictionary &parameters,
         u_roughness = parameters.get_float_texture(uroughness_key);
     } else if (parameters.has_floats(uroughness_key)) {
         auto uroughness_val = parameters.get_float(uroughness_key, {});
-        u_roughness = FloatTexture::create(uroughness_val, gpu_dynamic_pointers);
+        u_roughness =
+            FloatTexture::create_constant_float_texture(uroughness_val, gpu_dynamic_pointers);
     } else {
         auto roughness_val = parameters.get_float("roughness", 0.0);
-        u_roughness = FloatTexture::create(roughness_val, gpu_dynamic_pointers);
+        u_roughness =
+            FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
 
     auto vroughness_key = "vroughness";
@@ -59,10 +68,12 @@ void ConductorMaterial::init(const ParameterDictionary &parameters,
         v_roughness = parameters.get_float_texture(vroughness_key);
     } else if (parameters.has_floats(vroughness_key)) {
         auto vroughness_val = parameters.get_float(vroughness_key, {});
-        v_roughness = FloatTexture::create(vroughness_val, gpu_dynamic_pointers);
+        v_roughness =
+            FloatTexture::create_constant_float_texture(vroughness_val, gpu_dynamic_pointers);
     } else {
         auto roughness_val = parameters.get_float("roughness", 0.0);
-        v_roughness = FloatTexture::create(roughness_val, gpu_dynamic_pointers);
+        v_roughness =
+            FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
 
     remap_roughness = parameters.get_bool("remaproughness", true);

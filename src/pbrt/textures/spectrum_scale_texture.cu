@@ -1,6 +1,6 @@
 #include "pbrt/textures/spectrum_scale_texture.h"
 
-#include "pbrt/base/texture.h"
+#include "pbrt/base/spectrum_texture.h"
 #include "pbrt/scene/parameter_dictionary.h"
 
 void SpectrumScaleTexture::init(const ParameterDictionary &parameters) {

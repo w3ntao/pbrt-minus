@@ -60,4 +60,8 @@ class Point3fi : public Point3<Interval> {
     PBRT_CPU_GPU Point3fi operator-(Vector3<U> v) const {
         return {x - v.x, y - v.y, z - v.z};
     }
+
+    PBRT_CPU_GPU Point3fi operator/(FloatType divisor) const {
+        return {x / divisor, y / divisor, z / divisor};
+    }
 };

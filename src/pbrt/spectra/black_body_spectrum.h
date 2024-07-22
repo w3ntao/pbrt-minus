@@ -1,8 +1,8 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
-#include "sampled_spectrum.h"
-#include "sampled_wavelengths.h"
+#include "pbrt/spectrum_util/sampled_spectrum.h"
+#include "pbrt/spectrum_util/sampled_wavelengths.h"
 
 // Spectrum Function Declarations
 PBRT_CPU_GPU inline FloatType Blackbody(FloatType lambda, FloatType T) {
@@ -24,14 +24,19 @@ class BlackbodySpectrum {
   public:
     // BlackbodySpectrum Public Methods
     PBRT_CPU_GPU
-    BlackbodySpectrum(FloatType T) : T(T) {
-        // Compute blackbody normalization constant for given temperature
-        FloatType lambdaMax = 2.8977721e-3f / T;
-        normalization_factor = 1 / Blackbody(lambdaMax * 1e9f, T);
+    BlackbodySpectrum(FloatType _T) {
+        init(_T);
     }
 
     PBRT_CPU_GPU
-    FloatType operator()(FloatType lambda) const {
+    void init(FloatType _T) {
+        // Compute blackbody normalization constant for given temperature
+        T = _T;
+        FloatType lambdaMax = 2.8977721e-3f / _T;
+        normalization_factor = 1 / Blackbody(lambdaMax * 1e9f, _T);
+    }
+
+    PBRT_CPU_GPU FloatType operator()(FloatType lambda) const {
         return Blackbody(lambda, T) * normalization_factor;
     }
 

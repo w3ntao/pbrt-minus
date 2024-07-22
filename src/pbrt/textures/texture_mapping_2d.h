@@ -2,7 +2,7 @@
 
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/point2.h"
-#include "pbrt/base/texture.h"
+#include "pbrt/base/spectrum_texture.h"
 #include "pbrt/scene/parameter_dictionary.h"
 
 // TexCoord2D Definition

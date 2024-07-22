@@ -44,6 +44,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/camera.cu
         src/pbrt/base/film.cu
         src/pbrt/base/filter.cu
+        src/pbrt/base/float_texture.cu
         src/pbrt/base/integrator.cu
         src/pbrt/base/interaction.cu
         src/pbrt/base/light.cu
@@ -52,7 +53,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/sampler.cu
         src/pbrt/base/shape.cu
         src/pbrt/base/spectrum.cu
-        src/pbrt/base/texture.cu
+        src/pbrt/base/spectrum_texture.cu
 
         src/pbrt/accelerator/hlbvh.cu
 
@@ -82,6 +83,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/materials/diffuse_material.cu
 
         src/pbrt/primitives/geometric_primitive.cu
+        src/pbrt/primitives/transformed_primitive.cu
 
         src/pbrt/scene/parameter_dictionary.cu
         src/pbrt/scene/scene_builder.cu
@@ -100,6 +102,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/spectrum_util/global_spectra.cu
         src/pbrt/spectrum_util/rgb_to_spectrum_data.cu
 
+        src/pbrt/textures/float_scaled_texture.cu
         src/pbrt/textures/gpu_image.cu
         src/pbrt/textures/image_texture_base.cu
         src/pbrt/textures/spectrum_image_texture.cu

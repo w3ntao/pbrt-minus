@@ -1,8 +1,8 @@
 #include "pbrt/materials/dielectric_material.h"
 
+#include "pbrt/base/float_texture.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/spectrum.h"
-#include "pbrt/base/texture.h"
 
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 #include "pbrt/spectra/constant_spectrum.h"
@@ -25,10 +25,12 @@ void DielectricMaterial::init(const ParameterDictionary &parameters,
         u_roughness = parameters.get_float_texture(uroughness_key);
     } else if (parameters.has_floats(uroughness_key)) {
         auto uroughness_val = parameters.get_float(uroughness_key, {});
-        u_roughness = FloatTexture::create(uroughness_val, gpu_dynamic_pointers);
+        u_roughness =
+            FloatTexture::create_constant_float_texture(uroughness_val, gpu_dynamic_pointers);
     } else {
         auto roughness_val = parameters.get_float("roughness", 0.0);
-        u_roughness = FloatTexture::create(roughness_val, gpu_dynamic_pointers);
+        u_roughness =
+            FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
 
     auto vroughness_key = "vroughness";
@@ -36,10 +38,12 @@ void DielectricMaterial::init(const ParameterDictionary &parameters,
         v_roughness = parameters.get_float_texture(vroughness_key);
     } else if (parameters.has_floats(vroughness_key)) {
         auto vroughness_val = parameters.get_float(vroughness_key, {});
-        v_roughness = FloatTexture::create(vroughness_val, gpu_dynamic_pointers);
+        v_roughness =
+            FloatTexture::create_constant_float_texture(vroughness_val, gpu_dynamic_pointers);
     } else {
         auto roughness_val = parameters.get_float("roughness", 0.0);
-        v_roughness = FloatTexture::create(roughness_val, gpu_dynamic_pointers);
+        v_roughness =
+            FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
     remap_roughness = parameters.get_bool("remaproughness", true);
 }
