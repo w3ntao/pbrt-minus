@@ -37,8 +37,6 @@ static __global__ void init_samplers(Sampler *samplers, T *_samplers, uint lengt
 
 Sampler *Sampler::create(const std::string &type_sampler, const uint samples_per_pixel,
                          const uint total_pixel_num, std::vector<void *> &gpu_dynamic_pointers) {
-    printf("Sampler: %s\n", type_sampler.c_str());
-
     uint threads = 1024;
     uint blocks = divide_and_ceil(total_pixel_num, threads);
 

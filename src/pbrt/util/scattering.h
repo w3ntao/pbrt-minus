@@ -180,7 +180,7 @@ class TrowbridgeReitzDistribution {
     }
 
     PBRT_CPU_GPU
-    Vector3f Sample_wm(Vector3f w, Point2f u) const {
+    Vector3f sample_wm(Vector3f w, Point2f u) const {
         // Transform _w_ to hemispherical configuration
         Vector3f wh = Vector3f(alpha_x * w.x, alpha_y * w.y, w.z).normalize();
         if (wh.z < 0) {

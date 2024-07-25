@@ -13,6 +13,9 @@ class TransformedPrimitive {
     }
 
     PBRT_CPU_GPU
+    const Material *get_material() const;
+
+    PBRT_CPU_GPU
     Bounds3f bounds() const;
 
     PBRT_GPU

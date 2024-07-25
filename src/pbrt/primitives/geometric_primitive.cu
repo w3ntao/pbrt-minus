@@ -12,6 +12,11 @@ void GeometricPrimitive::init(const Shape *_shape_ptr, const Material *_material
 }
 
 PBRT_CPU_GPU
+const Material *GeometricPrimitive::get_material() const {
+    return material;
+}
+
+PBRT_CPU_GPU
 Bounds3f GeometricPrimitive::bounds() const {
     return shape_ptr->bounds();
 }

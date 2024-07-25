@@ -51,7 +51,7 @@ void add_one_to_map(const std::string &key, std::map<std::string, uint> &counter
     counter[key] += 1;
 }
 
-std::map<std::string, uint> count_light(const std::vector<Light *> &gpu_lights) {
+std::map<std::string, uint> count_light_type(const std::vector<Light *> &gpu_lights) {
     std::map<std::string, uint> counter;
     for (const auto light : gpu_lights) {
         switch (light->type) {
@@ -69,6 +69,41 @@ std::map<std::string, uint> count_light(const std::vector<Light *> &gpu_lights) 
             add_one_to_map("ImageInfiniteLight", counter);
             break;
         }
+        default: {
+            REPORT_FATAL_ERROR();
+        }
+        }
+    }
+
+    return counter;
+}
+
+std::map<std::string, uint> count_material_type(const std::vector<const Primitive *> &primitives) {
+    std::map<std::string, uint> counter;
+    for (const auto primitive : primitives) {
+        auto material_type = primitive->get_material()->get_material_type();
+
+        switch (material_type) {
+        case (Material::Type::coated_diffuse): {
+            add_one_to_map("CoatedDiffuse", counter);
+            break;
+        }
+
+        case (Material::Type::conductor): {
+            add_one_to_map("Conductor", counter);
+            break;
+        }
+
+        case (Material::Type::diffuse): {
+            add_one_to_map("Diffuse", counter);
+            break;
+        }
+
+        case (Material::Type::dielectric): {
+            add_one_to_map("Dielectric", counter);
+            break;
+        }
+
         default: {
             REPORT_FATAL_ERROR();
         }
@@ -432,8 +467,6 @@ void SceneBuilder::parse_make_named_material(const std::vector<Token> &tokens) {
 
     auto type_of_material = parameters.get_string("type", std::nullopt);
 
-    created_material.insert(type_of_material);
-
     named_material[material_name] =
         Material::create(type_of_material, parameters, gpu_dynamic_pointers);
 }
@@ -444,8 +477,6 @@ void SceneBuilder::parse_material(const std::vector<Token> &tokens) {
     }
 
     auto type_of_material = tokens[1].values[0];
-
-    created_material.insert(type_of_material);
 
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
@@ -534,7 +565,7 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     }
 
     if (active_instance_definition) {
-        printf("\nERROR: Area lights not supported with object instancing\n");
+        printf("\nERROR: area lights not supported with object instancing\n");
         REPORT_FATAL_ERROR();
     }
 
@@ -547,8 +578,11 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
 
     // otherwise: build AreaDiffuseLight
     for (uint idx = 0; idx < num_shapes; ++idx) {
-        gpu_lights.push_back(&diffuse_area_lights[idx]);
-        gpu_primitives.push_back(&geometric_primitives[idx]);
+        auto primitive_ptr = &geometric_primitives[idx];
+        auto area_light_ptr = &diffuse_area_lights[idx];
+
+        gpu_lights.push_back(area_light_ptr);
+        gpu_primitives.push_back(primitive_ptr);
     }
 }
 
@@ -740,17 +774,28 @@ void SceneBuilder::preprocess() {
     }
     build_integrator();
 
-    auto light_counter = count_light(gpu_lights);
+    printf("\n");
+    printf("Integrator: %s\n", renderer->integrator->get_name().c_str());
 
-    printf("total lights: %d\n", gpu_lights.size());
-    for (auto const &kv : light_counter) {
-        printf("    %s: %d\n", kv.first.c_str(), kv.second);
+    printf("Sampler: %s\n", renderer->samplers->get_name().c_str());
+    printf("\n");
+
+    auto light_type_counter = count_light_type(gpu_lights);
+
+    auto light_size = gpu_lights.size();
+    printf("total lights: %zu\n", light_size);
+    for (auto const &kv : light_type_counter) {
+        printf("    %s: %d (%.2f%)\n", kv.first.c_str(), kv.second,
+               double(kv.second) / light_size * 100);
     }
     printf("\n");
 
-    printf("material created: %d\n", created_material.size());
-    for (auto material : created_material) {
-        printf("    %s\n", material.c_str());
+    auto primitives_size = gpu_primitives.size();
+    auto material_type_counter = count_material_type(gpu_primitives);
+    printf("materials' type: %zu\n", material_type_counter.size());
+    for (auto const &kv : material_type_counter) {
+        printf("    %s: %d (%.2f%)\n", kv.first.c_str(), kv.second,
+               double(kv.second) / primitives_size * 100);
     }
     printf("\n");
 }

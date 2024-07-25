@@ -12,6 +12,11 @@ class SimplePrimitive {
     }
 
     PBRT_CPU_GPU
+    const Material *get_material() const {
+        return material;
+    }
+
+    PBRT_CPU_GPU
     Bounds3f bounds() const {
         return shape->bounds();
     }

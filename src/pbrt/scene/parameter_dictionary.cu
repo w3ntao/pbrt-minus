@@ -4,7 +4,6 @@
 #include "pbrt/scene/tokenizer.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectra/black_body_spectrum.h"
 
 std::vector<FloatType> read_spectrum_file(const std::string &filename) {
@@ -191,7 +190,9 @@ const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
         return Spectrum::create_black_body(value, gpu_dynamic_pointers);
     }
 
-    printf("%s(): key `%s` not found in Spectrum, RGB, Blackbody\n", __func__, key.c_str());
-
+    if (DEBUGGING) {
+        printf("%s(): key `%s` not found in Spectrum, RGB, Blackbody\n", __func__, key.c_str());
+    }
+    
     return nullptr;
 }

@@ -1,7 +1,7 @@
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 #include "pbrt/euclidean_space/normal3f.h"
 
-PBRT_CPU_GPU
+PBRT_GPU
 cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
                                                          TransportMode mode,
                                                          BxDFReflTransFlags sample_flags) const {
@@ -39,7 +39,6 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
             Vector3f wi;
             FloatType etap;
             bool valid = refract(wo, Normal3f(0, 0, 1), eta, &etap, &wi);
-
             if (!valid) {
                 return {};
             }
@@ -55,7 +54,7 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
 
     } else {
         // Sample rough dielectric BSDF
-        Vector3f wm = mfDistrib.Sample_wm(wo, u);
+        Vector3f wm = mfDistrib.sample_wm(wo, u);
         FloatType R = FrDielectric(wo.dot(wm), eta);
         FloatType T = 1 - R;
         // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission

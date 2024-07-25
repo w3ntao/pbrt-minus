@@ -11,12 +11,16 @@
 
 void DielectricMaterial::init(const ParameterDictionary &parameters,
                               std::vector<void *> &gpu_dynamic_pointers) {
-    if (parameters.has_floats("eta")) {
+    auto key_eta = "eta";
+
+    eta = nullptr;
+
+    if (parameters.has_floats(key_eta)) {
         // this part is not implemented
         REPORT_FATAL_ERROR();
-
+    } else if (parameters.has_spectrum(key_eta)) {
+        REPORT_FATAL_ERROR();
     } else {
-        // TODO: if eta was initialized as a Spectrum?
         eta = Spectrum::create_constant_spectrum(1.5, gpu_dynamic_pointers);
     }
 
@@ -45,7 +49,12 @@ void DielectricMaterial::init(const ParameterDictionary &parameters,
         v_roughness =
             FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
+
     remap_roughness = parameters.get_bool("remaproughness", true);
+
+    if (eta == nullptr) {
+        REPORT_FATAL_ERROR();
+    }
 }
 
 PBRT_GPU
@@ -73,5 +82,6 @@ DielectricBxDF DielectricMaterial::get_dielectric_bsdf(const MaterialEvalContext
         vrough = TrowbridgeReitzDistribution::RoughnessToAlpha(vrough);
     }
     TrowbridgeReitzDistribution distrib(urough, vrough);
+
     return DielectricBxDF(sampled_eta, distrib);
 }

@@ -20,7 +20,7 @@ class DielectricBxDF {
         return _flags | (mfDistrib.effectively_smooth() ? BxDFFlags::Specular : BxDFFlags::Glossy);
     }
 
-    PBRT_CPU_GPU
+    PBRT_GPU
     cuda::std::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;

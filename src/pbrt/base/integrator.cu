@@ -14,18 +14,18 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
                                      const std::optional<std::string> &_integrator_name,
                                      const IntegratorBase *integrator_base,
                                      std::vector<void *> &gpu_dynamic_pointers) {
-    auto integrator_name = _integrator_name.value();
-    if (_integrator_name == "volpath") {
+    std::string integrator_name;
+    if (!_integrator_name.has_value() || _integrator_name == "volpath") {
         printf("Integrator `%s` not implemented, changed to AmbientOcclusion\n",
                _integrator_name->c_str());
         integrator_name = "ambientocclusion";
+    } else {
+        integrator_name = _integrator_name.value();
     }
 
     Integrator *integrator;
     CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(Integrator)));
     gpu_dynamic_pointers.push_back(integrator);
-
-    printf("Integrator: %s\n", integrator_name.c_str());
 
     if (integrator_name == "ambientocclusion") {
         auto ambient_occlusion_integrator =

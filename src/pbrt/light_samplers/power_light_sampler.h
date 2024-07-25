@@ -31,14 +31,14 @@ class PowerLightSampler {
 
         if (total_power == 0.0) {
             for (uint idx = 0; idx < light_num; ++idx) {
-                lights_power[idx] = 1.0;
+                lights_power[idx] = 1.0 / total_power;
             }
         } else {
             for (uint idx = 0; idx < light_num; ++idx) {
                 lights_power[idx] /= total_power;
             }
         }
-        
+
         power_light_sampler->lights_power = lights_power;
 
         return power_light_sampler;

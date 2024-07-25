@@ -86,8 +86,6 @@ class SceneBuilder {
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
 
-    std::set<std::string> created_material;
-
     struct InstantiatedPrimitive {
         const Primitive *primitives = nullptr;
         uint num;

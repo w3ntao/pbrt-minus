@@ -16,6 +16,9 @@ class GeometricPrimitive {
     void init(const Shape *_shape_ptr, const Material *_material, const Light *_area_light);
 
     PBRT_CPU_GPU
+    const Material *get_material() const;
+
+    PBRT_CPU_GPU
     Bounds3f bounds() const;
 
     PBRT_GPU

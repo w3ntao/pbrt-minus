@@ -24,7 +24,7 @@ cuda::std::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType u
         return {};
     }
 
-    Vector3f wm = mf_distrib.Sample_wm(wo, u);
+    Vector3f wm = mf_distrib.sample_wm(wo, u);
     Vector3f wi = Reflect(wo, wm);
     if (!wo.same_hemisphere(wi)) {
         return {};

@@ -2,6 +2,11 @@
 #include "pbrt/base/primitive.h"
 
 PBRT_CPU_GPU
+const Material *TransformedPrimitive::get_material() const {
+    return primitive->get_material();
+}
+
+PBRT_CPU_GPU
 Bounds3f TransformedPrimitive::bounds() const {
     return render_from_pritimive(primitive->bounds());
 }

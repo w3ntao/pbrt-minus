@@ -17,6 +17,21 @@ class Sampler {
     static Sampler *create(const std::string &type_sampler, uint samples_per_pixel,
                            uint total_pixel_num, std::vector<void *> &gpu_dynamic_pointers);
 
+    std::string get_name() const {
+        switch (type) {
+        case (Type::independent): {
+            return "Independent";
+        }
+
+        case (Type::stratified): {
+            return "Stratified";
+        }
+        }
+
+        REPORT_FATAL_ERROR();
+        return "";
+    }
+
     PBRT_CPU_GPU
     void init(IndependentSampler *independent_sampler);
 

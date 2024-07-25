@@ -147,6 +147,26 @@ void Primitive::init(const TransformedPrimitive *transformed_primitive) {
 }
 
 PBRT_CPU_GPU
+const Material *Primitive::get_material() const {
+    switch (type) {
+    case (Type::geometric): {
+        return ((GeometricPrimitive *)ptr)->get_material();
+    }
+
+    case (Type::simple): {
+        return ((SimplePrimitive *)ptr)->get_material();
+    }
+
+    case (Type::transformed): {
+        return ((TransformedPrimitive *)ptr)->get_material();
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return {};
+}
+
+PBRT_CPU_GPU
 Bounds3f Primitive::bounds() const {
     switch (type) {
     case (Type::geometric): {

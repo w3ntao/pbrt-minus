@@ -33,6 +33,29 @@ class Integrator {
                                     const IntegratorBase *integrator_base,
                                     std::vector<void *> &gpu_dynamic_pointers);
 
+    std::string get_name() const {
+        switch (type) {
+        case (Type::ambient_occlusion): {
+            return "AmbientOcclusion";
+        }
+
+        case (Type::path): {
+            return "Path";
+        }
+
+        case (Type::simple_path): {
+            return "SimplePath";
+        }
+
+        case (Type::surface_normal): {
+            return "SurfaceNormal";
+        }
+        }
+
+        REPORT_FATAL_ERROR();
+        return "";
+    }
+
     void init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator);
 
     void init(const PathIntegrator *path_integrator);
