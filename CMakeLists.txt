@@ -77,6 +77,8 @@ add_executable(${PROJ_NAME}
         src/pbrt/lights/distant_light.cu
         src/pbrt/lights/image_infinite_light.cu
 
+        src/pbrt/light_samplers/power_light_sampler.cu
+
         src/pbrt/materials/conductor_material.cu
         src/pbrt/materials/coated_diffuse_material.cu
         src/pbrt/materials/dielectric_material.cu
@@ -108,8 +110,9 @@ add_executable(${PROJ_NAME}
         src/pbrt/textures/spectrum_image_texture.cu
         src/pbrt/textures/spectrum_scale_texture.cu
 
-        src/pbrt/util/sampling.cu
+        src/pbrt/util/hash_map.cu
         src/pbrt/util/math.cu
+        src/pbrt/util/sampling.cu
 
         src/ext/lodepng/lodepng.cpp
         src/ext/rply/rply.cpp
