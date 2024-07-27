@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-
 #include <cuda/std/optional>
 #include "pbrt/util/macro.h"
 
@@ -31,9 +30,10 @@ class PowerLightSampler {
 
   private:
     const Light **lights;
-    const FloatType *lights_power;
+    const FloatType *lights_pmf; // lights_power = lights_pdf
+    const FloatType *lights_cdf;
 
-    HashMap *light_ptr_to_idx;
+    const HashMap *light_ptr_to_idx;
 
     uint light_num;
 };

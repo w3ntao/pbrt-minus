@@ -10,11 +10,16 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
     gpu_dynamic_pointers.push_back(power_light_sampler);
 
     power_light_sampler->lights = nullptr;
-    power_light_sampler->lights_power = nullptr;
+    power_light_sampler->lights_pmf = nullptr;
+    power_light_sampler->lights_cdf = nullptr;
     power_light_sampler->light_ptr_to_idx = nullptr;
-    power_light_sampler->light_num = 0;
+    power_light_sampler->light_num = light_num;
 
-    std::vector<std::pair<uint, FloatType>> light_idx_power(light_num);
+    if (light_num == 0) {
+        return power_light_sampler;
+    }
+
+    std::vector<std::pair<uint, FloatType>> light_idx_pmf(light_num);
 
     SampledWavelengths lambda = SampledWavelengths::sample_visible(0.5f);
     FloatType total_power = 0;
@@ -24,44 +29,52 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
         auto power = phi.average();
 
         total_power += power;
-        light_idx_power[idx] = {idx, power};
+        light_idx_pmf[idx] = {idx, power};
     }
 
-    std::sort(light_idx_power.begin(), light_idx_power.end(),
+    std::sort(light_idx_pmf.begin(), light_idx_pmf.end(),
               [](const auto &left, const auto &right) { return left.second > right.second; });
 
     if (total_power == 0.0) {
         for (uint idx = 0; idx < light_num; ++idx) {
-            auto item = light_idx_power[idx];
+            auto item = light_idx_pmf[idx];
             item.second = 1.0;
-            light_idx_power[idx] = item;
+            light_idx_pmf[idx] = item;
         }
     } else {
         for (uint idx = 0; idx < light_num; ++idx) {
-            auto item = light_idx_power[idx];
+            auto item = light_idx_pmf[idx];
             item.second = item.second / total_power;
-            light_idx_power[idx] = item;
+            light_idx_pmf[idx] = item;
         }
     }
 
     const Light **sorted_lights;
-    FloatType *lights_power;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&lights_power, sizeof(FloatType) * light_num));
+    FloatType *lights_pmf;
+    FloatType *lights_cdf;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&lights_pmf, sizeof(FloatType) * light_num));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&lights_cdf, sizeof(FloatType) * light_num));
     CHECK_CUDA_ERROR(cudaMallocManaged(&sorted_lights, sizeof(Light *) * light_num));
-    gpu_dynamic_pointers.push_back(lights_power);
+    gpu_dynamic_pointers.push_back(lights_pmf);
     gpu_dynamic_pointers.push_back(sorted_lights);
+    gpu_dynamic_pointers.push_back(lights_cdf);
 
     for (auto idx = 0; idx < light_num; ++idx) {
-        sorted_lights[idx] = lights[light_idx_power[idx].first];
-        lights_power[idx] = light_idx_power[idx].second;
+        sorted_lights[idx] = lights[light_idx_pmf[idx].first];
+        lights_pmf[idx] = light_idx_pmf[idx].second;
     }
 
     if (DEBUGGING) {
         for (uint idx = 0; idx < light_num - 1; ++idx) {
-            if (lights_power[idx] < lights_power[idx + 1]) {
+            if (lights_pmf[idx] < lights_pmf[idx + 1]) {
                 REPORT_FATAL_ERROR();
             }
         }
+    }
+
+    lights_cdf[0] = lights_pmf[0];
+    for (size_t idx = 1; idx < light_num; ++idx) {
+        lights_cdf[idx] = lights_cdf[idx - 1] + lights_pmf[idx];
     }
 
     auto light_to_idx = HashMap::create(light_num, gpu_dynamic_pointers);
@@ -72,29 +85,53 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
 
     power_light_sampler->light_num = light_num;
     power_light_sampler->lights = sorted_lights;
-    power_light_sampler->lights_power = lights_power;
     power_light_sampler->light_ptr_to_idx = light_to_idx;
+    power_light_sampler->lights_pmf = lights_pmf;
+    power_light_sampler->lights_cdf = lights_cdf;
 
     return power_light_sampler;
 }
 
 PBRT_CPU_GPU
-cuda::std::optional<SampledLight> PowerLightSampler::sample(FloatType u) const {
+cuda::std::optional<SampledLight> PowerLightSampler::sample(const FloatType u) const {
     if (light_num == 0) {
         return {};
     }
 
-    auto probability = u;
-    for (uint idx = 0; idx < light_num; ++idx) {
-        // TODO: rewrite this part with binary search
-        // TODO: implement AliasTable in PBRT-v4
-        if (probability <= lights_power[idx]) {
-            return SampledLight{.light = lights[idx], .p = lights_power[idx]};
+    // TODO: testing this binary search
+
+    size_t light_idx;
+    if (u < lights_cdf[0]) {
+        light_idx = 0;
+    } else {
+        size_t start = 1;
+        size_t end = light_num;
+
+        while (true) {
+            if (end - start <= 10) {
+                light_idx = start;
+                for (auto idx = start; idx < end; ++idx) {
+                    if (u >= lights_cdf[idx - 1] && u < lights_cdf[idx]) {
+                        light_idx = idx;
+                        break;
+                    }
+                }
+                break;
+            } else {
+                auto mid = (start + end) / 2;
+                if (u >= lights_cdf[mid]) {
+                    // notice: change pivot to mid+1, rather than mid
+                    start = mid + 1;
+                } else {
+                    end = mid + 1;
+                }
+            }
         }
-        probability -= lights_power[idx];
     }
 
-    return SampledLight{.light = lights[light_num - 1], .p = lights_power[light_num - 1]};
+    return SampledLight{.light = lights[light_idx], .p = lights_pmf[light_idx]};
+
+    // TODO: testing this binary search
 }
 
 PBRT_CPU_GPU
@@ -105,6 +142,10 @@ cuda::std::optional<SampledLight> PowerLightSampler::sample(const LightSampleCon
 
 PBRT_CPU_GPU
 FloatType PowerLightSampler::pmf(const Light *light) const {
+    if (light_num == 0) {
+        return 0;
+    }
+
     auto light_idx = light_ptr_to_idx->lookup((uintptr_t)light);
-    return lights_power[light_idx];
+    return lights_pmf[light_idx];
 }
