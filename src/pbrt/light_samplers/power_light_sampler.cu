@@ -98,7 +98,9 @@ cuda::std::optional<SampledLight> PowerLightSampler::sample(const FloatType u) c
         return {};
     }
 
-    // TODO: testing this binary search
+    if (light_num == 1) {
+        return SampledLight{.light = lights[0], .p = lights_pmf[0]};
+    }
 
     size_t light_idx;
     if (u < lights_cdf[0]) {
@@ -129,9 +131,13 @@ cuda::std::optional<SampledLight> PowerLightSampler::sample(const FloatType u) c
         }
     }
 
-    return SampledLight{.light = lights[light_idx], .p = lights_pmf[light_idx]};
+    if (DEBUGGING) {
+        if (light_idx < 0 || light_idx >= light_num) {
+            REPORT_FATAL_ERROR();
+        }
+    }
 
-    // TODO: testing this binary search
+    return SampledLight{.light = lights[light_idx], .p = lights_pmf[light_idx]};
 }
 
 PBRT_CPU_GPU

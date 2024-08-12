@@ -24,6 +24,9 @@ class DistantLight : public LightBase {
     cuda::std::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 
+    PBRT_CPU_GPU
+    SampledSpectrum phi(const SampledWavelengths &lambda) const;
+
   private:
     const Spectrum *l_emit;
     FloatType scale;

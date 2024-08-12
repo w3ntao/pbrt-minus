@@ -61,3 +61,8 @@ cuda::std::optional<LightLiSample> DistantLight::sample_li(const LightSampleCont
 
     return LightLiSample(scale * l_emit->sample(lambda), wi, 1, Interaction(pOutside));
 }
+
+PBRT_CPU_GPU
+SampledSpectrum DistantLight::phi(const SampledWavelengths &lambda) const {
+    return scale * l_emit->sample(lambda) * sqr(scene_radius);
+}

@@ -182,6 +182,14 @@ SampledSpectrum Light::phi(const SampledWavelengths &lambda) const {
     case (Type::diffuse_area_light): {
         return ((DiffuseAreaLight *)ptr)->phi(lambda);
     }
+
+    case (Type::distant_light): {
+        return ((DistantLight *)ptr)->phi(lambda);
+    }
+
+    case (Type::image_infinite_light): {
+        return ((ImageInfiniteLight *)ptr)->phi(lambda);
+    }
     }
 
     REPORT_FATAL_ERROR();

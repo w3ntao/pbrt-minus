@@ -16,9 +16,8 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
                                      std::vector<void *> &gpu_dynamic_pointers) {
     std::string integrator_name;
     if (!_integrator_name.has_value() || _integrator_name == "volpath") {
-        printf("Integrator `%s` not implemented, changed to AmbientOcclusion\n",
-               _integrator_name->c_str());
-        integrator_name = "ambientocclusion";
+        printf("Integrator `%s` not implemented, changed to Path\n", _integrator_name->c_str());
+        integrator_name = "path";
     } else {
         integrator_name = _integrator_name.value();
     }

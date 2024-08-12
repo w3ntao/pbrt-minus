@@ -19,7 +19,6 @@ class PathIntegrator {
 
   private:
     const IntegratorBase *base;
-    // TODO: change UniformLightSampler to PowerLightSampler
     uint max_depth;
 
     bool regularize;

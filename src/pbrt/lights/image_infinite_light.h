@@ -29,6 +29,9 @@ class ImageInfiniteLight : public LightBase {
     cuda::std::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 
+    PBRT_CPU_GPU
+    SampledSpectrum phi(const SampledWavelengths &lambda) const;
+
     PBRT_GPU
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf) const;

@@ -69,6 +69,27 @@ cuda::std::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSamp
     return LightLiSample(ImageLe(u, lambda), wi, pdf, interaction);
 }
 
+PBRT_CPU_GPU
+SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &lambda) const {
+    SampledSpectrum sumL(0.0);
+
+    auto width = image->resolution.x;
+    auto height = image->resolution.y;
+
+    for (int v = 0; v < height; ++v) {
+        for (int u = 0; u < width; ++u) {
+            auto rgb = image->fetch_pixel(Point2i(u, v), WrapMode::OctahedralSphere);
+            sumL += RGBIlluminantSpectrum(rgb.clamp(0.0, Infinity), color_space).sample(lambda);
+        }
+    }
+
+    const auto pi = compute_pi();
+
+    // Integrating over the sphere, so 4pi for that.  Then one more for Pi
+    // r^2 for the area of the disk receiving illumination...
+    return 4 * pi * pi * sqr(scene_radius) * scale * sumL / (width * height);
+}
+
 PBRT_GPU
 FloatType ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                                      bool allow_incomplete_pdf) const {
