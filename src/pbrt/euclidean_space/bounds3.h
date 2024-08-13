@@ -194,6 +194,11 @@ class Bounds3 {
     }
 
     Point3<T> p_min, p_max;
+
+    friend std::ostream &operator<<(std::ostream &stream, const Bounds3 &p) {
+        stream << "Bounds3(pmin: " << p.p_min << ", pmax: " << p.p_max << ")";
+        return stream;
+    }
 };
 
 using Bounds3f = Bounds3<FloatType>;

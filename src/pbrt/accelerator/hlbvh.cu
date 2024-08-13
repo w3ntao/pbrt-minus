@@ -409,6 +409,22 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     for (uint idx = 0; idx < num_total_primitives; idx++) {
         bounds_of_primitives_centroids += gpu_morton_primitives[idx].bounds.centroid();
     }
+    auto max_dim = bounds_of_primitives_centroids.max_dimension();
+    auto radius = (bounds_of_primitives_centroids.p_max[max_dim] -
+                   bounds_of_primitives_centroids.p_min[max_dim]) /
+                  2;
+    auto adjusted_p_min = bounds_of_primitives_centroids.p_min;
+    auto adjusted_p_max = bounds_of_primitives_centroids.p_max;
+    for (uint dim = 0; dim < 3; ++dim) {
+        if (dim == max_dim) {
+            continue;
+        }
+        auto center = bounds_of_primitives_centroids.centroid()[dim];
+        adjusted_p_min[dim] = center - radius;
+        adjusted_p_max[dim] = center + radius;
+    }
+    bounds_of_primitives_centroids = Bounds3f(adjusted_p_min, adjusted_p_max);
+    // after adjusting bounds, all treelets grids are of the same size
 
     {
         uint batch_size = 512;

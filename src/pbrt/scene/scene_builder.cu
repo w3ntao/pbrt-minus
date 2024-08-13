@@ -114,8 +114,9 @@ std::map<std::string, uint> count_material_type(const std::vector<const Primitiv
 }
 
 SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
-    : samples_per_pixel(command_line_option.samples_per_pixel),
-      output_filename(command_line_option.output_file) {
+    : integrator_name(command_line_option.integrator_name),
+      output_filename(command_line_option.output_file),
+      samples_per_pixel(command_line_option.samples_per_pixel) {
 
     global_spectra =
         GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, thread_pool, gpu_dynamic_pointers);
@@ -322,6 +323,11 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
     }
 
     if (keyword == "Integrator") {
+        if (integrator_name.has_value()) {
+            // ignore config file, when integrator is read from command line option
+            return;
+        }
+
         integrator_name = tokens[1].values[0];
         integrator_tokens = tokens;
         return;

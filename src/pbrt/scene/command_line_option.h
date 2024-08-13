@@ -7,6 +7,7 @@
 
 struct CommandLineOption {
     std::string input_file;
+    std::optional<std::string> integrator_name;
     std::string output_file;
     std::optional<int> samples_per_pixel;
 
@@ -17,6 +18,12 @@ struct CommandLineOption {
             if (argument.size() > 2 && argument.substr(0, 2) == "--") {
                 if (argument == "--spp") {
                     samples_per_pixel = stoi(std::string(argv[idx + 1]));
+                    idx += 2;
+                    continue;
+                }
+
+                if (argument == "--integrator") {
+                    integrator_name = argv[idx + 1];
                     idx += 2;
                     continue;
                 }
