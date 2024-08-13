@@ -50,28 +50,3 @@ class Ray {
         return Ray(pf, pt - pf);
     }
 };
-
-class DifferentialRay {
-  public:
-    PBRT_CPU_GPU
-    DifferentialRay() : hasDifferentials(false) {}
-
-    PBRT_CPU_GPU
-    DifferentialRay(const Point3f o, const Vector3f d) : ray(Ray(o, d)), hasDifferentials(false) {}
-
-    PBRT_CPU_GPU
-    DifferentialRay(const Ray &_ray, bool _hasDifferentials, const Point3f &_rx_origin,
-                    const Point3f &_ry_origin, const Vector3f &_rx_direction,
-                    const Vector3f &_ry_direction)
-        : ray(_ray), rxOrigin(_rx_origin), ryOrigin(_ry_origin), rxDirection(_rx_direction),
-          ryDirection(_ry_direction), hasDifferentials(_hasDifferentials) {}
-
-    Ray ray;
-
-    bool hasDifferentials;
-
-    Point3f rxOrigin;
-    Point3f ryOrigin;
-    Vector3f rxDirection;
-    Vector3f ryDirection;
-};

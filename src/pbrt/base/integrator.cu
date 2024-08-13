@@ -89,8 +89,7 @@ void Integrator::init(const SimplePathIntegrator *simple_path_integrator) {
 }
 
 PBRT_GPU
-SampledSpectrum Integrator::li(const DifferentialRay &ray, SampledWavelengths &lambda,
-                               Sampler *sampler) const {
+SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const {
     switch (type) {
     case (Type::ambient_occlusion): {
         return ((AmbientOcclusionIntegrator *)ptr)->li(ray, lambda, sampler);

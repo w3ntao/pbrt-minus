@@ -54,33 +54,6 @@ class PerspectiveCamera {
         return CameraRay(camera_base.camera_transform.render_from_camera(ray));
     }
 
-    PBRT_CPU_GPU
-    CameraDifferentialRay generate_camera_differential_ray(const CameraSample &sample) const {
-
-        Point3f p_film = Point3f(sample.p_film.x, sample.p_film.y, 0);
-        Point3f p_camera = camera_from_raster(p_film);
-        Ray ray(Point3f(0, 0, 0), p_camera.to_vector3().normalize());
-
-        if (lens_radius == 0) {
-            auto rx_origin = ray.o;
-            auto ry_origin = ray.o;
-
-            auto rx_direction = (p_camera.to_vector3() + dx_camera).normalize();
-            auto ry_direction = (p_camera.to_vector3() + dy_camera).normalize();
-
-            auto differential_ray =
-                DifferentialRay(ray, true, rx_origin, ry_origin, rx_direction, ry_direction);
-
-            auto transformed_differential_ray =
-                camera_base.camera_transform.render_from_camera(differential_ray);
-
-            return CameraDifferentialRay(transformed_differential_ray);
-        }
-
-        REPORT_FATAL_ERROR();
-        return {};
-    }
-
     CameraBase camera_base;
 
   private:

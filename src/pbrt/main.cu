@@ -110,7 +110,7 @@ int main(int argc, const char **argv) {
 
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    cudaDeviceReset();
+    CHECK_CUDA_ERROR(cudaDeviceReset());
 
     return 0;
 }

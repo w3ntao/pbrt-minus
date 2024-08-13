@@ -13,16 +13,11 @@
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 
 PBRT_GPU
-void SurfaceInteraction::compute_differentials(const DifferentialRay &ray, const Camera *camera,
+void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *camera,
                                                int samples_per_pixel) {
-    if (ray.hasDifferentials) {
-        // TODO: ray.hasDifferentials not implemented
-    } else {
-        // Approximate screen-space change in $\pt{}$ based on camera projection
-        // camera.Approximate_dp_dxy(p(), n, time, samplesPerPixel, &dpdx, &dpdy);
-        camera->approximate_dp_dxy(p(), n, samples_per_pixel, &dpdx, &dpdy);
-    }
-
+    // different with PBRT-v4: ignore the DifferentialRay
+    camera->approximate_dp_dxy(p(), n, samples_per_pixel, &dpdx, &dpdy);
+    
     // Estimate screen-space change in $(u,v)$
     // Compute $\transpose{\XFORM{A}} \XFORM{A}$ and its determinant
     FloatType ata00 = dpdu.dot(dpdu);
@@ -61,9 +56,8 @@ void SurfaceInteraction::set_intersection_properties(const Material *_material,
 PBRT_GPU
 void SurfaceInteraction::init_coated_diffuse_bsdf(BSDF &bsdf,
                                                   CoatedDiffuseBxDF &coated_diffuse_bxdf,
-                                                  const DifferentialRay &ray,
-                                                  SampledWavelengths &lambda, const Camera *camera,
-                                                  Sampler *sampler) {
+                                                  const Ray &ray, SampledWavelengths &lambda,
+                                                  const Camera *camera, Sampler *sampler) {
     compute_differentials(ray, camera, sampler->get_samples_per_pixel());
 
     auto material_eval_context = MaterialEvalContext(*this);
@@ -75,7 +69,7 @@ void SurfaceInteraction::init_coated_diffuse_bsdf(BSDF &bsdf,
 
 PBRT_GPU
 void SurfaceInteraction::init_conductor_bsdf(BSDF &bsdf, ConductorBxDF &conductor_bxdf,
-                                             const DifferentialRay &ray, SampledWavelengths &lambda,
+                                             const Ray &ray, SampledWavelengths &lambda,
                                              const Camera *camera, Sampler *sampler) {
     compute_differentials(ray, camera, sampler->get_samples_per_pixel());
 
@@ -88,9 +82,8 @@ void SurfaceInteraction::init_conductor_bsdf(BSDF &bsdf, ConductorBxDF &conducto
 
 PBRT_GPU
 void SurfaceInteraction::init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielectric_bxdf,
-                                              const DifferentialRay &ray,
-                                              SampledWavelengths &lambda, const Camera *camera,
-                                              Sampler *sampler) {
+                                              const Ray &ray, SampledWavelengths &lambda,
+                                              const Camera *camera, Sampler *sampler) {
     compute_differentials(ray, camera, sampler->get_samples_per_pixel());
 
     auto material_eval_context = MaterialEvalContext(*this);
@@ -101,9 +94,9 @@ void SurfaceInteraction::init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielec
 }
 
 PBRT_GPU
-void SurfaceInteraction::init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf,
-                                           const DifferentialRay &ray, SampledWavelengths &lambda,
-                                           const Camera *camera, Sampler *sampler) {
+void SurfaceInteraction::init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,
+                                           SampledWavelengths &lambda, const Camera *camera,
+                                           Sampler *sampler) {
     compute_differentials(ray, camera, sampler->get_samples_per_pixel());
 
     auto material_eval_context = MaterialEvalContext(*this);

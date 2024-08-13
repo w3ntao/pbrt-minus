@@ -343,13 +343,6 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    DifferentialRay operator()(const DifferentialRay &_ray, FloatType *tMax = nullptr) const {
-        return DifferentialRay((*this)(_ray.ray, tMax), _ray.hasDifferentials,
-                               (*this)(_ray.rxOrigin), (*this)(_ray.ryOrigin),
-                               (*this)(_ray.rxDirection), (*this)(_ray.ryDirection));
-    }
-
-    PBRT_CPU_GPU
     SurfaceInteraction operator()(const SurfaceInteraction &si) const {
         SurfaceInteraction ret;
         const Transform &t = *this;

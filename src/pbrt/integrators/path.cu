@@ -34,8 +34,8 @@ void PathIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
     regularize = true;
 }
 
-PBRT_GPU SampledSpectrum PathIntegrator::li(const DifferentialRay &primary_ray,
-                                            SampledWavelengths &lambda, Sampler *sampler) {
+PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
+                                            Sampler *sampler) {
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
     bool specular_bounce = true;
@@ -57,13 +57,13 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const DifferentialRay &primary_ray,
     // Sample path from camera and accumulate radiance estimate
     while (true) {
         // Trace ray and find closest path vertex and its BSDF
-        auto si = base->bvh->intersect(ray.ray, Infinity);
+        auto si = base->bvh->intersect(ray, Infinity);
         // Add emitted light at intersection point or from the environment
         if (!si) {
             // Incorporate emission from infinite lights for escaped ray
             for (uint idx = 0; idx < base->infinite_light_num; ++idx) {
                 auto light = base->infinite_lights[idx];
-                auto Le = light->le(ray.ray, lambda);
+                auto Le = light->le(ray, lambda);
 
                 if (depth == 0 || specular_bounce) {
                     L += beta * Le;
@@ -71,7 +71,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const DifferentialRay &primary_ray,
                     // Compute MIS weight for infinite light
                     FloatType pdf_light =
                         base->light_sampler->pmf(prev_interaction_light_sample_ctx, light) *
-                        light->pdf_li(prev_interaction_light_sample_ctx, ray.ray.d, true);
+                        light->pdf_li(prev_interaction_light_sample_ctx, ray.d, true);
                     FloatType weight_bsdf = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
                     L += beta * weight_bsdf * Le;
@@ -82,7 +82,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const DifferentialRay &primary_ray,
         }
 
         // Incorporate emission from surface hit by ray
-        SampledSpectrum Le = si->interaction.le(-ray.ray.d, lambda);
+        SampledSpectrum Le = si->interaction.le(-ray.d, lambda);
         if (Le.is_positive()) {
             if (depth == 0 || specular_bounce)
                 L += beta * Le;
@@ -92,7 +92,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const DifferentialRay &primary_ray,
 
                 FloatType pdf_light =
                     base->light_sampler->pmf(prev_interaction_light_sample_ctx, area_light) *
-                    area_light->pdf_li(prev_interaction_light_sample_ctx, ray.ray.d);
+                    area_light->pdf_li(prev_interaction_light_sample_ctx, ray.d);
                 FloatType weight_light = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
                 L += beta * weight_light * Le;
@@ -144,7 +144,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const DifferentialRay &primary_ray,
         }
 
         // Sample BSDF to get new path direction
-        Vector3f wo = -ray.ray.d;
+        Vector3f wo = -ray.d;
         FloatType u = sampler->get_1d();
         auto bs = bsdf.sample_f(wo, u, sampler->get_2d());
         if (!bs) {

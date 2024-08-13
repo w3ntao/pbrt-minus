@@ -14,10 +14,9 @@ void RandomWalkIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
 }
 
 PBRT_GPU
-SampledSpectrum RandomWalkIntegrator::li_random_walk(const DifferentialRay &ray,
-                                                     SampledWavelengths &lambda, Sampler *sampler,
-                                                     uint depth) const {
-    auto si = base->bvh->intersect(ray.ray, Infinity);
+SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWavelengths &lambda,
+                                                     Sampler *sampler, uint depth) const {
+    auto si = base->bvh->intersect(ray, Infinity);
     if (!si) {
         return SampledSpectrum(0.0);
     }
@@ -25,7 +24,7 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const DifferentialRay &ray,
     SurfaceInteraction &isect = si->interaction;
 
     // Get emitted radiance at surface intersection
-    Vector3f wo = -ray.ray.d;
+    Vector3f wo = -ray.d;
     SampledSpectrum radiance_emission = isect.le(wo, lambda);
 
     // Terminate random walk if maximum depth has been reached

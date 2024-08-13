@@ -35,7 +35,7 @@ void SimplePathIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
     max_depth = _max_depth;
 }
 
-PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary_ray,
+PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const Ray &primary_ray,
                                                   SampledWavelengths &lambda, Sampler *sampler) {
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
@@ -51,20 +51,20 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const DifferentialRay &primary
     DiffuseBxDF diffuse_bxdf;
 
     while (beta.is_positive()) {
-        auto si = base->bvh->intersect(ray.ray, Infinity);
+        auto si = base->bvh->intersect(ray, Infinity);
 
         if (!si) {
             if (specular_bounce) {
                 for (uint idx = 0; idx < base->infinite_light_num; ++idx) {
                     auto light = base->infinite_lights[idx];
-                    L += beta * light->le(ray.ray, lambda);
+                    L += beta * light->le(ray, lambda);
                 }
             }
             break;
         }
 
         SurfaceInteraction &isect = si->interaction;
-        Vector3f wo = -ray.ray.d;
+        Vector3f wo = -ray.d;
 
         // Get emitted radiance at surface intersection
         if (specular_bounce) {
