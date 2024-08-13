@@ -15,8 +15,8 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
                                      const IntegratorBase *integrator_base,
                                      std::vector<void *> &gpu_dynamic_pointers) {
     std::string integrator_name;
-    if (!_integrator_name.has_value() || _integrator_name == "volpath") {
-        printf("Integrator `%s` not implemented, changed to Path\n", _integrator_name->c_str());
+    if (!_integrator_name.has_value()) {
+        printf("integrator not set in PBRT file, changed to Path\n");
         integrator_name = "path";
     } else {
         integrator_name = _integrator_name.value();
