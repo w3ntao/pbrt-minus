@@ -8,8 +8,9 @@
 
 class SpectrumImageTexture : ImageTextureBase {
   public:
-    static const SpectrumImageTexture *create(const ParameterDictionary &parameters,
+    static const SpectrumImageTexture *create(const Transform &render_from_object,
                                               const RGBColorSpace *_color_space,
+                                              const ParameterDictionary &parameters,
                                               std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
@@ -19,6 +20,6 @@ class SpectrumImageTexture : ImageTextureBase {
     SpectrumType spectrum_type;
     const RGBColorSpace *color_space;
 
-    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers,
-              const RGBColorSpace *_color_space);
+    void init(const Transform &render_from_object, const ParameterDictionary &parameters,
+              std::vector<void *> &gpu_dynamic_pointers, const RGBColorSpace *_color_space);
 };

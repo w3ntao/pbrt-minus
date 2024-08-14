@@ -3,20 +3,18 @@
 #include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 
-#include "pbrt/textures/float_constant_texture.h"
-#include "pbrt/textures/float_image_texture.h"
-
 #include "pbrt/textures/spectrum_constant_texture.h"
 #include "pbrt/textures/spectrum_image_texture.h"
 #include "pbrt/textures/spectrum_scale_texture.h"
 
 const SpectrumTexture *SpectrumTexture::create(const std::string &texture_type,
-                                               const ParameterDictionary &parameters,
+                                               const Transform &render_from_object,
                                                const RGBColorSpace *color_space,
+                                               const ParameterDictionary &parameters,
                                                std::vector<void *> &gpu_dynamic_pointers) {
     if (texture_type == "imagemap") {
-        auto image_texture =
-            SpectrumImageTexture::create(parameters, color_space, gpu_dynamic_pointers);
+        auto image_texture = SpectrumImageTexture::create(render_from_object, color_space,
+                                                          parameters, gpu_dynamic_pointers);
 
         SpectrumTexture *spectrum_texture;
         CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));

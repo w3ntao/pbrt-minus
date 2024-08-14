@@ -163,10 +163,8 @@ void SceneBuilder::build_camera() {
 
         render_from_world = camera_transform.render_from_world;
 
-        FloatType fov = parameters.get_float("fov", 90);
-
         renderer->camera = Camera::create_perspective_camera(
-            film_resolution.value(), camera_transform, fov, 0.0, gpu_dynamic_pointers);
+            film_resolution.value(), camera_transform, parameters, gpu_dynamic_pointers);
 
         return;
     }
@@ -313,6 +311,11 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
 
     if (keyword == "Film") {
         film_tokens = tokens;
+        return;
+    }
+
+    if (keyword == "Identity") {
+        graphics_state.transform = Transform::identity();
         return;
     }
 
@@ -599,15 +602,17 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 4));
 
     if (color_type == "float") {
-        auto float_texture = FloatTexture::create(texture_type, parameters, gpu_dynamic_pointers);
+        auto float_texture = FloatTexture::create(texture_type, get_render_from_object(),
+                                                  parameters, gpu_dynamic_pointers);
         named_float_texture[texture_name] = float_texture;
 
         return;
     }
 
     if (color_type == "spectrum") {
-        auto spectrum_texture = SpectrumTexture::create(
-            texture_type, parameters, global_spectra->rgb_color_space, gpu_dynamic_pointers);
+        auto spectrum_texture = SpectrumTexture::create(texture_type, get_render_from_object(),
+                                                        global_spectra->rgb_color_space, parameters,
+                                                        gpu_dynamic_pointers);
         named_spectrum_texture[texture_name] = spectrum_texture;
 
         return;

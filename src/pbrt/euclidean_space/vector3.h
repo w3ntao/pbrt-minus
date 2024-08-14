@@ -201,6 +201,11 @@ class Vector3 {
     PBRT_CPU_GPU void print() const {
         printf("(%f, %f, %f)", x, y, z);
     }
+
+    friend std::ostream &operator<<(std::ostream &stream, const Vector3 &v) {
+        stream << "Vector3(" << v.x << ", " << v.y << ", " << v.z << ")";
+        return stream;
+    }
 };
 
 using Vector3f = Vector3<FloatType>;

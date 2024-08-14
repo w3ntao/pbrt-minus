@@ -169,14 +169,20 @@ class ParameterDictionary {
             stream << "\n";
         }
 
+        if (!parameters.floats.empty()) {
+            stream << "Float:\n";
+            parameters.print_dict_of_vector(stream, parameters.floats);
+            stream << "\n";
+        }
+
         if (!parameters.point2s.empty()) {
-            stream << "Poin2f:\n";
+            stream << "Point2f:\n";
             parameters.print_dict_of_vector(stream, parameters.point2s);
             stream << "\n";
         }
 
         if (!parameters.point3s.empty()) {
-            stream << "Poin3f:\n";
+            stream << "Point3f:\n";
             parameters.print_dict_of_vector(stream, parameters.point3s);
             stream << "\n";
         }
@@ -187,9 +193,9 @@ class ParameterDictionary {
             stream << "\n";
         }
 
-        if (!parameters.floats.empty()) {
-            stream << "Float:\n";
-            parameters.print_dict_of_vector(stream, parameters.floats);
+        if (!parameters.vector3s.empty()) {
+            stream << "Vector3f:\n";
+            parameters.print_dict_of_single_var(stream, parameters.vector3s);
             stream << "\n";
         }
 
@@ -233,7 +239,6 @@ class ParameterDictionary {
             stream << "blackbody:\n";
             parameters.print_dict_of_single_var(stream, parameters.blackbodies);
             stream << "\n";
-
         }
 
         return stream;
@@ -246,6 +251,7 @@ class ParameterDictionary {
     std::map<std::string, std::vector<Point2f>> point2s;
     std::map<std::string, std::vector<Point3f>> point3s;
     std::map<std::string, std::vector<Normal3f>> normals;
+    std::map<std::string, Vector3f> vector3s;
     std::map<std::string, std::vector<int>> integers;
     std::map<std::string, std::vector<FloatType>> floats;
     std::map<std::string, std::string> strings;

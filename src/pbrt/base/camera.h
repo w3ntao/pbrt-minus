@@ -6,6 +6,8 @@
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 
+class Sampler;
+class ParameterDictionary;
 class PerspectiveCamera;
 
 enum class RenderingCoordinateSystem {
@@ -22,8 +24,8 @@ struct CameraTransform {
 
     PBRT_CPU_GPU CameraTransform() {}
 
-    PBRT_CPU_GPU CameraTransform(const Transform &_world_from_camera,
-                                 RenderingCoordinateSystem rendering_space) {
+    PBRT_CPU_GPU CameraTransform(const Transform _world_from_camera,
+                                 const RenderingCoordinateSystem rendering_space) {
         switch (rendering_space) {
         case RenderingCoordinateSystem::CameraCoordSystem: {
             world_from_render = _world_from_camera;
@@ -80,7 +82,7 @@ struct CameraBase {
 
     PBRT_CPU_GPU CameraBase() {}
 
-    PBRT_CPU_GPU void init(const Point2i _resolution, const CameraTransform _camera_transform) {
+    void init(const Point2i _resolution, const CameraTransform &_camera_transform) {
         resolution = _resolution;
         camera_transform = _camera_transform;
     }
@@ -126,8 +128,8 @@ class Camera {
     };
 
     static Camera *create_perspective_camera(const Point2i &resolution,
-                                             const CameraTransform &camera_transform, FloatType fov,
-                                             FloatType lens_radius,
+                                             const CameraTransform &camera_transform,
+                                             const ParameterDictionary &parameters,
                                              std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const PerspectiveCamera *perspective_camera);
@@ -135,8 +137,8 @@ class Camera {
     PBRT_CPU_GPU
     const CameraBase *get_camerabase() const;
 
-    PBRT_CPU_GPU
-    CameraRay generate_ray(const CameraSample &sample) const;
+    PBRT_GPU
+    CameraRay generate_ray(const CameraSample &sample, Sampler *sampler) const;
 
     PBRT_CPU_GPU
     void approximate_dp_dxy(const Point3f p, const Normal3f n, uint samples_per_pixel,

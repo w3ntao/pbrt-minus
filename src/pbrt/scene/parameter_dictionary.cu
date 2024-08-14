@@ -167,6 +167,12 @@ ParameterDictionary::ParameterDictionary(
             REPORT_FATAL_ERROR();
         }
 
+        if (variable_type == "vector3") {
+            auto value_list = tokens[idx + 1].to_floats();
+            vector3s[variable_name] = Vector3f(value_list[0], value_list[1], value_list[2]);
+            continue;
+        }
+
         printf("\n%s(): unknown variable type: %s\n", __func__, variable_type.c_str());
         REPORT_FATAL_ERROR();
     }
@@ -193,6 +199,6 @@ const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
     if (DEBUGGING) {
         printf("%s(): key `%s` not found in Spectrum, RGB, Blackbody\n", __func__, key.c_str());
     }
-    
+
     return nullptr;
 }

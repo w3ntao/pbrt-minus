@@ -7,16 +7,17 @@
 #include "pbrt/textures/mipmap.h"
 
 class MIPMap;
+class Transform;
 
 // ImageTextureBase Definition
 class ImageTextureBase {
   protected:
-    UVMapping mapping;
-    // TODO: change UVMapping to TextureMapping2D
+    const TextureMapping2D *texture_mapping;
     FloatType scale;
     bool invert;
     const MIPMap *mipmap;
 
-    void init_image_texture_base(const ParameterDictionary &parameters,
+    void init_image_texture_base(const Transform &render_from_object,
+                                 const ParameterDictionary &parameters,
                                  std::vector<void *> &gpu_dynamic_pointers);
 };

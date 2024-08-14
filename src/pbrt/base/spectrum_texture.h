@@ -6,8 +6,8 @@
 
 #include "texture_eval_context.h"
 
+class Transform;
 class ParameterDictionary;
-
 class RGBColorSpace;
 
 class Spectrum;
@@ -24,8 +24,9 @@ class SpectrumTexture {
     };
 
     static const SpectrumTexture *create(const std::string &texture_type,
-                                         const ParameterDictionary &parameters,
+                                         const Transform &render_from_object,
                                          const RGBColorSpace *color_space,
+                                         const ParameterDictionary &parameters,
                                          std::vector<void *> &gpu_dynamic_pointers);
 
     static const SpectrumTexture *

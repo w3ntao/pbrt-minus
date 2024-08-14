@@ -60,6 +60,8 @@ add_executable(${PROJ_NAME}
         src/pbrt/bxdfs/conductor_bxdf.cu
         src/pbrt/bxdfs/dielectric_bxdf.cu
 
+        src/pbrt/cameras/perspective.cu
+
         src/pbrt/euclidean_space/squared_matrix.cu
 
         src/pbrt/films/rgb_film.cu
@@ -109,6 +111,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/textures/image_texture_base.cu
         src/pbrt/textures/spectrum_image_texture.cu
         src/pbrt/textures/spectrum_scale_texture.cu
+        src/pbrt/textures/texture_mapping_2d.cu
 
         src/pbrt/util/hash_map.cu
         src/pbrt/util/math.cu

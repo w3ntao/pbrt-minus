@@ -34,7 +34,7 @@ void Renderer::evaluate_pixel_sample(const Point2i p_pixel, const uint num_sampl
         auto lu = sampler->get_1d();
         auto lambda = SampledWavelengths::sample_visible(lu);
 
-        auto ray = camera->generate_ray(camera_sample);
+        auto ray = camera->generate_ray(camera_sample, sampler);
 
         auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, sampler);
 

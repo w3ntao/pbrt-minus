@@ -5,16 +5,38 @@
 #include "pbrt/base/spectrum_texture.h"
 #include "pbrt/scene/parameter_dictionary.h"
 
+class UVMapping;
+
 // TexCoord2D Definition
 struct TexCoord2D {
     Point2f st;
     FloatType dsdx, dsdy, dtdx, dtdy;
 };
 
+struct TextureMapping2D {
+    enum class Type {
+        uv,
+        planar,
+    };
+
+    Type type;
+    const void *ptr;
+
+    void init(const UVMapping *uv_mapping);
+
+    PBRT_CPU_GPU
+    TexCoord2D map(const TextureEvalContext &ctx) const;
+};
+
 // UVMapping Definition
 class UVMapping {
   public:
     UVMapping(const ParameterDictionary &parameters) {
+        this->init(parameters);
+        // TODO: delete me
+    }
+
+    void init(const ParameterDictionary &parameters) {
         su = parameters.get_float("uscale", 1.0);
         sv = parameters.get_float("vscale", 1.0);
         du = parameters.get_float("udelta", 0.0);
@@ -22,7 +44,7 @@ class UVMapping {
     }
 
     PBRT_CPU_GPU
-    TexCoord2D map(TextureEvalContext ctx) const {
+    TexCoord2D map(const TextureEvalContext &ctx) const {
         // Compute texture differentials for 2D $(u,v)$ mapping
         FloatType dsdx = su * ctx.dudx;
         FloatType dsdy = su * ctx.dudy;

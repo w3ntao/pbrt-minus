@@ -5,6 +5,8 @@
 
 #include "pbrt/util/macro.h"
 
+class Transform;
+
 class FloatConstantTexture;
 class FloatImageTexture;
 class FloatScaledTexture;
@@ -21,6 +23,7 @@ class FloatTexture {
     };
 
     static const FloatTexture *create(const std::string &texture_type,
+                                      const Transform &render_from_object,
                                       const ParameterDictionary &parameters,
                                       std::vector<void *> &gpu_dynamic_pointers);
 
