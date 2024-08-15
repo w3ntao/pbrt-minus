@@ -1,11 +1,12 @@
 #include "pbrt/base/spectrum.h"
 
 #include "pbrt/spectra/black_body_spectrum.h"
-#include "pbrt/spectra/densely_sampled_spectrum.h"
 #include "pbrt/spectra/constant_spectrum.h"
-#include "pbrt/spectra/piecewise_linear_spectrum.h"
-#include "pbrt/spectra/rgb_illuminant_spectrum.h"
+#include "pbrt/spectra/densely_sampled_spectrum.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
+#include "pbrt/spectra/rgb_illuminant_spectrum.h"
+#include "pbrt/spectra/rgb_unbounded_spectrum.h"
+#include "pbrt/spectra/piecewise_linear_spectrum.h"
 
 const Spectrum *Spectrum::create_black_body(FloatType T, std::vector<void *> &gpu_dynamic_pointer) {
     BlackbodySpectrum *black_body;
@@ -91,6 +92,10 @@ const Spectrum *Spectrum::create_from_rgb(const RGB &val, SpectrumType spectrum_
                                           std::vector<void *> &gpu_dynamic_pointers) {
     switch (spectrum_type) {
     case (SpectrumType::Albedo): {
+        if (val.r > 1 || val.g > 1 || val.b > 1) {
+            REPORT_FATAL_ERROR();
+        }
+
         RGBAlbedoSpectrum *rgb_albedo_spectrum;
         Spectrum *spectrum;
         CHECK_CUDA_ERROR(cudaMallocManaged(&rgb_albedo_spectrum, sizeof(RGBAlbedoSpectrum)));
@@ -119,7 +124,24 @@ const Spectrum *Spectrum::create_from_rgb(const RGB &val, SpectrumType spectrum_
 
         return spectrum;
     }
+
+    case (SpectrumType::Unbounded): {
+        RGBUnboundedSpectrum *rgb_unbounded_spectrum;
+        Spectrum *spectrum;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&rgb_unbounded_spectrum, sizeof(RGBUnboundedSpectrum)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
+
+        gpu_dynamic_pointers.push_back(rgb_unbounded_spectrum);
+        gpu_dynamic_pointers.push_back(spectrum);
+
+        rgb_unbounded_spectrum->init(val, color_space);
+        spectrum->init(rgb_unbounded_spectrum);
+
+        return spectrum;
     }
+    }
+
+    printf("\n SpectrumType `%d` not implemented\n\n", spectrum_type);
 
     REPORT_FATAL_ERROR();
     return nullptr;
@@ -184,15 +206,21 @@ void Spectrum::init(const DenselySampledSpectrum *densely_sampled_spectrum) {
 }
 
 PBRT_CPU_GPU
+void Spectrum::init(const RGBAlbedoSpectrum *rgb_albedo_spectrum) {
+    type = Type::rgb_albedo;
+    ptr = rgb_albedo_spectrum;
+}
+
+PBRT_CPU_GPU
 void Spectrum::init(const RGBIlluminantSpectrum *rgb_illuminant_spectrum) {
     type = Type::rgb_illuminant;
     ptr = rgb_illuminant_spectrum;
 }
 
 PBRT_CPU_GPU
-void Spectrum::init(const RGBAlbedoSpectrum *rgb_albedo_spectrum) {
-    type = Type::rgb_albedo;
-    ptr = rgb_albedo_spectrum;
+void Spectrum::init(const RGBUnboundedSpectrum *rgb_unbounded_spectrum) {
+    type = Type::rgb_unbounded;
+    ptr = rgb_unbounded_spectrum;
 }
 
 PBRT_CPU_GPU
@@ -220,12 +248,16 @@ FloatType Spectrum::operator()(FloatType lambda) const {
         return ((PiecewiseLinearSpectrum *)ptr)->operator()(lambda);
     }
 
+    case (Type::rgb_albedo): {
+        return ((RGBAlbedoSpectrum *)ptr)->operator()(lambda);
+    }
+
     case (Type::rgb_illuminant): {
         return ((RGBIlluminantSpectrum *)ptr)->operator()(lambda);
     }
 
-    case (Type::rgb_albedo): {
-        return ((RGBAlbedoSpectrum *)ptr)->operator()(lambda);
+    case (Type::rgb_unbounded): {
+        return ((RGBUnboundedSpectrum *)ptr)->operator()(lambda);
     }
     }
 
@@ -260,12 +292,17 @@ SampledSpectrum Spectrum::sample(const SampledWavelengths &lambda) const {
     case (Type::piecewise_linear): {
         return ((PiecewiseLinearSpectrum *)ptr)->sample(lambda);
     }
+
+    case (Type::rgb_albedo): {
+        return ((RGBAlbedoSpectrum *)ptr)->sample(lambda);
+    }
+
     case (Type::rgb_illuminant): {
         return ((RGBIlluminantSpectrum *)ptr)->sample(lambda);
     }
 
-    case (Type::rgb_albedo): {
-        return ((RGBAlbedoSpectrum *)ptr)->sample(lambda);
+    case (Type::rgb_unbounded): {
+        return ((RGBUnboundedSpectrum *)ptr)->sample(lambda);
     }
     }
 

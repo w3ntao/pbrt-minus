@@ -1,6 +1,9 @@
 #include "pbrt/scene/parameter_dictionary.h"
 
+#include "pbrt/base/float_texture.h"
 #include "pbrt/base/spectrum.h"
+#include "pbrt/base/spectrum_texture.h"
+
 #include "pbrt/scene/tokenizer.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectrum_util/global_spectra.h"
@@ -26,12 +29,17 @@ std::vector<FloatType> read_spectrum_file(const std::string &filename) {
 }
 
 ParameterDictionary::ParameterDictionary(
-    const std::vector<Token> &tokens, const std::map<std::string, const Spectrum *> &_named_spectra,
-    const std::map<std::string, const FloatTexture *> &named_float_texture,
-    const std::map<std::string, const SpectrumTexture *> &named_spectrum_texture,
-    const std::string &_root, const GlobalSpectra *_global_spectra,
+    const std::vector<Token> &tokens, const std::string &_root,
+    const GlobalSpectra *_global_spectra, const std::map<std::string, const Spectrum *> &_spectra,
+    const std::map<std::string, const FloatTexture *> &_float_textures,
+    const std::map<std::string, const SpectrumTexture *> &_albedo_spectrum_textures,
+    const std::map<std::string, const SpectrumTexture *> &_illuminant_spectrum_textures,
+    const std::map<std::string, const SpectrumTexture *> &_unbounded_spectrum_textures,
     std::vector<void *> &gpu_dynamic_pointers)
-    : root(_root), global_spectra(_global_spectra), named_spectra(_named_spectra) {
+    : root(_root), global_spectra(_global_spectra), spectra(_spectra),
+      float_textures(_float_textures), albedo_spectrum_textures(_albedo_spectrum_textures),
+      illuminant_spectrum_textures(_illuminant_spectrum_textures),
+      unbounded_spectrum_textures(_unbounded_spectrum_textures) {
     // the 1st token is Keyword
     // the 2nd token is String
     // e.g. { Shape "trianglemesh" }, { Camera "perspective" }
@@ -131,17 +139,17 @@ ParameterDictionary::ParameterDictionary(
                     std::vector(std::begin(spectrum_samples), std::end(spectrum_samples)), false,
                     nullptr, gpu_dynamic_pointers);
 
-                named_spectra[variable_name] = built_spectrum;
+                spectra[variable_name] = built_spectrum;
                 continue;
             }
 
-            if (_named_spectra.find(val_in_str) == _named_spectra.end()) {
+            if (_spectra.find(val_in_str) == _spectra.end()) {
                 printf("\nERROR: spectrum `%s` not found\n", val_in_str.c_str());
                 REPORT_FATAL_ERROR();
             }
 
             // otherwise it's a named spectrum
-            named_spectra[variable_name] = _named_spectra.at(val_in_str);
+            spectra[variable_name] = _spectra.at(val_in_str);
             continue;
         }
 
@@ -151,20 +159,8 @@ ParameterDictionary::ParameterDictionary(
         }
 
         if (variable_type == "texture") {
-            auto target_texture_name = tokens[idx + 1].values[0];
-
-            if (named_spectrum_texture.find(target_texture_name) != named_spectrum_texture.end()) {
-                spectrum_textures[variable_name] = named_spectrum_texture.at(target_texture_name);
-                continue;
-            }
-
-            if (named_float_texture.find(target_texture_name) != named_float_texture.end()) {
-                float_textures[variable_name] = named_float_texture.at(target_texture_name);
-                continue;
-            }
-
-            printf("texture not found in texture: %s\n\n", target_texture_name.c_str());
-            REPORT_FATAL_ERROR();
+            textures_name[variable_name] = tokens[idx + 1].values[0];
+            continue;
         }
 
         if (variable_type == "vector3") {
@@ -181,8 +177,8 @@ ParameterDictionary::ParameterDictionary(
 const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
                                                   SpectrumType spectrum_type,
                                                   std::vector<void *> &gpu_dynamic_pointers) const {
-    if (named_spectra.find(key) != named_spectra.end()) {
-        return named_spectra.at(key);
+    if (spectra.find(key) != spectra.end()) {
+        return spectra.at(key);
     }
 
     if (has_rgb(key)) {
@@ -199,6 +195,88 @@ const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
     if (DEBUGGING) {
         printf("%s(): key `%s` not found in Spectrum, RGB, Blackbody\n", __func__, key.c_str());
     }
+
+    return nullptr;
+}
+
+const FloatTexture *
+ParameterDictionary::get_float_texture(const std::string &key,
+                                       std::vector<void *> &gpu_dynamic_pointers) const {
+    if (textures_name.find(key) == textures_name.end()) {
+        return nullptr;
+    }
+
+    const auto tex_name = textures_name.at(key);
+    if (tex_name.empty()) {
+        return nullptr;
+    }
+
+    if (float_textures.find(tex_name) != float_textures.end()) {
+        return float_textures.at(tex_name);
+    }
+
+    if (has_floats(tex_name)) {
+        auto val = get_float(tex_name, {});
+        return FloatTexture::create_constant_float_texture(val, gpu_dynamic_pointers);
+    }
+
+    if (DEBUGGING) {
+        printf("`%s` not found in FloatTexture\n", key.c_str());
+    }
+
+    return nullptr;
+}
+
+const FloatTexture *ParameterDictionary::get_float_texture_with_default_val(
+    const std::string &key, FloatType default_val,
+    std::vector<void *> &gpu_dynamic_pointers) const {
+    auto texture = get_float_texture(key, gpu_dynamic_pointers);
+    if (texture) {
+        return texture;
+    }
+
+    return FloatTexture::create_constant_float_texture(default_val, gpu_dynamic_pointers);
+}
+
+const SpectrumTexture *
+ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType spectrum_type,
+                                          std::vector<void *> &gpu_dynamic_pointers) const {
+    switch (spectrum_type) {
+    case (SpectrumType::Albedo):
+    case (SpectrumType::Illuminant):
+    case (SpectrumType::Unbounded): {
+        break;
+    }
+    default: {
+        REPORT_FATAL_ERROR();
+    }
+    }
+
+    if (textures_name.find(key) != textures_name.end()) {
+        auto tex_name = textures_name.at(key);
+
+        auto &spectrumTextures =
+            spectrum_type == SpectrumType::Albedo
+                ? albedo_spectrum_textures
+                : (spectrum_type == SpectrumType::Illuminant ? illuminant_spectrum_textures
+                                                             : unbounded_spectrum_textures);
+
+        if (spectrumTextures.find(tex_name) != spectrumTextures.end()) {
+            return spectrumTextures.at(tex_name);
+        }
+
+        printf("WARNING: spectrum texture not found: `%s` -> `%s`\n", key.c_str(),
+               tex_name.c_str());
+
+        return nullptr;
+    }
+
+    auto spectrum = get_spectrum(key, spectrum_type, gpu_dynamic_pointers);
+    if (spectrum) {
+        return SpectrumTexture::create_constant_texture(spectrum, gpu_dynamic_pointers);
+    }
+
+    printf("WARNING: spectrum texture not found: `%s`\n", key.c_str());
 
     return nullptr;
 }

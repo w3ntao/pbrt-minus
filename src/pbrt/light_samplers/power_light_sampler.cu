@@ -102,7 +102,7 @@ cuda::std::optional<SampledLight> PowerLightSampler::sample(const FloatType u) c
         return SampledLight{.light = lights[0], .p = lights_pmf[0]};
     }
 
-    size_t light_idx;
+    size_t light_idx = 0;
     if (u < lights_cdf[0]) {
         light_idx = 0;
     } else {
@@ -132,7 +132,7 @@ cuda::std::optional<SampledLight> PowerLightSampler::sample(const FloatType u) c
     }
 
     if (DEBUGGING) {
-        if (light_idx < 0 || light_idx >= light_num) {
+        if (light_idx >= light_num) {
             REPORT_FATAL_ERROR();
         }
     }

@@ -11,9 +11,10 @@ class RGBColorSpace;
 class BlackbodySpectrum;
 class ConstantSpectrum;
 class DenselySampledSpectrum;
-class PiecewiseLinearSpectrum;
-class RGBIlluminantSpectrum;
 class RGBAlbedoSpectrum;
+class RGBIlluminantSpectrum;
+class RGBUnboundedSpectrum;
+class PiecewiseLinearSpectrum;
 
 enum class SpectrumType {
     Illuminant,
@@ -27,8 +28,9 @@ class Spectrum {
         black_body,
         constant,
         densely_sampled,
-        rgb_illuminant,
         rgb_albedo,
+        rgb_illuminant,
+        rgb_unbounded,
         piecewise_linear,
     };
 
@@ -64,10 +66,13 @@ class Spectrum {
     void init(const DenselySampledSpectrum *densely_sampled_spectrum);
 
     PBRT_CPU_GPU
+    void init(const RGBAlbedoSpectrum *rgb_albedo_spectrum);
+
+    PBRT_CPU_GPU
     void init(const RGBIlluminantSpectrum *rgb_illuminant_spectrum);
 
     PBRT_CPU_GPU
-    void init(const RGBAlbedoSpectrum *rgb_albedo_spectrum);
+    void init(const RGBUnboundedSpectrum *rgb_unbounded_spectrum);
 
     PBRT_CPU_GPU
     void init(const PiecewiseLinearSpectrum *piecewise_linear_spectrum);

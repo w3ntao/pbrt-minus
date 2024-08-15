@@ -65,10 +65,14 @@ class SceneBuilder {
 
     std::vector<void *> gpu_dynamic_pointers;
 
-    std::map<std::string, const Material *> named_material;
-    std::map<std::string, const Spectrum *> named_spectra;
-    std::map<std::string, const FloatTexture *> named_float_texture;
-    std::map<std::string, const SpectrumTexture *> named_spectrum_texture;
+    std::map<std::string, const Material *> materials;
+    std::map<std::string, const Spectrum *> spectra;
+
+    std::map<std::string, const FloatTexture *> float_textures;
+
+    std::map<std::string, const SpectrumTexture *> albedo_spectrum_textures;
+    std::map<std::string, const SpectrumTexture *> illuminant_spectrum_textures;
+    std::map<std::string, const SpectrumTexture *> unbounded_spectrum_textures;
 
     std::optional<Point2i> film_resolution = std::nullopt;
     std::string output_filename;
@@ -115,9 +119,9 @@ class SceneBuilder {
     }
 
     ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
-        return ParameterDictionary(tokens, named_spectra, named_float_texture,
-                                   named_spectrum_texture, root, global_spectra,
-                                   gpu_dynamic_pointers);
+        return ParameterDictionary(tokens, root, global_spectra, spectra, float_textures,
+                                   albedo_spectrum_textures, illuminant_spectrum_textures,
+                                   unbounded_spectrum_textures, gpu_dynamic_pointers);
     }
 
     void build_camera();

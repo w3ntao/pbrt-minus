@@ -127,6 +127,12 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
     auto ag_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
         std::vector(std::begin(Ag_k), std::end(Ag_k)), false, nullptr, gpu_dynamic_pointers);
 
+    auto al_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+        std::vector(std::begin(Al_eta), std::end(Al_eta)), false, nullptr, gpu_dynamic_pointers);
+
+    auto al_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+        std::vector(std::begin(Al_k), std::end(Al_k)), false, nullptr, gpu_dynamic_pointers);
+
     auto cu_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
         std::vector(std::begin(Cu_eta), std::end(Cu_eta)), false, nullptr, gpu_dynamic_pointers);
 
@@ -137,9 +143,10 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
         std::vector(std::begin(GlassBK7_eta), std::end(GlassBK7_eta)), false, nullptr,
         gpu_dynamic_pointers);
 
-    named_spectra = {
-        {"metal-Ag-eta", ag_eta}, {"metal-Ag-k", ag_k},         {"metal-Cu-eta", cu_eta},
-        {"metal-Cu-k", cu_k},     {"glass-BK7", glass_bk7_eta},
+    spectra = {
+        {"metal-Ag-eta", ag_eta},     {"metal-Ag-k", ag_k},     {"metal-Al-eta", al_eta},
+        {"metal-Al-k", al_k},         {"metal-Cu-eta", cu_eta}, {"metal-Cu-k", cu_k},
+        {"glass-BK7", glass_bk7_eta},
     };
 
     renderer = Renderer::create(gpu_dynamic_pointers);
@@ -476,8 +483,7 @@ void SceneBuilder::parse_make_named_material(const std::vector<Token> &tokens) {
 
     auto type_of_material = parameters.get_string("type", std::nullopt);
 
-    named_material[material_name] =
-        Material::create(type_of_material, parameters, gpu_dynamic_pointers);
+    materials[material_name] = Material::create(type_of_material, parameters, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::parse_material(const std::vector<Token> &tokens) {
@@ -499,7 +505,7 @@ void SceneBuilder::parse_named_material(const std::vector<Token> &tokens) {
 
     auto material_name = tokens[1].values[0];
 
-    graphics_state.material = named_material.at(material_name);
+    graphics_state.material = materials.at(material_name);
 }
 
 void SceneBuilder::parse_rotate(const std::vector<Token> &tokens) {
@@ -604,16 +610,23 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
     if (color_type == "float") {
         auto float_texture = FloatTexture::create(texture_type, get_render_from_object(),
                                                   parameters, gpu_dynamic_pointers);
-        named_float_texture[texture_name] = float_texture;
+        float_textures[texture_name] = float_texture;
 
         return;
     }
 
     if (color_type == "spectrum") {
-        auto spectrum_texture = SpectrumTexture::create(texture_type, get_render_from_object(),
-                                                        global_spectra->rgb_color_space, parameters,
-                                                        gpu_dynamic_pointers);
-        named_spectrum_texture[texture_name] = spectrum_texture;
+        albedo_spectrum_textures[texture_name] = SpectrumTexture::create(
+            texture_type, SpectrumType::Albedo, get_render_from_object(),
+            global_spectra->rgb_color_space, parameters, gpu_dynamic_pointers);
+
+        illuminant_spectrum_textures[texture_name] = SpectrumTexture::create(
+            texture_type, SpectrumType::Illuminant, get_render_from_object(),
+            global_spectra->rgb_color_space, parameters, gpu_dynamic_pointers);
+
+        unbounded_spectrum_textures[texture_name] = SpectrumTexture::create(
+            texture_type, SpectrumType::Unbounded, get_render_from_object(),
+            global_spectra->rgb_color_space, parameters, gpu_dynamic_pointers);
 
         return;
     }

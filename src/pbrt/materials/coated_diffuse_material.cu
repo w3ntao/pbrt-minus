@@ -18,57 +18,31 @@ void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
     v_roughness = nullptr;
     thickness = nullptr;
     g = nullptr;
-
+    
     eta = nullptr;
 
-    auto reflectance_key = "reflectance";
-    if (parameters.has_spectrum_texture(reflectance_key)) {
-        reflectance = parameters.get_spectrum_texture(reflectance_key);
-    } else {
-        auto rgb_albedo_spectrum =
-            parameters.get_spectrum(reflectance_key, SpectrumType::Albedo, gpu_dynamic_pointers);
-
-        reflectance =
-            rgb_albedo_spectrum
-                ? SpectrumTexture::create_constant_texture(rgb_albedo_spectrum,
-                                                           gpu_dynamic_pointers)
-                : SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
+    reflectance =
+        parameters.get_spectrum_texture("reflectance", SpectrumType::Albedo, gpu_dynamic_pointers);
+    if (!reflectance) {
+        reflectance = SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
     }
 
-    auto uroughness_key = "uroughness";
-    if (parameters.has_float_texture(uroughness_key)) {
-        u_roughness = parameters.get_float_texture(uroughness_key);
-    } else if (parameters.has_floats(uroughness_key)) {
-        auto uroughness_val = parameters.get_float(uroughness_key, {});
-        u_roughness =
-            FloatTexture::create_constant_float_texture(uroughness_val, gpu_dynamic_pointers);
-    } else {
+    u_roughness = parameters.get_float_texture("uroughness", gpu_dynamic_pointers);
+    if (!u_roughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
         u_roughness =
             FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
 
-    auto vroughness_key = "vroughness";
-    if (parameters.has_float_texture(vroughness_key)) {
-        v_roughness = parameters.get_float_texture(vroughness_key);
-    } else if (parameters.has_floats(vroughness_key)) {
-        auto vroughness_val = parameters.get_float(vroughness_key, {});
-        v_roughness =
-            FloatTexture::create_constant_float_texture(vroughness_val, gpu_dynamic_pointers);
-    } else {
+    v_roughness = parameters.get_float_texture("vroughness", gpu_dynamic_pointers);
+    if (!v_roughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
         v_roughness =
             FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
 
-    auto thickness_key = "thickness";
-    if (parameters.has_float_texture(thickness_key)) {
-        thickness = parameters.get_float_texture(thickness_key);
-    } else {
-        auto thickness_val = parameters.get_float(thickness_key, 0.01);
-        thickness =
-            FloatTexture::create_constant_float_texture(thickness_val, gpu_dynamic_pointers);
-    }
+    thickness =
+        parameters.get_float_texture_with_default_val("thickness", 0.01, gpu_dynamic_pointers);
 
     auto eta_val = parameters.get_float("eta", 1.5);
     eta = Spectrum::create_constant_spectrum(eta_val, gpu_dynamic_pointers);
@@ -101,6 +75,7 @@ void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
 PBRT_GPU
 CoatedDiffuseBxDF CoatedDiffuseMaterial::get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
                                                                  SampledWavelengths &lambda) const {
+
     // Initialize diffuse component of plastic material
     SampledSpectrum r = reflectance->evaluate(ctx, lambda).clamp(0, 1);
 

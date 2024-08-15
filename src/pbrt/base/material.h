@@ -27,6 +27,8 @@ class CoatedDiffuseMaterial;
 class ConductorMaterial;
 class DielectricMaterial;
 class DiffuseMaterial;
+class MixMaterial;
+
 class ParameterDictionary;
 
 class Material {
@@ -36,6 +38,7 @@ class Material {
         conductor,
         diffuse,
         dielectric,
+        mix,
     };
 
     static const Material *create(const std::string &type_of_material,
@@ -52,6 +55,8 @@ class Material {
     void init(const DielectricMaterial *dielectric_material);
 
     void init(const DiffuseMaterial *diffuse_material);
+
+    void init(const MixMaterial *mix_material);
 
     PBRT_GPU
     ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,

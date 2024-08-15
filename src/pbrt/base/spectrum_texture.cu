@@ -5,16 +5,17 @@
 
 #include "pbrt/textures/spectrum_constant_texture.h"
 #include "pbrt/textures/spectrum_image_texture.h"
-#include "pbrt/textures/spectrum_scale_texture.h"
+#include "pbrt/textures/spectrum_scaled_texture.h"
 
 const SpectrumTexture *SpectrumTexture::create(const std::string &texture_type,
+                                               SpectrumType spectrum_type,
                                                const Transform &render_from_object,
                                                const RGBColorSpace *color_space,
                                                const ParameterDictionary &parameters,
                                                std::vector<void *> &gpu_dynamic_pointers) {
     if (texture_type == "imagemap") {
-        auto image_texture = SpectrumImageTexture::create(render_from_object, color_space,
-                                                          parameters, gpu_dynamic_pointers);
+        auto image_texture = SpectrumImageTexture::create(
+            spectrum_type, render_from_object, color_space, parameters, gpu_dynamic_pointers);
 
         SpectrumTexture *spectrum_texture;
         CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
@@ -25,17 +26,17 @@ const SpectrumTexture *SpectrumTexture::create(const std::string &texture_type,
     }
 
     if (texture_type == "scale") {
-        SpectrumScaleTexture *scale_texture;
+        SpectrumScaledTexture *scaled_texture;
         SpectrumTexture *spectrum_texture;
 
-        CHECK_CUDA_ERROR(cudaMallocManaged(&scale_texture, sizeof(SpectrumScaleTexture)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&scaled_texture, sizeof(SpectrumScaledTexture)));
         CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
 
-        gpu_dynamic_pointers.push_back(scale_texture);
+        gpu_dynamic_pointers.push_back(scaled_texture);
         gpu_dynamic_pointers.push_back(spectrum_texture);
 
-        scale_texture->init(parameters);
-        spectrum_texture->init(scale_texture);
+        scaled_texture->init(spectrum_type, parameters, gpu_dynamic_pointers);
+        spectrum_texture->init(scaled_texture);
         return spectrum_texture;
     }
 
@@ -97,8 +98,8 @@ void SpectrumTexture::init(const SpectrumImageTexture *image_texture) {
     ptr = image_texture;
 }
 
-void SpectrumTexture::init(const SpectrumScaleTexture *scale_texture) {
-    type = Type::scale;
+void SpectrumTexture::init(const SpectrumScaledTexture *scale_texture) {
+    type = Type::scaled;
     ptr = scale_texture;
 }
 
@@ -112,8 +113,8 @@ SampledSpectrum SpectrumTexture::evaluate(const TextureEvalContext &ctx,
     case (Type::image): {
         return ((SpectrumImageTexture *)ptr)->evaluate(ctx, lambda);
     }
-    case (Type::scale): {
-        return ((SpectrumScaleTexture *)ptr)->evaluate(ctx, lambda);
+    case (Type::scaled): {
+        return ((SpectrumScaledTexture *)ptr)->evaluate(ctx, lambda);
     }
     }
 

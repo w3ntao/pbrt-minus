@@ -82,9 +82,11 @@ add_executable(${PROJ_NAME}
         src/pbrt/light_samplers/power_light_sampler.cu
 
         src/pbrt/materials/conductor_material.cu
+        src/pbrt/materials/coated_conductor_material.cu
         src/pbrt/materials/coated_diffuse_material.cu
         src/pbrt/materials/dielectric_material.cu
         src/pbrt/materials/diffuse_material.cu
+        src/pbrt/materials/mix_material.cu
 
         src/pbrt/primitives/geometric_primitive.cu
         src/pbrt/primitives/transformed_primitive.cu
@@ -100,8 +102,9 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/spectra/densely_sampled_spectrum.cu
         src/pbrt/spectra/piecewise_linear_spectrum.cu
-        src/pbrt/spectra/rgb_illuminant_spectrum.cu
         src/pbrt/spectra/rgb_albedo_spectrum.cu
+        src/pbrt/spectra/rgb_illuminant_spectrum.cu
+        src/pbrt/spectra/rgb_unbounded_spectrum.cu
 
         src/pbrt/spectrum_util/global_spectra.cu
         src/pbrt/spectrum_util/rgb_to_spectrum_data.cu
@@ -110,7 +113,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/textures/gpu_image.cu
         src/pbrt/textures/image_texture_base.cu
         src/pbrt/textures/spectrum_image_texture.cu
-        src/pbrt/textures/spectrum_scale_texture.cu
+        src/pbrt/textures/spectrum_scaled_texture.cu
         src/pbrt/textures/texture_mapping_2d.cu
 
         src/pbrt/util/hash_map.cu

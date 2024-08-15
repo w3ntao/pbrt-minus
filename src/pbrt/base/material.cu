@@ -5,13 +5,28 @@
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 
 #include "pbrt/materials/coated_diffuse_material.h"
+#include "pbrt/materials/coated_conductor_material.h"
 #include "pbrt/materials/conductor_material.h"
 #include "pbrt/materials/diffuse_material.h"
 #include "pbrt/materials/dielectric_material.h"
+#include "pbrt/materials/mix_material.h"
 
 const Material *Material::create(const std::string &type_of_material,
                                  const ParameterDictionary &parameters,
                                  std::vector<void *> &gpu_dynamic_pointers) {
+    if (type_of_material == "coatedconductor") {
+        CoatedConductorMaterial *coated_conductor_material;
+        Material *material;
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged(&coated_conductor_material, sizeof(CoatedConductorMaterial)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+
+        gpu_dynamic_pointers.push_back(coated_conductor_material);
+        gpu_dynamic_pointers.push_back(material);
+
+        REPORT_FATAL_ERROR();
+    }
+
     if (type_of_material == "coateddiffuse") {
         CoatedDiffuseMaterial *coated_diffuse_material;
         Material *material;
@@ -30,15 +45,15 @@ const Material *Material::create(const std::string &type_of_material,
 
     if (type_of_material == "conductor") {
         ConductorMaterial *conductor_material;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&conductor_material, sizeof(ConductorMaterial)));
-        conductor_material->init(parameters, gpu_dynamic_pointers);
-
         Material *material;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&conductor_material, sizeof(ConductorMaterial)));
         CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
-        material->init(conductor_material);
 
         gpu_dynamic_pointers.push_back(conductor_material);
         gpu_dynamic_pointers.push_back(material);
+
+        conductor_material->init(parameters, gpu_dynamic_pointers);
+        material->init(conductor_material);
 
         return material;
     }
@@ -70,6 +85,21 @@ const Material *Material::create(const std::string &type_of_material,
 
         diffuse_material->init(parameters, gpu_dynamic_pointers);
         material->init(diffuse_material);
+
+        return material;
+    }
+
+    if (type_of_material == "mix") {
+        MixMaterial *mix_material;
+        Material *material;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&mix_material, sizeof(MixMaterial)));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+
+        gpu_dynamic_pointers.push_back(mix_material);
+        gpu_dynamic_pointers.push_back(material);
+
+        mix_material->init(parameters, gpu_dynamic_pointers);
+        material->init(mix_material);
 
         return material;
     }
@@ -111,6 +141,11 @@ void Material::init(const DielectricMaterial *dielectric_material) {
 void Material::init(const DiffuseMaterial *diffuse_material) {
     type = Type::diffuse;
     ptr = diffuse_material;
+}
+
+void Material::init(const MixMaterial *mix_material) {
+    type = Type::mix;
+    ptr = mix_material;
 }
 
 PBRT_GPU

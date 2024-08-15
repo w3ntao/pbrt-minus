@@ -18,48 +18,19 @@ const DiffuseMaterial *DiffuseMaterial::create(const SpectrumTexture *_reflectan
                                                std::vector<void *> &gpu_dynamic_pointers) {
     DiffuseMaterial *diffuse_material;
     CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material, sizeof(DiffuseMaterial)));
-    diffuse_material->reflectance = _reflectance;
-
     gpu_dynamic_pointers.push_back(diffuse_material);
+
+    diffuse_material->reflectance = _reflectance;
     return diffuse_material;
 }
 
 void DiffuseMaterial::init(const ParameterDictionary &parameters,
                            std::vector<void *> &gpu_dynamic_pointers) {
-    auto key = "reflectance";
-
-    if (parameters.has_rgb(key)) {
-        SpectrumConstantTexture *spectrum_constant_texture;
-        SpectrumTexture *spectrum_texture;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&spectrum_constant_texture, sizeof(SpectrumConstantTexture)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum_texture, sizeof(SpectrumTexture)));
-
-        auto rgb_val = parameters.get_rgb(key, std::nullopt);
-        spectrum_constant_texture->init(Spectrum::create_from_rgb(
-            rgb_val, SpectrumType::Albedo, parameters.global_spectra->rgb_color_space,
-            gpu_dynamic_pointers));
-
-        spectrum_texture->init(spectrum_constant_texture);
-
-        reflectance = spectrum_texture;
-
-        for (auto ptr : std::vector<void *>({
-                 spectrum_constant_texture,
-                 spectrum_texture,
-             })) {
-            gpu_dynamic_pointers.push_back(ptr);
-        }
-
-        return;
+    reflectance =
+        parameters.get_spectrum_texture("reflectance", SpectrumType::Albedo, gpu_dynamic_pointers);
+    if (!reflectance) {
+        reflectance = SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
     }
-
-    if (parameters.has_spectrum_texture(key)) {
-        reflectance = parameters.get_spectrum_texture(key);
-        return;
-    }
-
-    reflectance = SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
 }
 
 PBRT_GPU

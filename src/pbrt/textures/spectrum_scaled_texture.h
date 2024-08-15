@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pbrt/base/spectrum.h"
 #include "pbrt/util/macro.h"
 
 class SpectrumTexture;
@@ -8,9 +9,10 @@ class SampledWavelengths;
 class SampledSpectrum;
 class ParameterDictionary;
 
-class SpectrumScaleTexture {
+class SpectrumScaledTexture {
   public:
-    void init(const ParameterDictionary &parameters);
+    void init(SpectrumType spectrum_type, const ParameterDictionary &parameters,
+              std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     SampledSpectrum evaluate(const TextureEvalContext &ctx, const SampledWavelengths &lambda) const;
