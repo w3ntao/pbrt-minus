@@ -19,7 +19,7 @@ ImageInfiniteLight *ImageInfiniteLight::create(const Transform &_render_from_lig
                                                const ParameterDictionary &parameters,
                                                std::vector<void *> &gpu_dynamic_pointers) {
 
-    auto texture_file = parameters.root + "/" + parameters.get_string("filename", std::nullopt);
+    auto texture_file = parameters.root + "/" + parameters.get_one_string("filename");
 
     auto scale = parameters.get_float("scale", 1.0);
 

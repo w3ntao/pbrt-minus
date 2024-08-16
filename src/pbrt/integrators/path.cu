@@ -8,6 +8,7 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/material.h"
 
+#include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/conductor_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
@@ -49,6 +50,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
     auto ray = primary_ray;
 
     BSDF bsdf;
+    CoatedConductorBxDF coated_conductor_bxdf;
     CoatedDiffuseBxDF coated_diffuse_bxdf;
     ConductorBxDF conductor_bxdf;
     DielectricBxDF dielectric_bxdf;
@@ -102,6 +104,11 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
         SurfaceInteraction &isect = si->interaction;
 
         switch (isect.material->get_material_type()) {
+        case (Material::Type::coated_conductor): {
+            isect.init_coated_conductor_bsdf(bsdf, coated_conductor_bxdf, ray, lambda, base->camera,
+                                             sampler);
+            break;
+        }
         case (Material::Type::coated_diffuse): {
             isect.init_coated_diffuse_bsdf(bsdf, coated_diffuse_bxdf, ray, lambda, base->camera,
                                            sampler);
@@ -121,6 +128,11 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
         case (Material::Type::diffuse): {
             isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
             break;
+        }
+
+        case (Material::Type::mix): {
+            printf("\nyou should not see MixMaterial here\n\n");
+            REPORT_FATAL_ERROR();
         }
 
         default: {

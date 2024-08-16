@@ -15,6 +15,7 @@ class Material;
 class Sampler;
 class SampledWavelengths;
 
+class CoatedConductorBxDF;
 class CoatedDiffuseBxDF;
 class ConductorBxDF;
 
@@ -111,6 +112,11 @@ class SurfaceInteraction : public Interaction {
 
     PBRT_GPU
     void set_intersection_properties(const Material *_material, const Light *_area_light);
+
+    PBRT_GPU
+    void init_coated_conductor_bsdf(BSDF &bsdf, CoatedConductorBxDF &coated_conductor_bxdf,
+                                    const Ray &ray, SampledWavelengths &lambda,
+                                    const Camera *camera, Sampler *sampler);
 
     PBRT_GPU
     void init_coated_diffuse_bsdf(BSDF &bsdf, CoatedDiffuseBxDF &coated_diffuse_bxdf,

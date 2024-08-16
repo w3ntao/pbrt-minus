@@ -26,26 +26,26 @@ void ConductorMaterial::init(const ParameterDictionary &parameters,
 
     if (!reflectance) {
         if (!eta) {
-            auto spectrum_cu_eta =
-                parameters.get_spectrum("metal-Cu-eta", SpectrumType::Albedo, gpu_dynamic_pointers);
+            auto spectrum_cu_eta = parameters.get_spectrum("metal-Cu-eta", SpectrumType::Unbounded,
+                                                           gpu_dynamic_pointers);
             eta = SpectrumTexture::create_constant_texture(spectrum_cu_eta, gpu_dynamic_pointers);
         }
 
         if (!k) {
-            auto spectrum_cu_k =
-                parameters.get_spectrum("metal-Cu-k", SpectrumType::Albedo, gpu_dynamic_pointers);
+            auto spectrum_cu_k = parameters.get_spectrum("metal-Cu-k", SpectrumType::Unbounded,
+                                                         gpu_dynamic_pointers);
             k = SpectrumTexture::create_constant_texture(spectrum_cu_k, gpu_dynamic_pointers);
         }
     }
 
-    u_roughness = parameters.get_float_texture("uroughness", gpu_dynamic_pointers);
+    u_roughness = parameters.get_float_texture_or_null("uroughness", gpu_dynamic_pointers);
     if (!u_roughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
         u_roughness =
             FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
 
-    v_roughness = parameters.get_float_texture("vroughness", gpu_dynamic_pointers);
+    v_roughness = parameters.get_float_texture_or_null("vroughness", gpu_dynamic_pointers);
     if (!v_roughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
         v_roughness =

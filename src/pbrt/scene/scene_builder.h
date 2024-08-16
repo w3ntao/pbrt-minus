@@ -119,7 +119,7 @@ class SceneBuilder {
     }
 
     ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
-        return ParameterDictionary(tokens, root, global_spectra, spectra, float_textures,
+        return ParameterDictionary(tokens, root, global_spectra, spectra, materials, float_textures,
                                    albedo_spectrum_textures, illuminant_spectrum_textures,
                                    unbounded_spectrum_textures, gpu_dynamic_pointers);
     }

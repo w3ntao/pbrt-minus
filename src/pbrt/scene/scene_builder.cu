@@ -84,6 +84,10 @@ std::map<std::string, uint> count_material_type(const std::vector<const Primitiv
         auto material_type = primitive->get_material()->get_material_type();
 
         switch (material_type) {
+        case (Material::Type::coated_conductor): {
+            add_one_to_map("CoatedConductor", counter);
+        }
+
         case (Material::Type::coated_diffuse): {
             add_one_to_map("CoatedDiffuse", counter);
             break;
@@ -101,6 +105,12 @@ std::map<std::string, uint> count_material_type(const std::vector<const Primitiv
 
         case (Material::Type::dielectric): {
             add_one_to_map("Dielectric", counter);
+            break;
+        }
+
+        case (Material::Type::mix): {
+            // TODO: count different mixed material
+            add_one_to_map("Mix", counter);
             break;
         }
 
@@ -187,13 +197,13 @@ void SceneBuilder::build_filter() {
 void SceneBuilder::build_film() {
     const auto parameters = build_parameter_dictionary(sub_vector(film_tokens, 2));
 
-    auto resolution_x = parameters.get_integer("xresolution")[0];
-    auto resolution_y = parameters.get_integer("yresolution")[0];
+    auto resolution_x = parameters.get_integer("xresolution");
+    auto resolution_y = parameters.get_integer("yresolution");
 
     film_resolution = Point2i(resolution_x, resolution_y);
 
     if (output_filename.empty()) {
-        output_filename = parameters.get_string("filename", std::nullopt);
+        output_filename = parameters.get_one_string("filename");
     }
 
     if (std::filesystem::path p(output_filename); p.extension() != ".png") {
@@ -208,15 +218,8 @@ void SceneBuilder::build_sampler() {
     // TODO: sampler is not parsed, only pixelsamples read
     const auto parameters = build_parameter_dictionary(sub_vector(sampler_tokens, 2));
 
-    auto samples_from_parameters = parameters.get_integer("pixelsamples");
-
     if (!samples_per_pixel.has_value()) {
-        if (!samples_from_parameters.empty()) {
-            samples_per_pixel = samples_from_parameters[0];
-        } else {
-            samples_per_pixel = 4;
-            // default samples per pixel
-        }
+        samples_per_pixel = parameters.get_integer("pixelsamples", 4);
     }
 
     const std::string type_sampler = "stratified";
@@ -481,7 +484,7 @@ void SceneBuilder::parse_make_named_material(const std::vector<Token> &tokens) {
 
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
-    auto type_of_material = parameters.get_string("type", std::nullopt);
+    auto type_of_material = parameters.get_one_string("type");
 
     materials[material_name] = Material::create(type_of_material, parameters, gpu_dynamic_pointers);
 }

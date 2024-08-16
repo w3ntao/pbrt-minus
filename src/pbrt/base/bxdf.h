@@ -6,6 +6,7 @@
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/macro.h"
 
+class CoatedConductorBxDF;
 class CoatedDiffuseBxDF;
 class ConductorBxDF;
 class DielectricBxDF;
@@ -152,6 +153,7 @@ class BxDF {
   public:
     enum class Type {
         null,
+        coated_conductor,
         coated_diffuse,
         conductor,
         dielectric,
@@ -162,10 +164,13 @@ class BxDF {
     BxDF() : type(Type::null), ptr(nullptr) {}
 
     PBRT_GPU
-    void init(ConductorBxDF *conductor_bxdf);
+    void init(CoatedConductorBxDF *coated_conductor_bxdf);
 
     PBRT_GPU
     void init(CoatedDiffuseBxDF *coated_diffuse_bxdf);
+
+    PBRT_GPU
+    void init(ConductorBxDF *conductor_bxdf);
 
     PBRT_GPU
     void init(DielectricBxDF *dielectric_bxdf);

@@ -77,4 +77,10 @@ PBRT_CPU_GPU inline uint64_t hash(Args... args) {
     HIDDEN::hashRecursiveCopy((char *)buf, args...);
     return HIDDEN::MurmurHash64A((const unsigned char *)buf, sz, 0);
 }
+
+template <typename... Args>
+PBRT_CPU_GPU inline FloatType hash_float(Args... args) {
+    return uint32_t(hash(args...)) * 0x1p-32f;
+}
+
 } // namespace pstd

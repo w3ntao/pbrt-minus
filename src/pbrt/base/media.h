@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cuda/std/optional>
 
 #include "pbrt/base/spectrum.h"

@@ -48,6 +48,11 @@ class Vector3 {
         return NAN;
     }
 
+    PBRT_CPU_GPU
+    bool has_nan() const {
+        return isnan(x) || isnan(y) || isnan(z);
+    }
+
     PBRT_CPU_GPU bool operator==(const Vector3 &v) const {
         return x == v.x && y == v.y && z == v.z;
     }

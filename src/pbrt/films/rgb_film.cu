@@ -14,8 +14,8 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
 
 RGBFilm *RGBFilm::create(const ParameterDictionary &parameters,
                          std::vector<void *> &gpu_dynamic_pointers) {
-    auto resolution_x = parameters.get_integer("xresolution")[0];
-    auto resolution_y = parameters.get_integer("yresolution")[0];
+    auto resolution_x = parameters.get_integer("xresolution");
+    auto resolution_y = parameters.get_integer("yresolution");
 
     auto film_resolution = Point2i(resolution_x, resolution_y);
 

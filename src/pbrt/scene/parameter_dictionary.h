@@ -14,6 +14,7 @@
 
 class FloatTexture;
 class GlobalSpectra;
+class Material;
 class Spectrum;
 class SpectrumTexture;
 class Token;
@@ -26,6 +27,7 @@ class ParameterDictionary {
         const std::vector<Token> &tokens, const std::string &_root,
         const GlobalSpectra *_global_spectra,
         const std::map<std::string, const Spectrum *> &_spectra,
+        std::map<std::string, const Material *> _materials,
         const std::map<std::string, const FloatTexture *> &_float_textures,
         const std::map<std::string, const SpectrumTexture *> &_albedo_spectrum_textures,
         const std::map<std::string, const SpectrumTexture *> &_illuminant_spectrum_textures,
@@ -46,7 +48,26 @@ class ParameterDictionary {
         return rgbs.find(key) != rgbs.end();
     }
 
-    std::vector<int> get_integer(const std::string &key) const {
+    int get_integer(const std::string &key, std::optional<int> default_val = std::nullopt) const {
+        if (integers.find(key) == integers.end()) {
+            if (!default_val.has_value()) {
+                printf("key `%s` not available\n", key.c_str());
+                REPORT_FATAL_ERROR();
+            }
+
+            return default_val.value();
+        }
+
+        auto query_result = integers.at(key);
+        if (query_result.size() > 1) {
+            printf("key `%s` matched with more than 1 result\n", key.c_str());
+            REPORT_FATAL_ERROR();
+        }
+
+        return query_result.at(0);
+    }
+
+    std::vector<int> get_integers(const std::string &key) const {
         if (integers.find(key) == integers.end()) {
             return {};
         }
@@ -57,7 +78,7 @@ class ParameterDictionary {
     FloatType get_float(const std::string &key, std::optional<FloatType> default_val) const {
         if (floats.find(key) == floats.end()) {
             if (!default_val.has_value()) {
-                printf("%s(): key not available\n", __func__);
+                printf("key `%s` not available\n", key.c_str());
                 REPORT_FATAL_ERROR();
             }
 
@@ -70,7 +91,7 @@ class ParameterDictionary {
     bool get_bool(const std::string &key, std::optional<bool> default_val) const {
         if (booleans.find(key) == booleans.end()) {
             if (!default_val.has_value()) {
-                printf("%s(): key not available\n", __func__);
+                printf("key `%s` not available\n", key.c_str());
                 REPORT_FATAL_ERROR();
             }
 
@@ -80,7 +101,8 @@ class ParameterDictionary {
         return booleans.at(key);
     }
 
-    std::string get_string(const std::string &key, std::optional<std::string> default_val) const {
+    std::string get_one_string(const std::string &key,
+                               std::optional<std::string> default_val = std::nullopt) const {
         if (strings.find(key) == strings.end()) {
             if (!default_val.has_value()) {
                 printf("%s(): key `%s` not available\n", __func__, key.c_str());
@@ -88,6 +110,19 @@ class ParameterDictionary {
             }
 
             return default_val.value();
+        }
+
+        auto result = strings.at(key);
+        if (result.size() > 1) {
+            REPORT_FATAL_ERROR();
+        }
+
+        return result.at(0);
+    }
+
+    std::vector<std::string> get_strings(const std::string &key) const {
+        if (strings.find(key) == strings.end()) {
+            return {};
         }
 
         return strings.at(key);
@@ -144,7 +179,12 @@ class ParameterDictionary {
     const Spectrum *get_spectrum(const std::string &key, SpectrumType spectrum_type,
                                  std::vector<void *> &gpu_dynamic_pointers) const;
 
-    const FloatTexture *get_float_texture(const std::string &key,
+    const Material *get_material(const std::string &key) const;
+
+    const FloatTexture *get_float_texture_or_null(const std::string &key,
+                                                  std::vector<void *> &gpu_dynamic_pointers) const;
+
+    const FloatTexture *get_float_texture(const std::string &key, FloatType default_val,
                                           std::vector<void *> &gpu_dynamic_pointers) const;
 
     const FloatTexture *
@@ -205,7 +245,7 @@ class ParameterDictionary {
 
         if (!parameters.strings.empty()) {
             stream << "String:\n";
-            parameters.print_dict_of_single_var(stream, parameters.strings);
+            parameters.print_dict_of_vector(stream, parameters.strings);
             stream << "\n";
         }
 
@@ -258,12 +298,13 @@ class ParameterDictionary {
     std::map<std::string, Vector3f> vector3s;
     std::map<std::string, std::vector<int>> integers;
     std::map<std::string, std::vector<FloatType>> floats;
-    std::map<std::string, std::string> strings;
+    std::map<std::string, std::vector<std::string>> strings;
     std::map<std::string, RGB> rgbs;
     std::map<std::string, FloatType> blackbodies;
 
     std::map<std::string, const Spectrum *> spectra;
     std::map<std::string, std::string> textures_name;
+    std::map<std::string, const Material *> materials;
 
     std::map<std::string, const FloatTexture *> float_textures;
 

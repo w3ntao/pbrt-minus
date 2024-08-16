@@ -31,12 +31,13 @@ std::vector<FloatType> read_spectrum_file(const std::string &filename) {
 ParameterDictionary::ParameterDictionary(
     const std::vector<Token> &tokens, const std::string &_root,
     const GlobalSpectra *_global_spectra, const std::map<std::string, const Spectrum *> &_spectra,
+    std::map<std::string, const Material *> _materials,
     const std::map<std::string, const FloatTexture *> &_float_textures,
     const std::map<std::string, const SpectrumTexture *> &_albedo_spectrum_textures,
     const std::map<std::string, const SpectrumTexture *> &_illuminant_spectrum_textures,
     const std::map<std::string, const SpectrumTexture *> &_unbounded_spectrum_textures,
     std::vector<void *> &gpu_dynamic_pointers)
-    : root(_root), global_spectra(_global_spectra), spectra(_spectra),
+    : root(_root), global_spectra(_global_spectra), spectra(_spectra), materials(_materials),
       float_textures(_float_textures), albedo_spectrum_textures(_albedo_spectrum_textures),
       illuminant_spectrum_textures(_illuminant_spectrum_textures),
       unbounded_spectrum_textures(_unbounded_spectrum_textures) {
@@ -154,7 +155,7 @@ ParameterDictionary::ParameterDictionary(
         }
 
         if (variable_type == "string") {
-            strings[variable_name] = tokens[idx + 1].values[0];
+            strings[variable_name] = tokens[idx + 1].values;
             continue;
         }
 
@@ -199,9 +200,13 @@ const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
     return nullptr;
 }
 
+const Material *ParameterDictionary::get_material(const std::string &key) const {
+    return materials.at(key);
+}
+
 const FloatTexture *
-ParameterDictionary::get_float_texture(const std::string &key,
-                                       std::vector<void *> &gpu_dynamic_pointers) const {
+ParameterDictionary::get_float_texture_or_null(const std::string &key,
+                                               std::vector<void *> &gpu_dynamic_pointers) const {
     if (textures_name.find(key) == textures_name.end()) {
         return nullptr;
     }
@@ -227,10 +232,21 @@ ParameterDictionary::get_float_texture(const std::string &key,
     return nullptr;
 }
 
+const FloatTexture *
+ParameterDictionary::get_float_texture(const std::string &key, FloatType default_val,
+                                       std::vector<void *> &gpu_dynamic_pointers) const {
+    auto texture = get_float_texture_or_null(key, gpu_dynamic_pointers);
+    if (texture) {
+        return texture;
+    }
+
+    return FloatTexture::create_constant_float_texture(default_val, gpu_dynamic_pointers);
+}
+
 const FloatTexture *ParameterDictionary::get_float_texture_with_default_val(
     const std::string &key, FloatType default_val,
     std::vector<void *> &gpu_dynamic_pointers) const {
-    auto texture = get_float_texture(key, gpu_dynamic_pointers);
+    auto texture = get_float_texture_or_null(key, gpu_dynamic_pointers);
     if (texture) {
         return texture;
     }

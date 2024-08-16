@@ -37,7 +37,7 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
     }
 
     if (type_of_shape == "plymesh") {
-        auto file_path = parameters.root + "/" + parameters.get_string("filename", std::nullopt);
+        auto file_path = parameters.root + "/" + parameters.get_one_string("filename");
         auto ply_mesh = TriQuadMesh::read_ply(file_path);
 
         const Shape *shapes = nullptr;
@@ -61,7 +61,7 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
 
     if (type_of_shape == "trianglemesh") {
         auto uv = parameters.get_point2_array("uv");
-        auto indices = parameters.get_integer("indices");
+        auto indices = parameters.get_integers("indices");
         auto points = parameters.get_point3_array("P");
 
         return TriangleMesh::build_triangles(render_from_object, reverse_orientation, points,
@@ -69,8 +69,8 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
     }
 
     if (type_of_shape == "loopsubdiv") {
-        auto levels = parameters.get_integer("levels")[0];
-        auto indices = parameters.get_integer("indices");
+        auto levels = parameters.get_integer("levels", 3);
+        auto indices = parameters.get_integers("indices");
         auto points = parameters.get_point3_array("P");
 
         const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);

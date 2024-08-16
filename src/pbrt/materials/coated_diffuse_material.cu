@@ -18,7 +18,7 @@ void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
     v_roughness = nullptr;
     thickness = nullptr;
     g = nullptr;
-    
+
     eta = nullptr;
 
     reflectance =
@@ -27,14 +27,14 @@ void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
         reflectance = SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
     }
 
-    u_roughness = parameters.get_float_texture("uroughness", gpu_dynamic_pointers);
+    u_roughness = parameters.get_float_texture_or_null("uroughness", gpu_dynamic_pointers);
     if (!u_roughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
         u_roughness =
             FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
 
-    v_roughness = parameters.get_float_texture("vroughness", gpu_dynamic_pointers);
+    v_roughness = parameters.get_float_texture_or_null("vroughness", gpu_dynamic_pointers);
     if (!v_roughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
         v_roughness =
@@ -53,11 +53,8 @@ void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
     auto albedo_val = parameters.get_float("albedo", 0.0);
     albedo = SpectrumTexture::create_constant_float_val_texture(albedo_val, gpu_dynamic_pointers);
 
-    auto vec_max_depth = parameters.get_integer("maxdepth");
-    maxDepth = vec_max_depth.empty() ? 10 : vec_max_depth[0];
-
-    auto vec_n_samples = parameters.get_integer("nsamples");
-    nSamples = vec_n_samples.empty() ? 1 : vec_n_samples[0];
+    maxDepth = parameters.get_integer("maxdepth", 10);
+    nSamples = parameters.get_integer("nsamples", 1);
 
     remapRoughness = parameters.get_bool("remaproughness", true);
 

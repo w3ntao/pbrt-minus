@@ -1,9 +1,11 @@
 #include "pbrt/base/material.h"
 
+#include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/conductor_bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 
+#include "pbrt/materials/coated_conductor_material.h"
 #include "pbrt/materials/coated_diffuse_material.h"
 #include "pbrt/materials/coated_conductor_material.h"
 #include "pbrt/materials/conductor_material.h"
@@ -24,7 +26,10 @@ const Material *Material::create(const std::string &type_of_material,
         gpu_dynamic_pointers.push_back(coated_conductor_material);
         gpu_dynamic_pointers.push_back(material);
 
-        REPORT_FATAL_ERROR();
+        coated_conductor_material->init(parameters, gpu_dynamic_pointers);
+        material->init(coated_conductor_material);
+
+        return material;
     }
 
     if (type_of_material == "coateddiffuse") {
@@ -98,7 +103,7 @@ const Material *Material::create(const std::string &type_of_material,
         gpu_dynamic_pointers.push_back(mix_material);
         gpu_dynamic_pointers.push_back(material);
 
-        mix_material->init(parameters, gpu_dynamic_pointers);
+        mix_material->init(parameters);
         material->init(mix_material);
 
         return material;
@@ -121,6 +126,11 @@ const Material *Material::create_diffuse_material(const SpectrumTexture *texture
     material->init(diffuse_material);
 
     return material;
+}
+
+void Material::init(const CoatedConductorMaterial *coated_conductor_material) {
+    type = Type::coated_conductor;
+    ptr = coated_conductor_material;
 }
 
 void Material::init(const CoatedDiffuseMaterial *coated_diffuse_material) {
@@ -146,6 +156,25 @@ void Material::init(const DiffuseMaterial *diffuse_material) {
 void Material::init(const MixMaterial *mix_material) {
     type = Type::mix;
     ptr = mix_material;
+}
+
+PBRT_GPU
+const Material *Material::get_mix_material(const SurfaceInteraction *si) const {
+    if (type != Type::mix) {
+        REPORT_FATAL_ERROR();
+    }
+
+    return ((MixMaterial *)ptr)->get_material(si);
+}
+
+PBRT_GPU
+CoatedConductorBxDF Material::get_coated_conductor_bsdf(const MaterialEvalContext &ctx,
+                                                        SampledWavelengths &lambda) const {
+    if (type != Type::coated_conductor) {
+        REPORT_FATAL_ERROR();
+    }
+
+    return ((CoatedConductorMaterial *)ptr)->get_coated_conductor_bsdf(ctx, lambda);
 }
 
 PBRT_GPU

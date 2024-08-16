@@ -67,17 +67,17 @@ class MIPMap {
 
     void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers) {
         auto max_anisotropy = parameters.get_float("maxanisotropy", 8.0);
-        auto filter_string = parameters.get_string("filter", "bilinear");
+        auto filter_string = parameters.get_one_string("filter", "bilinear");
 
         options = MIPMapFilterOptions{
             .filter = parse_filter_function(filter_string),
             .max_anisotropy = max_anisotropy,
         };
 
-        auto wrap_string = parameters.get_string("wrap", "repeat");
+        auto wrap_string = parameters.get_one_string("wrap", "repeat");
         wrap_mode = parse_wrap_mode(wrap_string);
 
-        auto image_path = parameters.root + "/" + parameters.get_string("filename", std::nullopt);
+        auto image_path = parameters.root + "/" + parameters.get_one_string("filename");
         image = GPUImage::create_from_file(image_path, gpu_dynamic_pointers);
     }
 };

@@ -14,7 +14,7 @@ class Point3fi : public Point3<Interval> {
     using Point3<Interval>::operator*=;
 
     PBRT_CPU_GPU
-    Point3fi() {}
+    Point3fi() : Point3<Interval>(Interval(NAN), Interval(NAN), Interval(NAN)) {}
 
     PBRT_CPU_GPU
     Point3fi(Interval x, Interval y, Interval z) : Point3<Interval>(x, y, z) {}
@@ -39,21 +39,25 @@ class Point3fi : public Point3<Interval> {
         return Point3f(x.midpoint(), y.midpoint(), z.midpoint());
     }
 
-    template <typename T>
-    PBRT_CPU_GPU void operator+=(Vector3<T> v) {
-        x += v.x;
-        y += v.y;
-        z += v.z;
+    PBRT_CPU_GPU
+    bool has_nan() const {
+        return x.has_nan() || y.has_nan() || z.has_nan();
     }
 
-    PBRT_CPU_GPU
-    Vector3f error() const {
+    PBRT_CPU_GPU Vector3f error() const {
         return {x.width() / 2, y.width() / 2, z.width() / 2};
     }
 
     PBRT_CPU_GPU
     bool is_exact() const {
         return x.width() == 0 && y.width() == 0 && z.width() == 0;
+    }
+
+    template <typename T>
+    PBRT_CPU_GPU void operator+=(Vector3<T> v) {
+        x += v.x;
+        y += v.y;
+        z += v.z;
     }
 
     template <typename U>

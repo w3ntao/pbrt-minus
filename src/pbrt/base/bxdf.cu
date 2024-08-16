@@ -1,20 +1,27 @@
 #include "pbrt/base/bxdf.h"
 
+#include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/conductor_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 
 PBRT_GPU
-void BxDF::init(ConductorBxDF *conductor_bxdf) {
-    type = Type::conductor;
-    ptr = conductor_bxdf;
+void BxDF::init(CoatedConductorBxDF *coated_conductor_bxdf) {
+    type = Type::coated_conductor;
+    ptr = coated_conductor_bxdf;
 }
 
 PBRT_GPU
 void BxDF::init(CoatedDiffuseBxDF *coated_diffuse_bxdf) {
     type = Type::coated_diffuse;
     ptr = coated_diffuse_bxdf;
+}
+
+PBRT_GPU
+void BxDF::init(ConductorBxDF *conductor_bxdf) {
+    type = Type::conductor;
+    ptr = conductor_bxdf;
 }
 
 PBRT_GPU
@@ -32,6 +39,10 @@ void BxDF::init(DiffuseBxDF *diffuse_bxdf) {
 PBRT_CPU_GPU
 BxDFFlags BxDF::flags() const {
     switch (type) {
+    case (Type::coated_conductor): {
+        return ((CoatedConductorBxDF *)ptr)->flags();
+    }
+
     case (Type::coated_diffuse): {
         return ((CoatedDiffuseBxDF *)ptr)->flags();
     }
@@ -56,6 +67,11 @@ BxDFFlags BxDF::flags() const {
 PBRT_GPU
 void BxDF::regularize() {
     switch (type) {
+    case (Type::coated_conductor): {
+        ((CoatedConductorBxDF *)ptr)->regularize();
+        return;
+    }
+
     case (Type::coated_diffuse): {
         ((CoatedDiffuseBxDF *)ptr)->regularize();
         return;
@@ -79,6 +95,10 @@ void BxDF::regularize() {
 PBRT_GPU
 SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     switch (type) {
+    case (Type::coated_conductor): {
+        return ((CoatedConductorBxDF *)ptr)->f(wo, wi, mode);
+    }
+
     case (Type::coated_diffuse): {
         return ((CoatedDiffuseBxDF *)ptr)->f(wo, wi, mode);
     }
@@ -105,6 +125,10 @@ cuda::std::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2
                                                TransportMode mode,
                                                BxDFReflTransFlags sampleFlags) const {
     switch (type) {
+    case (Type::coated_conductor): {
+        return ((CoatedConductorBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
+    }
+
     case (Type::coated_diffuse): {
         return ((CoatedDiffuseBxDF *)ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
@@ -130,6 +154,10 @@ PBRT_GPU
 FloatType BxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                     BxDFReflTransFlags sampleFlags) const {
     switch (type) {
+    case (Type::coated_conductor): {
+        return ((CoatedConductorBxDF *)ptr)->pdf(wo, wi, mode, sampleFlags);
+    }
+
     case (Type::coated_diffuse): {
         return ((CoatedDiffuseBxDF *)ptr)->pdf(wo, wi, mode, sampleFlags);
     }

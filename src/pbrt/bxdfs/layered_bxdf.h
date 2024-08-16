@@ -1,3 +1,5 @@
+#pragma once
+
 #include <curand_kernel.h>
 
 #include "pbrt/base/media.h"
@@ -10,7 +12,7 @@ template <typename TopBxDF, typename BottomBxDF, bool twoSided>
 class LayeredBxDF {
   public:
     PBRT_GPU
-    LayeredBxDF(){};
+    LayeredBxDF() {};
 
     PBRT_GPU
     LayeredBxDF(TopBxDF top, BottomBxDF bottom, FloatType thickness, const SampledSpectrum &albedo,

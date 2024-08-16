@@ -48,6 +48,11 @@ class Interval {
     }
 
     PBRT_CPU_GPU
+    bool has_nan() const {
+        return isnan(low) || isnan(high);
+    }
+
+    PBRT_CPU_GPU
     bool exactly(FloatType v) const {
         return low == v && high == v;
     }

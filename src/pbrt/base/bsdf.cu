@@ -13,7 +13,13 @@ void BSDF::init_bxdf(ConductorBxDF *conductor_bxdf) {
     bxdf.init(conductor_bxdf);
 }
 
-PBRT_GPU void BSDF::init_bxdf(CoatedDiffuseBxDF *coated_diffuse_bxdf) {
+PBRT_GPU
+void BSDF::init_bxdf(CoatedConductorBxDF *coated_conductor_bxdf) {
+    bxdf.init(coated_conductor_bxdf);
+}
+
+PBRT_GPU
+void BSDF::init_bxdf(CoatedDiffuseBxDF *coated_diffuse_bxdf) {
     bxdf.init(coated_diffuse_bxdf);
 }
 

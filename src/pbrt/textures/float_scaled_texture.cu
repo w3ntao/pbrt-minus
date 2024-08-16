@@ -10,7 +10,8 @@ const FloatScaledTexture *FloatScaledTexture::create(const ParameterDictionary &
     gpu_dynamic_pointers.push_back(float_scaled_texture);
 
     float_scaled_texture->scale = parameters.get_float("scale", 1.0);
-    float_scaled_texture->texture = parameters.get_float_texture("tex", gpu_dynamic_pointers);
+    float_scaled_texture->texture =
+        parameters.get_float_texture_or_null("tex", gpu_dynamic_pointers);
 
     return float_scaled_texture;
 }

@@ -23,6 +23,7 @@ struct MaterialEvalContext : public TextureEvalContext {
     Vector3f dpdus;
 };
 
+class CoatedConductorMaterial;
 class CoatedDiffuseMaterial;
 class ConductorMaterial;
 class DielectricMaterial;
@@ -34,6 +35,7 @@ class ParameterDictionary;
 class Material {
   public:
     enum class Type {
+        coated_conductor,
         coated_diffuse,
         conductor,
         diffuse,
@@ -48,6 +50,8 @@ class Material {
     static const Material *create_diffuse_material(const SpectrumTexture *texture,
                                                    std::vector<void *> &gpu_dynamic_pointers);
 
+    void init(const CoatedConductorMaterial *coated_conductor_material);
+
     void init(const CoatedDiffuseMaterial *coated_diffuse_material);
 
     void init(const ConductorMaterial *conductor_material);
@@ -58,13 +62,25 @@ class Material {
 
     void init(const MixMaterial *mix_material);
 
+    PBRT_CPU_GPU
+    Type get_material_type() const {
+        return type;
+    }
+
     PBRT_GPU
-    ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,
-                                     SampledWavelengths &lambda) const;
+    const Material *get_mix_material(const SurfaceInteraction *si) const;
+
+    PBRT_GPU
+    CoatedConductorBxDF get_coated_conductor_bsdf(const MaterialEvalContext &ctx,
+                                                  SampledWavelengths &lambda) const;
 
     PBRT_GPU
     CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
                                               SampledWavelengths &lambda) const;
+
+    PBRT_GPU
+    ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,
+                                     SampledWavelengths &lambda) const;
 
     PBRT_GPU
     DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
@@ -72,11 +88,6 @@ class Material {
 
     PBRT_GPU
     DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
-
-    PBRT_CPU_GPU
-    Type get_material_type() const {
-        return type;
-    }
 
   private:
     const void *ptr;

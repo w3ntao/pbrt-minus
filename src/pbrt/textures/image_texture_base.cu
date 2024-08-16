@@ -9,9 +9,9 @@ void ImageTextureBase::init_image_texture_base(const Transform &render_from_obje
     mipmap = MIPMap::create(parameters, gpu_dynamic_pointers);
 
     if (parameters.has_string("mapping")) {
-        auto mapping = parameters.get_string("mapping", {});
+        auto mapping = parameters.get_one_string("mapping");
         printf("\ntexture mapping `%s` not implemented\n", mapping.c_str());
-        
+
         REPORT_FATAL_ERROR();
     } else {
         TextureMapping2D *_texture_mapping;

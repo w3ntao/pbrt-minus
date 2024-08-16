@@ -24,7 +24,7 @@ class ConductorBxDF {
     PBRT_GPU
     cuda::std::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
-             BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All);
+             BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
 
     PBRT_GPU
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;

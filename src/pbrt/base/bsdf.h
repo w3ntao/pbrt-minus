@@ -12,6 +12,8 @@ class BSDF {
   public:
     PBRT_GPU void init_frame(const Normal3f &ns, const Vector3f &dpdus);
 
+    PBRT_GPU void init_bxdf(CoatedConductorBxDF *coated_conductor_bxdf);
+
     PBRT_GPU void init_bxdf(CoatedDiffuseBxDF *coated_diffuse_bxdf);
 
     PBRT_GPU void init_bxdf(ConductorBxDF *conductor_bxdf);

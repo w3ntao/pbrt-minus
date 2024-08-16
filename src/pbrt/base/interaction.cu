@@ -5,6 +5,7 @@
 #include "pbrt/base/light.h"
 #include "pbrt/base/sampler.h"
 
+#include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/conductor_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
@@ -17,7 +18,7 @@ void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *cam
                                                int samples_per_pixel) {
     // different with PBRT-v4: ignore the DifferentialRay
     camera->approximate_dp_dxy(p(), n, samples_per_pixel, &dpdx, &dpdy);
-    
+
     // Estimate screen-space change in $(u,v)$
     // Compute $\transpose{\XFORM{A}} \XFORM{A}$ and its determinant
     FloatType ata00 = dpdu.dot(dpdu);
@@ -49,8 +50,35 @@ void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *cam
 PBRT_GPU
 void SurfaceInteraction::set_intersection_properties(const Material *_material,
                                                      const Light *_area_light) {
-    material = _material;
+
+    if (_material->get_material_type() == Material::Type::mix) {
+        if (DEBUGGING) {
+            // TODO: to test this part
+            if (this->pi.has_nan() || this->wo.has_nan()) {
+                REPORT_FATAL_ERROR();
+            }
+        }
+
+        material = _material->get_mix_material(this);
+    } else {
+        material = _material;
+    }
+
     area_light = _area_light;
+}
+
+PBRT_GPU
+void SurfaceInteraction::init_coated_conductor_bsdf(BSDF &bsdf,
+                                                    CoatedConductorBxDF &coated_conductor_bxdf,
+                                                    const Ray &ray, SampledWavelengths &lambda,
+                                                    const Camera *camera, Sampler *sampler) {
+    compute_differentials(ray, camera, sampler->get_samples_per_pixel());
+
+    auto material_eval_context = MaterialEvalContext(*this);
+    bsdf.init_frame(material_eval_context.ns, material_eval_context.dpdus);
+
+    coated_conductor_bxdf = material->get_coated_conductor_bsdf(material_eval_context, lambda);
+    bsdf.init_bxdf(&coated_conductor_bxdf);
 }
 
 PBRT_GPU
