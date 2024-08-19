@@ -107,7 +107,7 @@ class HLBVH {
     PBRT_CPU_GPU
     Bounds3f bounds() const {
         if (build_nodes == nullptr) {
-            REPORT_FATAL_ERROR();
+            return Bounds3f::empty();
         }
 
         return build_nodes[0].bounds;

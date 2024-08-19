@@ -155,6 +155,10 @@ const HLBVH *HLBVH::create(const std::vector<const Primitive *> &gpu_primitives,
 }
 
 PBRT_GPU bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
+    if (build_nodes == nullptr) {
+        return false;
+    }
+
     auto d = ray.d;
     auto inv_dir = Vector3f(1.0 / d.x, 1.0 / d.y, 1.0 / d.z);
     int dir_is_neg[3] = {
@@ -203,6 +207,10 @@ PBRT_GPU bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
 
 PBRT_GPU cuda::std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray,
                                                                  FloatType t_max) const {
+    if (build_nodes == nullptr) {
+        return {};
+    }
+
     cuda::std::optional<ShapeIntersection> best_intersection = {};
     auto best_t = t_max;
 
@@ -354,12 +362,13 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
                       std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool) {
     auto start_sorting = std::chrono::system_clock::now();
 
+    primitives = nullptr;
+    morton_primitives = nullptr;
+    build_nodes = nullptr;
+
     uint num_total_primitives = gpu_primitives.size();
-
-    if (num_total_primitives <= 0) {
-        printf("\n%s(): there is 0 primitives in the scenes\n", __func__);
-
-        REPORT_FATAL_ERROR();
+    if (num_total_primitives == 0) {
+        return;
     }
 
     printf("\ntotal primitives: %u\n", num_total_primitives);
