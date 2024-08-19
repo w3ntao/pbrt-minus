@@ -22,10 +22,10 @@ class DielectricMaterial {
                                        SampledWavelengths &lambda) const;
 
   private:
-    const FloatTexture *u_roughness;
-    const FloatTexture *v_roughness;
+    const FloatTexture *uRoughness;
+    const FloatTexture *vRoughness;
 
     const Spectrum *eta;
 
-    bool remap_roughness;
+    bool remapRoughness;
 };

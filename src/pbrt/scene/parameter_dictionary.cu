@@ -207,21 +207,18 @@ const Material *ParameterDictionary::get_material(const std::string &key) const 
 const FloatTexture *
 ParameterDictionary::get_float_texture_or_null(const std::string &key,
                                                std::vector<void *> &gpu_dynamic_pointers) const {
-    if (textures_name.find(key) == textures_name.end()) {
+    if (textures_name.find(key) != textures_name.end()) {
+        const auto tex_name = textures_name.at(key);
+
+        if (float_textures.find(tex_name) != float_textures.end()) {
+            return float_textures.at(tex_name);
+        }
+
         return nullptr;
     }
 
-    const auto tex_name = textures_name.at(key);
-    if (tex_name.empty()) {
-        return nullptr;
-    }
-
-    if (float_textures.find(tex_name) != float_textures.end()) {
-        return float_textures.at(tex_name);
-    }
-
-    if (has_floats(tex_name)) {
-        auto val = get_float(tex_name, {});
+    if (has_floats(key)) {
+        auto val = get_float(key);
         return FloatTexture::create_constant_float_texture(val, gpu_dynamic_pointers);
     }
 
@@ -281,8 +278,9 @@ ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType s
             return spectrumTextures.at(tex_name);
         }
 
-        printf("WARNING: spectrum texture not found: `%s` -> `%s`\n", key.c_str(),
-               tex_name.c_str());
+        printf("ERROR: spectrum texture not found: `%s` -> `%s`\n", key.c_str(), tex_name.c_str());
+
+        REPORT_FATAL_ERROR();
 
         return nullptr;
     }
@@ -292,7 +290,9 @@ ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType s
         return SpectrumTexture::create_constant_texture(spectrum, gpu_dynamic_pointers);
     }
 
-    printf("WARNING: spectrum texture not found: `%s`\n", key.c_str());
+    if (DEBUGGING) {
+        printf("WARNING: spectrum texture not found: `%s`\n", key.c_str());
+    }
 
     return nullptr;
 }

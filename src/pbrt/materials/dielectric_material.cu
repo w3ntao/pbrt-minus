@@ -15,8 +15,8 @@ void DielectricMaterial::init(const ParameterDictionary &parameters,
 
     auto key_eta = "eta";
     if (parameters.has_floats(key_eta)) {
-        eta = Spectrum::create_constant_spectrum(parameters.get_float(key_eta, {}),
-                                                 gpu_dynamic_pointers);
+        eta =
+            Spectrum::create_constant_spectrum(parameters.get_float(key_eta), gpu_dynamic_pointers);
     } else {
         eta = parameters.get_spectrum(key_eta, SpectrumType::Unbounded, gpu_dynamic_pointers);
     }
@@ -25,21 +25,21 @@ void DielectricMaterial::init(const ParameterDictionary &parameters,
         eta = Spectrum::create_constant_spectrum(1.5, gpu_dynamic_pointers);
     }
 
-    u_roughness = parameters.get_float_texture_or_null("uroughness", gpu_dynamic_pointers);
-    if (!u_roughness) {
+    uRoughness = parameters.get_float_texture_or_null("uroughness", gpu_dynamic_pointers);
+    if (!uRoughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
-        u_roughness =
+        uRoughness =
             FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
 
-    v_roughness = parameters.get_float_texture_or_null("vroughness", gpu_dynamic_pointers);
-    if (!v_roughness) {
+    vRoughness = parameters.get_float_texture_or_null("vroughness", gpu_dynamic_pointers);
+    if (!vRoughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
-        v_roughness =
+        vRoughness =
             FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
     }
 
-    remap_roughness = parameters.get_bool("remaproughness", true);
+    remapRoughness = parameters.get_bool("remaproughness", true);
 
     if (eta == nullptr) {
         REPORT_FATAL_ERROR();
@@ -63,10 +63,10 @@ DielectricBxDF DielectricMaterial::get_dielectric_bsdf(const MaterialEvalContext
 
     // Create microfacet distribution for dielectric material
 
-    auto urough = u_roughness->evaluate(ctx);
-    auto vrough = v_roughness->evaluate(ctx);
+    auto urough = uRoughness->evaluate(ctx);
+    auto vrough = vRoughness->evaluate(ctx);
 
-    if (remap_roughness) {
+    if (remapRoughness) {
         urough = TrowbridgeReitzDistribution::RoughnessToAlpha(urough);
         vrough = TrowbridgeReitzDistribution::RoughnessToAlpha(vrough);
     }

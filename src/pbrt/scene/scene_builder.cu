@@ -86,6 +86,7 @@ std::map<std::string, uint> count_material_type(const std::vector<const Primitiv
         switch (material_type) {
         case (Material::Type::coated_conductor): {
             add_one_to_map("CoatedConductor", counter);
+            break;
         }
 
         case (Material::Type::coated_diffuse): {

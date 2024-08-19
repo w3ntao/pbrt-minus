@@ -75,7 +75,8 @@ class ParameterDictionary {
         return integers.at(key);
     }
 
-    FloatType get_float(const std::string &key, std::optional<FloatType> default_val) const {
+    FloatType get_float(const std::string &key,
+                        std::optional<FloatType> default_val = std::nullopt) const {
         if (floats.find(key) == floats.end()) {
             if (!default_val.has_value()) {
                 printf("key `%s` not available\n", key.c_str());
