@@ -116,6 +116,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/textures/spectrum_scaled_texture.cu
         src/pbrt/textures/texture_mapping_2d.cu
 
+        src/pbrt/util/distribution_2d.cu
         src/pbrt/util/hash_map.cu
         src/pbrt/util/math.cu
         src/pbrt/util/sampling.cu

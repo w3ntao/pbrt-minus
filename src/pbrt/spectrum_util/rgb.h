@@ -13,6 +13,14 @@ class RGB {
 
     PBRT_CPU_GPU RGB(FloatType _r, FloatType _g, FloatType _b) : r(_r), g(_g), b(_b) {}
 
+    PBRT_CPU_GPU FloatType sum() const {
+        return r + g + b;
+    }
+
+    PBRT_CPU_GPU FloatType avg() const {
+        return sum() / 3;
+    }
+
     PBRT_CPU_GPU
     RGB clamp(FloatType low, FloatType high) const {
         return RGB(::clamp(r, low, high), ::clamp(g, low, high), ::clamp(b, low, high));
@@ -24,6 +32,23 @@ class RGB {
 
     PBRT_CPU_GPU FloatType max_component() const {
         return std::max(std::max(r, g), b);
+    }
+
+    PBRT_CPU_GPU FloatType operator[](uint8_t idx) const {
+        switch (idx) {
+        case 0: {
+            return r;
+        }
+        case 1: {
+            return g;
+        }
+        case 2: {
+            return b;
+        }
+        }
+
+        REPORT_FATAL_ERROR();
+        return NAN;
     }
 
     PBRT_CPU_GPU bool operator==(const RGB &rhs) const {
@@ -77,23 +102,6 @@ class RGB {
         r /= divisor;
         g /= divisor;
         b /= divisor;
-    }
-
-    PBRT_CPU_GPU FloatType operator[](uint8_t idx) const {
-        switch (idx) {
-        case 0: {
-            return r;
-        }
-        case 1: {
-            return g;
-        }
-        case 2: {
-            return b;
-        }
-        }
-
-        REPORT_FATAL_ERROR();
-        return NAN;
     }
 
     PBRT_CPU_GPU

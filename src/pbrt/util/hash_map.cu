@@ -35,7 +35,7 @@ PBRT_CPU_GPU
 uint64_t HashMap::lookup(uint64_t key) const {
     uint64_t slot = hash(key) % capacity;
 
-    while (true) {
+    for (uint loop = 0; loop < capacity; ++loop) {
         if (items[slot].key == key) {
             return items[slot].value;
         }
@@ -44,6 +44,7 @@ uint64_t HashMap::lookup(uint64_t key) const {
     }
 
     REPORT_FATAL_ERROR();
+    return SIZE_MAX;
 }
 
 PBRT_CPU_GPU

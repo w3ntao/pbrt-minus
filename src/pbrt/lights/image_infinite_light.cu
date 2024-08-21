@@ -12,37 +12,47 @@
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 
 #include "pbrt/textures/gpu_image.h"
+
+#include "pbrt/util/distribution_2d.h"
 #include "pbrt/util/macro.h"
 #include "pbrt/util/math.h"
 
-ImageInfiniteLight *ImageInfiniteLight::create(const Transform &_render_from_light,
+ImageInfiniteLight *ImageInfiniteLight::create(const Transform &render_from_light,
                                                const ParameterDictionary &parameters,
                                                std::vector<void *> &gpu_dynamic_pointers) {
-
-    auto texture_file = parameters.root + "/" + parameters.get_one_string("filename");
-
-    auto scale = parameters.get_float("scale", 1.0);
-
-    const auto cie_y = parameters.global_spectra->cie_y;
-
-    scale /= parameters.global_spectra->rgb_color_space->illuminant->to_photometric(cie_y);
-
     ImageInfiniteLight *image_infinite_light;
     CHECK_CUDA_ERROR(cudaMallocManaged(&image_infinite_light, sizeof(ImageInfiniteLight)));
     gpu_dynamic_pointers.push_back(image_infinite_light);
 
-    image_infinite_light->light_type = LightType::infinite;
-    image_infinite_light->render_from_light = _render_from_light;
-
-    image_infinite_light->image = GPUImage::create_from_file(texture_file, gpu_dynamic_pointers);
-    image_infinite_light->scale = scale;
-
-    image_infinite_light->color_space = parameters.global_spectra->rgb_color_space;
-
-    image_infinite_light->scene_radius = NAN;
-    image_infinite_light->scene_center = Point3f(NAN, NAN, NAN);
+    image_infinite_light->init(render_from_light, parameters, gpu_dynamic_pointers);
 
     return image_infinite_light;
+}
+
+void ImageInfiniteLight::init(const Transform &_render_from_light,
+                              const ParameterDictionary &parameters,
+                              std::vector<void *> &gpu_dynamic_pointers) {
+    auto _scale = parameters.get_float("scale", 1.0);
+
+    const auto cie_y = parameters.global_spectra->cie_y;
+
+    _scale /= parameters.global_spectra->rgb_color_space->illuminant->to_photometric(cie_y);
+    scale = _scale;
+
+    light_type = LightType::infinite;
+    render_from_light = _render_from_light;
+
+    auto texture_file = parameters.root + "/" + parameters.get_one_string("filename");
+    image_ptr = GPUImage::create_from_file(texture_file, gpu_dynamic_pointers);
+
+    image_resolution = image_ptr->resolution;
+
+    image_le_distribution = Distribution2D::create_from_image(image_ptr, gpu_dynamic_pointers);
+
+    color_space = parameters.global_spectra->rgb_color_space;
+
+    scene_radius = NAN;
+    scene_center = Point3f(NAN, NAN, NAN);
 }
 
 PBRT_GPU
@@ -56,29 +66,32 @@ PBRT_GPU
 cuda::std::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleContext &ctx,
                                                                  const Point2f &u,
                                                                  SampledWavelengths &lambda) const {
-    // Convert infinite light sample point to direction
-    Vector3f wLight = EqualAreaSquareToSphere(u);
+    const auto le_sample = image_le_distribution->sample(u);
+
+    const auto uv = le_sample.first;
+    const auto map_pdf = le_sample.second * image_resolution.x * image_resolution.y;
+
+    Vector3f wLight = EqualAreaSquareToSphere(uv);
     Vector3f wi = render_from_light(wLight);
 
     // Compute PDF for sampled infinite light direction
-    FloatType pdf = 1.0 / (4 * compute_pi());
+    FloatType pdf = map_pdf / (4 * compute_pi());
 
     const auto interaction = Interaction(ctx.p() + wi * (2 * scene_radius));
 
     // Return radiance value for infinite light direction
-    return LightLiSample(ImageLe(u, lambda), wi, pdf, interaction);
+    return LightLiSample(ImageLe(uv, lambda), wi, pdf, interaction);
 }
 
-PBRT_CPU_GPU
-SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &lambda) const {
+PBRT_CPU_GPU SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &lambda) const {
     SampledSpectrum sumL(0.0);
 
-    auto width = image->resolution.x;
-    auto height = image->resolution.y;
+    auto width = image_ptr->resolution.x;
+    auto height = image_ptr->resolution.y;
 
     for (int v = 0; v < height; ++v) {
         for (int u = 0; u < width; ++u) {
-            auto rgb = image->fetch_pixel(Point2i(u, v), WrapMode::OctahedralSphere);
+            auto rgb = image_ptr->fetch_pixel(Point2i(u, v), WrapMode::OctahedralSphere);
             sumL += RGBIlluminantSpectrum(rgb.clamp(0.0, Infinity), color_space).sample(lambda);
         }
     }
@@ -91,10 +104,13 @@ SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &lambda) const 
 }
 
 PBRT_GPU
-FloatType ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+FloatType ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &w,
                                      bool allow_incomplete_pdf) const {
-    // allow_incomplete_pdf = false
-    return 1.0 / (4 * compute_pi());
+    Vector3f wLight = render_from_light.apply_inverse(w);
+    Point2f uv = EqualAreaSphereToSquare(wLight);
+
+    auto pdf = this->image_le_distribution->get_pdf(uv) * image_resolution.x * image_resolution.y;
+    return pdf / (4 * compute_pi());
 }
 
 void ImageInfiniteLight::preprocess(const Bounds3f &scene_bounds) {
@@ -103,7 +119,7 @@ void ImageInfiniteLight::preprocess(const Bounds3f &scene_bounds) {
 
 PBRT_GPU
 SampledSpectrum ImageInfiniteLight::ImageLe(Point2f uv, const SampledWavelengths &lambda) const {
-    const auto rgb = image->bilerp(uv, WrapMode::OctahedralSphere).clamp(0, Infinity);
+    const auto rgb = image_ptr->bilerp(uv, WrapMode::OctahedralSphere).clamp(0, Infinity);
 
     auto spec = RGBIlluminantSpectrum(rgb, color_space);
 

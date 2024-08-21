@@ -4,6 +4,7 @@
 #include <cuda/std/optional>
 #include "pbrt/util/macro.h"
 
+class Distribution1D;
 class HashMap;
 class Light;
 class LightSampleContext;
@@ -14,10 +15,10 @@ class PowerLightSampler {
     static const PowerLightSampler *create(const Light **lights, const uint light_num,
                                            std::vector<void *> &gpu_dynamic_pointers);
 
-    PBRT_CPU_GPU
+    PBRT_GPU
     cuda::std::optional<SampledLight> sample(FloatType u) const;
 
-    PBRT_CPU_GPU
+    PBRT_GPU
     cuda::std::optional<SampledLight> sample(const LightSampleContext &ctx, FloatType u) const;
 
     PBRT_CPU_GPU
@@ -30,9 +31,7 @@ class PowerLightSampler {
 
   private:
     const Light **lights;
-    const FloatType *lights_pmf; // lights_power = lights_pdf
-    const FloatType *lights_cdf;
-
+    const Distribution1D *lights_power_distribution;
     const HashMap *light_ptr_to_idx;
 
     uint light_num;
