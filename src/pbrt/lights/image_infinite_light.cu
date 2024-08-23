@@ -45,7 +45,7 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
     auto texture_file = parameters.root + "/" + parameters.get_one_string("filename");
     image_ptr = GPUImage::create_from_file(texture_file, gpu_dynamic_pointers);
 
-    image_resolution = image_ptr->resolution;
+    image_resolution = image_ptr->get_resolution();
 
     image_le_distribution = Distribution2D::create_from_image(image_ptr, gpu_dynamic_pointers);
 
@@ -86,12 +86,12 @@ cuda::std::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSamp
 PBRT_CPU_GPU SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &lambda) const {
     SampledSpectrum sumL(0.0);
 
-    auto width = image_ptr->resolution.x;
-    auto height = image_ptr->resolution.y;
+    auto width = image_resolution.x;
+    auto height = image_resolution.y;
 
-    for (int v = 0; v < height; ++v) {
-        for (int u = 0; u < width; ++u) {
-            auto rgb = image_ptr->fetch_pixel(Point2i(u, v), WrapMode::OctahedralSphere);
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            auto rgb = image_ptr->fetch_pixel(Point2i(x, y), WrapMode::OctahedralSphere);
             sumL += RGBIlluminantSpectrum(rgb.clamp(0.0, Infinity), color_space).sample(lambda);
         }
     }

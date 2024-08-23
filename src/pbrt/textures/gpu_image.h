@@ -80,15 +80,20 @@ class GPUImage {
                                             std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
+    Point2i get_resolution() const {
+        return resolution;
+    }
+
+    PBRT_CPU_GPU
     RGB fetch_pixel(Point2i _p, WrapMode2D wrap_mode) const;
 
     PBRT_CPU_GPU RGB bilerp(Point2f p, WrapMode2D wrap) const;
 
-    Point2i resolution;
-    
   private:
-    const RGB *pixels;
     PixelFormat pixel_format;
+    Point2i resolution;
+
+    const RGB *pixels;
 
     void init_png(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers);
 

@@ -17,7 +17,7 @@ const Distribution2D *Distribution2D::create_from_image(const GPUImage *image,
 
 void Distribution2D::build_from_image(const GPUImage *image,
                                       std::vector<void *> &gpu_dynamic_pointers) {
-    dimension = image->resolution;
+    dimension = image->get_resolution();
 
     distribution_1d_list = nullptr;
     cdf = nullptr;
@@ -27,20 +27,50 @@ void Distribution2D::build_from_image(const GPUImage *image,
     CHECK_CUDA_ERROR(cudaMallocManaged(&_pmf, sizeof(FloatType) * dimension.x));
     gpu_dynamic_pointers.push_back(_pmf);
 
-    double sum_pmf = 0.0;
+    FloatType max_luminance = 0.0;
+    std::vector<std::vector<FloatType>> image_luminance_array(dimension.x,
+                                                              std::vector<FloatType>(dimension.y));
     for (int x = 0; x < dimension.x; ++x) {
-        FloatType accumulated_rgb_val = 0.0;
         for (int y = 0; y < dimension.y; ++y) {
             const auto rgb =
                 image->fetch_pixel(Point2i(x, y), WrapMode::OctahedralSphere).clamp(0, Infinity);
 
-            auto pixel_val = rgb.avg();
-            accumulated_rgb_val += pixel_val;
+            auto luminance = rgb.avg();
+            image_luminance_array[x][y] = luminance;
+
+            max_luminance = std::max(max_luminance, luminance);
+        }
+    }
+
+    if (max_luminance <= 0.0) {
+        REPORT_FATAL_ERROR();
+    }
+
+    // ignore minimal values
+    // those pixels that are smaller than 0.01 * max_luminance are ignored
+    const auto ignore_ratio = 0.01;
+    double sum_pmf = 0.0;
+    auto num_ignore = 0;
+    auto ignore_threshold = ignore_ratio * max_luminance;
+    for (int x = 0; x < dimension.x; ++x) {
+        FloatType luminance_per_row = 0.0;
+        for (int y = 0; y < dimension.y; ++y) {
+            if (image_luminance_array[x][y] <= ignore_threshold) {
+                image_luminance_array[x][y] = 0.0;
+                num_ignore += 1;
+                continue;
+            }
+
+            luminance_per_row += image_luminance_array[x][y];
         }
 
-        _pmf[x] = accumulated_rgb_val;
-        sum_pmf += accumulated_rgb_val;
+        _pmf[x] = luminance_per_row;
+        sum_pmf += luminance_per_row;
     }
+
+    auto num_pixels = dimension.x * dimension.y;
+    printf("%s(): %d/%d (%.2f%) values ignored (ignored ratio: %f)\n", __func__, num_ignore,
+           num_pixels, FloatType(num_ignore) / num_pixels * 100, ignore_ratio);
 
     for (uint idx = 0; idx < dimension.x; ++idx) {
         _pmf[idx] = _pmf[idx] / sum_pmf;
