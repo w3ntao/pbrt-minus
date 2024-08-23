@@ -144,6 +144,12 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
     auto al_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
         std::vector(std::begin(Al_k), std::end(Al_k)), false, nullptr, gpu_dynamic_pointers);
 
+    auto au_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+        std::vector(std::begin(Au_eta), std::end(Au_eta)), false, nullptr, gpu_dynamic_pointers);
+
+    auto au_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+        std::vector(std::begin(Au_k), std::end(Au_k)), false, nullptr, gpu_dynamic_pointers);
+
     auto cu_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
         std::vector(std::begin(Cu_eta), std::end(Cu_eta)), false, nullptr, gpu_dynamic_pointers);
 
@@ -155,9 +161,9 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
         gpu_dynamic_pointers);
 
     spectra = {
-        {"metal-Ag-eta", ag_eta},     {"metal-Ag-k", ag_k},     {"metal-Al-eta", al_eta},
-        {"metal-Al-k", al_k},         {"metal-Cu-eta", cu_eta}, {"metal-Cu-k", cu_k},
-        {"glass-BK7", glass_bk7_eta},
+        {"metal-Ag-eta", ag_eta}, {"metal-Ag-k", ag_k},     {"metal-Al-eta", al_eta},
+        {"metal-Al-k", al_k},     {"metal-Au-eta", au_eta}, {"metal-Au-k", au_k},
+        {"metal-Cu-eta", cu_eta}, {"metal-Cu-k", cu_k},     {"glass-BK7", glass_bk7_eta},
     };
 
     renderer = Renderer::create(gpu_dynamic_pointers);

@@ -150,17 +150,13 @@ const Spectrum *Spectrum::create_from_rgb(const RGB &val, SpectrumType spectrum_
 const Spectrum *Spectrum::create_piecewise_linear_spectrum_from_lambdas_and_values(
     const std::vector<FloatType> &cpu_lambdas, const std::vector<FloatType> &cpu_values,
     std::vector<void *> &gpu_dynamic_pointers) {
-    PiecewiseLinearSpectrum *piecewise_linear_spectrum;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&piecewise_linear_spectrum, sizeof(PiecewiseLinearSpectrum)));
-    piecewise_linear_spectrum->init_from_lambdas_values(cpu_lambdas, cpu_values,
-                                                        gpu_dynamic_pointers);
+    auto piecewise_linear_spectrum = PiecewiseLinearSpectrum::create_from_lambdas_values(
+        cpu_lambdas, cpu_values, gpu_dynamic_pointers);
 
     Spectrum *spectrum;
     CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
     spectrum->init(piecewise_linear_spectrum);
 
-    gpu_dynamic_pointers.push_back(piecewise_linear_spectrum);
     gpu_dynamic_pointers.push_back(spectrum);
 
     return spectrum;
@@ -170,18 +166,13 @@ const Spectrum *Spectrum::create_piecewise_linear_spectrum_from_interleaved(
     const std::vector<FloatType> &samples, bool normalize, const Spectrum *cie_y,
     std::vector<void *> &gpu_dynamic_pointers) {
 
-    PiecewiseLinearSpectrum *piecewise_linear_spectrum;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&piecewise_linear_spectrum, sizeof(PiecewiseLinearSpectrum)));
-
-    piecewise_linear_spectrum->init_from_interleaved(samples, normalize, cie_y,
-                                                     gpu_dynamic_pointers);
+    auto piecewise_linear_spectrum = PiecewiseLinearSpectrum::create_from_interleaved(
+        samples, normalize, cie_y, gpu_dynamic_pointers);
 
     Spectrum *spectrum;
     CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(Spectrum)));
     spectrum->init(piecewise_linear_spectrum);
 
-    gpu_dynamic_pointers.push_back(piecewise_linear_spectrum);
     gpu_dynamic_pointers.push_back(spectrum);
 
     return spectrum;

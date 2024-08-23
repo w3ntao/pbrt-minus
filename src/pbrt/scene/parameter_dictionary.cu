@@ -130,27 +130,46 @@ ParameterDictionary::ParameterDictionary(
         }
 
         if (variable_type == "spectrum") {
-            auto val_in_str = tokens[idx + 1].values[0];
+            auto spectrum_arg_list = tokens[idx + 1].values;
 
-            auto file_path = root + "/" + val_in_str;
-            if (std::filesystem::is_regular_file(file_path)) {
-                auto spectrum_samples = read_spectrum_file(file_path);
-
-                auto built_spectrum = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-                    std::vector(std::begin(spectrum_samples), std::end(spectrum_samples)), false,
-                    nullptr, gpu_dynamic_pointers);
-
-                spectra[variable_name] = built_spectrum;
-                continue;
-            }
-
-            if (_spectra.find(val_in_str) == _spectra.end()) {
-                printf("\nERROR: spectrum `%s` not found\n", val_in_str.c_str());
+            if (spectrum_arg_list.empty()) {
                 REPORT_FATAL_ERROR();
             }
 
-            // otherwise it's a named spectrum
-            spectra[variable_name] = _spectra.at(val_in_str);
+            if (spectrum_arg_list.size() == 1) {
+                // the only value could be a path
+                auto spectrum_arg = spectrum_arg_list[0];
+
+                auto file_path = root + "/" + spectrum_arg;
+                if (std::filesystem::is_regular_file(file_path)) {
+                    auto spectrum_samples = read_spectrum_file(file_path);
+
+                    auto built_spectrum =
+                        Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+                            std::vector(std::begin(spectrum_samples), std::end(spectrum_samples)),
+                            false, nullptr, gpu_dynamic_pointers);
+
+                    spectra[variable_name] = built_spectrum;
+                    continue;
+                }
+
+                if (_spectra.find(spectrum_arg) != _spectra.end()) {
+                    // or name of a spectrum
+                    spectra[variable_name] = _spectra.at(spectrum_arg);
+                    continue;
+                }
+            }
+
+            // build PiecewiseLinearSpectrum from Interleaved data
+            std::vector<FloatType> floats;
+            for (const auto &x : spectrum_arg_list) {
+                floats.push_back(stod(x));
+            }
+
+            auto spectrum = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+                floats, false, nullptr, gpu_dynamic_pointers);
+
+            spectra[variable_name] = spectrum;
             continue;
         }
 

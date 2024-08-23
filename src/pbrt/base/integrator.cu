@@ -18,6 +18,10 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
     if (!_integrator_name.has_value()) {
         printf("integrator not set in PBRT file, changed to Path\n");
         integrator_name = "path";
+    } else if (_integrator_name == "volpath") {
+        printf("integrator `%s` not implemented, changed to Path\n",
+               _integrator_name.value().c_str());
+        integrator_name = "path";
     } else {
         integrator_name = _integrator_name.value();
     }

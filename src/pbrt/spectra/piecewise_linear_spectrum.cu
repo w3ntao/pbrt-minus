@@ -2,14 +2,30 @@
 #include "pbrt/base/spectrum.h"
 #include "pbrt/spectrum_util/spectrum_constants_cie.h"
 
-PBRT_CPU_GPU
-SampledSpectrum PiecewiseLinearSpectrum::sample(const SampledWavelengths &lambda) const {
-    SampledSpectrum s;
-    for (int idx = 0; idx < NSpectrumSamples; ++idx) {
-        s[idx] = (*this)(lambda[idx]);
-    }
+const PiecewiseLinearSpectrum *
+PiecewiseLinearSpectrum::create_from_lambdas_values(const std::vector<FloatType> &cpu_lambdas,
+                                                    const std::vector<FloatType> &cpu_values,
+                                                    std::vector<void *> &gpu_dynamic_pointers) {
+    PiecewiseLinearSpectrum *spectrum;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(PiecewiseLinearSpectrum)));
+    gpu_dynamic_pointers.push_back(spectrum);
 
-    return s;
+    spectrum->init_from_lambdas_values(cpu_lambdas, cpu_values, gpu_dynamic_pointers);
+
+    return spectrum;
+}
+
+const PiecewiseLinearSpectrum *
+PiecewiseLinearSpectrum::create_from_interleaved(const std::vector<FloatType> &samples,
+                                                 bool normalize, const Spectrum *cie_y,
+                                                 std::vector<void *> &gpu_dynamic_pointers) {
+    PiecewiseLinearSpectrum *spectrum;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(PiecewiseLinearSpectrum)));
+    gpu_dynamic_pointers.push_back(spectrum);
+
+    spectrum->init_from_interleaved(samples, normalize, cie_y, gpu_dynamic_pointers);
+
+    return spectrum;
 }
 
 void PiecewiseLinearSpectrum::init_from_lambdas_values(const std::vector<FloatType> &cpu_lambdas,
@@ -22,13 +38,13 @@ void PiecewiseLinearSpectrum::init_from_lambdas_values(const std::vector<FloatTy
 
     cudaMallocManaged(&lambdas, sizeof(FloatType) * size);
     cudaMallocManaged(&values, sizeof(FloatType) * size);
+    gpu_dynamic_pointers.push_back(lambdas);
+    gpu_dynamic_pointers.push_back(values);
+
     CHECK_CUDA_ERROR(
         cudaMemcpy(lambdas, cpu_lambdas.data(), sizeof(FloatType) * size, cudaMemcpyHostToDevice));
     CHECK_CUDA_ERROR(
         cudaMemcpy(values, cpu_values.data(), sizeof(FloatType) * size, cudaMemcpyHostToDevice));
-
-    gpu_dynamic_pointers.push_back(lambdas);
-    gpu_dynamic_pointers.push_back(values);
 }
 
 void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<FloatType> &samples,
@@ -64,6 +80,16 @@ void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<FloatType>
     if (normalize) {
         this->scale(CIE_Y_integral / inner_product(cie_y));
     }
+}
+
+PBRT_CPU_GPU
+SampledSpectrum PiecewiseLinearSpectrum::sample(const SampledWavelengths &lambda) const {
+    SampledSpectrum s;
+    for (int idx = 0; idx < NSpectrumSamples; ++idx) {
+        s[idx] = (*this)(lambda[idx]);
+    }
+
+    return s;
 }
 
 PBRT_CPU_GPU
