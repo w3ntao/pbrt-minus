@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pbrt/spectrum_util/xyz.h"
-#include "pbrt/util/utility_math.h"
+#include "pbrt/util/basic_math.h"
 
 PBRT_CPU_GPU
 inline FloatType LinearToSRGB(FloatType value) {

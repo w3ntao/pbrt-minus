@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/utility_math.h"
+#include "pbrt/util/basic_math.h"
 #include "pbrt/euclidean_space/point3.h"
 #include "pbrt/base/ray.h"
 

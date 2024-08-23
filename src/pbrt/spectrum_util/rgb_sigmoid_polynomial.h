@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/utility_math.h"
+#include "pbrt/util/basic_math.h"
 #include "spectrum_constants_cie.h"
 
 class RGBSigmoidPolynomial {

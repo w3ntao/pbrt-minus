@@ -2,7 +2,7 @@
 
 #include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/vector3.h"
-#include "pbrt/util/utility_math.h"
+#include "pbrt/util/basic_math.h"
 
 class Normal3f {
   public:

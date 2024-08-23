@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iomanip>
-#include "pbrt/util/utility_math.h"
+#include "pbrt/util/basic_math.h"
 #include "pbrt/util/compensated_float.h"
 
 template <uint N>

@@ -2,7 +2,7 @@
 
 #include "pbrt/base/filter.h"
 #include "pbrt/euclidean_space/point2.h"
-#include "pbrt/util/utility_math.h"
+#include "pbrt/util/basic_math.h"
 
 class BoxFilter {
   public:

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include "pbrt/util/bit_arithmetic.h"
-#include "pbrt/util/utility_math.h"
+#include "pbrt/util/basic_math.h"
 #include "pbrt/util/util.h"
 
 class Interval {

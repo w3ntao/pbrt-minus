@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-#include "pbrt/util/utility_math.h"
+#include "pbrt/util/basic_math.h"
 #include "pbrt/util/interval.h"
 
 template <typename T>

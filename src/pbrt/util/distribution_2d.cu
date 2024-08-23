@@ -23,10 +23,6 @@ void Distribution2D::build_from_image(const GPUImage *image,
     cdf = nullptr;
     pmf = nullptr;
 
-    FloatType *_pmf;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&_pmf, sizeof(FloatType) * dimension.x));
-    gpu_dynamic_pointers.push_back(_pmf);
-
     FloatType max_luminance = 0.0;
     std::vector<std::vector<FloatType>> image_luminance_array(dimension.x,
                                                               std::vector<FloatType>(dimension.y));
@@ -46,8 +42,12 @@ void Distribution2D::build_from_image(const GPUImage *image,
         REPORT_FATAL_ERROR();
     }
 
+    FloatType *_pmf;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&_pmf, sizeof(FloatType) * dimension.x));
+    gpu_dynamic_pointers.push_back(_pmf);
+
     // ignore minimal values
-    // those pixels that are smaller than 0.01 * max_luminance are ignored
+    // those pixels with luminance smaller than 0.01 * max_luminance are ignored
     const auto ignore_ratio = 0.01;
     double sum_pmf = 0.0;
     auto num_ignore = 0;

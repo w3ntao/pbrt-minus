@@ -1,6 +1,6 @@
 #include "pbrt/util/math.h"
 #include "pbrt/util/util.h"
-#include "pbrt/util/utility_math.h"
+#include "pbrt/util/basic_math.h"
 
 PBRT_GPU
 Point2f EqualAreaSphereToSquare(Vector3f d) {
