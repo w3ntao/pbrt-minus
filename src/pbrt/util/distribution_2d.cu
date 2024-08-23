@@ -2,75 +2,44 @@
 
 #include "pbrt/spectrum_util/rgb.h"
 #include "pbrt/util/distribution_1d.h"
-#include "pbrt/textures/gpu_image.h"
 
-const Distribution2D *Distribution2D::create_from_image(const GPUImage *image,
-                                                        std::vector<void *> &gpu_dynamic_pointers) {
+const Distribution2D *Distribution2D::create(const std::vector<std::vector<FloatType>> &data,
+                                             std::vector<void *> &gpu_dynamic_pointers) {
     Distribution2D *distribution;
     CHECK_CUDA_ERROR(cudaMallocManaged(&distribution, sizeof(Distribution2D)));
     gpu_dynamic_pointers.push_back(distribution);
 
-    distribution->build_from_image(image, gpu_dynamic_pointers);
+    distribution->build(data, gpu_dynamic_pointers);
 
     return distribution;
 }
 
-void Distribution2D::build_from_image(const GPUImage *image,
-                                      std::vector<void *> &gpu_dynamic_pointers) {
-    dimension = image->get_resolution();
+void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
+                           std::vector<void *> &gpu_dynamic_pointers) {
+    if (data.empty()) {
+        REPORT_FATAL_ERROR();
+    }
+
+    dimension = Point2i(data.size(), data[0].size());
 
     distribution_1d_list = nullptr;
     cdf = nullptr;
     pmf = nullptr;
 
-    FloatType max_luminance = 0.0;
-    std::vector<std::vector<FloatType>> image_luminance_array(dimension.x,
-                                                              std::vector<FloatType>(dimension.y));
-    for (int x = 0; x < dimension.x; ++x) {
-        for (int y = 0; y < dimension.y; ++y) {
-            const auto rgb =
-                image->fetch_pixel(Point2i(x, y), WrapMode::OctahedralSphere).clamp(0, Infinity);
-
-            auto luminance = rgb.avg();
-            image_luminance_array[x][y] = luminance;
-
-            max_luminance = std::max(max_luminance, luminance);
-        }
-    }
-
-    if (max_luminance <= 0.0) {
-        REPORT_FATAL_ERROR();
-    }
-
     FloatType *_pmf;
     CHECK_CUDA_ERROR(cudaMallocManaged(&_pmf, sizeof(FloatType) * dimension.x));
     gpu_dynamic_pointers.push_back(_pmf);
 
-    // ignore minimal values
-    // those pixels with luminance smaller than 0.01 * max_luminance are ignored
-    const auto ignore_ratio = 0.01;
     double sum_pmf = 0.0;
-    auto num_ignore = 0;
-    auto ignore_threshold = ignore_ratio * max_luminance;
     for (int x = 0; x < dimension.x; ++x) {
-        FloatType luminance_per_row = 0.0;
+        FloatType sum_per_row = 0.0;
         for (int y = 0; y < dimension.y; ++y) {
-            if (image_luminance_array[x][y] <= ignore_threshold) {
-                image_luminance_array[x][y] = 0.0;
-                num_ignore += 1;
-                continue;
-            }
-
-            luminance_per_row += image_luminance_array[x][y];
+            sum_per_row += data[x][y];
         }
 
-        _pmf[x] = luminance_per_row;
-        sum_pmf += luminance_per_row;
+        _pmf[x] = sum_per_row;
+        sum_pmf += sum_per_row;
     }
-
-    auto num_pixels = dimension.x * dimension.y;
-    printf("%s(): %d/%d (%.2f%) values ignored (ignored ratio: %f)\n", __func__, num_ignore,
-           num_pixels, FloatType(num_ignore) / num_pixels * 100, ignore_ratio);
 
     for (uint idx = 0; idx < dimension.x; ++idx) {
         _pmf[idx] = _pmf[idx] / sum_pmf;
@@ -96,9 +65,7 @@ void Distribution2D::build_from_image(const GPUImage *image,
     for (int x = 0; x < dimension.x; ++x) {
         std::vector<FloatType> pdfs(dimension.y);
         for (int y = 0; y < dimension.y; ++y) {
-            const auto rgb =
-                image->fetch_pixel(Point2i(x, y), WrapMode::OctahedralSphere).clamp(0, Infinity);
-            pdfs[y] = rgb.avg();
+            pdfs[y] = data[x][y];
         }
 
         _distribution_1d_list[x].build(pdfs, gpu_dynamic_pointers);

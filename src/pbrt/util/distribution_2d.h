@@ -7,14 +7,14 @@
 #include "pbrt/util/macro.h"
 
 class Distribution1D;
-class GPUImage;
 
 class Distribution2D {
   public:
-    static const Distribution2D *create_from_image(const GPUImage *image,
-                                                   std::vector<void *> &gpu_dynamic_pointers);
+    static const Distribution2D *create(const std::vector<std::vector<FloatType>> &data,
+                                        std::vector<void *> &gpu_dynamic_pointers);
 
-    void build_from_image(const GPUImage *image, std::vector<void *> &gpu_dynamic_pointers);
+    void build(const std::vector<std::vector<FloatType>> &data,
+               std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_GPU
     cuda::std::pair<Point2f, FloatType> sample(const Point2f &uv) const;

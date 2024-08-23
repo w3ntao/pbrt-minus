@@ -42,17 +42,55 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
     light_type = LightType::infinite;
     render_from_light = _render_from_light;
 
+    color_space = parameters.global_spectra->rgb_color_space;
+
+    scene_radius = NAN;
+    scene_center = Point3f(NAN, NAN, NAN);
+
     auto texture_file = parameters.root + "/" + parameters.get_one_string("filename");
     image_ptr = GPUImage::create_from_file(texture_file, gpu_dynamic_pointers);
 
     image_resolution = image_ptr->get_resolution();
 
-    image_le_distribution = Distribution2D::create_from_image(image_ptr, gpu_dynamic_pointers);
+    FloatType max_luminance = 0.0;
+    std::vector<std::vector<FloatType>> image_luminance_array(
+        image_resolution.x, std::vector<FloatType>(image_resolution.y));
+    for (int x = 0; x < image_resolution.x; ++x) {
+        for (int y = 0; y < image_resolution.y; ++y) {
+            const auto rgb = image_ptr->fetch_pixel(Point2i(x, y), WrapMode::OctahedralSphere)
+                                 .clamp(0, Infinity);
 
-    color_space = parameters.global_spectra->rgb_color_space;
+            auto luminance = rgb.avg();
+            image_luminance_array[x][y] = luminance;
 
-    scene_radius = NAN;
-    scene_center = Point3f(NAN, NAN, NAN);
+            max_luminance = std::max(max_luminance, luminance);
+        }
+    }
+
+    if (max_luminance <= 0.0) {
+        REPORT_FATAL_ERROR();
+    }
+
+    // ignore minimal values
+    // those pixels with luminance smaller than 0.01 * max_luminance are ignored
+    const auto ignore_ratio = 0.01;
+    auto num_ignore = 0;
+    auto ignore_threshold = ignore_ratio * max_luminance;
+    for (int x = 0; x < image_resolution.x; ++x) {
+        for (int y = 0; y < image_resolution.y; ++y) {
+            if (image_luminance_array[x][y] <= ignore_threshold) {
+                image_luminance_array[x][y] = 0.0;
+                num_ignore += 1;
+                continue;
+            }
+        }
+    }
+
+    auto num_pixels = image_resolution.x * image_resolution.y;
+    printf("ImageInfiniteLight::%s(): %d/%d (%.2f%) pixels ignored (ignored ratio: %f)\n", __func__,
+           num_ignore, num_pixels, FloatType(num_ignore) / num_pixels * 100, ignore_ratio);
+
+    image_le_distribution = Distribution2D::create(image_luminance_array, gpu_dynamic_pointers);
 }
 
 PBRT_GPU

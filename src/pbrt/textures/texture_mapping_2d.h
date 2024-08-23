@@ -33,7 +33,6 @@ class UVMapping {
   public:
     UVMapping(const ParameterDictionary &parameters) {
         this->init(parameters);
-        // TODO: delete me
     }
 
     void init(const ParameterDictionary &parameters) {
