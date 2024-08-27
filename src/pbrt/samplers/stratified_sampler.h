@@ -57,7 +57,6 @@ class StratifiedSampler {
     }
 
   private:
-    // StratifiedSampler Private Members
     uint samples_per_dimension;
 
     curandState rand_state;

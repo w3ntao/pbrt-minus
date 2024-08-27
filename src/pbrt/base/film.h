@@ -21,6 +21,10 @@ class Film {
     void init(RGBFilm *rgb_film);
 
     PBRT_CPU_GPU
+    void add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
+                    const SampledWavelengths &lambda, FloatType weight);
+
+    PBRT_CPU_GPU
     void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
                     const SampledWavelengths &lambda, FloatType weight);
 

@@ -12,7 +12,6 @@ Film *Film::create_rgb_film(const ParameterDictionary &parameters,
     gpu_dynamic_pointers.push_back(film);
 
     auto rgb_film = RGBFilm::create(parameters, gpu_dynamic_pointers);
-
     film->init(rgb_film);
 
     return film;
@@ -21,6 +20,18 @@ Film *Film::create_rgb_film(const ParameterDictionary &parameters,
 void Film::init(RGBFilm *rgb_film) {
     ptr = rgb_film;
     type = Type::rgb;
+}
+
+PBRT_CPU_GPU
+void Film::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
+                      const SampledWavelengths &lambda, FloatType weight) {
+    switch (type) {
+    case (Type::rgb): {
+        return ((RGBFilm *)ptr)->add_sample(pixel_index, radiance_l, lambda, weight);
+    }
+    }
+
+    REPORT_FATAL_ERROR();
 }
 
 PBRT_CPU_GPU

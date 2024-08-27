@@ -42,7 +42,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
     bool specular_bounce = true;
     bool any_non_specular_bounces = false;
 
-    uint depth = 0;
+    uint path_length = 0;
     FloatType pdf_bsdf = NAN;
     FloatType eta_scale = 1.0;
     LightSampleContext prev_interaction_light_sample_ctx;
@@ -67,7 +67,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
                 auto light = base->infinite_lights[idx];
                 auto Le = light->le(ray, lambda);
 
-                if (depth == 0 || specular_bounce) {
+                if (path_length == 0 || specular_bounce) {
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
@@ -83,14 +83,16 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
             break;
         }
 
+        SurfaceInteraction &isect = si->interaction;
+
         // Incorporate emission from surface hit by ray
-        SampledSpectrum Le = si->interaction.le(-ray.d, lambda);
+        SampledSpectrum Le = isect.le(-ray.d, lambda);
         if (Le.is_positive()) {
-            if (depth == 0 || specular_bounce)
+            if (path_length == 0 || specular_bounce)
                 L += beta * Le;
             else {
                 // Compute MIS weight for area light
-                auto area_light = si->interaction.area_light;
+                auto area_light = isect.area_light;
 
                 FloatType pdf_light =
                     base->light_sampler->pmf(prev_interaction_light_sample_ctx, area_light) *
@@ -100,8 +102,6 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
                 L += beta * weight_light * Le;
             }
         }
-
-        SurfaceInteraction &isect = si->interaction;
 
         switch (isect.material->get_material_type()) {
         case (Material::Type::coated_conductor): {
@@ -144,7 +144,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
             bsdf.regularize();
         }
 
-        if (depth++ == max_depth) {
+        if (path_length++ == max_depth) {
             break;
         }
 
@@ -174,18 +174,21 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
         if (bs->is_transmission()) {
             eta_scale *= sqr(bs->eta);
         }
-        prev_interaction_light_sample_ctx = si->interaction;
+        prev_interaction_light_sample_ctx = isect;
         ray = isect.spawn_ray(bs->wi);
         // different with PBRT-v4: ignore the DifferentialRay
 
         // Possibly terminate the path with Russian roulette
-        SampledSpectrum russian_roulette_beta = beta * eta_scale;
-        if (russian_roulette_beta.max_component_value() < 1 && depth > 1) {
-            auto q = std::max<FloatType>(0, 1 - russian_roulette_beta.max_component_value());
-            if (sampler->get_1d() < q) {
-                break;
+        if (path_length > 4) {
+            SampledSpectrum russian_roulette_beta = beta * eta_scale;
+            if (russian_roulette_beta.max_component_value() < 1) {
+                auto q = clamp<FloatType>(1 - russian_roulette_beta.max_component_value(), 0, 0.95);
+
+                if (sampler->get_1d() < q) {
+                    break;
+                }
+                beta /= 1 - q;
             }
-            beta /= 1 - q;
         }
     }
 

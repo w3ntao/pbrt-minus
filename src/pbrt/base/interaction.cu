@@ -50,7 +50,6 @@ void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *cam
 PBRT_GPU
 void SurfaceInteraction::set_intersection_properties(const Material *_material,
                                                      const Light *_area_light) {
-
     if (_material->get_material_type() == Material::Type::mix) {
         if (DEBUGGING) {
             // TODO: to test this part

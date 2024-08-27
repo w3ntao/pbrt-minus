@@ -3,9 +3,12 @@
 #include "pbrt/base/camera.h"
 #include "pbrt/base/film.h"
 #include "pbrt/base/integrator.h"
+#include "pbrt/integrators/integrator_base.h"
 #include "pbrt/base/sampler.h"
 
-__global__ static void parallel_render(Renderer *renderer, uint num_samples) {
+#include "pbrt/wavefront/path.h"
+
+__global__ static void mega_kernel_render(Renderer *renderer, uint num_samples) {
     auto camera_base = renderer->camera->get_camerabase();
 
     uint width = camera_base->resolution.x;
@@ -46,25 +49,47 @@ void Renderer::evaluate_pixel_sample(const Point2i p_pixel, const uint num_sampl
     }
 }
 
-void Renderer::render(const std::string &output_filename, const Point2i &film_resolution,
-                      uint samples_per_pixel) {
-    uint thread_width = 8;
-    uint thread_height = 8;
+void Renderer::render(const std::string &output_filename, uint samples_per_pixel) {
+    auto film_resolution = this->camera->get_camerabase()->resolution;
 
-    std::cout << "\n";
-    std::cout << "rendering a " << film_resolution.x << "x" << film_resolution.y
-              << " image (samples per pixel: " << samples_per_pixel << ") ";
-    std::cout << "in " << thread_width << "x" << thread_height << " blocks.\n" << std::flush;
+    if (wavefront_path_integrator != nullptr) {
+        std::cout << "\n";
+        std::cout << "rendering a " << film_resolution.x << "x" << film_resolution.y
+                  << " image (samples per pixel: " << samples_per_pixel << ") ";
+        std::cout << "with wavefront integrator.\n" << std::flush;
 
-    dim3 blocks(divide_and_ceil(uint(film_resolution.x), thread_width),
-                divide_and_ceil(uint(film_resolution.y), thread_height), 1);
-    dim3 threads(thread_width, thread_height, 1);
+        wavefront_path_integrator->render(film, filter);
 
-    parallel_render<<<blocks, threads>>>(this, samples_per_pixel);
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        film->write_to_png(output_filename, film_resolution);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-    film->write_to_png(output_filename, film_resolution);
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        return;
+    }
+
+    if (integrator != nullptr) {
+        uint thread_width = 8;
+        uint thread_height = 8;
+
+        std::cout << "\n";
+        std::cout << "rendering a " << film_resolution.x << "x" << film_resolution.y
+                  << " image (samples per pixel: " << samples_per_pixel << ") ";
+        std::cout << "in " << thread_width << "x" << thread_height << " blocks.\n" << std::flush;
+
+        dim3 blocks(divide_and_ceil(uint(film_resolution.x), thread_width),
+                    divide_and_ceil(uint(film_resolution.y), thread_height), 1);
+        dim3 threads(thread_width, thread_height, 1);
+
+        mega_kernel_render<<<blocks, threads>>>(this, samples_per_pixel);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+        film->write_to_png(output_filename, film_resolution);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+        return;
+    }
+
+    REPORT_FATAL_ERROR();
 }

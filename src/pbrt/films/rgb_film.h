@@ -35,19 +35,24 @@ class RGBFilm {
     }
 
     PBRT_CPU_GPU
-    void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
+    void add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
                     const SampledWavelengths &lambda, FloatType weight) {
-        int pixel_index = p_film.y * resolution.x + p_film.x;
-
         auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
 
         if (DEBUGGING && rgb.has_nan()) {
-            printf("RGBFilm::%s(): pixel(%d, %d): has a NAN component\n", __func__, p_film.x,
-                   p_film.y);
+            printf("RGBFilm::%s(): pixel(%d): has a NAN component\n", __func__, pixel_index);
         }
 
         pixels[pixel_index].rgb_sum += weight * rgb;
         pixels[pixel_index].weight_sum += weight;
+    }
+
+    PBRT_CPU_GPU
+    void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
+                    const SampledWavelengths &lambda, FloatType weight) {
+        int pixel_index = p_film.y * resolution.x + p_film.x;
+
+        add_sample(pixel_index, radiance_l, lambda, weight);
     }
 
     PBRT_CPU_GPU

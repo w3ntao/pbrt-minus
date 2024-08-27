@@ -121,6 +121,8 @@ add_executable(${PROJ_NAME}
         src/pbrt/util/math.cu
         src/pbrt/util/sampling.cu
 
+        src/pbrt/wavefront/path.cu
+
         src/ext/lodepng/lodepng.cpp
         src/ext/rply/rply.cpp
         src/ext/tinyexr/deps/miniz/miniz.c

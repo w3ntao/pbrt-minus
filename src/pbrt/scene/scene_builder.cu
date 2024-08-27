@@ -29,6 +29,8 @@
 
 #include "pbrt/util/std_container.h"
 
+#include "pbrt/wavefront/path.h"
+
 uint next_keyword_position(const std::vector<Token> &tokens, uint start) {
     for (uint idx = start + 1; idx < tokens.size(); ++idx) {
         const auto type = tokens[idx].type;
@@ -228,9 +230,9 @@ void SceneBuilder::build_sampler() {
     if (!samples_per_pixel.has_value()) {
         samples_per_pixel = parameters.get_integer("pixelsamples", 4);
     }
-
-    const std::string type_sampler = "stratified";
-    // const std::string type_sampler = "independent";
+    // TODO: implement stratified sampler for wavefront renderer
+    //  const std::string type_sampler = "stratified";
+    const std::string type_sampler = "independent";
     uint total_pixel_num = film_resolution->x * film_resolution->y;
 
     renderer->samplers = Sampler::create(type_sampler, samples_per_pixel.value(), total_pixel_num,
@@ -288,6 +290,13 @@ void SceneBuilder::build_integrator() {
          })) {
         gpu_dynamic_pointers.push_back(ptr);
     }
+
+    renderer->wavefront_path_integrator = WavefrontPathIntegrator::create(
+        parameters, integrator_base, samples_per_pixel.value(), gpu_dynamic_pointers);
+
+    return;
+
+    // TODO: automatically choose wavefront rendering or mega-kernel rendering
 
     renderer->integrator =
         Integrator::create(parameters, integrator_name, integrator_base, gpu_dynamic_pointers);
@@ -809,7 +818,14 @@ void SceneBuilder::preprocess() {
     build_integrator();
 
     printf("\n");
-    printf("Integrator: %s\n", renderer->integrator->get_name().c_str());
+    if (renderer->wavefront_path_integrator != nullptr) {
+        printf("Integrator: wavefront path integrator\n");
+
+    } else if (renderer->integrator != nullptr) {
+        printf("Integrator: %s\n", renderer->integrator->get_name().c_str());
+    } else {
+        REPORT_FATAL_ERROR();
+    }
 
     printf("Sampler: %s\n", renderer->samplers->get_name().c_str());
     printf("\n");
@@ -837,7 +853,7 @@ void SceneBuilder::preprocess() {
 void SceneBuilder::render() const {
     auto start = std::chrono::system_clock::now();
 
-    renderer->render(output_filename, film_resolution.value(), samples_per_pixel.value());
+    renderer->render(output_filename, samples_per_pixel.value());
 
     const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
 
