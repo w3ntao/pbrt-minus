@@ -555,13 +555,13 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
     }
     queues.new_path_counter = PATH_POOL_SIZE;
 
+    queues.ray_counter = 0;
     generate_new_path<<<divide_and_ceil(queues.new_path_counter, threads), threads>>>(
         base, filter, &path_state, &queues);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     if (DEBUGGING) {
         CHECK_CUDA_ERROR(cudaGetLastError());
     }
-    queues.ray_counter = PATH_POOL_SIZE;
 
     while (queues.ray_counter > 0) {
         ray_cast<<<divide_and_ceil(queues.ray_counter, threads), threads>>>(this, &path_state,
