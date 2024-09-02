@@ -39,7 +39,7 @@ void Renderer::evaluate_pixel_sample(const Point2i p_pixel, const uint num_sampl
 
         auto ray = camera->generate_ray(camera_sample, sampler);
 
-        auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, sampler);
+        auto radiance_l = ray.weight * megakernel_integrator->li(ray.ray, lambda, sampler);
 
         if (DEBUGGING && radiance_l.has_nan()) {
             printf("%s(): pixel(%d, %d), samples %u: has NAN\n", __func__, p_pixel.x, p_pixel.y, i);
@@ -52,13 +52,13 @@ void Renderer::evaluate_pixel_sample(const Point2i p_pixel, const uint num_sampl
 void Renderer::render(const std::string &output_filename, uint samples_per_pixel) {
     auto film_resolution = this->camera->get_camerabase()->resolution;
 
-    if (wavefront_path_integrator != nullptr) {
+    if (wavefront_integrator != nullptr) {
         std::cout << "\n";
         std::cout << "rendering a " << film_resolution.x << "x" << film_resolution.y
                   << " image (samples per pixel: " << samples_per_pixel << ") ";
         std::cout << "with wavefront integrator.\n" << std::flush;
 
-        wavefront_path_integrator->render(film, filter);
+        wavefront_integrator->render(film, filter);
 
         film->write_to_png(output_filename, film_resolution);
         CHECK_CUDA_ERROR(cudaGetLastError());
@@ -67,7 +67,7 @@ void Renderer::render(const std::string &output_filename, uint samples_per_pixel
         return;
     }
 
-    if (integrator != nullptr) {
+    if (megakernel_integrator != nullptr) {
         uint thread_width = 8;
         uint thread_height = 8;
 

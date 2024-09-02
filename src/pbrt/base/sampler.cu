@@ -35,12 +35,12 @@ static __global__ void init_samplers(Sampler *samplers, T *_samplers, uint lengt
     samplers[idx].init(&_samplers[idx]);
 }
 
-Sampler *Sampler::create(const std::string &type_sampler, const uint samples_per_pixel,
+Sampler *Sampler::create(const std::string &sampler_type, const uint samples_per_pixel,
                          const uint total_pixel_num, std::vector<void *> &gpu_dynamic_pointers) {
     uint threads = 1024;
     uint blocks = divide_and_ceil(total_pixel_num, threads);
 
-    if (type_sampler == "independent") {
+    if (sampler_type == "independent") {
         Sampler *samplers;
         IndependentSampler *independent_samplers;
         CHECK_CUDA_ERROR(cudaMallocManaged(&samplers, sizeof(Sampler) * total_pixel_num));
@@ -62,7 +62,7 @@ Sampler *Sampler::create(const std::string &type_sampler, const uint samples_per
         return samplers;
     }
 
-    if (type_sampler == "stratified") {
+    if (sampler_type == "stratified") {
         if (sqr(std::sqrt(samples_per_pixel)) != samples_per_pixel) {
             REPORT_FATAL_ERROR();
         }

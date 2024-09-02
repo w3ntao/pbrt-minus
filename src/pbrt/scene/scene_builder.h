@@ -16,6 +16,7 @@
 
 #include "pbrt/util/thread_pool.h"
 
+class IntegratorBase;
 class GlobalSpectra;
 class Primitive;
 class Renderer;
@@ -130,9 +131,11 @@ class SceneBuilder {
 
     void build_film();
 
-    void build_sampler();
+    void build_sampler_for_megakernel_integrator(const std::string &sampler_type);
 
-    void build_integrator();
+    const IntegratorBase *build_integrator_base();
+
+    void build_integrator(bool wavefront);
 
     void parse_keyword(const std::vector<Token> &tokens);
 
@@ -170,7 +173,7 @@ class SceneBuilder {
 
     void parse_file(const std::string &_filename);
 
-    void preprocess();
+    void preprocess(bool wavefront);
 
     void render() const;
 
@@ -193,7 +196,7 @@ class SceneBuilder {
 
         builder.parse_file(input_file);
 
-        builder.preprocess();
+        builder.preprocess(false);
 
         builder.render();
     }

@@ -14,7 +14,7 @@ class Sampler {
         stratified,
     };
 
-    static Sampler *create(const std::string &type_sampler, uint samples_per_pixel,
+    static Sampler *create(const std::string &sampler_type, uint samples_per_pixel,
                            uint total_pixel_num, std::vector<void *> &gpu_dynamic_pointers);
 
     std::string get_name() const {

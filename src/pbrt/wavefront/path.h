@@ -58,11 +58,11 @@ struct PathState {
     unsigned long long int global_path_counter;
     unsigned long long int total_path_num;
 
+    void create(uint samples_per_pixel, const Point2i &_resolution, const std::string &sampler_type,
+                std::vector<void *> &gpu_dynamic_pointers);
+
     PBRT_CPU_GPU
     void init_new_path(uint path_idx);
-
-    void first_init(uint samples_per_pixel, const Point2i &_resolution,
-                    std::vector<void *> &gpu_dynamic_pointers);
 };
 
 struct Queues {
@@ -96,7 +96,8 @@ struct Queues {
 class WavefrontPathIntegrator {
   public:
     static WavefrontPathIntegrator *create(const ParameterDictionary &parameters,
-                                           const IntegratorBase *base, uint samples_per_pixel,
+                                           const IntegratorBase *base,
+                                           const std::string &sampler_type, uint samples_per_pixel,
                                            std::vector<void *> &gpu_dynamic_pointers);
 
     void render(Film *film, const Filter *filter);

@@ -223,27 +223,25 @@ void SceneBuilder::build_film() {
     renderer->film = Film::create_rgb_film(parameters, gpu_dynamic_pointers);
 }
 
-void SceneBuilder::build_sampler() {
+void SceneBuilder::build_sampler_for_megakernel_integrator(const std::string &sampler_type) {
     // TODO: sampler is not parsed, only pixelsamples read
     const auto parameters = build_parameter_dictionary(sub_vector(sampler_tokens, 2));
 
     if (!samples_per_pixel.has_value()) {
         samples_per_pixel = parameters.get_integer("pixelsamples", 4);
     }
-    // TODO: implement stratified sampler for wavefront renderer
-    //  const std::string type_sampler = "stratified";
-    const std::string type_sampler = "independent";
+
     uint total_pixel_num = film_resolution->x * film_resolution->y;
 
-    if (type_sampler == "stratified") {
+    if (sampler_type == "stratified") {
         samples_per_pixel = sqr(std::sqrt(samples_per_pixel.value()));
     }
 
-    renderer->samplers = Sampler::create(type_sampler, samples_per_pixel.value(), total_pixel_num,
+    renderer->samplers = Sampler::create(sampler_type, samples_per_pixel.value(), total_pixel_num,
                                          gpu_dynamic_pointers);
 }
 
-void SceneBuilder::build_integrator() {
+const IntegratorBase *SceneBuilder::build_integrator_base() {
     const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
 
     IntegratorBase *integrator_base;
@@ -294,15 +292,29 @@ void SceneBuilder::build_integrator() {
         gpu_dynamic_pointers.push_back(ptr);
     }
 
-    renderer->wavefront_path_integrator = WavefrontPathIntegrator::create(
-        parameters, integrator_base, samples_per_pixel.value(), gpu_dynamic_pointers);
+    return integrator_base;
+}
 
-    return;
+void SceneBuilder::build_integrator(bool wavefront) {
+    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
 
-    // TODO: automatically choose wavefront rendering or mega-kernel rendering
+    auto integrator_base = build_integrator_base();
 
-    renderer->integrator =
-        Integrator::create(parameters, integrator_name, integrator_base, gpu_dynamic_pointers);
+    const std::string sampler_type = "stratified";
+    // auto sampler_type = "independent";
+
+    printf("sampler: %s\n", sampler_type.c_str());
+
+    if (wavefront) {
+        renderer->wavefront_integrator =
+            WavefrontPathIntegrator::create(parameters, integrator_base, sampler_type,
+                                            samples_per_pixel.value(), gpu_dynamic_pointers);
+    } else {
+        build_sampler_for_megakernel_integrator(sampler_type);
+
+        renderer->megakernel_integrator =
+            Integrator::create(parameters, integrator_name, integrator_base, gpu_dynamic_pointers);
+    }
 }
 
 void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
@@ -696,7 +708,6 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
             build_film();
             build_filter();
             build_camera();
-            build_sampler();
 
             graphics_state.transform = Transform::identity();
             named_coordinate_systems["world"] = graphics_state.transform;
@@ -811,26 +822,28 @@ void SceneBuilder::parse_file(const std::string &_filename) {
     parse_tokens(all_tokens);
 }
 
-void SceneBuilder::preprocess() {
+void SceneBuilder::preprocess(bool wavefront) {
     renderer->bvh = HLBVH::create(gpu_primitives, gpu_dynamic_pointers, thread_pool);
 
     auto full_scene_bounds = renderer->bvh->bounds();
     for (auto light : gpu_lights) {
         light->preprocess(full_scene_bounds);
     }
-    build_integrator();
 
-    printf("\n");
-    if (renderer->wavefront_path_integrator != nullptr) {
-        printf("Integrator: wavefront path integrator\n");
+    renderer->wavefront_integrator = nullptr;
+    renderer->megakernel_integrator = nullptr;
 
-    } else if (renderer->integrator != nullptr) {
-        printf("Integrator: %s\n", renderer->integrator->get_name().c_str());
+    build_integrator(wavefront);
+
+    if (renderer->wavefront_integrator != nullptr) {
+        printf("Integrator: (wavefront) path\n");
+
+    } else if (renderer->megakernel_integrator != nullptr) {
+        printf("Integrator: (megakernel) %s\n",
+               renderer->megakernel_integrator->get_name().c_str());
     } else {
         REPORT_FATAL_ERROR();
     }
-
-    printf("Sampler: %s\n", renderer->samplers->get_name().c_str());
     printf("\n");
 
     auto light_type_counter = count_light_type(gpu_lights);

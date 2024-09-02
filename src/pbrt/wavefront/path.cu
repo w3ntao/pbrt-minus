@@ -15,6 +15,8 @@
 #include "pbrt/light_samplers/power_light_sampler.h"
 
 #include "pbrt/samplers/independent_sampler.h"
+#include "pbrt/samplers/stratified_sampler.h"
+
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
@@ -63,14 +65,26 @@ struct MISParameter {
     }
 };
 
-template <typename TypeOfSampler>
-__global__ void init_samplers(Sampler *samplers, TypeOfSampler *concrete_samplers, uint num) {
+__global__ void init_independent_samplers(Sampler *samplers,
+                                          IndependentSampler *independent_samplers, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
     }
 
-    samplers[worker_idx].init(&concrete_samplers[worker_idx]);
+    samplers[worker_idx].init(&independent_samplers[worker_idx]);
+}
+
+__global__ void init_stratifid_samplers(Sampler *samplers, StratifiedSampler *stratified_samplers,
+                                        uint samples_per_dimension, uint num) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num) {
+        return;
+    }
+
+    stratified_samplers[worker_idx].init(samples_per_dimension);
+
+    samplers[worker_idx].init(&stratified_samplers[worker_idx]);
 }
 
 __global__ void gpu_init_path_state(PathState *path_state) {
@@ -520,8 +534,8 @@ void PathState::init_new_path(uint path_idx) {
     mis_parameters[path_idx].init();
 }
 
-void PathState::first_init(uint samples_per_pixel, const Point2i &_resolution,
-                           std::vector<void *> &gpu_dynamic_pointers) {
+void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
+                       const std::string &sampler_type, std::vector<void *> &gpu_dynamic_pointers) {
     image_resolution = _resolution;
     global_path_counter = 0;
     total_path_num = samples_per_pixel * image_resolution.x * image_resolution.y;
@@ -554,39 +568,44 @@ void PathState::first_init(uint samples_per_pixel, const Point2i &_resolution,
     CHECK_CUDA_ERROR(cudaMallocManaged(&mis_parameters, sizeof(MISParameter) * PATH_POOL_SIZE));
 
     CHECK_CUDA_ERROR(cudaMallocManaged(&samplers, sizeof(Sampler) * PATH_POOL_SIZE));
-    // TODO: change to Stratified Sampler
-    IndependentSampler *independent_samplers;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&independent_samplers, sizeof(IndependentSampler) * PATH_POOL_SIZE));
 
-    for (auto ptr : std::vector<void *>({camera_samples,
-                                         camera_rays,
-                                         lambdas,
-                                         L,
-                                         beta,
-                                         shape_intersections,
-                                         path_length,
-                                         intersected,
-                                         finished,
-                                         pixel_indices,
-                                         sample_indices,
-                                         bsdf,
-                                         coated_conductor_bxdf,
-                                         coated_diffuse_bxdf,
-                                         conductor_bxdf,
-                                         dielectric_bxdf,
-                                         diffuse_bxdf,
-                                         mis_parameters,
-                                         samplers,
-                                         independent_samplers})) {
+    for (auto ptr :
+         std::vector<void *>({camera_samples, camera_rays, lambdas, L, beta, shape_intersections,
+                              path_length, intersected, finished, pixel_indices, sample_indices,
+                              bsdf, coated_conductor_bxdf, coated_diffuse_bxdf, conductor_bxdf,
+                              dielectric_bxdf, diffuse_bxdf, mis_parameters, samplers})) {
         gpu_dynamic_pointers.push_back(ptr);
     }
 
     const uint threads = 1024;
     uint blocks = divide_and_ceil<uint>(PATH_POOL_SIZE, threads);
-    init_samplers<<<blocks, threads>>>(samplers, independent_samplers, PATH_POOL_SIZE);
-    // TODO: progress 2024/09/02: init StratifiedSampler
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    if (sampler_type == "stratified") {
+        const uint samples_per_dimension = std::sqrt(samples_per_pixel);
+        if (samples_per_dimension * samples_per_dimension != samples_per_pixel) {
+            REPORT_FATAL_ERROR();
+        }
+
+        StratifiedSampler *stratified_samplers;
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged(&stratified_samplers, sizeof(StratifiedSampler) * PATH_POOL_SIZE));
+        gpu_dynamic_pointers.push_back(stratified_samplers);
+
+        init_stratifid_samplers<<<blocks, threads>>>(samplers, stratified_samplers,
+                                                     samples_per_dimension, PATH_POOL_SIZE);
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    } else if (sampler_type == "independent") {
+        IndependentSampler *independent_samplers;
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged(&independent_samplers, sizeof(IndependentSampler) * PATH_POOL_SIZE));
+        gpu_dynamic_pointers.push_back(independent_samplers);
+
+        init_independent_samplers<<<blocks, threads>>>(samplers, independent_samplers,
+                                                       PATH_POOL_SIZE);
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    } else {
+        REPORT_FATAL_ERROR();
+    }
 
     gpu_init_path_state<<<PATH_POOL_SIZE, threads>>>(this);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
@@ -615,14 +634,15 @@ void Queues::init(std::vector<void *> &gpu_dynamic_pointers) {
 
 WavefrontPathIntegrator *
 WavefrontPathIntegrator::create(const ParameterDictionary &parameters, const IntegratorBase *base,
-                                uint samples_per_pixel, std::vector<void *> &gpu_dynamic_pointers) {
+                                const std::string &sampler_type, uint samples_per_pixel,
+                                std::vector<void *> &gpu_dynamic_pointers) {
     WavefrontPathIntegrator *integrator;
     CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(WavefrontPathIntegrator)));
     gpu_dynamic_pointers.push_back(integrator);
 
     integrator->base = base;
-    integrator->path_state.first_init(samples_per_pixel, base->camera->get_camerabase()->resolution,
-                                      gpu_dynamic_pointers);
+    integrator->path_state.create(samples_per_pixel, base->camera->get_camerabase()->resolution,
+                                  sampler_type, gpu_dynamic_pointers);
     integrator->queues.init(gpu_dynamic_pointers);
 
     integrator->max_depth = 5;

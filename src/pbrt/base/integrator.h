@@ -36,19 +36,19 @@ class Integrator {
     std::string get_name() const {
         switch (type) {
         case (Type::ambient_occlusion): {
-            return "AmbientOcclusion";
+            return "ambientocclusion";
         }
 
         case (Type::path): {
-            return "Path";
+            return "path";
         }
 
         case (Type::simple_path): {
-            return "SimplePath";
+            return "simplepath";
         }
 
         case (Type::surface_normal): {
-            return "SurfaceNormal";
+            return "surfacenormal";
         }
         }
 

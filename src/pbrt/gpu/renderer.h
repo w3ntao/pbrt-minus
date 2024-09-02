@@ -20,8 +20,8 @@ struct Renderer {
         CHECK_CUDA_ERROR(cudaMallocManaged(&renderer, sizeof(Renderer)));
         gpu_dynamic_pointers.push_back(renderer);
 
-        renderer->integrator = nullptr;
-        renderer->wavefront_path_integrator = nullptr;
+        renderer->megakernel_integrator = nullptr;
+        renderer->wavefront_integrator = nullptr;
         renderer->camera = nullptr;
         renderer->film = nullptr;
         renderer->filter = nullptr;
@@ -31,8 +31,8 @@ struct Renderer {
         return renderer;
     }
 
-    const Integrator *integrator;
-    WavefrontPathIntegrator *wavefront_path_integrator;
+    const Integrator *megakernel_integrator;
+    WavefrontPathIntegrator *wavefront_integrator;
     Camera *camera;
     Film *film;
     const Filter *filter;
