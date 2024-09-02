@@ -63,6 +63,10 @@ Sampler *Sampler::create(const std::string &type_sampler, const uint samples_per
     }
 
     if (type_sampler == "stratified") {
+        if (sqr(std::sqrt(samples_per_pixel)) != samples_per_pixel) {
+            REPORT_FATAL_ERROR();
+        }
+
         auto samples_per_dimension = uint(std::sqrt(samples_per_pixel));
         // samples_per_pixel = samples_per_dimension * samples_per_dimension;
 

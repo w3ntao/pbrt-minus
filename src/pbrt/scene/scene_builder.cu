@@ -235,9 +235,12 @@ void SceneBuilder::build_sampler() {
     const std::string type_sampler = "independent";
     uint total_pixel_num = film_resolution->x * film_resolution->y;
 
+    if (type_sampler == "stratified") {
+        samples_per_pixel = sqr(std::sqrt(samples_per_pixel.value()));
+    }
+
     renderer->samplers = Sampler::create(type_sampler, samples_per_pixel.value(), total_pixel_num,
                                          gpu_dynamic_pointers);
-    samples_per_pixel = renderer->samplers->get_samples_per_pixel();
 }
 
 void SceneBuilder::build_integrator() {

@@ -339,7 +339,7 @@ __global__ void evaluate_coated_diffuse_diffuse_material(const WavefrontPathInte
 
     auto &isect = path_state->shape_intersections[path_idx].interaction;
 
-    if (DEBUGGING && isect.material->get_material_type() != Material::Type::diffuse) {
+    if (DEBUGGING && isect.material->get_material_type() != Material::Type::coated_diffuse) {
         REPORT_FATAL_ERROR();
     }
 
@@ -457,6 +457,7 @@ void PathState::first_init(uint samples_per_pixel, const Point2i &_resolution,
     const uint threads = 1024;
     uint blocks = divide_and_ceil<uint>(PATH_POOL_SIZE, threads);
     init_samplers<<<blocks, threads>>>(samplers, independent_samplers, PATH_POOL_SIZE);
+    // TODO: progress 2024/09/02: init StratifiedSampler
 
     gpu_init_path_state<<<PATH_POOL_SIZE, threads>>>(this);
 }

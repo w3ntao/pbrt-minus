@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <cuda/std/optional>
 
 #include "pbrt/euclidean_space/point2.h"
 
@@ -31,6 +30,7 @@ struct PathState {
     SampledSpectrum *L;
     SampledSpectrum *beta;
     Sampler *samplers;
+
     ShapeIntersection *shape_intersections;
 
     uint *path_length;
