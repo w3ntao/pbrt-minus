@@ -2,9 +2,11 @@
 
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/base/film.h"
+#include "pbrt/base/light.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
 
+#include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 
 #include "pbrt/integrators/integrator_base.h"
@@ -184,6 +186,12 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator, PathSta
 
     switch (isect.material->get_material_type()) {
 
+    case (Material::Type::coated_diffuse): {
+        const uint queue_idx = atomicAdd(&queues->coated_diffuse_material_counter, 1);
+        queues->coated_diffuse_material_queue[queue_idx] = path_idx;
+        break;
+    }
+
     case (Material::Type::diffuse): {
         const uint queue_idx = atomicAdd(&queues->diffuse_material_counter, 1);
         queues->diffuse_material_queue[queue_idx] = path_idx;
@@ -282,18 +290,18 @@ PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *pat
     auto sampler = &path_state->samplers[path_idx];
 
     if (path_state->mis_parameters[path_idx].any_non_specular_bounces) {
-        path_state->bsdfs[path_idx].regularize();
+        path_state->bsdf[path_idx].regularize();
     }
 
-    if (_is_non_specular(path_state->bsdfs[path_idx].flags())) {
-        SampledSpectrum Ld = sample_ld(isect, &path_state->bsdfs[path_idx], lambda, sampler);
+    if (_is_non_specular(path_state->bsdf[path_idx].flags())) {
+        SampledSpectrum Ld = sample_ld(isect, &path_state->bsdf[path_idx], lambda, sampler);
         path_state->L[path_idx] += path_state->beta[path_idx] * Ld;
     }
 
     // Sample BSDF to get new path direction
     Vector3f wo = -ray.d;
     FloatType u = sampler->get_1d();
-    auto bs = path_state->bsdfs[path_idx].sample_f(wo, u, sampler->get_2d());
+    auto bs = path_state->bsdf[path_idx].sample_f(wo, u, sampler->get_2d());
     if (!bs) {
         path_state->beta[path_idx] = SampledSpectrum(0.0);
         return;
@@ -302,7 +310,7 @@ PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *pat
     path_state->beta[path_idx] *= bs->f * bs->wi.abs_dot(isect.shading.n.to_vector3()) / bs->pdf;
 
     path_state->mis_parameters[path_idx].pdf_bsdf =
-        bs->pdf_is_proportional ? path_state->bsdfs[path_idx].pdf(wo, bs->wi) : bs->pdf;
+        bs->pdf_is_proportional ? path_state->bsdf[path_idx].pdf(wo, bs->wi) : bs->pdf;
     path_state->mis_parameters[path_idx].specular_bounce = bs->is_specular();
     path_state->mis_parameters[path_idx].any_non_specular_bounces |= (!bs->is_specular());
 
@@ -313,6 +321,36 @@ PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *pat
     path_state->mis_parameters[path_idx].prev_interaction_light_sample_ctx = isect;
 
     path_state->camera_rays[path_idx].ray = isect.spawn_ray(bs->wi);
+}
+
+__global__ void evaluate_coated_diffuse_diffuse_material(const WavefrontPathIntegrator *integrator,
+                                                         PathState *path_state, Queues *queues) {
+    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (queue_idx >= queues->coated_diffuse_material_counter) {
+        return;
+    }
+    const uint path_idx = queues->coated_diffuse_material_queue[queue_idx];
+
+    const auto ray = path_state->camera_rays[path_idx].ray;
+
+    auto &lambda = path_state->lambdas[path_idx];
+
+    auto sampler = &path_state->samplers[path_idx];
+
+    auto &isect = path_state->shape_intersections[path_idx].interaction;
+
+    if (DEBUGGING && isect.material->get_material_type() != Material::Type::diffuse) {
+        REPORT_FATAL_ERROR();
+    }
+
+    isect.init_coated_diffuse_bsdf(path_state->bsdf[path_idx],
+                                   path_state->coated_diffuse_bxdf[path_idx], ray, lambda,
+                                   integrator->base->camera, sampler);
+
+    integrator->sample_bsdf(path_idx, path_state);
+
+    uint ray_queue_idx = atomicAdd(&queues->ray_counter, 1);
+    queues->ray_queue[ray_queue_idx] = path_idx;
 }
 
 __global__ void evaluate_diffuse_material(const WavefrontPathIntegrator *integrator,
@@ -335,7 +373,7 @@ __global__ void evaluate_diffuse_material(const WavefrontPathIntegrator *integra
         REPORT_FATAL_ERROR();
     }
 
-    isect.init_diffuse_bsdf(path_state->bsdfs[path_idx], path_state->diffuse_bxdfs[path_idx], ray,
+    isect.init_diffuse_bsdf(path_state->bsdf[path_idx], path_state->diffuse_bxdf[path_idx], ray,
                             lambda, integrator->base->camera, sampler);
 
     integrator->sample_bsdf(path_idx, path_state);
@@ -397,8 +435,10 @@ void PathState::first_init(uint samples_per_pixel, const Point2i &_resolution,
     CHECK_CUDA_ERROR(cudaMallocManaged(&pixel_indices, sizeof(uint) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&sample_indices, sizeof(uint) * PATH_POOL_SIZE));
 
-    CHECK_CUDA_ERROR(cudaMallocManaged(&bsdfs, sizeof(BSDF) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_bxdfs, sizeof(DiffuseBxDF) * PATH_POOL_SIZE));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&bsdf, sizeof(BSDF) * PATH_POOL_SIZE));
+    CHECK_CUDA_ERROR(
+        cudaMallocManaged(&coated_diffuse_bxdf, sizeof(CoatedDiffuseBxDF) * PATH_POOL_SIZE));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_bxdf, sizeof(DiffuseBxDF) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&mis_parameters, sizeof(MISParameter) * PATH_POOL_SIZE));
 
     CHECK_CUDA_ERROR(cudaMallocManaged(&samplers, sizeof(Sampler) * PATH_POOL_SIZE));
@@ -407,10 +447,10 @@ void PathState::first_init(uint samples_per_pixel, const Point2i &_resolution,
     CHECK_CUDA_ERROR(
         cudaMallocManaged(&independent_samplers, sizeof(IndependentSampler) * PATH_POOL_SIZE));
 
-    for (auto ptr : std::vector<void *>({camera_samples, camera_rays, lambdas, L, beta,
-                                         shape_intersections, path_length, intersected, finished,
-                                         pixel_indices, sample_indices, bsdfs, diffuse_bxdfs,
-                                         mis_parameters, samplers, independent_samplers})) {
+    for (auto ptr : std::vector<void *>(
+             {camera_samples, camera_rays, lambdas, L, beta, shape_intersections, path_length,
+              intersected, finished, pixel_indices, sample_indices, bsdf, coated_diffuse_bxdf,
+              diffuse_bxdf, mis_parameters, samplers, independent_samplers})) {
         gpu_dynamic_pointers.push_back(ptr);
     }
 
@@ -424,11 +464,13 @@ void PathState::first_init(uint samples_per_pixel, const Point2i &_resolution,
 void Queues::init(std::vector<void *> &gpu_dynamic_pointers) {
     CHECK_CUDA_ERROR(cudaMallocManaged(&new_path_queue, sizeof(uint) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&ray_queue, sizeof(uint) * PATH_POOL_SIZE));
+    CHECK_CUDA_ERROR(
+        cudaMallocManaged(&coated_diffuse_material_queue, sizeof(uint) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material_queue, sizeof(uint) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&frame_buffer_queue, sizeof(FrameBuffer) * PATH_POOL_SIZE));
 
-    for (auto ptr : std::vector<void *>(
-             {new_path_queue, ray_queue, diffuse_material_queue, frame_buffer_queue})) {
+    for (auto ptr : std::vector<void *>({new_path_queue, ray_queue, coated_diffuse_material_queue,
+                                         diffuse_material_queue, frame_buffer_queue})) {
         gpu_dynamic_pointers.push_back(ptr);
     }
 }
@@ -532,6 +574,7 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
         // clear all queues before control stage
         queues.new_path_counter = 0;
         queues.ray_counter = 0;
+        queues.coated_diffuse_material_counter = 0;
         queues.diffuse_material_counter = 0;
         queues.frame_buffer_counter = 0;
 
@@ -558,6 +601,16 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
         if (queues.new_path_counter > 0) {
             generate_new_path<<<divide_and_ceil(queues.new_path_counter, threads), threads>>>(
                 base, filter, &path_state, &queues);
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+            if (DEBUGGING) {
+                CHECK_CUDA_ERROR(cudaGetLastError());
+            }
+        }
+
+        if (queues.coated_diffuse_material_counter > 0) {
+            evaluate_coated_diffuse_diffuse_material<<<
+                divide_and_ceil(queues.coated_diffuse_material_counter, threads), threads>>>(
+                this, &path_state, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
             if (DEBUGGING) {
                 CHECK_CUDA_ERROR(cudaGetLastError());

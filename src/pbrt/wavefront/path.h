@@ -4,11 +4,11 @@
 #include <cuda/std/optional>
 
 #include "pbrt/euclidean_space/point2.h"
-#include "pbrt/base/light.h"
 
 class BSDF;
 class CameraSample;
 class CameraRay;
+class CoatedDiffuseBxDF;
 class DiffuseBxDF;
 class Film;
 class Filter;
@@ -37,8 +37,9 @@ struct PathState {
     bool *intersected;
     bool *finished;
 
-    BSDF *bsdfs;
-    DiffuseBxDF *diffuse_bxdfs;
+    BSDF *bsdf;
+    CoatedDiffuseBxDF *coated_diffuse_bxdf;
+    DiffuseBxDF *diffuse_bxdf;
 
     MISParameter *mis_parameters;
 
@@ -66,6 +67,9 @@ struct Queues {
 
     uint *ray_queue;
     uint ray_counter;
+
+    uint *coated_diffuse_material_queue;
+    uint coated_diffuse_material_counter;
 
     uint *diffuse_material_queue;
     uint diffuse_material_counter;
