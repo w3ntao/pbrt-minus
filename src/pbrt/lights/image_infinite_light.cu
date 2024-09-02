@@ -78,7 +78,7 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
     auto ignore_threshold = ignore_ratio * max_luminance;
     for (int x = 0; x < image_resolution.x; ++x) {
         for (int y = 0; y < image_resolution.y; ++y) {
-            if (image_luminance_array[x][y] <= ignore_threshold) {
+            if (image_luminance_array[x][y] < ignore_threshold) {
                 image_luminance_array[x][y] = 0.0;
                 num_ignore += 1;
                 continue;
@@ -87,6 +87,11 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
     }
 
     auto num_pixels = image_resolution.x * image_resolution.y;
+
+    if (num_ignore == num_pixels) {
+        REPORT_FATAL_ERROR();
+    }
+
     printf("ImageInfiniteLight::%s(): %d/%d (%.2f%) pixels ignored (ignored ratio: %f)\n", __func__,
            num_ignore, num_pixels, FloatType(num_ignore) / num_pixels * 100, ignore_ratio);
 
