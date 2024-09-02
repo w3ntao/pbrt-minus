@@ -21,7 +21,7 @@
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/util/basic_math.h"
 
-const uint PATH_POOL_SIZE = 1 * 1024 * 1024;
+const uint PATH_POOL_SIZE = 2 * 1024 * 1024;
 
 struct FrameBuffer {
     uint pixel_idx;
@@ -181,7 +181,6 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator, PathSta
     }
 
     // for active paths: advance one segment
-    // TODO: progress 2024/08/29: handle more materials
 
     path_state->path_length[path_idx] += 1;
 
@@ -689,26 +688,18 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
     // generate new paths for the whole pool
     fill_new_path_queue<<<PATH_POOL_SIZE, threads>>>(&queues);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    if (DEBUGGING) {
-        CHECK_CUDA_ERROR(cudaGetLastError());
-    }
+
     queues.new_path_counter = PATH_POOL_SIZE;
 
     queues.ray_counter = 0;
     generate_new_path<<<divide_and_ceil(queues.new_path_counter, threads), threads>>>(
         base, filter, &path_state, &queues);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    if (DEBUGGING) {
-        CHECK_CUDA_ERROR(cudaGetLastError());
-    }
 
     while (queues.ray_counter > 0) {
         ray_cast<<<divide_and_ceil(queues.ray_counter, threads), threads>>>(this, &path_state,
                                                                             &queues);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        if (DEBUGGING) {
-            CHECK_CUDA_ERROR(cudaGetLastError());
-        }
 
         // clear all queues before control stage
         queues.new_path_counter = 0;
@@ -724,9 +715,6 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
         control_logic<<<divide_and_ceil(PATH_POOL_SIZE, threads), threads>>>(this, &path_state,
                                                                              &queues);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        if (DEBUGGING) {
-            CHECK_CUDA_ERROR(cudaGetLastError());
-        }
 
         if (queues.frame_buffer_counter > 0) {
             // sort to make film writing deterministic
@@ -736,18 +724,12 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
             write_frame_buffer<<<divide_and_ceil(queues.frame_buffer_counter, threads), threads>>>(
                 film, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-            if (DEBUGGING) {
-                CHECK_CUDA_ERROR(cudaGetLastError());
-            }
         }
 
         if (queues.new_path_counter > 0) {
             generate_new_path<<<divide_and_ceil(queues.new_path_counter, threads), threads>>>(
                 base, filter, &path_state, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-            if (DEBUGGING) {
-                CHECK_CUDA_ERROR(cudaGetLastError());
-            }
         }
 
         if (queues.coated_conductor_material_counter > 0) {
@@ -755,9 +737,6 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
                 divide_and_ceil(queues.coated_conductor_material_counter, threads), threads>>>(
                 this, &path_state, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-            if (DEBUGGING) {
-                CHECK_CUDA_ERROR(cudaGetLastError());
-            }
         }
 
         if (queues.coated_diffuse_material_counter > 0) {
@@ -765,9 +744,6 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
                 divide_and_ceil(queues.coated_diffuse_material_counter, threads), threads>>>(
                 this, &path_state, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-            if (DEBUGGING) {
-                CHECK_CUDA_ERROR(cudaGetLastError());
-            }
         }
 
         if (queues.conductor_material_counter > 0) {
@@ -775,9 +751,6 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
                 divide_and_ceil(queues.conductor_material_counter, threads), threads>>>(
                 this, &path_state, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-            if (DEBUGGING) {
-                CHECK_CUDA_ERROR(cudaGetLastError());
-            }
         }
 
         if (queues.dielectric_material_counter > 0) {
@@ -785,18 +758,12 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
                 divide_and_ceil(queues.dielectric_material_counter, threads), threads>>>(
                 this, &path_state, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-            if (DEBUGGING) {
-                CHECK_CUDA_ERROR(cudaGetLastError());
-            }
         }
 
         if (queues.diffuse_material_counter > 0) {
             evaluate_diffuse_material<<<divide_and_ceil(queues.diffuse_material_counter, threads),
                                         threads>>>(this, &path_state, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-            if (DEBUGGING) {
-                CHECK_CUDA_ERROR(cudaGetLastError());
-            }
         }
     }
 }
