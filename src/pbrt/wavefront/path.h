@@ -4,11 +4,8 @@
 
 #include "pbrt/euclidean_space/point2.h"
 
-class BSDF;
 class CameraSample;
 class CameraRay;
-class CoatedDiffuseBxDF;
-class DiffuseBxDF;
 class Film;
 class Filter;
 class FrameBuffer;
@@ -21,6 +18,11 @@ class SampledWavelengths;
 class ShapeIntersection;
 class Spectrum;
 class SurfaceInteraction;
+
+class BSDF;
+class CoatedConductorBxDF;
+class CoatedDiffuseBxDF;
+class DiffuseBxDF;
 
 struct PathState {
     CameraSample *camera_samples;
@@ -38,6 +40,7 @@ struct PathState {
     bool *finished;
 
     BSDF *bsdf;
+    CoatedConductorBxDF *coated_conductor_bxdf;
     CoatedDiffuseBxDF *coated_diffuse_bxdf;
     DiffuseBxDF *diffuse_bxdf;
 
@@ -67,6 +70,9 @@ struct Queues {
 
     uint *ray_queue;
     uint ray_counter;
+
+    uint *coated_conductor_material_queue;
+    uint coated_conductor_material_counter;
 
     uint *coated_diffuse_material_queue;
     uint coated_diffuse_material_counter;
