@@ -23,6 +23,7 @@ class BSDF;
 class CoatedConductorBxDF;
 class CoatedDiffuseBxDF;
 class ConductorBxDF;
+class DielectricBxDF;
 class DiffuseBxDF;
 
 struct PathState {
@@ -44,6 +45,7 @@ struct PathState {
     CoatedConductorBxDF *coated_conductor_bxdf;
     CoatedDiffuseBxDF *coated_diffuse_bxdf;
     ConductorBxDF *conductor_bxdf;
+    DielectricBxDF *dielectric_bxdf;
     DiffuseBxDF *diffuse_bxdf;
 
     MISParameter *mis_parameters;
@@ -81,6 +83,9 @@ struct Queues {
 
     uint *coated_diffuse_material_queue;
     uint coated_diffuse_material_counter;
+
+    uint *dielectric_material_queue;
+    uint dielectric_material_counter;
 
     uint *diffuse_material_queue;
     uint diffuse_material_counter;
