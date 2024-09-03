@@ -1,6 +1,6 @@
 #include "pbrt/integrators/path.h"
 
-#include "pbrt/integrators/integrator_base.h"
+#include "pbrt/base/integrator_base.h"
 
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/base/bxdf.h"

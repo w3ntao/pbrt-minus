@@ -8,14 +8,13 @@
 #include "pbrt/base/film.h"
 #include "pbrt/base/filter.h"
 #include "pbrt/base/integrator.h"
+#include "pbrt/base/integrator_base.h"
 #include "pbrt/base/material.h"
+#include "pbrt/base/primitive.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/base/shape.h"
-#include "pbrt/base/primitive.h"
 
 #include "pbrt/gpu/renderer.h"
-
-#include "pbrt/integrators/integrator_base.h"
 
 #include "pbrt/light_samplers/uniform_light_sampler.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
@@ -29,7 +28,7 @@
 
 #include "pbrt/util/std_container.h"
 
-#include "pbrt/wavefront/path.h"
+#include "pbrt/wavefront_integrators/path.h"
 
 uint next_keyword_position(const std::vector<Token> &tokens, uint start) {
     for (uint idx = start + 1; idx < tokens.size(); ++idx) {

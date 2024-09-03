@@ -2,12 +2,12 @@
 
 #include "pbrt/accelerator/hlbvh.h"
 
+#include "pbrt/base/integrator_base.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/base/spectrum.h"
 
 #include "pbrt/euclidean_space/frame.h"
-#include "pbrt/integrators/integrator_base.h"
 #include "pbrt/util/sampling.h"
 
 class IntegratorBase;

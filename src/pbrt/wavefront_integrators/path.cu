@@ -1,7 +1,8 @@
-#include "pbrt/wavefront/path.h"
+#include "pbrt/wavefront_integrators/path.h"
 
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/base/film.h"
+#include "pbrt/base/integrator_base.h"
 #include "pbrt/base/light.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
@@ -9,8 +10,6 @@
 #include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
-
-#include "pbrt/integrators/integrator_base.h"
 
 #include "pbrt/light_samplers/power_light_sampler.h"
 

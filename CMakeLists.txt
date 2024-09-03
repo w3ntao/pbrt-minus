@@ -46,6 +46,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/filter.cu
         src/pbrt/base/float_texture.cu
         src/pbrt/base/integrator.cu
+        src/pbrt/base/integrator_base.cu
         src/pbrt/base/interaction.cu
         src/pbrt/base/light.cu
         src/pbrt/base/material.cu
@@ -69,7 +70,6 @@ add_executable(${PROJ_NAME}
         src/pbrt/gpu/renderer.cu
 
         src/pbrt/integrators/ambient_occlusion.cu
-        src/pbrt/integrators/integrator_base.cu
         src/pbrt/integrators/path.cu
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu
@@ -121,7 +121,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/util/math.cu
         src/pbrt/util/sampling.cu
 
-        src/pbrt/wavefront/path.cu
+        src/pbrt/wavefront_integrators/path.cu
 
         src/ext/lodepng/lodepng.cpp
         src/ext/rply/rply.cpp

@@ -1,12 +1,13 @@
 #include "pbrt/integrators/random_walk.h"
 
+#include "pbrt/accelerator/hlbvh.h"
+
+#include "pbrt/base/integrator_base.h"
+#include "pbrt/base/material.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/base/sampler.h"
-#include "pbrt/base/material.h"
 
-#include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
-#include "pbrt/integrators/integrator_base.h"
 
 void RandomWalkIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
     base = _base;

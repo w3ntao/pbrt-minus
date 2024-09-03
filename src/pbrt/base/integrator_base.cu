@@ -1,4 +1,4 @@
-#include "pbrt/integrators/integrator_base.h"
+#include "integrator_base.h"
 
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/base/interaction.h"

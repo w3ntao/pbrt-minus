@@ -3,10 +3,10 @@
 #include "pbrt/base/camera.h"
 #include "pbrt/base/film.h"
 #include "pbrt/base/integrator.h"
-#include "pbrt/integrators/integrator_base.h"
+#include "pbrt/base/integrator_base.h"
 #include "pbrt/base/sampler.h"
 
-#include "pbrt/wavefront/path.h"
+#include "pbrt/wavefront_integrators/path.h"
 
 __global__ static void mega_kernel_render(Renderer *renderer, uint num_samples) {
     auto camera_base = renderer->camera->get_camerabase();
