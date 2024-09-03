@@ -1,9 +1,8 @@
 #pragma once
 
-#include <stdexcept>
-
 #include "pbrt/util/basic_math.h"
 #include "pbrt/util/interval.h"
+#include <stdexcept>
 
 template <typename T>
 class Vector3 {

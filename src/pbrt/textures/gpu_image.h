@@ -1,11 +1,10 @@
 #pragma once
 
+#include "pbrt/euclidean_space/point2.h"
+#include "pbrt/util/float.h"
+#include "pbrt/util/macro.h"
 #include <string>
 #include <vector>
-
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/util/macro.h"
-#include "pbrt/util/float.h"
 
 class RGB;
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/util/basic_math.h"
+#include "pbrt/util/macro.h"
 
 class Normal3f {
   public:

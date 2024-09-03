@@ -1,7 +1,6 @@
-#include "pbrt/shapes/triangle_mesh.h"
-
 #include "pbrt/base/shape.h"
 #include "pbrt/shapes/triangle.h"
+#include "pbrt/shapes/triangle_mesh.h"
 
 template <typename T>
 static __global__ void apply_transform(T *data, const Transform transform, uint length) {

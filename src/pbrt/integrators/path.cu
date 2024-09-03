@@ -1,19 +1,15 @@
-#include "pbrt/integrators/path.h"
-
-#include "pbrt/base/integrator_base.h"
-
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/base/bxdf.h"
-#include "pbrt/base/sampler.h"
+#include "pbrt/base/integrator_base.h"
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/material.h"
-
+#include "pbrt/base/sampler.h"
 #include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/conductor_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
-
+#include "pbrt/integrators/path.h"
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/image_infinite_light.h"
 

@@ -2,7 +2,6 @@
 
 #include "pbrt/base/spectrum.h"
 #include "pbrt/euclidean_space/transform.h"
-
 #include "pbrt/textures/image_texture_base.h"
 #include "pbrt/textures/mipmap.h"
 

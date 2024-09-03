@@ -1,12 +1,11 @@
 #pragma once
 
+#include "pbrt/base/primitive.h"
+#include "pbrt/base/shape.h"
+#include "pbrt/euclidean_space/bounds3.h"
+#include <atomic>
 #include <cassert>
 #include <vector>
-#include <atomic>
-
-#include "pbrt/base/shape.h"
-#include "pbrt/base/primitive.h"
-#include "pbrt/euclidean_space/bounds3.h"
 
 class ThreadPool;
 

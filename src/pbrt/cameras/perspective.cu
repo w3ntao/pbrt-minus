@@ -1,5 +1,5 @@
-#include "pbrt/cameras/perspective.h"
 #include "pbrt/base/sampler.h"
+#include "pbrt/cameras/perspective.h"
 
 void PerspectiveCamera::init(const Point2i &resolution, const CameraTransform &camera_transform,
                              const ParameterDictionary &parameters) {

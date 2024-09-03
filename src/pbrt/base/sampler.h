@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point2.h"
 #include "pbrt/base/camera.h"
+#include "pbrt/euclidean_space/point2.h"
 
 class Filter;
 class IndependentSampler;

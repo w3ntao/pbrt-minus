@@ -1,8 +1,7 @@
 #pragma once
 
-#include <cuda/std/optional>
-
 #include "pbrt/base/light.h"
+#include <cuda/std/optional>
 
 class GlobalSpectra;
 class ParameterDictionary;

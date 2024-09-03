@@ -1,14 +1,12 @@
-#include "pbrt/base/integrator.h"
-
-#include "pbrt/base/sampler.h"
+#include "pbrt/base/megakernel_integrator.h"
 #include "pbrt/base/ray.h"
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
-
+#include "pbrt/base/sampler.h"
 #include "pbrt/integrators/ambient_occlusion.h"
 #include "pbrt/integrators/path.h"
 #include "pbrt/integrators/random_walk.h"
 #include "pbrt/integrators/simple_path.h"
 #include "pbrt/integrators/surface_normal.h"
+#include "pbrt/spectrum_util/sampled_wavelengths.h"
 
 const Integrator *Integrator::create(const ParameterDictionary &parameters,
                                      const std::optional<std::string> &_integrator_name,

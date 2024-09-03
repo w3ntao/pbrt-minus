@@ -1,16 +1,13 @@
-#include "pbrt/base/interaction.h"
-
 #include "pbrt/base/camera.h"
-#include "pbrt/base/material.h"
+#include "pbrt/base/interaction.h"
 #include "pbrt/base/light.h"
+#include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
-
 #include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/conductor_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
-
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 
 PBRT_GPU

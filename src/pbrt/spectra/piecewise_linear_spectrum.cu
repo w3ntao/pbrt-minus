@@ -1,5 +1,5 @@
-#include "pbrt/spectra/piecewise_linear_spectrum.h"
 #include "pbrt/base/spectrum.h"
+#include "pbrt/spectra/piecewise_linear_spectrum.h"
 #include "pbrt/spectrum_util/spectrum_constants_cie.h"
 
 const PiecewiseLinearSpectrum *

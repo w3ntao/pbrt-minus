@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/util/basic_math.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/vector2.h"
+#include "pbrt/util/basic_math.h"
 
 // Bounds2 Definition
 template <typename T>

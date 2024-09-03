@@ -1,14 +1,12 @@
 #pragma once
 
-#include <optional>
-
-#include "pbrt/util/macro.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-
 #include "pbrt/base/bsdf.h"
 #include "pbrt/base/spectrum_texture.h"
-#include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/euclidean_space/normal3f.h"
+#include "pbrt/euclidean_space/vector3.h"
+#include "pbrt/spectrum_util/sampled_spectrum.h"
+#include "pbrt/util/macro.h"
+#include <optional>
 
 struct MaterialEvalContext : public TextureEvalContext {
     // MaterialEvalContext Public Methods

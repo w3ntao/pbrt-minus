@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vector>
-
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/util/macro.h"
+#include <vector>
 
 class ShapeSample;
 class ShapeSampleContext;

@@ -1,7 +1,6 @@
-#include "pbrt/primitives/geometric_primitive.h"
-
-#include "pbrt/base/shape.h"
 #include "pbrt/base/light.h"
+#include "pbrt/base/shape.h"
+#include "pbrt/primitives/geometric_primitive.h"
 
 PBRT_CPU_GPU
 void GeometricPrimitive::init(const Shape *_shape_ptr, const Material *_material,

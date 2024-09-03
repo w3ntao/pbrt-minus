@@ -1,12 +1,10 @@
 #pragma once
 
+#include "pbrt/util/macro.h"
+#include <cuda/std/tuple>
 #include <functional>
 #include <numeric>
 #include <vector>
-
-#include <cuda/std/tuple>
-
-#include "pbrt/util/macro.h"
 
 PBRT_CPU_GPU
 static uint search_cdf(FloatType u, const FloatType *cdf, uint length) {

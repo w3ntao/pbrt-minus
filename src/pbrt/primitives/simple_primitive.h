@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/base/shape.h"
 #include "pbrt/base/material.h"
+#include "pbrt/base/shape.h"
 
 class SimplePrimitive {
   public:

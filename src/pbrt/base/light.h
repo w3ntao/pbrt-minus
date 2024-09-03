@@ -1,12 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <cuda/std/optional>
-
 #include "pbrt/base/interaction.h"
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
+#include <cuda/std/optional>
+#include <vector>
 
 template <typename T>
 class Bounds3;

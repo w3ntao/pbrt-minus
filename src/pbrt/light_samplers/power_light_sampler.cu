@@ -1,7 +1,5 @@
-#include "pbrt/light_samplers/power_light_sampler.h"
-
 #include "pbrt/base/light.h"
-
+#include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/util/distribution_1d.h"
 #include "pbrt/util/hash_map.h"
 

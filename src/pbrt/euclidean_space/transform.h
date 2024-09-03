@@ -1,13 +1,12 @@
 #pragma once
 
-#include "pbrt/base/ray.h"
 #include "pbrt/base/interaction.h"
-
+#include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/euclidean_space/normal3f.h"
-#include "pbrt/euclidean_space/vector3fi.h"
 #include "pbrt/euclidean_space/point3fi.h"
 #include "pbrt/euclidean_space/squared_matrix.h"
+#include "pbrt/euclidean_space/vector3fi.h"
 
 class Transform {
   public:

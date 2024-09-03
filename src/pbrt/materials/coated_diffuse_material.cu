@@ -1,9 +1,7 @@
-#include "pbrt/materials/coated_diffuse_material.h"
-
 #include "pbrt/base/float_texture.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/spectrum.h"
-
+#include "pbrt/materials/coated_diffuse_material.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/spectrum_util/global_spectra.h"

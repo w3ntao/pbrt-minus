@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
-#include <cuda/std/optional>
 #include "pbrt/util/macro.h"
+#include <cuda/std/optional>
+#include <vector>
 
 class Distribution1D;
 class HashMap;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
+#include <vector>
 
 class FloatTexture;
 class MaterialEvalContext;

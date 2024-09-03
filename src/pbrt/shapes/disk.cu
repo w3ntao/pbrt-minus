@@ -1,7 +1,6 @@
-#include "pbrt/shapes/disk.h"
-
 #include "pbrt/base/shape.h"
 #include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/shapes/disk.h"
 #include "pbrt/util/sampling.h"
 
 const Disk *Disk::create(const Transform &render_from_object, const Transform &object_from_render,

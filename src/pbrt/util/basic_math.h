@@ -1,7 +1,7 @@
 #pragma once
 
-#include <limits>
 #include "pbrt/util/macro.h"
+#include <limits>
 
 constexpr FloatType Infinity = std::numeric_limits<FloatType>::infinity();
 

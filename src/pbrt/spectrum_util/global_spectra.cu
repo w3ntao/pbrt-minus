@@ -1,6 +1,5 @@
-#include "pbrt/spectrum_util/global_spectra.h"
-
 #include "pbrt/base/spectrum.h"
+#include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/util/thread_pool.h"
 
@@ -66,6 +65,6 @@ const GlobalSpectra *GlobalSpectra::create(RGBtoSpectrumData::Gamut gamut, Threa
     std::cout << std::fixed << std::setprecision(1) << "spectra computing took " << duration.count()
               << " seconds.\n"
               << std::flush;
-    
+
     return global_spectra;
 }

@@ -1,7 +1,5 @@
 #include "pbrt/base/light.h"
-
 #include "pbrt/base/shape.h"
-
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/distant_light.h"
 #include "pbrt/lights/image_infinite_light.h"

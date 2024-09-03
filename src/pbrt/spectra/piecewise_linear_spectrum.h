@@ -1,8 +1,7 @@
 #pragma once
 
-#include <vector>
-
 #include "pbrt/util/macro.h"
+#include <vector>
 
 class SampledSpectrum;
 class SampledWavelengths;

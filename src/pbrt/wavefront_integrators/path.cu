@@ -1,26 +1,21 @@
-#include "pbrt/wavefront_integrators/path.h"
-
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/base/film.h"
 #include "pbrt/base/integrator_base.h"
 #include "pbrt/base/light.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
-
 #include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
-
 #include "pbrt/light_samplers/power_light_sampler.h"
-
 #include "pbrt/samplers/independent_sampler.h"
 #include "pbrt/samplers/stratified_sampler.h"
-
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/util/basic_math.h"
+#include "pbrt/wavefront_integrators/path.h"
 
 const uint PATH_POOL_SIZE = 1 * 1024 * 1024;
 

@@ -1,12 +1,11 @@
 #pragma once
 
-#include <cuda/std/optional>
-
-#include "pbrt/base/ray.h"
 #include "pbrt/base/interaction.h"
+#include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/shapes/triangle_mesh.h"
 #include "pbrt/util/sampling.h"
+#include <cuda/std/optional>
 
 PBRT_CPU_GPU
 static FloatType SphericalTriangleArea(const Vector3f a, const Vector3f b, const Vector3f c) {

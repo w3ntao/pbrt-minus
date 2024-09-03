@@ -1,12 +1,10 @@
-#include "pbrt/materials/dielectric_material.h"
-
 #include "pbrt/base/float_texture.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/spectrum.h"
-
 #include "pbrt/bxdfs/dielectric_bxdf.h"
-#include "pbrt/spectra/constant_spectrum.h"
+#include "pbrt/materials/dielectric_material.h"
 #include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/textures/float_constant_texture.h"
 
 void DielectricMaterial::init(const ParameterDictionary &parameters,

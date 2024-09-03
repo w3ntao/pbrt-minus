@@ -1,5 +1,4 @@
 #include "pbrt/base/bsdf.h"
-
 #include "pbrt/base/bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 

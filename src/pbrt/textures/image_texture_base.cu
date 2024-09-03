@@ -1,6 +1,5 @@
-#include "pbrt/textures/image_texture_base.h"
-
 #include "pbrt/euclidean_space/transform.h"
+#include "pbrt/textures/image_texture_base.h"
 #include "pbrt/textures/mipmap.h"
 
 void ImageTextureBase::init_image_texture_base(const Transform &render_from_object,

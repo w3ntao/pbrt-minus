@@ -1,7 +1,5 @@
-#include "pbrt/base/primitive.h"
-
 #include "pbrt/base/light.h"
-
+#include "pbrt/base/primitive.h"
 #include "pbrt/primitives/geometric_primitive.h"
 #include "pbrt/primitives/simple_primitive.h"
 #include "pbrt/primitives/transformed_primitive.h"

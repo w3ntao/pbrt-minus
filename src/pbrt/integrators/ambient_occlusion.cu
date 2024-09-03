@@ -1,5 +1,4 @@
 #include "pbrt/integrators/ambient_occlusion.h"
-
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 

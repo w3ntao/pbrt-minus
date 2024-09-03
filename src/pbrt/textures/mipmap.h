@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vector>
-
-#include "pbrt/util/macro.h"
+#include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/spectrum_util/rgb.h"
 #include "pbrt/textures/gpu_image.h"
+#include "pbrt/util/macro.h"
+#include <vector>
 
 class RGBColorSpace;
 class GPUImage;

@@ -1,12 +1,10 @@
 #pragma once
 
-#include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/euclidean_space/point3.h"
+#include "pbrt/euclidean_space/vector3.h"
 
-// Vector3fi Definition
 class Vector3fi : public Vector3<Interval> {
   public:
-    // Vector3fi Public Methods
     using Vector3<Interval>::x;
     using Vector3<Interval>::y;
     using Vector3<Interval>::z;

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <cuda/std/optional>
-
 #include "pbrt/base/spectrum.h"
 #include "pbrt/util/scattering.h"
+#include <cuda/std/optional>
 
 struct PhaseFunctionSample {
     FloatType p;

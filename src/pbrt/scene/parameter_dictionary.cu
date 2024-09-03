@@ -1,13 +1,11 @@
-#include "pbrt/scene/parameter_dictionary.h"
-
 #include "pbrt/base/float_texture.h"
 #include "pbrt/base/spectrum.h"
 #include "pbrt/base/spectrum_texture.h"
-
+#include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/scene/tokenizer.h"
+#include "pbrt/spectra/black_body_spectrum.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectra/black_body_spectrum.h"
 
 std::vector<FloatType> read_spectrum_file(const std::string &filename) {
     std::string token;

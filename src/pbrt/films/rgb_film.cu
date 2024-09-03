@@ -1,5 +1,4 @@
 #include "pbrt/films/rgb_film.h"
-
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 

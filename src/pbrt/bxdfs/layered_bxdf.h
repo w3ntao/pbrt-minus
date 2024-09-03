@@ -1,11 +1,10 @@
 #pragma once
 
-#include <curand_kernel.h>
-
 #include "pbrt/base/media.h"
 #include "pbrt/bxdfs/top_or_bottom_bxdf.h"
 #include "pbrt/util/hash.h"
 #include "pbrt/util/macro.h"
+#include <curand_kernel.h>
 
 // LayeredBxDF Definition
 template <typename TopBxDF, typename BottomBxDF, bool twoSided>

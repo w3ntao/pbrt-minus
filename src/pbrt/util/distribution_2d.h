@@ -1,10 +1,9 @@
 #pragma once
 
-#include <vector>
-#include <cuda/std/tuple>
-
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/util/macro.h"
+#include <cuda/std/tuple>
+#include <vector>
 
 class Distribution1D;
 

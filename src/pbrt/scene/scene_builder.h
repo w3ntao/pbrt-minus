@@ -1,20 +1,16 @@
 #pragma once
 
+#include "pbrt/base/light.h"
+#include "pbrt/euclidean_space/point2.h"
+#include "pbrt/euclidean_space/transform.h"
+#include "pbrt/scene/command_line_option.h"
+#include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/scene/parser.h"
+#include "pbrt/util/thread_pool.h"
 #include <filesystem>
 #include <map>
 #include <set>
 #include <stack>
-
-#include "pbrt/base/light.h"
-
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/euclidean_space/transform.h"
-
-#include "pbrt/scene/command_line_option.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/scene/parser.h"
-
-#include "pbrt/util/thread_pool.h"
 
 class IntegratorBase;
 class GlobalSpectra;

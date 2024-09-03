@@ -1,11 +1,9 @@
-#include "pbrt/gpu/renderer.h"
-
 #include "pbrt/base/camera.h"
 #include "pbrt/base/film.h"
-#include "pbrt/base/integrator.h"
 #include "pbrt/base/integrator_base.h"
+#include "pbrt/base/megakernel_integrator.h"
 #include "pbrt/base/sampler.h"
-
+#include "pbrt/gpu/renderer.h"
 #include "pbrt/wavefront_integrators/path.h"
 
 __global__ static void mega_kernel_render(Renderer *renderer, uint num_samples) {

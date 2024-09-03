@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vector>
-
 #include "pbrt/base/bsdf.h"
 #include "pbrt/util/macro.h"
+#include <vector>
 
 class DielectricBxDF;
 class FloatTexture;

@@ -1,11 +1,10 @@
 #pragma once
 
-#include <vector>
-#include <curand_kernel.h>
-
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/util/hash.h"
 #include "pbrt/util/permutation.h"
+#include <curand_kernel.h>
+#include <vector>
 
 class StratifiedSampler {
   public:

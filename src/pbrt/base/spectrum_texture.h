@@ -1,10 +1,9 @@
 #pragma once
 
-#include <vector>
-
 #include "pbrt/base/spectrum.h"
 #include "pbrt/base/texture_eval_context.h"
 #include "pbrt/util/macro.h"
+#include <vector>
 
 class Transform;
 class ParameterDictionary;

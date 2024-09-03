@@ -1,10 +1,9 @@
 #pragma once
 
-#include <cuda/std/optional>
-
 #include "pbrt/base/bxdf.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/sampling.h"
+#include <cuda/std/optional>
 
 class DiffuseBxDF {
   public:

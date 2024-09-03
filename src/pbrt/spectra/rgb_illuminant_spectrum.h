@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
 #include "pbrt/spectrum_util/rgb.h"
 #include "pbrt/spectrum_util/rgb_sigmoid_polynomial.h"
+#include "pbrt/util/macro.h"
 
 class Spectrum;
 class RGBColorSpace;

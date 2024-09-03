@@ -1,10 +1,7 @@
-#include "pbrt/lights/diffuse_area_light.h"
-
 #include "pbrt/base/shape.h"
 #include "pbrt/base/spectrum.h"
-
+#include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/scene/parameter_dictionary.h"
-
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 

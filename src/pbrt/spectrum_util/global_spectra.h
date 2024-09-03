@@ -1,8 +1,8 @@
 #pragma once
 
 #include "pbrt/base/spectrum.h"
-#include "pbrt/spectrum_util/rgb_to_spectrum_data.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
+#include "pbrt/spectrum_util/rgb_to_spectrum_data.h"
 
 class Spectrum;
 class ThreadPool;

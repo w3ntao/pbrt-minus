@@ -1,7 +1,5 @@
 #include "pbrt/base/float_texture.h"
-
 #include "pbrt/base/texture_eval_context.h"
-
 #include "pbrt/textures/float_constant_texture.h"
 #include "pbrt/textures/float_image_texture.h"
 #include "pbrt/textures/float_scaled_texture.h"

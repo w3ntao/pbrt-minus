@@ -1,8 +1,6 @@
 #include "pbrt/base/spectrum_texture.h"
-
 #include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
-
 #include "pbrt/textures/spectrum_constant_texture.h"
 #include "pbrt/textures/spectrum_image_texture.h"
 #include "pbrt/textures/spectrum_scaled_texture.h"

@@ -1,14 +1,11 @@
 #pragma once
 
-#include <optional>
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <iterator>
-#include <algorithm>
-
 #include "pbrt/scene/tokenizer.h"
+#include <fstream>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <vector>
 
 class Lexer {
 

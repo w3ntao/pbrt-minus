@@ -1,12 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <cuda/std/optional>
-
 #include "pbrt/base/interaction.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/util/macro.h"
+#include <cuda/std/optional>
+#include <vector>
 
 class Shape;
 class Material;

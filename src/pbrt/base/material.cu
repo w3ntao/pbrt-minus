@@ -1,16 +1,13 @@
 #include "pbrt/base/material.h"
-
 #include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/conductor_bxdf.h"
-#include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/bxdfs/dielectric_bxdf.h"
-
+#include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/materials/coated_conductor_material.h"
 #include "pbrt/materials/coated_diffuse_material.h"
-#include "pbrt/materials/coated_conductor_material.h"
 #include "pbrt/materials/conductor_material.h"
-#include "pbrt/materials/diffuse_material.h"
 #include "pbrt/materials/dielectric_material.h"
+#include "pbrt/materials/diffuse_material.h"
 #include "pbrt/materials/mix_material.h"
 
 const Material *Material::create(const std::string &type_of_material,

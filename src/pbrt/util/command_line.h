@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <stdexcept>
 
 static std::string bash(const std::string &cmd) {
     char buffer[128];

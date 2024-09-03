@@ -1,14 +1,12 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/normal3f.h"
+#include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/vector3.h"
-
 #include "pbrt/util/complex.h"
 #include "pbrt/util/macro.h"
 #include "pbrt/util/sampling.h"
 
-// Scattering Inline Functions
 PBRT_CPU_GPU
 inline Vector3f Reflect(const Vector3f wo, const Vector3f n) {
     return -wo + 2 * wo.dot(n) * n;
@@ -111,7 +109,7 @@ class TrowbridgeReitzDistribution {
   public:
     // TrowbridgeReitzDistribution Public Methods
     PBRT_CPU_GPU
-    TrowbridgeReitzDistribution(){};
+    TrowbridgeReitzDistribution() {};
 
     PBRT_CPU_GPU
     TrowbridgeReitzDistribution(FloatType ax, FloatType ay) : alpha_x(ax), alpha_y(ay) {

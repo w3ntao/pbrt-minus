@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
-#include "pbrt/util/macro.h"
 #include "pbrt/base/material.h"
+#include "pbrt/util/macro.h"
+#include <vector>
 
 class ParameterDictionary;
 

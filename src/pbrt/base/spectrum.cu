@@ -1,12 +1,11 @@
 #include "pbrt/base/spectrum.h"
-
 #include "pbrt/spectra/black_body_spectrum.h"
 #include "pbrt/spectra/constant_spectrum.h"
 #include "pbrt/spectra/densely_sampled_spectrum.h"
+#include "pbrt/spectra/piecewise_linear_spectrum.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectra/rgb_unbounded_spectrum.h"
-#include "pbrt/spectra/piecewise_linear_spectrum.h"
 
 const Spectrum *Spectrum::create_black_body(FloatType T, std::vector<void *> &gpu_dynamic_pointer) {
     BlackbodySpectrum *black_body;

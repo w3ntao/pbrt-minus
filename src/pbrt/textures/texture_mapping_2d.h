@@ -1,9 +1,9 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
-#include "pbrt/euclidean_space/point2.h"
 #include "pbrt/base/spectrum_texture.h"
+#include "pbrt/euclidean_space/point2.h"
 #include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/util/macro.h"
 
 class UVMapping;
 

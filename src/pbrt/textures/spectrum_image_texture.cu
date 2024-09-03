@@ -1,5 +1,5 @@
-#include "pbrt/textures/spectrum_image_texture.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
+#include "pbrt/textures/spectrum_image_texture.h"
 
 const SpectrumImageTexture *
 SpectrumImageTexture::create(SpectrumType spectrum_type, const Transform &render_from_object,

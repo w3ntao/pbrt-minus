@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include "pbrt/euclidean_space/point3.h"
+#include <vector>
 
 struct LoopSubdivide {
     std::vector<int> vertex_indices;

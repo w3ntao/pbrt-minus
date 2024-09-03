@@ -1,5 +1,7 @@
 #pragma once
 
+#include "pbrt/util/macro.h"
+
 PBRT_CPU_GPU
 inline int permutation_element(uint32_t i, uint32_t l, uint32_t p) {
     uint32_t w = l - 1;

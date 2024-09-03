@@ -1,10 +1,9 @@
 #pragma once
 
-#include <vector>
-
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/rgb.h"
+#include "pbrt/spectrum_util/sampled_spectrum.h"
+#include "pbrt/spectrum_util/sampled_wavelengths.h"
+#include <vector>
 
 class ParameterDictionary;
 class RGBFilm;

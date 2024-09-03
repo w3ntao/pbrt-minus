@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vector>
-
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/spectrum_util/xyz.h"
+#include <vector>
 
 class RGB;
 class RGBColorSpace;

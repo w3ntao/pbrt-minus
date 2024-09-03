@@ -1,9 +1,7 @@
 #include "pbrt/accelerator/hlbvh.h"
-
-#include <chrono>
-
 #include "pbrt/util/stack.h"
 #include "pbrt/util/thread_pool.h"
+#include <chrono>
 
 constexpr int MORTON_SCALE = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
 

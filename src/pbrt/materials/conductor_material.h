@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include "pbrt/util/macro.h"
+#include <vector>
 
 class ConductorBxDF;
 

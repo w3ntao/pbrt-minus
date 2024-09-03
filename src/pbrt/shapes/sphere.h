@@ -1,11 +1,10 @@
 #pragma once
 
-#include <vector>
-
 #include "pbrt/base/interaction.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/util/macro.h"
+#include <vector>
 
 class ShapeSample;
 class ShapeSampleContext;

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vector>
-
 #include "pbrt/base/material.h"
 #include "pbrt/euclidean_space/point2.h"
+#include <vector>
 
 class CameraSample;
 class CameraRay;

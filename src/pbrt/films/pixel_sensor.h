@@ -1,9 +1,9 @@
 #pragma once
 
 #include "pbrt/euclidean_space/squared_matrix.h"
+#include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/rgb.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
-#include "pbrt/spectrum_util/color_encoding.h"
 
 class PixelSensor {
   public:

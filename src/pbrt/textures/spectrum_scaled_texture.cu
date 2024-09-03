@@ -1,7 +1,6 @@
-#include "pbrt/textures/spectrum_scaled_texture.h"
-
 #include "pbrt/base/spectrum_texture.h"
 #include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/textures/spectrum_scaled_texture.h"
 
 void SpectrumScaledTexture::init(SpectrumType spectrum_type, const ParameterDictionary &parameters,
                                  std::vector<void *> &gpu_dynamic_pointers) {

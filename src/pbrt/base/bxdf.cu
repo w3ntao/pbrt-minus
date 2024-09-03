@@ -1,5 +1,4 @@
 #include "pbrt/base/bxdf.h"
-
 #include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/conductor_bxdf.h"

@@ -1,10 +1,9 @@
 #pragma once
 
-#include <cuda/std/optional>
-
-#include "pbrt/util/macro.h"
-#include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/base/interaction.h"
+#include "pbrt/euclidean_space/bounds3.h"
+#include "pbrt/util/macro.h"
+#include <cuda/std/optional>
 
 class Light;
 class Material;

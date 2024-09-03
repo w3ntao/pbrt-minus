@@ -1,8 +1,8 @@
 #pragma once
 
 #include "pbrt/base/spectrum.h"
-#include "pbrt/util/sampling.h"
 #include "pbrt/euclidean_space/frame.h"
+#include "pbrt/util/sampling.h"
 
 class Ray;
 class IntegratorBase;

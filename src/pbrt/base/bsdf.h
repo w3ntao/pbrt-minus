@@ -1,12 +1,11 @@
 #pragma once
 
-#include <cuda/std/optional>
-
 #include "pbrt/base/bxdf.h"
 #include "pbrt/euclidean_space/frame.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
+#include <cuda/std/optional>
 
 class BSDF {
   public:

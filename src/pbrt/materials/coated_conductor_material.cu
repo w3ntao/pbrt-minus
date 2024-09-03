@@ -1,9 +1,8 @@
-#include "pbrt/materials/coated_conductor_material.h"
-
 #include "pbrt/base/float_texture.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/spectrum_texture.h"
 #include "pbrt/bxdfs/coated_conductor_bxdf.h"
+#include "pbrt/materials/coated_conductor_material.h"
 #include "pbrt/scene/parameter_dictionary.h"
 
 const FloatTexture *build_float_texture(const std::string &primary_key,

@@ -1,10 +1,9 @@
 #pragma once
 
-#include <vector>
-
 #include "pbrt/base/light.h"
 #include "pbrt/euclidean_space/point3.h"
 #include "pbrt/util/macro.h"
+#include <vector>
 
 class ParameterDictionary;
 class Spectrum;

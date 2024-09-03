@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cuda_fp16.h>
 #include "pbrt/util/macro.h"
+#include <cuda_fp16.h>
 
 static const int HalfExponentMask = 0b0111110000000000;
 static const int HalfSignificandMask = 0b1111111111;

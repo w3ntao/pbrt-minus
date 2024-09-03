@@ -1,9 +1,7 @@
-#include "pbrt/shapes/sphere.h"
-
 #include "pbrt/base/shape.h"
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/scene/parameter_dictionary.h"
-
+#include "pbrt/shapes/sphere.h"
 #include "pbrt/util/sampling.h"
 #include "pbrt/util/util.h"
 

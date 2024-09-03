@@ -1,12 +1,11 @@
 #pragma once
 
-#include <cuda/std/optional>
-#include <vector>
-
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/util/macro.h"
+#include <cuda/std/optional>
+#include <vector>
 
 class Disk;
 class Sphere;

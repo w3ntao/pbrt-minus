@@ -1,7 +1,6 @@
-#include "pbrt/util/distribution_2d.h"
-
 #include "pbrt/spectrum_util/rgb.h"
 #include "pbrt/util/distribution_1d.h"
+#include "pbrt/util/distribution_2d.h"
 
 const Distribution2D *Distribution2D::create(const std::vector<std::vector<FloatType>> &data,
                                              std::vector<void *> &gpu_dynamic_pointers) {

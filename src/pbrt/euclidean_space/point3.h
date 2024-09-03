@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdexcept>
-
 #include "pbrt/euclidean_space/vector3.h"
 
 template <typename T>

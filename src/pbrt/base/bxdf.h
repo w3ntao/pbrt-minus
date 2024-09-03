@@ -1,10 +1,9 @@
 #pragma once
 
-#include <cuda/std/optional>
-
 #include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/macro.h"
+#include <cuda/std/optional>
 
 class CoatedConductorBxDF;
 class CoatedDiffuseBxDF;

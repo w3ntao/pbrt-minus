@@ -1,8 +1,7 @@
 #pragma once
 
-#include <iostream>
-
 #include "pbrt/scene/lexer.h"
+#include <iostream>
 
 static std::vector<Token> parse_pbrt_into_token(const std::string &filename) {
     auto lexer = Lexer(filename);

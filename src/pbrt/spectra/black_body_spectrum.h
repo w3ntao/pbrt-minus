@@ -1,10 +1,9 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
+#include "pbrt/util/macro.h"
 
-// Spectrum Function Declarations
 PBRT_CPU_GPU inline FloatType Blackbody(FloatType lambda, FloatType T) {
     if (T <= 0) {
         return 0.0;

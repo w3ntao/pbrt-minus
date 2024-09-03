@@ -1,8 +1,7 @@
 #pragma once
 
-#include <curand_kernel.h>
-
 #include "pbrt/euclidean_space/point2.h"
+#include <curand_kernel.h>
 
 class IndependentSampler {
   public:

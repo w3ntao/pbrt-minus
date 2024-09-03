@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cuda/std/optional>
 #include "pbrt/base/light.h"
+#include <cuda/std/optional>
 
 class UniformLightSampler {
   public:

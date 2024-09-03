@@ -1,10 +1,9 @@
 #pragma once
 
+#include "pbrt/textures/mipmap.h"
+#include "pbrt/textures/texture_mapping_2d.h"
 #include <string>
 #include <vector>
-
-#include "pbrt/textures/texture_mapping_2d.h"
-#include "pbrt/textures/mipmap.h"
 
 class MIPMap;
 class Transform;

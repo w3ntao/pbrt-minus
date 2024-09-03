@@ -1,17 +1,12 @@
-#include "pbrt/materials/diffuse_material.h"
-
 #include "pbrt/base/material.h"
 #include "pbrt/base/spectrum.h"
 #include "pbrt/base/spectrum_texture.h"
-
 #include "pbrt/bxdfs/diffuse_bxdf.h"
-
+#include "pbrt/materials/diffuse_material.h"
 #include "pbrt/scene/parameter_dictionary.h"
-
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
-
 #include "pbrt/textures/spectrum_constant_texture.h"
 
 const DiffuseMaterial *DiffuseMaterial::create(const SpectrumTexture *_reflectance,

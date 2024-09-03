@@ -1,9 +1,8 @@
 #pragma once
 
+#include "pbrt/spectrum_util/sampled_spectrum.h"
 #include <optional>
 #include <vector>
-
-#include "pbrt/spectrum_util/sampled_spectrum.h"
 
 class Ray;
 class HLBVH;

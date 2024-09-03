@@ -1,10 +1,9 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "pbrt/base/light.h"
 #include "pbrt/util/macro.h"
+#include <string>
+#include <vector>
 
 template <typename T>
 class Bounds3;
@@ -47,7 +46,7 @@ class ImageInfiniteLight : public LightBase {
     const RGBColorSpace *color_space;
 
     const GPUImage *image_ptr;
-    
+
     const Distribution2D *image_le_distribution;
 
     Point2i image_resolution;

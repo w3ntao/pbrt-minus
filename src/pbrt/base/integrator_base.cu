@@ -1,6 +1,5 @@
-#include "integrator_base.h"
-
 #include "pbrt/accelerator/hlbvh.h"
+#include "pbrt/base/integrator_base.h"
 #include "pbrt/base/interaction.h"
 
 PBRT_GPU

@@ -1,9 +1,8 @@
 #pragma once
 
+#include "pbrt/util/macro.h"
 #include <string>
 #include <vector>
-
-#include "pbrt/util/macro.h"
 
 class Transform;
 

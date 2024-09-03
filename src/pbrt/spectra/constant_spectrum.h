@@ -2,7 +2,6 @@
 
 #include "pbrt/util/macro.h"
 
-// Spectrum Definitions
 class ConstantSpectrum {
   public:
     void init(FloatType _c) {

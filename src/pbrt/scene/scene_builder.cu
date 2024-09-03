@@ -1,34 +1,25 @@
-#include "pbrt/scene/scene_builder.h"
-
-#include <set>
-
 #include "pbrt/accelerator/hlbvh.h"
-
-#include "pbrt/base/float_texture.h"
 #include "pbrt/base/film.h"
 #include "pbrt/base/filter.h"
-#include "pbrt/base/integrator.h"
+#include "pbrt/base/float_texture.h"
 #include "pbrt/base/integrator_base.h"
 #include "pbrt/base/material.h"
+#include "pbrt/base/megakernel_integrator.h"
 #include "pbrt/base/primitive.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/base/shape.h"
-
 #include "pbrt/gpu/renderer.h"
-
-#include "pbrt/light_samplers/uniform_light_sampler.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
-
+#include "pbrt/light_samplers/uniform_light_sampler.h"
+#include "pbrt/scene/scene_builder.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
-#include "pbrt/spectrum_util/spectrum_constants_metal.h"
 #include "pbrt/spectrum_util/spectrum_constants_glass.h"
-
+#include "pbrt/spectrum_util/spectrum_constants_metal.h"
 #include "pbrt/textures/spectrum_constant_texture.h"
-
 #include "pbrt/util/std_container.h"
-
 #include "pbrt/wavefront_integrators/path.h"
+#include <set>
 
 uint next_keyword_position(const std::vector<Token> &tokens, uint start) {
     for (uint idx = start + 1; idx < tokens.size(); ++idx) {

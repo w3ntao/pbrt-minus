@@ -1,16 +1,15 @@
 #pragma once
 
-#include <filesystem>
-#include <fstream>
-#include <map>
-#include <optional>
-#include <vector>
-
 #include "pbrt/base/spectrum.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/point3.h"
 #include "pbrt/spectrum_util/rgb.h"
+#include <filesystem>
+#include <fstream>
+#include <map>
+#include <optional>
+#include <vector>
 
 class FloatTexture;
 class GlobalSpectra;

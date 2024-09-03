@@ -1,8 +1,8 @@
 #pragma once
 
-#include <iostream>
-#include "pbrt/util/macro.h"
 #include "pbrt/euclidean_space/vector2.h"
+#include "pbrt/util/macro.h"
+#include <iostream>
 
 template <typename T>
 class Point2 {

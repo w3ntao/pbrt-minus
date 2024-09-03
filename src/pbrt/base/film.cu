@@ -1,9 +1,7 @@
-#include "pbrt/base/film.h"
-
-#include <vector>
-
-#include "pbrt/films/rgb_film.h"
 #include "ext/lodepng/lodepng.h"
+#include "pbrt/base/film.h"
+#include "pbrt/films/rgb_film.h"
+#include <vector>
 
 Film *Film::create_rgb_film(const ParameterDictionary &parameters,
                             std::vector<void *> &gpu_dynamic_pointers) {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <algorithm>
-#include "pbrt/util/bit_arithmetic.h"
 #include "pbrt/util/basic_math.h"
+#include "pbrt/util/bit_arithmetic.h"
 #include "pbrt/util/util.h"
+#include <algorithm>
 
 class Interval {
   public:

@@ -1,10 +1,9 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/util/macro.h"
+#include <string>
+#include <vector>
 
 class Camera;
 class Film;

@@ -45,11 +45,11 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/film.cu
         src/pbrt/base/filter.cu
         src/pbrt/base/float_texture.cu
-        src/pbrt/base/integrator.cu
         src/pbrt/base/integrator_base.cu
         src/pbrt/base/interaction.cu
         src/pbrt/base/light.cu
         src/pbrt/base/material.cu
+        src/pbrt/base/megakernel_integrator.cu
         src/pbrt/base/primitive.cu
         src/pbrt/base/sampler.cu
         src/pbrt/base/shape.cu

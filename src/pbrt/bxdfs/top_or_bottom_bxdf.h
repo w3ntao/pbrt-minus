@@ -1,7 +1,8 @@
-#include <cuda/std/optional>
+#pragma once
 
-#include "pbrt/util/macro.h"
 #include "pbrt/base/bxdf.h"
+#include "pbrt/util/macro.h"
+#include <cuda/std/optional>
 
 template <typename TopBxDF, typename BottomBxDF>
 class TopOrBottomBxDF {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdexcept>
 #include "pbrt/util/macro.h"
 
 template <typename T>

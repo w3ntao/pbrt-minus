@@ -1,6 +1,5 @@
-#include "pbrt/textures/float_scaled_texture.h"
-
 #include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/textures/float_scaled_texture.h"
 
 const FloatScaledTexture *FloatScaledTexture::create(const ParameterDictionary &parameters,
                                                      std::vector<void *> &gpu_dynamic_pointers) {

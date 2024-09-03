@@ -1,12 +1,10 @@
 #include "pbrt/base/shape.h"
-
 #include "pbrt/scene/parameter_dictionary.h"
-
 #include "pbrt/shapes/disk.h"
 #include "pbrt/shapes/loop_subdivide.h"
 #include "pbrt/shapes/sphere.h"
-#include "pbrt/shapes/triangle.h"
 #include "pbrt/shapes/tri_quad_mesh.h"
+#include "pbrt/shapes/triangle.h"
 
 std::pair<const Shape *, uint>
 Shape::create(const std::string &type_of_shape, const Transform &render_from_object,

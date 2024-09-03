@@ -1,15 +1,13 @@
 #pragma once
 
 #include "pbrt/accelerator/hlbvh.h"
-
 #include "pbrt/base/integrator_base.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/base/spectrum.h"
-
 #include "pbrt/euclidean_space/frame.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/util/sampling.h"
 
 class SurfaceNormalIntegrator {

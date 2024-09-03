@@ -1,14 +1,13 @@
-#include "pbrt/textures/gpu_image.h"
-
-#include <filesystem>
-
+#include "ext/lodepng/lodepng.h"
 #include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/rgb.h"
+#include "pbrt/textures/gpu_image.h"
+#include <filesystem>
 
-#include "ext/lodepng/lodepng.h"
-
+// clang-format off
 #define TINYEXR_IMPLEMENTATION
 #include "ext/tinyexr/tinyexr.h"
+// clang-format on
 
 PBRT_CPU_GPU
 Point2i remap_pixel_coord(const Point2i p, const Point2i resolution, WrapMode2D wrap_mode) {

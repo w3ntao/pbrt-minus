@@ -1,6 +1,6 @@
-#include "pbrt/util/sampling.h"
 #include "pbrt/base/media.h"
 #include "pbrt/euclidean_space/frame.h"
+#include "pbrt/util/sampling.h"
 
 PBRT_CPU_GPU
 Vector3f SampleHenyeyGreenstein(Vector3f wo, FloatType g, Point2f u, FloatType *pdf) {

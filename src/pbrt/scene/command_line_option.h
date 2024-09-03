@@ -1,9 +1,9 @@
 #pragma once
 
-#include <optional>
-#include <string>
 #include <filesystem>
 #include <iostream>
+#include <optional>
+#include <string>
 
 struct CommandLineOption {
     std::string input_file;

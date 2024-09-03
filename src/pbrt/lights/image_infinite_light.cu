@@ -1,18 +1,12 @@
-#include "pbrt/lights/image_infinite_light.h"
-
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/euclidean_space/vector3.h"
-
+#include "pbrt/lights/image_infinite_light.h"
 #include "pbrt/scene/parameter_dictionary.h"
-
 #include "pbrt/spectra/rgb_illuminant_spectrum.h"
-
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
-
 #include "pbrt/textures/gpu_image.h"
-
 #include "pbrt/util/distribution_2d.h"
 #include "pbrt/util/macro.h"
 #include "pbrt/util/math.h"
