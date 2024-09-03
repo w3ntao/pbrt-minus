@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "pbrt/base/material.h"
 #include "pbrt/euclidean_space/point2.h"
 
 class CameraSample;
@@ -115,4 +116,7 @@ class WavefrontPathIntegrator {
                               SampledWavelengths &lambda, Sampler *sampler) const;
 
     PBRT_GPU void sample_bsdf(uint path_idx, PathState *path_state) const;
+
+    template <Material::Type material_type>
+    void evaluate_material();
 };

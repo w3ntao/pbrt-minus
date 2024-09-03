@@ -23,7 +23,7 @@
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/util/basic_math.h"
 
-const uint PATH_POOL_SIZE = 2 * 1024 * 1024;
+const uint PATH_POOL_SIZE = 1 * 1024 * 1024;
 
 struct FrameBuffer {
     uint pixel_idx;
@@ -65,8 +65,8 @@ struct MISParameter {
     }
 };
 
-__global__ void init_independent_samplers(Sampler *samplers,
-                                          IndependentSampler *independent_samplers, uint num) {
+__global__ void gpu_init_independent_samplers(Sampler *samplers,
+                                              IndependentSampler *independent_samplers, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
@@ -75,8 +75,9 @@ __global__ void init_independent_samplers(Sampler *samplers,
     samplers[worker_idx].init(&independent_samplers[worker_idx]);
 }
 
-__global__ void init_stratifid_samplers(Sampler *samplers, StratifiedSampler *stratified_samplers,
-                                        uint samples_per_dimension, uint num) {
+__global__ void gpu_init_stratified_samplers(Sampler *samplers,
+                                             StratifiedSampler *stratified_samplers,
+                                             uint samples_per_dimension, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
@@ -314,6 +315,132 @@ __global__ void generate_new_path(const IntegratorBase *base, const Filter *filt
     queues->ray_queue[ray_queue_idx] = path_idx;
 }
 
+template <Material::Type material_type>
+__global__ void gpu_evaluate_material(const WavefrontPathIntegrator *integrator,
+                                      PathState *path_state, Queues *queues) {
+    uint material_counter = NAN;
+    uint *material_queue = nullptr;
+
+    switch (material_type) {
+    case (Material::Type::coated_conductor): {
+        material_counter = queues->coated_conductor_material_counter;
+        material_queue = queues->coated_conductor_material_queue;
+        break;
+    }
+
+    case (Material::Type::coated_diffuse): {
+        material_counter = queues->coated_diffuse_material_counter;
+        material_queue = queues->coated_diffuse_material_queue;
+        break;
+    }
+
+    case (Material::Type::conductor): {
+        material_counter = queues->conductor_material_counter;
+        material_queue = queues->conductor_material_queue;
+        break;
+    }
+
+    case (Material::Type::dielectric): {
+        material_counter = queues->dielectric_material_counter;
+        material_queue = queues->dielectric_material_queue;
+        break;
+    }
+
+    case (Material::Type::diffuse): {
+        material_counter = queues->diffuse_material_counter;
+        material_queue = queues->diffuse_material_queue;
+        break;
+    }
+
+    default: {
+        REPORT_FATAL_ERROR();
+    }
+    }
+
+    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (queue_idx >= material_counter) {
+        return;
+    }
+
+    const uint path_idx = material_queue[queue_idx];
+
+    const auto ray = path_state->camera_rays[path_idx].ray;
+
+    auto &lambda = path_state->lambdas[path_idx];
+
+    auto sampler = &path_state->samplers[path_idx];
+
+    auto &isect = path_state->shape_intersections[path_idx].interaction;
+
+    if (DEBUGGING && isect.material->get_material_type() != material_type) {
+        REPORT_FATAL_ERROR();
+    }
+
+    switch (material_type) {
+    case (Material::Type::coated_conductor): {
+        isect.init_coated_conductor_bsdf(path_state->bsdf[path_idx],
+                                         path_state->coated_conductor_bxdf[path_idx], ray, lambda,
+                                         integrator->base->camera, sampler);
+        break;
+    }
+
+    case (Material::Type::coated_diffuse): {
+        isect.init_coated_diffuse_bsdf(path_state->bsdf[path_idx],
+                                       path_state->coated_diffuse_bxdf[path_idx], ray, lambda,
+                                       integrator->base->camera, sampler);
+        break;
+    }
+
+    case (Material::Type::conductor): {
+        isect.init_conductor_bsdf(path_state->bsdf[path_idx], path_state->conductor_bxdf[path_idx],
+                                  ray, lambda, integrator->base->camera, sampler);
+        break;
+    }
+
+    case (Material::Type::dielectric): {
+        isect.init_dielectric_bsdf(path_state->bsdf[path_idx],
+                                   path_state->dielectric_bxdf[path_idx], ray, lambda,
+                                   integrator->base->camera, sampler);
+        break;
+    }
+
+    case (Material::Type::diffuse): {
+        isect.init_diffuse_bsdf(path_state->bsdf[path_idx], path_state->diffuse_bxdf[path_idx], ray,
+                                lambda, integrator->base->camera, sampler);
+        break;
+    }
+
+    default: {
+        REPORT_FATAL_ERROR();
+    }
+    }
+
+    integrator->sample_bsdf(path_idx, path_state);
+
+    uint ray_queue_idx = atomicAdd(&queues->ray_counter, 1);
+    queues->ray_queue[ray_queue_idx] = path_idx;
+}
+
+__global__ void ray_cast(const WavefrontPathIntegrator *integrator, PathState *path_state,
+                         Queues *queues) {
+    const uint ray_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (ray_queue_idx >= queues->ray_counter) {
+        return;
+    }
+
+    const uint path_idx = queues->ray_queue[ray_queue_idx];
+
+    const auto camera_ray = path_state->camera_rays[path_idx];
+
+    auto intersection = integrator->base->bvh->intersect(camera_ray.ray, Infinity);
+
+    path_state->intersected[path_idx] = intersection.has_value();
+
+    if (intersection.has_value()) {
+        path_state->shape_intersections[path_idx] = intersection.value();
+    }
+}
+
 PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *path_state) const {
     auto &isect = path_state->shape_intersections[path_idx].interaction;
     auto &lambda = path_state->lambdas[path_idx];
@@ -355,171 +482,49 @@ PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *pat
     path_state->camera_rays[path_idx].ray = isect.spawn_ray(bs->wi);
 }
 
-__global__ void evaluate_coated_conductor_material(const WavefrontPathIntegrator *integrator,
-                                                   PathState *path_state, Queues *queues) {
-    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (queue_idx >= queues->coated_conductor_material_counter) {
-        return;
+template <Material::Type material_type>
+void WavefrontPathIntegrator::evaluate_material() {
+    uint material_counter = NAN;
+    switch (material_type) {
+    case (Material::Type::coated_conductor): {
+        material_counter = queues.coated_conductor_material_counter;
+        break;
     }
-    const uint path_idx = queues->coated_conductor_material_queue[queue_idx];
 
-    const auto ray = path_state->camera_rays[path_idx].ray;
+    case (Material::Type::coated_diffuse): {
+        material_counter = queues.coated_diffuse_material_counter;
+        break;
+    }
 
-    auto &lambda = path_state->lambdas[path_idx];
+    case (Material::Type::conductor): {
+        material_counter = queues.conductor_material_counter;
+        break;
+    }
 
-    auto sampler = &path_state->samplers[path_idx];
+    case (Material::Type::dielectric): {
+        material_counter = queues.dielectric_material_counter;
+        break;
+    }
 
-    auto &isect = path_state->shape_intersections[path_idx].interaction;
+    case (Material::Type::diffuse): {
+        material_counter = queues.diffuse_material_counter;
+        break;
+    }
 
-    if (DEBUGGING && isect.material->get_material_type() != Material::Type::coated_conductor) {
+    default: {
         REPORT_FATAL_ERROR();
     }
-
-    isect.init_coated_conductor_bsdf(path_state->bsdf[path_idx],
-                                     path_state->coated_conductor_bxdf[path_idx], ray, lambda,
-                                     integrator->base->camera, sampler);
-
-    integrator->sample_bsdf(path_idx, path_state);
-
-    uint ray_queue_idx = atomicAdd(&queues->ray_counter, 1);
-    queues->ray_queue[ray_queue_idx] = path_idx;
-}
-
-__global__ void evaluate_coated_diffuse_material(const WavefrontPathIntegrator *integrator,
-                                                 PathState *path_state, Queues *queues) {
-    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (queue_idx >= queues->coated_diffuse_material_counter) {
-        return;
-    }
-    const uint path_idx = queues->coated_diffuse_material_queue[queue_idx];
-
-    const auto ray = path_state->camera_rays[path_idx].ray;
-
-    auto &lambda = path_state->lambdas[path_idx];
-
-    auto sampler = &path_state->samplers[path_idx];
-
-    auto &isect = path_state->shape_intersections[path_idx].interaction;
-
-    if (DEBUGGING && isect.material->get_material_type() != Material::Type::coated_diffuse) {
-        REPORT_FATAL_ERROR();
     }
 
-    isect.init_coated_diffuse_bsdf(path_state->bsdf[path_idx],
-                                   path_state->coated_diffuse_bxdf[path_idx], ray, lambda,
-                                   integrator->base->camera, sampler);
-
-    integrator->sample_bsdf(path_idx, path_state);
-
-    uint ray_queue_idx = atomicAdd(&queues->ray_counter, 1);
-    queues->ray_queue[ray_queue_idx] = path_idx;
-}
-
-__global__ void evaluate_conductor_material(const WavefrontPathIntegrator *integrator,
-                                            PathState *path_state, Queues *queues) {
-    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (queue_idx >= queues->conductor_material_counter) {
-        return;
-    }
-    const uint path_idx = queues->conductor_material_queue[queue_idx];
-
-    const auto ray = path_state->camera_rays[path_idx].ray;
-
-    auto &lambda = path_state->lambdas[path_idx];
-
-    auto sampler = &path_state->samplers[path_idx];
-
-    auto &isect = path_state->shape_intersections[path_idx].interaction;
-
-    if (DEBUGGING && isect.material->get_material_type() != Material::Type::conductor) {
-        REPORT_FATAL_ERROR();
-    }
-
-    isect.init_conductor_bsdf(path_state->bsdf[path_idx], path_state->conductor_bxdf[path_idx], ray,
-                              lambda, integrator->base->camera, sampler);
-
-    integrator->sample_bsdf(path_idx, path_state);
-
-    uint ray_queue_idx = atomicAdd(&queues->ray_counter, 1);
-    queues->ray_queue[ray_queue_idx] = path_idx;
-}
-
-__global__ void evaluate_dielectric_material(const WavefrontPathIntegrator *integrator,
-                                             PathState *path_state, Queues *queues) {
-    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (queue_idx >= queues->dielectric_material_counter) {
-        return;
-    }
-    const uint path_idx = queues->dielectric_material_queue[queue_idx];
-
-    const auto ray = path_state->camera_rays[path_idx].ray;
-
-    auto &lambda = path_state->lambdas[path_idx];
-
-    auto sampler = &path_state->samplers[path_idx];
-
-    auto &isect = path_state->shape_intersections[path_idx].interaction;
-
-    if (DEBUGGING && isect.material->get_material_type() != Material::Type::dielectric) {
-        REPORT_FATAL_ERROR();
-    }
-
-    isect.init_dielectric_bsdf(path_state->bsdf[path_idx], path_state->dielectric_bxdf[path_idx],
-                               ray, lambda, integrator->base->camera, sampler);
-
-    integrator->sample_bsdf(path_idx, path_state);
-
-    uint ray_queue_idx = atomicAdd(&queues->ray_counter, 1);
-    queues->ray_queue[ray_queue_idx] = path_idx;
-}
-
-__global__ void evaluate_diffuse_material(const WavefrontPathIntegrator *integrator,
-                                          PathState *path_state, Queues *queues) {
-    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (queue_idx >= queues->diffuse_material_counter) {
-        return;
-    }
-    const uint path_idx = queues->diffuse_material_queue[queue_idx];
-
-    const auto ray = path_state->camera_rays[path_idx].ray;
-
-    auto &lambda = path_state->lambdas[path_idx];
-
-    auto sampler = &path_state->samplers[path_idx];
-
-    auto &isect = path_state->shape_intersections[path_idx].interaction;
-
-    if (DEBUGGING && isect.material->get_material_type() != Material::Type::diffuse) {
-        REPORT_FATAL_ERROR();
-    }
-
-    isect.init_diffuse_bsdf(path_state->bsdf[path_idx], path_state->diffuse_bxdf[path_idx], ray,
-                            lambda, integrator->base->camera, sampler);
-
-    integrator->sample_bsdf(path_idx, path_state);
-
-    uint ray_queue_idx = atomicAdd(&queues->ray_counter, 1);
-    queues->ray_queue[ray_queue_idx] = path_idx;
-}
-
-__global__ void ray_cast(const WavefrontPathIntegrator *integrator, PathState *path_state,
-                         Queues *queues) {
-    const uint ray_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (ray_queue_idx >= queues->ray_counter) {
+    if (material_counter <= 0) {
         return;
     }
 
-    const uint path_idx = queues->ray_queue[ray_queue_idx];
+    const uint threads = 256;
+    const auto blocks = divide_and_ceil(material_counter, threads);
 
-    const auto camera_ray = path_state->camera_rays[path_idx];
-
-    auto intersection = integrator->base->bvh->intersect(camera_ray.ray, Infinity);
-
-    path_state->intersected[path_idx] = intersection.has_value();
-
-    if (intersection.has_value()) {
-        path_state->shape_intersections[path_idx] = intersection.value();
-    }
+    gpu_evaluate_material<material_type><<<blocks, threads>>>(this, &path_state, &queues);
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 PBRT_CPU_GPU
@@ -591,8 +596,8 @@ void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
             cudaMallocManaged(&stratified_samplers, sizeof(StratifiedSampler) * PATH_POOL_SIZE));
         gpu_dynamic_pointers.push_back(stratified_samplers);
 
-        init_stratifid_samplers<<<blocks, threads>>>(samplers, stratified_samplers,
-                                                     samples_per_dimension, PATH_POOL_SIZE);
+        gpu_init_stratified_samplers<<<blocks, threads>>>(samplers, stratified_samplers,
+                                                          samples_per_dimension, PATH_POOL_SIZE);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     } else if (sampler_type == "independent") {
         IndependentSampler *independent_samplers;
@@ -600,8 +605,8 @@ void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
             cudaMallocManaged(&independent_samplers, sizeof(IndependentSampler) * PATH_POOL_SIZE));
         gpu_dynamic_pointers.push_back(independent_samplers);
 
-        init_independent_samplers<<<blocks, threads>>>(samplers, independent_samplers,
-                                                       PATH_POOL_SIZE);
+        gpu_init_independent_samplers<<<blocks, threads>>>(samplers, independent_samplers,
+                                                           PATH_POOL_SIZE);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     } else {
         REPORT_FATAL_ERROR();
@@ -752,38 +757,14 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
-        if (queues.coated_conductor_material_counter > 0) {
-            evaluate_coated_conductor_material<<<
-                divide_and_ceil(queues.coated_conductor_material_counter, threads), threads>>>(
-                this, &path_state, &queues);
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        }
+        evaluate_material<Material::Type::coated_conductor>();
 
-        if (queues.coated_diffuse_material_counter > 0) {
-            evaluate_coated_diffuse_material<<<
-                divide_and_ceil(queues.coated_diffuse_material_counter, threads), threads>>>(
-                this, &path_state, &queues);
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        }
+        evaluate_material<Material::Type::coated_diffuse>();
 
-        if (queues.conductor_material_counter > 0) {
-            evaluate_conductor_material<<<
-                divide_and_ceil(queues.conductor_material_counter, threads), threads>>>(
-                this, &path_state, &queues);
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        }
+        evaluate_material<Material::Type::conductor>();
 
-        if (queues.dielectric_material_counter > 0) {
-            evaluate_dielectric_material<<<
-                divide_and_ceil(queues.dielectric_material_counter, threads), threads>>>(
-                this, &path_state, &queues);
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        }
+        evaluate_material<Material::Type::dielectric>();
 
-        if (queues.diffuse_material_counter > 0) {
-            evaluate_diffuse_material<<<divide_and_ceil(queues.diffuse_material_counter, threads),
-                                        threads>>>(this, &path_state, &queues);
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        }
+        evaluate_material<Material::Type::diffuse>();
     }
 }

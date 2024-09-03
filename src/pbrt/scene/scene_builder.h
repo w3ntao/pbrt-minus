@@ -196,7 +196,7 @@ class SceneBuilder {
 
         builder.parse_file(input_file);
 
-        builder.preprocess(false);
+        builder.preprocess(true);
 
         builder.render();
     }
