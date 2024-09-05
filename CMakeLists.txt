@@ -25,16 +25,27 @@ if (PBRT_FLOAT_AS_DOUBLE)
     list(APPEND PBRT_DEFINITIONS "PBRT_FLOAT_AS_DOUBLE")
 endif ()
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/ext)
-
 enable_language(CUDA)
 include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 
-find_package(Threads REQUIRED)
+add_subdirectory("src/ext")
+
+include_directories("src/ext/glad-3.3-core/include")
+
+include_directories("${GLFW_SOURCE_DIR}/deps")
+link_libraries(glfw)
+
+set(OpenGL_GL_PREFERENCE GLVND)
+find_package(OpenGL REQUIRED)
+link_libraries(${OPENGL_LIBRARIES})
 
 find_package(PNG REQUIRED)
 include_directories(${PNG_INCLUDE_DIRS})
+link_libraries(${PNG_LIBRARY})
 add_definitions(${PNG_DEFINITIONS})
+
+find_package(Threads REQUIRED)
+link_libraries(Threads::Threads)
 
 add_executable(${PROJ_NAME}
         src/pbrt/main.cu
@@ -123,22 +134,22 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/wavefront_integrators/path.cu
 
+        src/ext/glad-3.3-core/src/glad.c
         src/ext/lodepng/lodepng.cpp
         src/ext/rply/rply.cpp
         src/ext/tinyexr/deps/miniz/miniz.c
 )
 
+
 target_include_directories(
         ${PROJ_NAME} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
-        ${ZLIB_INCLUDE_DIRS}
         ${TINYEXR_INCLUDE_DIRS}
+        ${ZLIB_INCLUDE_DIRS}
 )
 
 target_link_libraries(
         ${PROJ_NAME} PRIVATE
-        Threads::Threads
-        ${PNG_LIBRARY}
         ${ZLIB_LIBRARIES}
 )
 

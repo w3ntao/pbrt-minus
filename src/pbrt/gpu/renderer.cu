@@ -56,7 +56,7 @@ void Renderer::render(const std::string &output_filename, uint samples_per_pixel
                   << " image (samples per pixel: " << samples_per_pixel << ") ";
         std::cout << "with wavefront integrator.\n" << std::flush;
 
-        wavefront_integrator->render(film, filter);
+        wavefront_integrator->render(film, filter, output_filename);
 
         film->write_to_png(output_filename, film_resolution);
         CHECK_CUDA_ERROR(cudaGetLastError());

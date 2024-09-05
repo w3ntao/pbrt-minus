@@ -7,17 +7,19 @@
 #include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/coated_diffuse_bxdf.h"
 #include "pbrt/bxdfs/diffuse_bxdf.h"
+#include "pbrt/gui/gl_object.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/samplers/independent_sampler.h"
 #include "pbrt/samplers/stratified_sampler.h"
 #include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/util/basic_math.h"
 #include "pbrt/wavefront_integrators/path.h"
 
-const uint PATH_POOL_SIZE = 1 * 1024 * 1024;
+const uint PATH_POOL_SIZE = 2 * 1024 * 1024;
 
 struct FrameBuffer {
     uint pixel_idx;
@@ -33,11 +35,11 @@ struct FBComparator {
             return true;
         }
 
-        if (left.pixel_idx == right.pixel_idx) {
-            return left.sample_idx < right.sample_idx;
+        if (left.pixel_idx > right.pixel_idx) {
+            return false;
         }
 
-        return false;
+        return left.sample_idx < right.sample_idx;
     }
 };
 
@@ -701,7 +703,86 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
     return weight_light * ls->l * f / pdf_light;
 }
 
-void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
+__global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint width, uint height) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= width * height) {
+        return;
+    }
+
+    auto y = worker_idx / width;
+    auto x = worker_idx % width;
+
+    auto rgb = film->get_pixel_rgb(Point2i(x, y));
+    if (rgb.has_nan()) {
+        return;
+    }
+
+    const SRGBColorEncoding srgb_encoding;
+
+    gpu_frame_buffer[worker_idx * 3 + 0] = srgb_encoding.from_linear(rgb.r);
+    gpu_frame_buffer[worker_idx * 3 + 1] = srgb_encoding.from_linear(rgb.g);
+    gpu_frame_buffer[worker_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
+}
+
+void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
+                                     const std::string &output_filename) {
+    printf("wavefront: path pool size: %u\n", PATH_POOL_SIZE);
+    std::chrono::duration<FloatType> total_preview_time = std::chrono::seconds(0);
+    std::chrono::duration<FloatType> total_sort_frame_buffer_time = std::chrono::seconds(0);
+
+    const auto image_resolution = this->path_state.image_resolution;
+
+    uint8_t *gpu_frame_buffer;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x *
+                                                              image_resolution.y));
+    std::vector<uint8_t> cpu_frame_buffer(3 * image_resolution.x * image_resolution.y);
+
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    // thus disable window resize
+
+    const GLFWvidmode *_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    const auto monitor_resolution = Point2i(_mode->width, _mode->height);
+
+    auto window_dimension = image_resolution;
+
+    auto scale_numerator = 10;
+    auto scale_denominator = 10;
+    while (true) {
+        window_dimension = image_resolution * scale_numerator / scale_denominator;
+
+        const auto portion = 0.85;
+        if (window_dimension.x <= monitor_resolution.x * portion &&
+            window_dimension.y <= monitor_resolution.y * portion) {
+            break;
+        }
+
+        scale_numerator -= 1;
+        if (scale_numerator <= 0) {
+            REPORT_FATAL_ERROR();
+        }
+    }
+
+    GLObject gl_object;
+    gl_object.create_window(window_dimension.x, window_dimension.y, output_filename);
+    glfwMakeContextCurrent(gl_object.window);
+
+    // center the window
+    glfwSetWindowPos(gl_object.window, (monitor_resolution.x - window_dimension.x) / 2,
+                     (monitor_resolution.y - window_dimension.y) / 2);
+
+    // glad: load all OpenGL function pointers
+    // ---------------------------------------
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        std::cout << "ERROR: failed to initialize GLAD\n";
+        REPORT_FATAL_ERROR();
+    }
+
+    gl_object.build();
+
     const uint threads = 256;
 
     // generate new paths for the whole pool
@@ -715,6 +796,7 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
         base, filter, &path_state, &queues);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
+    uint pass = 0;
     while (queues.ray_counter > 0) {
         ray_cast<<<divide_and_ceil(queues.ray_counter, threads), threads>>>(this, &path_state,
                                                                             &queues);
@@ -737,12 +819,56 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
 
         if (queues.frame_buffer_counter > 0) {
             // sort to make film writing deterministic
+            auto start_sort_frame_buffer = std::chrono::system_clock::now();
+
+            // TODO: rewriting sorting with CUDA
             std::sort(queues.frame_buffer_queue + 0,
                       queues.frame_buffer_queue + queues.frame_buffer_counter, FBComparator());
+
+            total_sort_frame_buffer_time +=
+                std::chrono::system_clock::now() - start_sort_frame_buffer;
 
             write_frame_buffer<<<divide_and_ceil(queues.frame_buffer_counter, threads), threads>>>(
                 film, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+            auto start_preview = std::chrono::system_clock::now();
+
+            auto blocks = divide_and_ceil<uint>(image_resolution.x * image_resolution.y, threads);
+            copy_pixels<<<blocks, threads>>>(gpu_frame_buffer, film, image_resolution.x,
+                                             image_resolution.y);
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+            CHECK_CUDA_ERROR(
+                cudaMemcpy(cpu_frame_buffer.data(), gpu_frame_buffer,
+                           sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y,
+                           cudaMemcpyDeviceToHost));
+
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_resolution.x, image_resolution.y, 0,
+                         GL_RGB, GL_UNSIGNED_BYTE, cpu_frame_buffer.data());
+            glGenerateMipmap(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, gl_object.texture);
+
+            gl_object.use_shader();
+            glBindVertexArray(gl_object.VAO);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+            auto total_pixel_num = image_resolution.x * image_resolution.y;
+
+            auto total_sample_num = path_state.total_path_num / total_pixel_num;
+            auto current_sample_idx =
+                clamp<uint>(path_state.global_path_counter / total_pixel_num, 0, total_sample_num);
+
+            auto title = output_filename + " - samples: " + std::to_string(current_sample_idx) +
+                         "/" + std::to_string(total_sample_num) + " - pass " + std::to_string(pass);
+
+            glfwSetWindowTitle(gl_object.window, title.c_str());
+
+            // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+            // -------------------------------------------------------------------------------
+            glfwSwapBuffers(gl_object.window);
+            glfwPollEvents();
+
+            total_preview_time += std::chrono::system_clock::now() - start_preview;
         }
 
         if (queues.new_path_counter > 0) {
@@ -760,5 +886,19 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter) {
         evaluate_material<Material::Type::dielectric>();
 
         evaluate_material<Material::Type::diffuse>();
+
+        pass += 1;
     }
+
+    CHECK_CUDA_ERROR(cudaFree(gpu_frame_buffer));
+
+    gl_object.release();
+    glfwTerminate();
+
+    std::cout << std::fixed << std::setprecision(3)
+              << "wavefront: total sort frame buffer time: " << total_sort_frame_buffer_time.count()
+              << " seconds.\n";
+
+    std::cout << std::fixed << std::setprecision(3)
+              << "wavefront: total preview time: " << total_preview_time.count() << " seconds.\n";
 }

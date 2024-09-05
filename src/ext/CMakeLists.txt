@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "GLFW lib only")
+set(GLFW_INSTALL OFF CACHE BOOL "GLFW lib only")
+set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "GLFW lib only")
+add_subdirectory(glfw)
+
 ###########################################################################
 # zlib
 

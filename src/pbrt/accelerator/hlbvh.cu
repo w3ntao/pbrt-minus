@@ -5,7 +5,7 @@
 
 constexpr int MORTON_SCALE = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
 
-constexpr uint NUM_BUCKETS = 64;
+constexpr uint NUM_BUCKETS = 24;
 
 PBRT_CPU_GPU
 uint morton_code_to_treelet_idx(const uint morton_code) {

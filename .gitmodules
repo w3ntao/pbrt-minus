@@ -17,3 +17,13 @@ branch = master
 path = src/ext/tinyexr
 url = https://github.com/w3ntao/tinyexr.git
 branch = release
+
+[submodule "src/ext/glfw"]
+path = src/ext/glfw
+url = https://github.com/w3ntao/glfw.git
+branch = main
+
+[submodule "src/ext/glad-3.3-core"]
+path = src/ext/glad-3.3-core
+url = https://github.com/w3ntao/glad-3.3-core.git
+branch = main

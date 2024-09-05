@@ -69,6 +69,18 @@ class Point2 {
         return Point2(x * factor, y * factor);
     }
 
+    PBRT_CPU_GPU void operator*=(T factor) {
+        *this = *this * factor;
+    }
+
+    PBRT_CPU_GPU Point2 operator/(T divisor) const {
+        return Point2(x / divisor, y / divisor);
+    }
+
+    PBRT_CPU_GPU void operator/=(T divisor) {
+        *this = *this / divisor;
+    }
+
     PBRT_CPU_GPU Point2 min(const Point2 &p) const {
         return Point2(std::min(x, p.x), std::min(y, p.y));
     }
