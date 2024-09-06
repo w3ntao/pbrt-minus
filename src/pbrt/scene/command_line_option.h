@@ -10,6 +10,7 @@ struct CommandLineOption {
     std::optional<std::string> integrator_name;
     std::string output_file;
     std::optional<int> samples_per_pixel;
+    bool megakernel = false;
 
     CommandLineOption(int argc, const char **argv) {
         int idx = 1;
@@ -25,6 +26,12 @@ struct CommandLineOption {
                 if (argument == "--integrator") {
                     integrator_name = argv[idx + 1];
                     idx += 2;
+                    continue;
+                }
+
+                if (argument == "--megakernel") {
+                    megakernel = true;
+                    idx += 1;
                     continue;
                 }
 

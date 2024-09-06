@@ -714,6 +714,10 @@ __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint wi
 
     auto rgb = film->get_pixel_rgb(Point2i(x, y));
     if (rgb.has_nan()) {
+        gpu_frame_buffer[worker_idx * 3 + 0] = 0;
+        gpu_frame_buffer[worker_idx * 3 + 1] = 0;
+        gpu_frame_buffer[worker_idx * 3 + 2] = 0;
+
         return;
     }
 
@@ -742,21 +746,22 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    // thus disable window resize
+    // thus disable window resizing
 
     const GLFWvidmode *_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     const auto monitor_resolution = Point2i(_mode->width, _mode->height);
 
     auto window_dimension = image_resolution;
 
-    auto scale_numerator = 10;
-    auto scale_denominator = 10;
+    auto scale_numerator = 20;
+    auto scale_denominator = 20;
     while (true) {
+        // compute the maximal window size that can fit into the user screen
         window_dimension = image_resolution * scale_numerator / scale_denominator;
 
-        const auto portion = 0.85;
-        if (window_dimension.x <= monitor_resolution.x * portion &&
-            window_dimension.y <= monitor_resolution.y * portion) {
+        const auto window_ratio = 0.9;
+        if (window_dimension.x <= monitor_resolution.x * window_ratio &&
+            window_dimension.y <= monitor_resolution.y * window_ratio) {
             break;
         }
 

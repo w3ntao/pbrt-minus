@@ -23,6 +23,18 @@ const FloatTexture *FloatTexture::create(const std::string &texture_type,
                                          const Transform &render_from_object,
                                          const ParameterDictionary &parameters,
                                          std::vector<void *> &gpu_dynamic_pointers) {
+    if (texture_type == "constant") {
+        auto constant_texture = FloatConstantTexture::create(parameters, gpu_dynamic_pointers);
+
+        FloatTexture *float_texture;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&float_texture, sizeof(FloatTexture)));
+        gpu_dynamic_pointers.push_back(float_texture);
+
+        float_texture->init(constant_texture);
+
+        return float_texture;
+    }
+
     if (texture_type == "scale") {
         auto float_scaled_texture = FloatScaledTexture::create(parameters, gpu_dynamic_pointers);
 

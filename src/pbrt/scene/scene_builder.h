@@ -192,7 +192,8 @@ class SceneBuilder {
 
         builder.parse_file(input_file);
 
-        builder.preprocess(true);
+        auto wavefront = !command_line_option.megakernel;
+        builder.preprocess(wavefront);
 
         builder.render();
     }

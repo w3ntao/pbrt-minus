@@ -295,6 +295,21 @@ void SceneBuilder::build_integrator(bool wavefront) {
 
     printf("sampler: %s\n", sampler_type.c_str());
 
+    if (!integrator_name.has_value()) {
+        printf("integrator not set in PBRT file, changed to path\n");
+        integrator_name = "path";
+    } else if (integrator_name == "volpath") {
+        printf("integrator `%s` not implemented, changed to path\n",
+               integrator_name.value().c_str());
+        integrator_name = "path";
+    }
+
+    if (wavefront && integrator_name != "path") {
+        printf("WARNING: wavefront rendering is not implemented for `%s`\n",
+               integrator_name->c_str());
+        wavefront = false;
+    }
+
     if (wavefront) {
         renderer->wavefront_integrator =
             WavefrontPathIntegrator::create(parameters, integrator_base, sampler_type,
@@ -302,8 +317,8 @@ void SceneBuilder::build_integrator(bool wavefront) {
     } else {
         build_sampler_for_megakernel_integrator(sampler_type);
 
-        renderer->megakernel_integrator =
-            Integrator::create(parameters, integrator_name, integrator_base, gpu_dynamic_pointers);
+        renderer->megakernel_integrator = Integrator::create(parameters, integrator_name.value(),
+                                                             integrator_base, gpu_dynamic_pointers);
     }
 }
 

@@ -28,7 +28,7 @@ class Integrator {
     };
 
     static const Integrator *create(const ParameterDictionary &parameters,
-                                    const std::optional<std::string> &_integrator_name,
+                                    const std::string &integrator_name,
                                     const IntegratorBase *integrator_base,
                                     std::vector<void *> &gpu_dynamic_pointers);
 
