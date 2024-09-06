@@ -119,7 +119,7 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator, PathSta
     bool should_terminate_path =
         !intersected || path_length > integrator->max_depth || !beta.is_positive();
 
-    if (!should_terminate_path && path_length > 3) {
+    if (!should_terminate_path && path_length > 8) {
         // possibly terminate the path with Russian roulette
 
         auto &eta_scale = path_state->mis_parameters[path_idx].eta_scale;
@@ -646,7 +646,7 @@ WavefrontPathIntegrator::create(const ParameterDictionary &parameters, const Int
                                   sampler_type, gpu_dynamic_pointers);
     integrator->queues.init(gpu_dynamic_pointers);
 
-    integrator->max_depth = 5;
+    integrator->max_depth = parameters.get_integer("maxdepth", 5);
 
     return integrator;
 }

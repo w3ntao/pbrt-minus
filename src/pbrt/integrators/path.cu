@@ -12,6 +12,7 @@
 #include "pbrt/integrators/path.h"
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/image_infinite_light.h"
+#include "pbrt/scene/parameter_dictionary.h"
 
 const PathIntegrator *PathIntegrator::create(const ParameterDictionary &parameters,
                                              const IntegratorBase *integrator_base,
@@ -20,7 +21,9 @@ const PathIntegrator *PathIntegrator::create(const ParameterDictionary &paramete
     CHECK_CUDA_ERROR(cudaMallocManaged(&path_integrator, sizeof(PathIntegrator)));
     gpu_dynamic_pointers.push_back(path_integrator);
 
-    path_integrator->init(integrator_base, 5);
+    auto max_depth = parameters.get_integer("maxdepth", 5);
+
+    path_integrator->init(integrator_base, max_depth);
 
     return path_integrator;
 }
@@ -175,7 +178,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
         // different with PBRT-v4: ignore the DifferentialRay
 
         // Possibly terminate the path with Russian roulette
-        if (path_length > 4) {
+        if (path_length > 8) {
             SampledSpectrum russian_roulette_beta = beta * eta_scale;
             if (russian_roulette_beta.max_component_value() < 1) {
                 auto q = clamp<FloatType>(1 - russian_roulette_beta.max_component_value(), 0, 0.95);
