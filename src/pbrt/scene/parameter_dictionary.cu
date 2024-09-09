@@ -210,7 +210,7 @@ const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
         return Spectrum::create_black_body(value, gpu_dynamic_pointers);
     }
 
-    if (DEBUGGING) {
+    if (DEBUG_MODE) {
         printf("%s(): key `%s` not found in Spectrum, RGB, Blackbody\n", __func__, key.c_str());
     }
 
@@ -239,7 +239,7 @@ ParameterDictionary::get_float_texture_or_null(const std::string &key,
         return FloatTexture::create_constant_float_texture(val, gpu_dynamic_pointers);
     }
 
-    if (DEBUGGING) {
+    if (DEBUG_MODE) {
         printf("`%s` not found in FloatTexture\n", key.c_str());
     }
 
@@ -307,7 +307,7 @@ ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType s
         return SpectrumTexture::create_constant_texture(spectrum, gpu_dynamic_pointers);
     }
 
-    if (DEBUGGING) {
+    if (DEBUG_MODE) {
         printf("WARNING: spectrum texture not found: `%s`\n", key.c_str());
     }
 

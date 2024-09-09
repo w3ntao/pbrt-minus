@@ -39,7 +39,7 @@ class RGBFilm {
                     const SampledWavelengths &lambda, FloatType weight) {
         auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
 
-        if (DEBUGGING && rgb.has_nan()) {
+        if (DEBUG_MODE && rgb.has_nan()) {
             printf("RGBFilm::%s(): pixel(%d): has a NAN component\n", __func__, pixel_index);
         }
 

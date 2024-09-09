@@ -55,7 +55,7 @@ cuda::std::optional<SampledLight> PowerLightSampler::sample(const FloatType u) c
 
     auto result = lights_power_distribution->sample(u);
 
-    if (DEBUGGING) {
+    if (DEBUG_MODE) {
         if (result.first >= light_num) {
             REPORT_FATAL_ERROR();
         }

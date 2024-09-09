@@ -10,6 +10,10 @@
 class Lexer {
 
   private:
+    bool string_starts_with(const std::string &full_str, const std::string &beginning) {
+        return full_str.rfind(beginning, 0) == 0;
+    }
+
     bool is_letter(char ch) {
         return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_';
     }
@@ -204,9 +208,26 @@ class Lexer {
         }
 
         case '"': {
+            const auto variable_definitions = {
+                "bool ",   "blackbody ", "float ",  "integer ",  "normal ",  "rgb ",
+                "point2 ", "point3 ",    "string ", "spectrum ", "texture ", "vector3 ",
+            };
+
+            auto is_string = true;
             auto string_without_quote = read_next_quoted_string();
+
             if (in_bracket || string_without_quote.find(' ') == std::string::npos) {
-                // it's a String with possibly space in it
+                is_string = true;
+            } else {
+                for (const auto type : variable_definitions) {
+                    if (string_starts_with(string_without_quote, type)) {
+                        is_string = false;
+                        break;
+                    }
+                }
+            }
+
+            if (is_string) {
                 return Token(TokenType::String, string_without_quote);
             }
 

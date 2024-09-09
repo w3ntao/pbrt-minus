@@ -368,7 +368,7 @@ __global__ void gpu_evaluate_material(const WavefrontPathIntegrator *integrator,
 
     auto &isect = path_state->shape_intersections[path_idx].interaction;
 
-    if (DEBUGGING && isect.material->get_material_type() != material_type) {
+    if (DEBUG_MODE && isect.material->get_material_type() != material_type) {
         REPORT_FATAL_ERROR();
     }
 
