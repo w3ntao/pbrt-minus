@@ -732,7 +732,7 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
                                      const std::string &output_filename) {
     printf("wavefront: path pool size: %u\n", PATH_POOL_SIZE);
     std::chrono::duration<FloatType> total_preview_time = std::chrono::seconds(0);
-    std::chrono::duration<FloatType> total_sort_frame_buffer_time = std::chrono::seconds(0);
+    std::chrono::duration<FloatType> total_write_frame_buffer_time = std::chrono::seconds(0);
 
     const auto image_resolution = this->path_state.image_resolution;
 
@@ -824,18 +824,18 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
 
         if (queues.frame_buffer_counter > 0) {
             // sort to make film writing deterministic
-            auto start_sort_frame_buffer = std::chrono::system_clock::now();
+            auto start_write_frame_buffer = std::chrono::system_clock::now();
 
             // TODO: rewriting sorting with CUDA
             std::sort(queues.frame_buffer_queue + 0,
                       queues.frame_buffer_queue + queues.frame_buffer_counter, FBComparator());
 
-            total_sort_frame_buffer_time +=
-                std::chrono::system_clock::now() - start_sort_frame_buffer;
-
             write_frame_buffer<<<divide_and_ceil(queues.frame_buffer_counter, threads), threads>>>(
                 film, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+            total_write_frame_buffer_time +=
+                std::chrono::system_clock::now() - start_write_frame_buffer;
 
             auto start_preview = std::chrono::system_clock::now();
 
@@ -864,8 +864,8 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
                 clamp<uint>(path_state.global_path_counter / total_pixel_num, 0, total_sample_num);
 
             auto title = output_filename + " - samples: " + std::to_string(current_sample_idx) +
-                         "/" + std::to_string(total_sample_num) + " - pass " + std::to_string(pass);
-
+                         "/" + std::to_string(total_sample_num) +
+                         " - pass: " + std::to_string(pass);
             glfwSetWindowTitle(gl_object.window, title.c_str());
 
             // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -900,9 +900,8 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
     gl_object.release();
     glfwTerminate();
 
-    std::cout << std::fixed << std::setprecision(3)
-              << "wavefront: total sort frame buffer time: " << total_sort_frame_buffer_time.count()
-              << " seconds.\n";
+    std::cout << std::fixed << std::setprecision(3) << "wavefront: total write frame buffer time: "
+              << total_write_frame_buffer_time.count() << " seconds.\n";
 
     std::cout << std::fixed << std::setprecision(3)
               << "wavefront: total preview time: " << total_preview_time.count() << " seconds.\n";

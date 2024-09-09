@@ -2,6 +2,7 @@
 
 #include "pbrt/scene/tokenizer.h"
 #include <fstream>
+#include <iterator>
 #include <optional>
 #include <sstream>
 #include <string>

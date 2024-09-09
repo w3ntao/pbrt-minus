@@ -66,8 +66,8 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
     }
 
     // ignore minimal values
-    // those pixels with luminance smaller than 0.01 * max_luminance are ignored
-    const auto ignore_ratio = 0.01;
+    // those pixels with luminance smaller than 0.001 * max_luminance are ignored
+    const auto ignore_ratio = 0.001;
     auto num_ignore = 0;
     auto ignore_threshold = ignore_ratio * max_luminance;
     for (int x = 0; x < image_resolution.x; ++x) {
