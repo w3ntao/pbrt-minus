@@ -27,16 +27,12 @@ void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
 
     u_roughness = parameters.get_float_texture_or_null("uroughness", gpu_dynamic_pointers);
     if (!u_roughness) {
-        auto roughness_val = parameters.get_float("roughness", 0.0);
-        u_roughness =
-            FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
+        u_roughness = parameters.get_float_texture("roughness", 0.0, gpu_dynamic_pointers);
     }
 
     v_roughness = parameters.get_float_texture_or_null("vroughness", gpu_dynamic_pointers);
     if (!v_roughness) {
-        auto roughness_val = parameters.get_float("roughness", 0.0);
-        v_roughness =
-            FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
+        v_roughness = parameters.get_float_texture("roughness", 0.0, gpu_dynamic_pointers);
     }
 
     thickness =

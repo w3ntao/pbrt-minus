@@ -645,12 +645,12 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
     auto color_type = tokens[2].values[0];
     auto texture_type = tokens[3].values[0];
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 4));
-    
+
     if (color_type == "float") {
         auto float_texture = FloatTexture::create(texture_type, get_render_from_object(),
                                                   parameters, gpu_dynamic_pointers);
         float_textures[texture_name] = float_texture;
-
+        
         return;
     }
 

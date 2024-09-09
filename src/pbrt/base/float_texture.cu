@@ -90,6 +90,10 @@ FloatType FloatTexture::evaluate(const TextureEvalContext &ctx) const {
     case (Type::constant): {
         return ((FloatConstantTexture *)ptr)->evaluate(ctx);
     }
+
+    case (Type::image): {
+        return ((FloatImageTexture *)ptr)->evaluate(ctx);
+    }
     }
 
     REPORT_FATAL_ERROR();

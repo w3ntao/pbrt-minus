@@ -16,4 +16,16 @@ class FloatImageTexture : ImageTextureBase {
 
         return float_image_texture;
     }
+
+    PBRT_CPU_GPU
+    FloatType evaluate(const TextureEvalContext &ctx) const {
+        TexCoord2D c = texture_mapping->map(ctx);
+        // Texture coordinates are (0,0) in the lower left corner, but
+        // image coordinates are (0,0) in the upper left.
+
+        c.st[1] = 1 - c.st[1];
+        auto v = this->scale * mipmap->filter(c.st)[0];
+
+        return invert ? std::max<FloatType>(0, 1 - v) : v;
+    }
 };

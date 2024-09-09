@@ -7,8 +7,13 @@ void ImageTextureBase::init_image_texture_base(const Transform &render_from_obje
                                                std::vector<void *> &gpu_dynamic_pointers) {
     mipmap = MIPMap::create(parameters, gpu_dynamic_pointers);
 
+    scale = parameters.get_float("scale", 1.0);
+    invert = parameters.get_bool("invert", false);
+
+    texture_mapping = nullptr;
+
     const std::string mapping = parameters.get_one_string("mapping", "uv");
-    
+
     if (mapping == "uv") {
         TextureMapping2D *_texture_mapping;
         UVMapping *uv_mapping;
@@ -24,8 +29,6 @@ void ImageTextureBase::init_image_texture_base(const Transform &render_from_obje
 
         texture_mapping = _texture_mapping;
 
-        scale = parameters.get_float("scale", 1.0);
-        invert = parameters.get_bool("invert", false);
         return;
     }
 
