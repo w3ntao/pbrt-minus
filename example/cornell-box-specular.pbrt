@@ -7,7 +7,7 @@ Film "rgb"
     "integer xresolution" [ 1080 ]
     "integer yresolution" [ 1080 ]
 
-Integrator "simplepath"
+Integrator "path"
 
 WorldBegin
 

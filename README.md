@@ -31,7 +31,7 @@ $ cmake ..
 $ make -j
 
 # render
-$ ./pbrt-minus ../example/cornell-box-specular.pbrt -spp 4
+$ ./pbrt-minus ../example/cornell-box-specular.pbrt --spp 4
 ```
 
 More scenes could be found at https://github.com/w3ntao/pbrt-minus-scenes.

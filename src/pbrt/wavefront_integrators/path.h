@@ -110,6 +110,8 @@ class WavefrontPathIntegrator {
 
     uint max_depth;
 
+    uint samples_per_pixel;
+
     PBRT_GPU
     SampledSpectrum sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
                               SampledWavelengths &lambda, Sampler *sampler) const;

@@ -648,6 +648,8 @@ WavefrontPathIntegrator::create(const ParameterDictionary &parameters, const Int
 
     integrator->max_depth = parameters.get_integer("maxdepth", 5);
 
+    integrator->samples_per_pixel = samples_per_pixel;
+
     return integrator;
 }
 
@@ -858,13 +860,11 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
             auto total_pixel_num = image_resolution.x * image_resolution.y;
-
-            auto total_sample_num = path_state.total_path_num / total_pixel_num;
             auto current_sample_idx =
-                clamp<uint>(path_state.global_path_counter / total_pixel_num, 0, total_sample_num);
+                clamp<uint>(path_state.global_path_counter / total_pixel_num, 0, samples_per_pixel);
 
             auto title = output_filename + " - samples: " + std::to_string(current_sample_idx) +
-                         "/" + std::to_string(total_sample_num) +
+                         "/" + std::to_string(samples_per_pixel) +
                          " - pass: " + std::to_string(pass);
             glfwSetWindowTitle(gl_object.window, title.c_str());
 
