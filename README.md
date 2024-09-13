@@ -2,61 +2,92 @@
 
 A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT-v4.
 
+
 ## feature
 
 * CUDA acceleration
-* spectral rendering
 * HLBVH with work queues ([Pantaleoni et al. 2010](https://research.nvidia.com/publication/2010-06_hlbvh-hierarchical-lbvh-construction-real-time-ray-tracing), [Garanzha et al. 2011](https://research.nvidia.com/publication/simpler-and-faster-hlbvh-work-queues))
-* integrator: AmbientOcclusion, SurfaceNormal, PathTracing
+* wavefront path tracing ([Laine et al. 2013](https://research.nvidia.com/sites/default/files/pubs/2013-07_Megakernels-Considered-Harmful/laine2013hpg_paper.pdf))
+* spectral rendering
+* multiple importance sampling
+* power light sampler
+* stratified sampler
 
-## requisite
 
-* C++ >= 17
-* CUDA (compute capability >= 7.5, runtime version >= 11)
-* CMake (>= 3.24)
-* PNG library ([for Debian](https://packages.debian.org/search?keywords=libpng-dev), [for Arch](https://archlinux.org/packages/extra/x86_64/libpng/))
+## set up environment
+
+### Linux
+
+Debian/Ubuntu:
+```
+$ sudo apt install -y libglu1-mesa-dev libx11-dev xorg-dev
+```
+
+Setting up for other distros should be similar.
+
+### Windows
+
+It's recommended to build it with [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install).
+
+[CUDA on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html#getting-started-with-cuda-on-wsl) might help set up CUDA.
 
 
 ## build and render
 
 ```
-# clone this repository and its submodules
 $ git clone --recursive https://github.com/w3ntao/pbrt-minus.git
 
-# build with CMake
 $ cd pbrt-minus
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make -j
+$ mkdir build; cd build
+$ cmake ..; make -j
 
-# render
 $ ./pbrt-minus ../example/cornell-box-specular.pbrt --spp 4
 ```
 
-More scenes could be found at https://github.com/w3ntao/pbrt-minus-scenes.
 
 ## gallery
 
-All rendered with scenes from https://github.com/w3ntao/pbrt-minus-scenes \
-(which is basically a subset of https://github.com/mmp/pbrt-v4-scenes).
+More scenes at https://github.com/w3ntao/pbrt-minus-scenes.
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/ganesha-simplepath-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/book-path-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-silver-simplepath-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/chopper-titan-v4-path-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-rough-glass-simplepath-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/crown-path-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-simplepath-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/ganesha-path-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-specular-simplepath-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/ganesha-coated-gold-path-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/veach-mis-colorized-simplepath-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-rough-glass-path-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/killeroo-gold-simplepath-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-silver-path-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/killeroo-simple-simplepath-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/veach-mis-colorized-path-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/dragon_10-ambientocclusion-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame25-path-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/crown-surfacenormal-stratified-1024.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame35-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame52-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame85-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame120-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame180-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame210-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame300-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame542-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame675-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame812-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame888-path-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame1266-path-4096.png)
+
