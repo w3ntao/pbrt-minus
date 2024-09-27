@@ -129,7 +129,6 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/util/distribution_2d.cu
         src/pbrt/util/hash_map.cu
-        src/pbrt/util/math.cu
         src/pbrt/util/sampling.cu
 
         src/pbrt/wavefront_integrators/path.cu

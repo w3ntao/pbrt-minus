@@ -1,7 +1,8 @@
 #pragma once
 
 #include "pbrt/euclidean_space/point2.h"
-#include <curand_kernel.h>
+#include "pbrt/util/hash.h"
+#include "pbrt/util/rng.h"
 
 class IndependentSampler {
   public:
@@ -12,7 +13,8 @@ class IndependentSampler {
 
     PBRT_GPU
     void start_pixel_sample(const uint pixel_idx, const uint sample_idx, const uint dimension) {
-        curand_init(pixel_idx, sample_idx, dimension, &rand_state);
+        rng.set_sequence(pstd::hash(pixel_idx));
+        rng.advance(sample_idx * 65536ull + dimension);
     }
 
     PBRT_CPU_GPU
@@ -21,11 +23,11 @@ class IndependentSampler {
     }
 
     PBRT_GPU FloatType get_1d() {
-        return curand_uniform(&rand_state);
+        return rng.uniform<FloatType>();
     }
 
     PBRT_GPU Point2f get_2d() {
-        return Point2f(curand_uniform(&rand_state), curand_uniform(&rand_state));
+        return Point2f(rng.uniform<FloatType>(), rng.uniform<FloatType>());
     }
 
     PBRT_GPU Point2f get_pixel_2d() {
@@ -33,6 +35,6 @@ class IndependentSampler {
     }
 
   private:
-    curandState rand_state;
+    RNG rng;
     uint samples_per_pixel;
 };

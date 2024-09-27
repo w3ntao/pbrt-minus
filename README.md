@@ -20,7 +20,7 @@ A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT
 
 Debian/Ubuntu:
 ```
-$ sudo apt install -y libglu1-mesa-dev libx11-dev xorg-dev
+$ sudo apt install -y libglu1-mesa-dev libpng-dev libx11-dev xorg-dev
 ```
 
 Setting up for other distros should be similar.

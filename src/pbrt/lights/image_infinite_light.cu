@@ -9,7 +9,7 @@
 #include "pbrt/textures/gpu_image.h"
 #include "pbrt/util/distribution_2d.h"
 #include "pbrt/util/macro.h"
-#include "pbrt/util/math.h"
+#include "pbrt/util/sampling.h"
 
 ImageInfiniteLight *ImageInfiniteLight::create(const Transform &render_from_light,
                                                const ParameterDictionary &parameters,

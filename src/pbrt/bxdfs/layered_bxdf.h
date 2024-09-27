@@ -4,14 +4,14 @@
 #include "pbrt/bxdfs/top_or_bottom_bxdf.h"
 #include "pbrt/util/hash.h"
 #include "pbrt/util/macro.h"
-#include <curand_kernel.h>
+#include "pbrt/util/rng.h"
 
 // LayeredBxDF Definition
 template <typename TopBxDF, typename BottomBxDF, bool twoSided>
 class LayeredBxDF {
   public:
     PBRT_GPU
-    LayeredBxDF() {};
+    LayeredBxDF(){};
 
     PBRT_GPU
     LayeredBxDF(TopBxDF top, BottomBxDF bottom, FloatType thickness, const SampledSpectrum &albedo,
@@ -85,10 +85,9 @@ class LayeredBxDF {
             f = nSamples * enterInterface.f(wo, wi, mode);
         }
 
-        curandState rand_state;
-        curand_init(pstd::hash(wi), pstd::hash(wo), 0, &rand_state);
-        auto r = [&rand_state]() {
-            return std::min<FloatType>(curand_uniform(&rand_state), OneMinusEpsilon);
+        RNG rng(pstd::hash(wo), pstd::hash(wi));
+        auto r = [&rng]() {
+            return std::min<FloatType>(rng.uniform<FloatType>(), OneMinusEpsilon);
         };
 
         for (int s = 0; s < nSamples; ++s) {
@@ -275,11 +274,9 @@ class LayeredBxDF {
         Vector3f w = bs->wi;
         bool specularPath = bs->is_specular();
 
-        curandState rand_state;
-        curand_init(pstd::hash(wo), pstd::hash(uc, u), 0, &rand_state);
-
-        auto r = [&rand_state]() {
-            return std::min<FloatType>(curand_uniform(&rand_state), OneMinusEpsilon);
+        RNG rng(pstd::hash(wo), pstd::hash(uc, u));
+        auto r = [&rng]() {
+            return std::min<FloatType>(rng.uniform<FloatType>(), OneMinusEpsilon);
         };
 
         // Declare common variables for layered BSDF sampling
@@ -389,10 +386,10 @@ class LayeredBxDF {
             wi = -wi;
         }
 
-        curandState rand_state;
-        curand_init(pstd::hash(wi), pstd::hash(wo), 0, &rand_state);
-        auto r = [&rand_state]() {
-            return std::min<FloatType>(curand_uniform(&rand_state), OneMinusEpsilon);
+        // Declare _RNG_ for layered PDF evaluation
+        RNG rng(pstd::hash(wi), pstd::hash(wo));
+        auto r = [&rng]() {
+            return std::min<FloatType>(rng.uniform<FloatType>(), OneMinusEpsilon);
         };
 
         // Update _pdfSum_ for reflection at the entrance layer

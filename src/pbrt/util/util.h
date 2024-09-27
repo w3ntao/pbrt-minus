@@ -28,4 +28,3 @@ PBRT_CPU_GPU inline double copysign(double mag, double sign) {
 }
 
 } // namespace pstd
-// namespace pstd

@@ -217,10 +217,6 @@ void SceneBuilder::build_sampler_for_megakernel_integrator(const std::string &sa
     // TODO: sampler is not parsed, only pixelsamples read
     const auto parameters = build_parameter_dictionary(sub_vector(sampler_tokens, 2));
 
-    if (!samples_per_pixel.has_value()) {
-        samples_per_pixel = parameters.get_integer("pixelsamples", 4);
-    }
-
     uint total_pixel_num = film_resolution->x * film_resolution->y;
 
     if (sampler_type == "stratified") {
@@ -291,7 +287,7 @@ void SceneBuilder::build_integrator(bool wavefront) {
     auto integrator_base = build_integrator_base();
 
     const std::string sampler_type = "stratified";
-    // auto sampler_type = "independent";
+    // const std::string sampler_type = "independent";
 
     printf("sampler: %s\n", sampler_type.c_str());
 
@@ -419,6 +415,12 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
 
     if (keyword == "Sampler") {
         sampler_tokens = tokens;
+
+        const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
+        if (!samples_per_pixel.has_value()) {
+            samples_per_pixel = parameters.get_integer("pixelsamples", 4);
+        }
+
         return;
     }
 
@@ -650,7 +652,7 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
         auto float_texture = FloatTexture::create(texture_type, get_render_from_object(),
                                                   parameters, gpu_dynamic_pointers);
         float_textures[texture_name] = float_texture;
-        
+
         return;
     }
 
