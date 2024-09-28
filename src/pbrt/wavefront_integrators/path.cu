@@ -314,7 +314,7 @@ __global__ void generate_new_path(const IntegratorBase *base, const Filter *filt
 template <Material::Type material_type>
 __global__ void gpu_evaluate_material(const WavefrontPathIntegrator *integrator,
                                       PathState *path_state, Queues *queues) {
-    uint material_counter = NAN;
+    uint material_counter = UINT_MAX;
     uint *material_queue = nullptr;
 
     switch (material_type) {
@@ -480,7 +480,7 @@ PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *pat
 
 template <Material::Type material_type>
 void WavefrontPathIntegrator::evaluate_material() {
-    uint material_counter = NAN;
+    uint material_counter = UINT_MAX;
     switch (material_type) {
     case (Material::Type::coated_conductor): {
         material_counter = queues.coated_conductor_material_counter;

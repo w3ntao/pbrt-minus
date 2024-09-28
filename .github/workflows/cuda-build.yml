@@ -1,0 +1,47 @@
+name: cuda-build
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cuda-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda: [ '12.5.0' ]
+
+    name: GPU build (CUDA ${{ matrix.cuda }})
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: jimver/cuda-toolkit@v0.2.17
+      id: cuda-toolkit
+      with:
+        cuda: ${{ matrix.cuda }}
+        method: 'network'
+        sub-packages: '[ "nvcc" ]'
+
+    - name: check NVCC
+      run: nvcc -V
+
+    - name: install dependencies
+      run:
+        sudo apt install -y cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev
+
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: build
+      run:
+        mkdir build;
+        cd build;
+        cmake ..;
+        make -j;

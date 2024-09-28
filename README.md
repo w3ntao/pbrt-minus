@@ -1,5 +1,7 @@
 # pbrt-minus
 
+[![cuda-build](https://github.com/w3ntao/pbrt-minus/actions/workflows/cuda-build.yml/badge.svg)](https://github.com/w3ntao/pbrt-minus/actions/workflows/cuda-build.yml)
+
 A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT-v4.
 
 
@@ -20,7 +22,7 @@ A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT
 
 Debian/Ubuntu:
 ```
-$ sudo apt install -y libglu1-mesa-dev libpng-dev libx11-dev xorg-dev
+$ sudo apt install -y cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev
 ```
 
 Setting up for other distros should be similar.

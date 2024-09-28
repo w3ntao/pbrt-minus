@@ -10,8 +10,6 @@ if (NOT CMAKE_CUDA_COMPILER)
     # required by CLion
 endif ()
 
-message("CUDA compiler: ${CMAKE_CUDA_COMPILER}")
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -27,6 +25,13 @@ endif ()
 
 enable_language(CUDA)
 include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
+
+message(STATUS "nvcc path: ${CMAKE_CUDA_COMPILER}")
+message(STATUS "nvcc version = ${CMAKE_CUDA_COMPILER_VERSION}")
+
+if (${CMAKE_CUDA_COMPILER_VERSION} VERSION_LESS "12.5.0")
+    message(FATAL_ERROR "you need NVCC >= 12.5.0 to build this project (required by cuda::std::optional)")
+endif ()
 
 add_subdirectory("src/ext")
 
