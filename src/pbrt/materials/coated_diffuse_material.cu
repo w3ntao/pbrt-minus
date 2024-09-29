@@ -63,7 +63,7 @@ void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
     }
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 CoatedDiffuseBxDF CoatedDiffuseMaterial::get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
                                                                  SampledWavelengths &lambda) const {
 

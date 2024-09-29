@@ -1,6 +1,6 @@
 #include "pbrt/bxdfs/conductor_bxdf.h"
 
-PBRT_GPU
+PBRT_CPU_GPU
 cuda::std::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
                                                         TransportMode mode,
                                                         BxDFReflTransFlags sample_flags) const {
@@ -48,7 +48,7 @@ cuda::std::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType u
     return BSDFSample(f, wi, pdf, BxDFFlags::GlossyReflection);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum ConductorBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     if (!wo.same_hemisphere(wi)) {
         return {};
@@ -80,7 +80,7 @@ SampledSpectrum ConductorBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) c
     return mf_distrib.D(wm) * F * mf_distrib.G(wo, wi) / (4 * cosTheta_i * cosTheta_o);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType ConductorBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                              BxDFReflTransFlags sample_flags) const {
     if (!(sample_flags & BxDFReflTransFlags::Reflection)) {

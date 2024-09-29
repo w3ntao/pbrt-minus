@@ -65,26 +65,26 @@ class Material {
         return type;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     const Material *get_mix_material(const SurfaceInteraction *si) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     CoatedConductorBxDF get_coated_conductor_bsdf(const MaterialEvalContext &ctx,
                                                   SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
                                               SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,
                                      SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
                                        SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:

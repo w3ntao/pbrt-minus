@@ -19,7 +19,7 @@ class DiffuseMaterial {
 
     void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:

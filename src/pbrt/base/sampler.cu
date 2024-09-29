@@ -103,7 +103,7 @@ void Sampler::init(StratifiedSampler *stratified_sampler) {
     ptr = stratified_sampler;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension) {
     switch (type) {
     case (Type::independent): {
@@ -136,7 +136,7 @@ uint Sampler::get_samples_per_pixel() const {
     return 0;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType Sampler::get_1d() {
     switch (type) {
     case (Type::independent): {
@@ -152,7 +152,7 @@ FloatType Sampler::get_1d() {
     return NAN;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 Point2f Sampler::get_2d() {
     switch (type) {
     case (Type::independent): {
@@ -168,7 +168,7 @@ Point2f Sampler::get_2d() {
     return Point2f(NAN, NAN);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 Point2f Sampler::get_pixel_2d() {
     switch (type) {
     case (Type::independent): {
@@ -184,7 +184,7 @@ Point2f Sampler::get_pixel_2d() {
     return Point2f(NAN, NAN);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 CameraSample Sampler::get_camera_sample(const Point2i pPixel, const Filter *filter) {
     auto fs = filter->sample(get_pixel_2d());
 

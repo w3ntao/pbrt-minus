@@ -1,7 +1,7 @@
 #include "pbrt/bxdfs/dielectric_bxdf.h"
 #include "pbrt/euclidean_space/normal3f.h"
 
-PBRT_GPU
+PBRT_CPU_GPU
 cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
                                                          TransportMode mode,
                                                          BxDFReflTransFlags sample_flags) const {

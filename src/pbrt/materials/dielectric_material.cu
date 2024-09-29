@@ -44,7 +44,7 @@ void DielectricMaterial::init(const ParameterDictionary &parameters,
     }
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 DielectricBxDF DielectricMaterial::get_dielectric_bsdf(const MaterialEvalContext &ctx,
                                                        SampledWavelengths &lambda) const {
     // Compute index of refraction for dielectric material

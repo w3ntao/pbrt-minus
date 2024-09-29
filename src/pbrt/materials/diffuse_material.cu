@@ -28,7 +28,7 @@ void DiffuseMaterial::init(const ParameterDictionary &parameters,
     }
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 DiffuseBxDF DiffuseMaterial::get_diffuse_bsdf(const MaterialEvalContext &ctx,
                                               SampledWavelengths &lambda) const {
     auto r = reflectance->evaluate(ctx, lambda).clamp(0.0, 1.0);

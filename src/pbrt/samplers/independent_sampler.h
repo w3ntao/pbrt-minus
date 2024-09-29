@@ -11,7 +11,7 @@ class IndependentSampler {
         samples_per_pixel = _samples_per_pixel;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void start_pixel_sample(const uint pixel_idx, const uint sample_idx, const uint dimension) {
         rng.set_sequence(pstd::hash(pixel_idx));
         rng.advance(sample_idx * 65536ull + dimension);
@@ -22,15 +22,15 @@ class IndependentSampler {
         return samples_per_pixel;
     }
 
-    PBRT_GPU FloatType get_1d() {
+    PBRT_CPU_GPU FloatType get_1d() {
         return rng.uniform<FloatType>();
     }
 
-    PBRT_GPU Point2f get_2d() {
+    PBRT_CPU_GPU Point2f get_2d() {
         return Point2f(rng.uniform<FloatType>(), rng.uniform<FloatType>());
     }
 
-    PBRT_GPU Point2f get_pixel_2d() {
+    PBRT_CPU_GPU Point2f get_pixel_2d() {
         return get_2d();
     }
 

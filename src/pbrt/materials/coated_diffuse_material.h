@@ -13,7 +13,7 @@ class CoatedDiffuseMaterial {
   public:
     void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
                                               SampledWavelengths &lambda) const;
 

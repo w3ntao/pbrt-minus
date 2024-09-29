@@ -37,7 +37,7 @@ const CameraBase *Camera::get_camerabase() const {
     return nullptr;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 CameraRay Camera::generate_ray(const CameraSample &sample, Sampler *sampler) const {
     switch (type) {
     case (Type::perspective): {

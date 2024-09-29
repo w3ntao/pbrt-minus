@@ -40,7 +40,7 @@ void PerspectiveCamera::init(const Point2i &resolution, const CameraTransform &c
         camera_from_raster(Point3f(0.0, 1.0, 0.0)) - camera_from_raster(Point3f(0.0, 0.0, 0.0));
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 CameraRay PerspectiveCamera::generate_ray(const CameraSample &sample, Sampler *sampler) const {
     Point3f p_film = Point3f(sample.p_film.x, sample.p_film.y, 0);
     Point3f p_camera = camera_from_raster(p_film);

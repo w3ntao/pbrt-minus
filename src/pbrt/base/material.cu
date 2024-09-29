@@ -155,7 +155,7 @@ void Material::init(const MixMaterial *mix_material) {
     ptr = mix_material;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 const Material *Material::get_mix_material(const SurfaceInteraction *si) const {
     if (type != Type::mix) {
         REPORT_FATAL_ERROR();
@@ -164,7 +164,7 @@ const Material *Material::get_mix_material(const SurfaceInteraction *si) const {
     return ((MixMaterial *)ptr)->get_material(si);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 CoatedConductorBxDF Material::get_coated_conductor_bsdf(const MaterialEvalContext &ctx,
                                                         SampledWavelengths &lambda) const {
     if (type != Type::coated_conductor) {
@@ -174,7 +174,7 @@ CoatedConductorBxDF Material::get_coated_conductor_bsdf(const MaterialEvalContex
     return ((CoatedConductorMaterial *)ptr)->get_coated_conductor_bsdf(ctx, lambda);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 CoatedDiffuseBxDF Material::get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
                                                     SampledWavelengths &lambda) const {
     if (type != Type::coated_diffuse) {
@@ -184,7 +184,7 @@ CoatedDiffuseBxDF Material::get_coated_diffuse_bsdf(const MaterialEvalContext &c
     return ((CoatedDiffuseMaterial *)ptr)->get_coated_diffuse_bsdf(ctx, lambda);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 ConductorBxDF Material::get_conductor_bsdf(const MaterialEvalContext &ctx,
                                            SampledWavelengths &lambda) const {
     if (type != Type::conductor) {
@@ -194,7 +194,7 @@ ConductorBxDF Material::get_conductor_bsdf(const MaterialEvalContext &ctx,
     return ((ConductorMaterial *)ptr)->get_conductor_bsdf(ctx, lambda);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 DielectricBxDF Material::get_dielectric_bsdf(const MaterialEvalContext &ctx,
                                              SampledWavelengths &lambda) const {
     if (type != Type::dielectric) {
@@ -204,7 +204,7 @@ DielectricBxDF Material::get_dielectric_bsdf(const MaterialEvalContext &ctx,
     return ((DielectricMaterial *)ptr)->get_dielectric_bsdf(ctx, lambda);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 DiffuseBxDF Material::get_diffuse_bsdf(const MaterialEvalContext &ctx,
                                        SampledWavelengths &lambda) const {
     if (type != Type::diffuse) {

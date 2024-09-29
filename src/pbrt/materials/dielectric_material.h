@@ -16,7 +16,7 @@ class DielectricMaterial {
   public:
     void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
                                        SampledWavelengths &lambda) const;
 

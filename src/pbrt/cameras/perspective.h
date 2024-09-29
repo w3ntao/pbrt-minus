@@ -9,7 +9,7 @@ class PerspectiveCamera {
     void init(const Point2i &resolution, const CameraTransform &camera_transform,
               const ParameterDictionary &parameters);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     CameraRay generate_ray(const CameraSample &sample, Sampler *sampler) const;
 
     CameraBase camera_base;

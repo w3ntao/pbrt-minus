@@ -16,7 +16,7 @@ class CoatedConductorMaterial {
   public:
     void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     CoatedConductorBxDF get_coated_conductor_bsdf(const MaterialEvalContext &ctx,
                                                   SampledWavelengths &lambda) const;
 

@@ -51,7 +51,7 @@ void ConductorMaterial::init(const ParameterDictionary &parameters,
     }
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 ConductorBxDF ConductorMaterial::get_conductor_bsdf(const MaterialEvalContext &ctx,
                                                     SampledWavelengths &lambda) {
     auto uRough = u_roughness->evaluate(ctx);

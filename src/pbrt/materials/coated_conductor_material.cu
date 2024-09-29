@@ -93,7 +93,7 @@ void CoatedConductorMaterial::init(const ParameterDictionary &parameters,
     remapRoughness = parameters.get_bool("remaproughness", true);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 CoatedConductorBxDF
 CoatedConductorMaterial::get_coated_conductor_bsdf(const MaterialEvalContext &ctx,
                                                    SampledWavelengths &lambda) const {

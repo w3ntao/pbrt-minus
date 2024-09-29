@@ -13,8 +13,8 @@ class Stack {
 
     PBRT_GPU void push(const T &val) {
         if (size >= Capacity) {
-            printf("\n\n\nERROR: Stack::push(): size (%d) >= limit (%d).\n\n\n", size, Capacity);
-            asm("trap;");
+            printf("\nERROR: Stack::push(): size (%d) >= limit (%d).\n", size, Capacity);
+            REPORT_FATAL_ERROR();
         }
 
         data[size] = val;
@@ -23,8 +23,8 @@ class Stack {
 
     PBRT_GPU T pop() {
         if (size == 0) {
-            printf("\n\n\nERROR: Stack::pop(): no data in the stack.\n\n\n");
-            asm("trap;");
+            printf("\nERROR: Stack::pop(): no data in the stack.\n");
+            REPORT_FATAL_ERROR();
         }
 
         size -= 1;

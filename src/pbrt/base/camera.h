@@ -56,7 +56,8 @@ struct CameraSample {
     Point2f p_film;
     FloatType filter_weight;
 
-    PBRT_GPU CameraSample(const Point2f _p_film, FloatType _filter_weight)
+    PBRT_CPU_GPU
+    CameraSample(const Point2f _p_film, FloatType _filter_weight)
         : p_film(_p_film), filter_weight(_filter_weight) {}
 };
 
@@ -136,7 +137,7 @@ class Camera {
     PBRT_CPU_GPU
     const CameraBase *get_camerabase() const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     CameraRay generate_ray(const CameraSample &sample, Sampler *sampler) const;
 
     PBRT_CPU_GPU

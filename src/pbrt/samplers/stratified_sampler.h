@@ -18,7 +18,7 @@ class StratifiedSampler {
         return samples_per_dimension * samples_per_dimension;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void start_pixel_sample(const uint _pixel_idx, const uint _sample_idx, const uint _dimension) {
         pixel_idx = _pixel_idx;
         sample_idx = _sample_idx;
@@ -28,7 +28,7 @@ class StratifiedSampler {
         rng.advance(_sample_idx * 65536ull + _dimension);
     }
 
-    PBRT_GPU FloatType get_1d() {
+    PBRT_CPU_GPU FloatType get_1d() {
         uint64_t hash = pstd::hash(pixel_idx, dimension);
         int stratum = permutation_element(sample_idx, get_samples_per_pixel(), hash);
 
@@ -39,7 +39,7 @@ class StratifiedSampler {
         return (stratum + delta) / get_samples_per_pixel();
     }
 
-    PBRT_GPU Point2f get_2d() {
+    PBRT_CPU_GPU Point2f get_2d() {
         uint64_t hash = pstd::hash(pixel_idx, dimension);
         int stratum = permutation_element(sample_idx, get_samples_per_pixel(), hash);
         dimension += 2;
@@ -54,7 +54,7 @@ class StratifiedSampler {
                        (y + delta_y) / samples_per_dimension);
     }
 
-    PBRT_GPU Point2f get_pixel_2d() {
+    PBRT_CPU_GPU Point2f get_pixel_2d() {
         return get_2d();
     }
 
