@@ -18,7 +18,7 @@
 #include "pbrt/spectrum_util/spectrum_constants_metal.h"
 #include "pbrt/textures/spectrum_constant_texture.h"
 #include "pbrt/util/std_container.h"
-#include "pbrt/wavefront_integrators/path.h"
+#include "pbrt/wavefront_integrators/wavefront_path.h"
 #include <set>
 
 uint next_keyword_position(const std::vector<Token> &tokens, uint start) {

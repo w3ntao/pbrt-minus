@@ -9,15 +9,15 @@
 #include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/gui/gl_object.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
-#include "pbrt/samplers/independent_sampler.h"
-#include "pbrt/samplers/stratified_sampler.h"
+#include "pbrt/samplers/independent.h"
+#include "pbrt/samplers/stratified.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/util/basic_math.h"
-#include "pbrt/wavefront_integrators/path.h"
+#include "pbrt/wavefront_integrators/wavefront_path.h"
 
 const uint PATH_POOL_SIZE = 2 * 1024 * 1024;
 

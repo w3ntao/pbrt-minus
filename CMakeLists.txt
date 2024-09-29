@@ -136,7 +136,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/util/hash_map.cu
         src/pbrt/util/sampling.cu
 
-        src/pbrt/wavefront_integrators/path.cu
+        src/pbrt/wavefront_integrators/wavefront_path.cu
 
         src/ext/glad-3.3-core/src/glad.c
         src/ext/lodepng/lodepng.cpp

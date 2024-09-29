@@ -1,7 +1,7 @@
 #include "pbrt/base/filter.h"
 #include "pbrt/base/sampler.h"
-#include "pbrt/samplers/independent_sampler.h"
-#include "pbrt/samplers/stratified_sampler.h"
+#include "pbrt/samplers/independent.h"
+#include "pbrt/samplers/stratified.h"
 
 static __global__ void init_independent_samplers(IndependentSampler *samplers,
                                                  uint samples_per_pixel, uint num) {

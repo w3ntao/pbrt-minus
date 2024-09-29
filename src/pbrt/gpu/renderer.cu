@@ -4,7 +4,7 @@
 #include "pbrt/base/megakernel_integrator.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/gpu/renderer.h"
-#include "pbrt/wavefront_integrators/path.h"
+#include "pbrt/wavefront_integrators/wavefront_path.h"
 
 __global__ static void mega_kernel_render(Renderer *renderer, uint num_samples) {
     auto camera_base = renderer->camera->get_camerabase();
