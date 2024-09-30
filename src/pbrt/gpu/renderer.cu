@@ -3,7 +3,10 @@
 #include "pbrt/base/integrator_base.h"
 #include "pbrt/base/megakernel_integrator.h"
 #include "pbrt/base/sampler.h"
+#include "pbrt/films/grey_scale_film.h"
 #include "pbrt/gpu/renderer.h"
+#include "pbrt/integrators/mlt_path.h"
+#include "pbrt/samplers/mlt.h"
 #include "pbrt/wavefront_integrators/wavefront_path.h"
 
 __global__ static void mega_kernel_render(Renderer *renderer, uint num_samples) {
@@ -50,11 +53,31 @@ void Renderer::evaluate_pixel_sample(const Point2i p_pixel, const uint num_sampl
 void Renderer::render(const std::string &output_filename, uint samples_per_pixel) {
     auto film_resolution = this->camera->get_camerabase()->resolution;
 
+    std::cout << "\n"
+              << "rendering a " << film_resolution.x << "x" << film_resolution.y << " image";
+
+    if (mlt_integrator != nullptr) {
+        std::cout << " (mutations per pixel: " << mlt_integrator->get_mutation_per_pixel() << ")"
+                  << " with MLT integrator.\n"
+                  << std::flush;
+
+        GreyScaleFilm heatmap(film_resolution);
+
+        mlt_integrator->render(film, heatmap, filter);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+        film->write_to_png(output_filename, film_resolution);
+
+        heatmap.write_to_png("heatmap-" + output_filename);
+
+        return;
+    }
+
     if (wavefront_integrator != nullptr) {
-        std::cout << "\n";
-        std::cout << "rendering a " << film_resolution.x << "x" << film_resolution.y
-                  << " image (samples per pixel: " << samples_per_pixel << ") ";
-        std::cout << "with wavefront integrator.\n" << std::flush;
+        std::cout << " (samples per pixel: " << samples_per_pixel << ")"
+                  << " with wavefront integrator.\n"
+                  << std::flush;
 
         wavefront_integrator->render(film, filter, output_filename);
 
@@ -69,10 +92,9 @@ void Renderer::render(const std::string &output_filename, uint samples_per_pixel
         uint thread_width = 8;
         uint thread_height = 8;
 
-        std::cout << "\n";
-        std::cout << "rendering a " << film_resolution.x << "x" << film_resolution.y
-                  << " image (samples per pixel: " << samples_per_pixel << ") ";
-        std::cout << "in " << thread_width << "x" << thread_height << " blocks.\n" << std::flush;
+        std::cout << " (samples per pixel: " << samples_per_pixel << ") " << "in " << thread_width
+                  << "x" << thread_height << " blocks.\n"
+                  << std::flush;
 
         dim3 blocks(divide_and_ceil(uint(film_resolution.x), thread_width),
                     divide_and_ceil(uint(film_resolution.y), thread_height), 1);

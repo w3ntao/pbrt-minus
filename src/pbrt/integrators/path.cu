@@ -31,11 +31,14 @@ const PathIntegrator *PathIntegrator::create(const ParameterDictionary &paramete
 void PathIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
     base = _base;
     max_depth = _max_depth;
-    regularize = true;
 }
 
-PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
-                                            Sampler *sampler) {
+PBRT_GPU
+SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengths &lambda,
+                                        const IntegratorBase *base, Sampler *sampler,
+                                        uint max_depth) {
+    const bool regularize = true;
+
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
     bool specular_bounce = true;
@@ -150,7 +153,7 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
         // Sample direct illumination from the light sources
 
         if (_is_non_specular(bsdf.flags())) {
-            SampledSpectrum Ld = sample_ld(isect, &bsdf, lambda, sampler);
+            SampledSpectrum Ld = PathIntegrator::sample_ld(isect, &bsdf, lambda, base, sampler);
             L += beta * Ld;
         }
 
@@ -194,9 +197,15 @@ PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavel
     return L;
 }
 
+PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
+                                            Sampler *sampler) {
+    return eval_li(primary_ray, lambda, base, sampler, max_depth);
+}
+
 PBRT_GPU
 SampledSpectrum PathIntegrator::sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
-                                          SampledWavelengths &lambda, Sampler *sampler) const {
+                                          SampledWavelengths &lambda, const IntegratorBase *base,
+                                          Sampler *sampler) {
     // Initialize _LightSampleContext_ for light sampling
     LightSampleContext ctx(intr);
     // Try to nudge the light sampling position to correct side of the surface

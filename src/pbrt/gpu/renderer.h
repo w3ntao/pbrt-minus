@@ -10,6 +10,7 @@ class Film;
 class Filter;
 class HLBVH;
 class Integrator;
+class MLTPathIntegrator;
 class Sampler;
 class WavefrontPathIntegrator;
 
@@ -21,6 +22,7 @@ struct Renderer {
 
         renderer->megakernel_integrator = nullptr;
         renderer->wavefront_integrator = nullptr;
+        renderer->mlt_integrator = nullptr;
         renderer->camera = nullptr;
         renderer->film = nullptr;
         renderer->filter = nullptr;
@@ -32,6 +34,8 @@ struct Renderer {
 
     const Integrator *megakernel_integrator;
     WavefrontPathIntegrator *wavefront_integrator;
+    MLTPathIntegrator *mlt_integrator;
+
     Camera *camera;
     Film *film;
     const Filter *filter;

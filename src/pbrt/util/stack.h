@@ -2,18 +2,26 @@
 
 #include "pbrt/util/macro.h"
 
-template <typename T, int Capacity>
+template <typename T, size_t Capacity>
 class Stack {
   public:
     PBRT_GPU Stack() : size(0) {}
 
-    PBRT_GPU bool empty() const {
-        return size == 0;
+    PBRT_CPU_GPU size_t get_size() const {
+        return size;
     }
 
-    PBRT_GPU void push(const T &val) {
+    PBRT_CPU_GPU bool empty() const {
+        return size <= 0;
+    }
+
+    PBRT_CPU_GPU void clear() {
+        size = 0;
+    }
+
+    PBRT_CPU_GPU void push(const T &val) {
         if (size >= Capacity) {
-            printf("\nERROR: Stack::push(): size (%d) >= limit (%d).\n", size, Capacity);
+            printf("\nERROR: Stack::push(): size (%ld) >= limit (%ld).\n", size, Capacity);
             REPORT_FATAL_ERROR();
         }
 
@@ -21,8 +29,8 @@ class Stack {
         size += 1;
     }
 
-    PBRT_GPU T pop() {
-        if (size == 0) {
+    PBRT_CPU_GPU inline T pop() {
+        if (size <= 0 || size > Capacity) {
             printf("\nERROR: Stack::pop(): no data in the stack.\n");
             REPORT_FATAL_ERROR();
         }
@@ -33,5 +41,5 @@ class Stack {
 
   private:
     T data[Capacity];
-    uint size;
+    size_t size;
 };

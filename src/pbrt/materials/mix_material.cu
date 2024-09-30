@@ -16,7 +16,12 @@ void MixMaterial::init(const ParameterDictionary &parameters) {
 
 PBRT_CPU_GPU
 const Material *MixMaterial::get_material(const SurfaceInteraction *si) const {
+    if (DEBUG_MODE) {
+        if (si->pi.has_nan() || si->wo.has_nan()) {
+            REPORT_FATAL_ERROR();
+        }
+    }
+
     auto u = pstd::hash_float(si->pi, si->wo, materials[0], materials[1]);
-    // TODO: test hash_float range
     return u < amount ? materials[0] : materials[1];
 }

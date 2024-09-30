@@ -29,8 +29,8 @@ include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 message(STATUS "nvcc path: ${CMAKE_CUDA_COMPILER}")
 message(STATUS "nvcc version = ${CMAKE_CUDA_COMPILER_VERSION}")
 
-if (${CMAKE_CUDA_COMPILER_VERSION} VERSION_LESS "12.5.0")
-    message(FATAL_ERROR "you need NVCC >= 12.5.0 to build this project (required by cuda::std::optional)")
+if (${CMAKE_CUDA_COMPILER_VERSION} VERSION_LESS "12.3.0")
+    message(FATAL_ERROR "you need NVCC >= 12.3.0 to build this project (required by cuda::std::optional)")
 endif ()
 
 add_subdirectory("src/ext")
@@ -81,11 +81,13 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/euclidean_space/squared_matrix.cu
 
+        src/pbrt/films/grey_scale_film.cu
         src/pbrt/films/rgb_film.cu
 
         src/pbrt/gpu/renderer.cu
 
         src/pbrt/integrators/ambient_occlusion.cu
+        src/pbrt/integrators/mlt_path.cu
         src/pbrt/integrators/path.cu
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu
@@ -124,6 +126,7 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/spectrum_util/global_spectra.cu
         src/pbrt/spectrum_util/rgb_to_spectrum_data.cu
+        src/pbrt/spectrum_util/sampled_spectrum.cu
 
         src/pbrt/textures/float_scaled_texture.cu
         src/pbrt/textures/gpu_image.cu

@@ -1,6 +1,7 @@
 #include "pbrt/base/filter.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/samplers/independent.h"
+#include "pbrt/samplers/mlt.h"
 #include "pbrt/samplers/stratified.h"
 
 static __global__ void init_independent_samplers(IndependentSampler *samplers,
@@ -92,9 +93,16 @@ Sampler *Sampler::create(const std::string &sampler_type, const uint samples_per
     return nullptr;
 }
 
-PBRT_CPU_GPU void Sampler::init(IndependentSampler *independent_sampler) {
+PBRT_CPU_GPU
+void Sampler::init(IndependentSampler *independent_sampler) {
     type = Type::independent;
     ptr = independent_sampler;
+}
+
+PBRT_CPU_GPU
+void Sampler::init(MLTSampler *mlt_sampler) {
+    type = Type::mlt;
+    ptr = mlt_sampler;
 }
 
 PBRT_CPU_GPU
@@ -108,6 +116,11 @@ void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension
     switch (type) {
     case (Type::independent): {
         ((IndependentSampler *)ptr)->start_pixel_sample(pixel_idx, sample_idx, dimension);
+        return;
+    }
+
+    case (Type::mlt): {
+        ((MLTSampler *)ptr)->init_sample_idx();
         return;
     }
 
@@ -127,6 +140,11 @@ uint Sampler::get_samples_per_pixel() const {
         return ((IndependentSampler *)ptr)->get_samples_per_pixel();
     }
 
+    case (Type::mlt): {
+        // TODO: fix this?
+        return 4;
+    }
+
     case (Type::stratified): {
         return ((StratifiedSampler *)ptr)->get_samples_per_pixel();
     }
@@ -143,6 +161,10 @@ FloatType Sampler::get_1d() {
         return ((IndependentSampler *)ptr)->get_1d();
     }
 
+    case (Type::mlt): {
+        return ((MLTSampler *)ptr)->next_sample();
+    }
+
     case (Type::stratified): {
         return ((StratifiedSampler *)ptr)->get_1d();
     }
@@ -157,6 +179,11 @@ Point2f Sampler::get_2d() {
     switch (type) {
     case (Type::independent): {
         return ((IndependentSampler *)ptr)->get_2d();
+    }
+
+    case (Type::mlt): {
+        auto converted_ptr = ((MLTSampler *)ptr);
+        return Point2f(converted_ptr->next_sample(), converted_ptr->next_sample());
     }
 
     case (Type::stratified): {

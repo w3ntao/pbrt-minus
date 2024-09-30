@@ -124,7 +124,7 @@ void display_system_info() {
 int main(int argc, const char **argv) {
     size_t stack_size;
     cudaDeviceGetLimit(&stack_size, cudaLimitStackSize);
-    size_t new_stack_size = std::max(stack_size, size_t(8 * 1024));
+    size_t new_stack_size = std::max(stack_size, size_t(64 * 1024));
     CHECK_CUDA_ERROR(cudaDeviceSetLimit(cudaLimitStackSize, new_stack_size));
 
     display_system_info();

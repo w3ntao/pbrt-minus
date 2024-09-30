@@ -1,7 +1,10 @@
 #pragma once
 
-#include "pbrt/spectrum_util/xyz.h"
 #include "pbrt/spectrum_util/spectrum_constants_cie.h"
+#include "pbrt/spectrum_util/xyz.h"
+
+class Spectrum;
+class SampledWavelengths;
 
 class SampledSpectrum {
   public:
@@ -29,7 +32,8 @@ class SampledSpectrum {
         return false;
     }
 
-    PBRT_CPU_GPU SampledSpectrum sqrt() const {
+    PBRT_CPU_GPU
+    SampledSpectrum sqrt() const {
         SampledSpectrum result;
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             result[idx] = std::sqrt(values[idx]);
@@ -38,7 +42,8 @@ class SampledSpectrum {
         return result;
     }
 
-    PBRT_CPU_GPU SampledSpectrum clamp(FloatType low, FloatType high) const {
+    PBRT_CPU_GPU
+    SampledSpectrum clamp(FloatType low, FloatType high) const {
         SampledSpectrum result;
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             result[idx] = ::clamp(values[idx], low, high);
@@ -48,12 +53,15 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    FloatType operator[](uint8_t i) const {
+    FloatType y(const SampledWavelengths &lambda, const Spectrum *cie_y) const;
+
+    PBRT_CPU_GPU
+    inline FloatType operator[](uint8_t i) const {
         return values[i];
     }
 
     PBRT_CPU_GPU
-    FloatType &operator[](uint8_t i) {
+    inline FloatType &operator[](uint8_t i) {
         return values[i];
     }
 

@@ -9,6 +9,7 @@
 #include "pbrt/base/sampler.h"
 #include "pbrt/base/shape.h"
 #include "pbrt/gpu/renderer.h"
+#include "pbrt/integrators/mlt_path.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/light_samplers/uniform_light_sampler.h"
 #include "pbrt/scene/scene_builder.h"
@@ -291,6 +292,11 @@ void SceneBuilder::build_integrator(bool wavefront) {
 
     printf("sampler: %s\n", sampler_type.c_str());
 
+    integrator_name = "mlt";
+    // TODO: rewrite this part
+
+    printf("DEBUGGING: integrator name: %s\n", integrator_name->c_str());
+
     if (!integrator_name.has_value()) {
         printf("integrator not set in PBRT file, changed to path\n");
         integrator_name = "path";
@@ -300,22 +306,23 @@ void SceneBuilder::build_integrator(bool wavefront) {
         integrator_name = "path";
     }
 
-    if (wavefront && integrator_name != "path") {
-        printf("WARNING: wavefront rendering is not implemented for `%s`\n",
-               integrator_name->c_str());
-        wavefront = false;
+    if (integrator_name == "mlt" || integrator_name == "mlt-path") {
+        renderer->mlt_integrator = MLTPathIntegrator::create(samples_per_pixel, parameters,
+                                                             integrator_base, gpu_dynamic_pointers);
+        return;
     }
 
-    if (wavefront) {
+    if (integrator_name == "path" and wavefront) {
         renderer->wavefront_integrator =
             WavefrontPathIntegrator::create(parameters, integrator_base, sampler_type,
                                             samples_per_pixel.value(), gpu_dynamic_pointers);
-    } else {
-        build_sampler_for_megakernel_integrator(sampler_type);
-
-        renderer->megakernel_integrator = Integrator::create(parameters, integrator_name.value(),
-                                                             integrator_base, gpu_dynamic_pointers);
+        return;
     }
+
+    build_sampler_for_megakernel_integrator(sampler_type);
+
+    renderer->megakernel_integrator = Integrator::create(parameters, integrator_name.value(),
+                                                         integrator_base, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
@@ -417,6 +424,7 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
         sampler_tokens = tokens;
 
         const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
+
         if (!samples_per_pixel.has_value()) {
             samples_per_pixel = parameters.get_integer("pixelsamples", 4);
         }
@@ -837,14 +845,20 @@ void SceneBuilder::preprocess(bool wavefront) {
         light->preprocess(full_scene_bounds);
     }
 
+    if (!samples_per_pixel.has_value()) {
+        samples_per_pixel = 4;
+    }
+
     renderer->wavefront_integrator = nullptr;
     renderer->megakernel_integrator = nullptr;
+    renderer->mlt_integrator = nullptr;
 
     build_integrator(wavefront);
 
-    if (renderer->wavefront_integrator != nullptr) {
+    if (renderer->mlt_integrator != nullptr) {
+        printf("Integrator: (megakernel) mlt\n");
+    } else if (renderer->wavefront_integrator != nullptr) {
         printf("Integrator: (wavefront) path\n");
-
     } else if (renderer->megakernel_integrator != nullptr) {
         printf("Integrator: (megakernel) %s\n",
                renderer->megakernel_integrator->get_name().c_str());
