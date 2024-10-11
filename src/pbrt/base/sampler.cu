@@ -182,7 +182,7 @@ Point2f Sampler::get_2d() {
     }
 
     case (Type::mlt): {
-        auto converted_ptr = ((MLTSampler *)ptr);
+        auto converted_ptr = (MLTSampler *)ptr;
         return Point2f(converted_ptr->next_sample(), converted_ptr->next_sample());
     }
 

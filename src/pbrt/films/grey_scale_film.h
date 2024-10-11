@@ -10,10 +10,10 @@ class GreyScaleFilm {
           pixels(std::vector<FloatType>(_resolution.x * _resolution.y, 0)) {}
 
     void add_sample(const Point2i &coord, FloatType val) {
-        pixels[coord.x + resolution.x * coord.y] += val;
+        pixels[coord.y * resolution.x + coord.x] += val;
     }
 
-    void write_to_png(const std::string &filename);
+    void write_to_png(const std::string &filename) const;
 
   private:
     Point2i resolution;

@@ -3,13 +3,17 @@
 #include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/rgb.h"
 #include "pbrt/util/basic_math.h"
+#include <algorithm>
 
 /*
+
 const std::vector<RGB> colors = {
-    RGB(0, 0, 1), RGB(0, 1, 1), RGB(0, 1, 0), RGB(1, 1, 0), RGB(1, 0, 0),
+    RGB(0, 0, 0), RGB(0, 0, 1), RGB(0, 1, 1), RGB(0, 1, 0), RGB(1, 1, 0), RGB(1, 0, 0),
 };
+
 const std::vector<RGB> colors = {RGB(0, 0, 0), RGB(0, 0, 1), RGB(0, 1, 1), RGB(0, 1, 0),
                                  RGB(1, 1, 0), RGB(1, 0, 0), RGB(1, 1, 1)};
+
 
 const std::vector<RGB> colors = {
     RGB(68, 1, 84) / 255,   RGB(59, 82, 139) / 255,  RGB(33, 145, 140) / 255,
@@ -19,22 +23,22 @@ const std::vector<RGB> colors = {
 
 const std::vector<RGB> colors = {RGB(68, 1, 84) / 255,    RGB(68, 57, 131) / 255,
                                  RGB(49, 104, 142) / 255, RGB(33, 145, 140) / 255,
-                                 RGB(53, 183, 121) / 255, RGB(144, 215, 67) / 255,
+                                 RGB(53, 183, 121) / 255, RGB(144, 215, 67) / 251,
                                  RGB(253, 231, 37) / 255};
 
 /*
 taken from https://www.andrewnoske.com/wiki/Code_-_heatmaps_and_color_gradients
+6 colors rainbow: black, blue, cyan, green, yellow, red
 5 colors rainbow:        blue, cyan, green, yellow, red
 7 colors rainbow: black, blue, cyan, green, yellow, red, white
 7 color viridis: https://waldyrious.net/viridis-palette-generator/
 */
 
 static RGB convert_to_heatmap_rgb(double linear) {
-    // linear = linear * 2;
-
-    linear = clamp<double>(linear, 0, 1);
+    /*
     const auto gamma = 2.0;
     linear = pow(linear, 1.0 / gamma);
+    */
 
     const auto gap = 1.0 / (colors.size() - 1);
 
@@ -48,18 +52,19 @@ static RGB convert_to_heatmap_rgb(double linear) {
     return colors[colors.size() - 1];
 }
 
-void GreyScaleFilm::write_to_png(const std::string &filename) {
-    FloatType max_intensity = 0.0;
-    for (float pixel : pixels) {
-        max_intensity = std::max(max_intensity, pixel);
-    }
+void GreyScaleFilm::write_to_png(const std::string &filename) const {
+    auto sorted_value = pixels;
+    std::sort(sorted_value.begin(), sorted_value.end(), std::greater{});
+
+    const auto one_percent = 0.01;
+    const double top_one_percent_max_intensity = sorted_value[pixels.size() * one_percent];
 
     SRGBColorEncoding srgb_encoding;
 
     std::vector<unsigned char> png_pixels(pixels.size() * 4);
 
     for (int idx = 0; idx < pixels.size(); ++idx) {
-        auto val = pixels[idx] / max_intensity;
+        auto val = clamp<double>(pixels[idx] / top_one_percent_max_intensity, 0, 1);
 
         auto rgb = convert_to_heatmap_rgb(val);
 

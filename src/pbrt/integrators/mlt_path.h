@@ -15,16 +15,13 @@ class ParameterDictionary;
 class Spectrum;
 
 struct PathSample {
-    FloatType x;
-    FloatType y;
-    // TODO: change x y to float like Film::AddSplat() from PBRT-V4
-
+    Point2f p_film;
     SampledSpectrum radiance;
     SampledWavelengths lambda;
 
     PBRT_CPU_GPU
-    PathSample(FloatType _x, FloatType _y, SampledSpectrum _radiance, SampledWavelengths _lambda)
-        : x(_x), y(_y), radiance(_radiance), lambda(_lambda) {}
+    PathSample(const Point2f _p_film, SampledSpectrum _radiance, SampledWavelengths _lambda)
+        : p_film(_p_film), radiance(_radiance), lambda(_lambda) {}
 };
 
 class MLTPathIntegrator {

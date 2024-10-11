@@ -31,13 +31,17 @@ class MLTSampler {
         constexpr FloatType s2 = 1.0 / 16.0;
         const FloatType r = rng.uniform<FloatType>();
         const FloatType dx = s1 / (s1 / s2 + std::abs(2.0 * r - 1.0)) - s1 / (s1 / s2 + 1.0);
+
+        FloatType mutated_val = NAN;
         if (r < 0.5) {
             const FloatType x1 = x + dx;
-            return (x1 < 1.0) ? x1 : x1 - 1.0;
+            mutated_val = (x1 >= 1.0) ? x1 - 1.0 : x1;
         } else {
             const FloatType x1 = x - dx;
-            return (x1 < 0.0) ? x1 + 1.0 : x1;
+            mutated_val = (x1 < 0.0) ? x1 + 1.0 : x1;
         }
+
+        return clamp<FloatType>(mutated_val, 0, OneMinusEpsilon);
     }
 
   public:
