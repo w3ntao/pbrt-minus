@@ -12,10 +12,14 @@
 #include <set>
 #include <stack>
 
-class IntegratorBase;
+class Film;
 class GlobalSpectra;
+class Integrator;
+class IntegratorBase;
+class MLTPathIntegrator;
 class Primitive;
 class Renderer;
+class WavefrontPathIntegrator;
 
 struct AreaLightEntity {
     std::string name;
@@ -57,7 +61,14 @@ class SceneBuilder {
     std::optional<int> samples_per_pixel;
     std::optional<std::string> integrator_name;
 
-    Renderer *renderer = nullptr;
+    const Integrator *megakernel_integrator = nullptr;
+    WavefrontPathIntegrator *wavefront_integrator = nullptr;
+    MLTPathIntegrator *mlt_integrator = nullptr;
+
+    IntegratorBase *integrator_base = nullptr;
+
+    Film *film = nullptr;
+
     const GlobalSpectra *global_spectra = nullptr;
 
     std::vector<void *> gpu_dynamic_pointers;
@@ -71,13 +82,11 @@ class SceneBuilder {
     std::map<std::string, const SpectrumTexture *> illuminant_spectrum_textures;
     std::map<std::string, const SpectrumTexture *> unbounded_spectrum_textures;
 
-    std::optional<Point2i> film_resolution = std::nullopt;
     std::string output_filename;
 
     std::vector<Token> camera_tokens;
     std::vector<Token> film_tokens;
     std::vector<Token> integrator_tokens;
-    std::vector<Token> sampler_tokens;
 
     std::vector<const Primitive *> gpu_primitives;
     std::vector<Light *> gpu_lights;
@@ -127,9 +136,7 @@ class SceneBuilder {
 
     void build_film();
 
-    void build_sampler_for_megakernel_integrator(const std::string &sampler_type);
-
-    const IntegratorBase *build_integrator_base();
+    void build_gpu_lights();
 
     void build_integrator(bool wavefront);
 

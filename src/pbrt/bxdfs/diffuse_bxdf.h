@@ -35,7 +35,7 @@ class DiffuseBxDF {
     void regularize() {}
 
     PBRT_CPU_GPU SampledSpectrum f(const Vector3f wo, const Vector3f wi,
-                               const TransportMode mode) const {
+                                   const TransportMode mode) const {
         if (!wo.same_hemisphere(wi)) {
             return SampledSpectrum(0.0);
         }

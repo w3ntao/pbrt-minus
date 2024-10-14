@@ -2,12 +2,12 @@
 
 #include "pbrt/util/macro.h"
 
-class HLBVH;
 class Camera;
+class Filter;
+class HLBVH;
 class Light;
 class UniformLightSampler;
 class PowerLightSampler;
-class ImageInfiniteLight;
 
 class Ray;
 class Interaction;
@@ -15,6 +15,8 @@ class Interaction;
 struct IntegratorBase {
     const HLBVH *bvh;
     const Camera *camera;
+    const Filter *filter;
+
     const Light **lights;
     uint light_num;
 
@@ -28,4 +30,33 @@ struct IntegratorBase {
 
     PBRT_GPU
     bool unoccluded(const Interaction &p0, const Interaction &p1) const;
+
+    void init() {
+        bvh = nullptr;
+        camera = nullptr;
+        filter = nullptr;
+        light_sampler = nullptr;
+
+        lights = nullptr;
+        light_num = 0;
+
+        infinite_lights = nullptr;
+        infinite_light_num = 0;
+    }
+
+    [[nodiscard]] bool is_ready() const {
+        if (bvh == nullptr || camera == nullptr || filter == nullptr || light_sampler == nullptr) {
+            return false;
+        }
+
+        if (light_num > 0 && lights == nullptr) {
+            return false;
+        }
+
+        if (infinite_light_num > 0 && infinite_lights == nullptr) {
+            return false;
+        }
+
+        return true;
+    }
 };

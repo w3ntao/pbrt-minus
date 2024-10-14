@@ -20,6 +20,9 @@ class Film {
     void init(RGBFilm *rgb_film);
 
     PBRT_CPU_GPU
+    Point2i get_resolution() const;
+
+    PBRT_CPU_GPU
     void add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
                     const SampledWavelengths &lambda, FloatType weight);
 
@@ -30,7 +33,7 @@ class Film {
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i &p) const;
 
-    void write_to_png(const std::string &filename, const Point2i &resolution) const;
+    void write_to_png(const std::string &filename) const;
 
   private:
     Type type;

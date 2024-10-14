@@ -7,7 +7,6 @@
 class CameraSample;
 class CameraRay;
 class Film;
-class Filter;
 class FrameBuffer;
 class IntegratorBase;
 class MISParameter;
@@ -100,7 +99,7 @@ class WavefrontPathIntegrator {
                                            const std::string &sampler_type, uint samples_per_pixel,
                                            std::vector<void *> &gpu_dynamic_pointers);
 
-    void render(Film *film, const Filter *filter, const std::string &output_filename);
+    void render(Film *film, const std::string &output_filename);
 
     PathState path_state;
 

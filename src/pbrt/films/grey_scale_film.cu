@@ -59,6 +59,10 @@ void GreyScaleFilm::write_to_png(const std::string &filename) const {
     const auto one_percent = 0.01;
     const double top_one_percent_max_intensity = sorted_value[pixels.size() * one_percent];
 
+    if (top_one_percent_max_intensity <= 0) {
+        REPORT_FATAL_ERROR();
+    }
+
     SRGBColorEncoding srgb_encoding;
 
     std::vector<unsigned char> png_pixels(pixels.size() * 4);

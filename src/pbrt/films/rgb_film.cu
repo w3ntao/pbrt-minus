@@ -1,6 +1,8 @@
+#include "pbrt/films/pixel_sensor.h"
 #include "pbrt/films/rgb_film.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/global_spectra.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
 
 static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -56,4 +58,39 @@ RGBFilm *RGBFilm::create(const ParameterDictionary &parameters,
     rgb_film->init(gpu_pixels, sensor, film_resolution, parameters.global_spectra->rgb_color_space);
 
     return rgb_film;
+}
+
+void RGBFilm::init(Pixel *_pixels, const PixelSensor *_sensor, const Point2i &_resolution,
+                   const RGBColorSpace *rgb_color_space) {
+    pixels = _pixels;
+    sensor = _sensor;
+    resolution = _resolution;
+
+    output_rgb_from_sensor_rgb = rgb_color_space->rgb_from_xyz * sensor->xyz_from_sensor_rgb;
+}
+
+PBRT_CPU_GPU
+void RGBFilm::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
+                         const SampledWavelengths &lambda, FloatType weight) {
+    auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
+
+    if (DEBUG_MODE && rgb.has_nan()) {
+        printf("RGBFilm::%s(): pixel(%d): has a NAN component\n", __func__, pixel_index);
+    }
+
+    // TODO: should I clamp pixel rgb?
+
+    pixels[pixel_index].rgb_sum += weight * rgb;
+    pixels[pixel_index].weight_sum += weight;
+}
+
+PBRT_CPU_GPU
+RGB RGBFilm::get_pixel_rgb(const Point2i p) const {
+    int idx = p.x + p.y * resolution.x;
+    auto pixel_rgb = pixels[idx].rgb_sum;
+    if (pixels[idx].weight_sum != 0) {
+        pixel_rgb /= pixels[idx].weight_sum;
+    }
+
+    return output_rgb_from_sensor_rgb * pixel_rgb;
 }

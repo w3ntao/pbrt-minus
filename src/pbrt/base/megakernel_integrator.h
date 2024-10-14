@@ -1,13 +1,13 @@
 #pragma once
 
 #include "pbrt/spectrum_util/sampled_spectrum.h"
-#include <optional>
 #include <vector>
 
-class Ray;
+class Film;
 class HLBVH;
 class IntegratorBase;
 class ParameterDictionary;
+class Ray;
 class SampledWavelengths;
 class Sampler;
 
@@ -55,6 +55,12 @@ class Integrator {
         return "";
     }
 
+    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
+
+    void render(Film *film, const std::string &sampler_type, uint samples_per_pixel,
+                const IntegratorBase *integrator_base) const;
+
+  private:
     void init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator);
 
     void init(const PathIntegrator *path_integrator);
@@ -65,9 +71,6 @@ class Integrator {
 
     void init(const SimplePathIntegrator *simple_path_integrator);
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
-
-  private:
     Type type;
     const void *ptr;
 };

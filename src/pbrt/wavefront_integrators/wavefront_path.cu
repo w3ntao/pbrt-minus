@@ -267,8 +267,8 @@ __global__ void fill_new_path_queue(Queues *queues) {
     queues->new_path_queue[worker_idx] = worker_idx;
 }
 
-__global__ void generate_new_path(const IntegratorBase *base, const Filter *filter,
-                                  PathState *path_state, Queues *queues) {
+__global__ void generate_new_path(const IntegratorBase *base, PathState *path_state,
+                                  Queues *queues) {
     const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= queues->new_path_counter) {
         return;
@@ -294,7 +294,7 @@ __global__ void generate_new_path(const IntegratorBase *base, const Filter *filt
 
     sampler->start_pixel_sample(pixel_idx, sample_idx, 0);
 
-    path_state->camera_samples[path_idx] = sampler->get_camera_sample(p_pixel, filter);
+    path_state->camera_samples[path_idx] = sampler->get_camera_sample(p_pixel, base->filter);
     auto lu = sampler->get_1d();
     path_state->lambdas[path_idx] = SampledWavelengths::sample_visible(lu);
 
@@ -644,7 +644,9 @@ WavefrontPathIntegrator::create(const ParameterDictionary &parameters, const Int
     if (sampler_type == "stratified") {
         auto old_spp = samples_per_pixel;
         samples_per_pixel = sqr(int(std::sqrt(samples_per_pixel)));
-        printf("samples per pixel adjusted: %d -> %d\n", old_spp, samples_per_pixel);
+        if (old_spp != samples_per_pixel) {
+            printf("samples per pixel adjusted: %d -> %d\n", old_spp, samples_per_pixel);
+        }
     }
 
     integrator->samples_per_pixel = samples_per_pixel;
@@ -736,8 +738,7 @@ __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint wi
     gpu_frame_buffer[worker_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
 }
 
-void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
-                                     const std::string &output_filename) {
+void WavefrontPathIntegrator::render(Film *film, const std::string &output_filename) {
     printf("wavefront: path pool size: %u\n", PATH_POOL_SIZE);
     std::chrono::duration<FloatType> total_preview_time = std::chrono::seconds(0);
     std::chrono::duration<FloatType> total_write_frame_buffer_time = std::chrono::seconds(0);
@@ -806,7 +807,7 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
 
     queues.ray_counter = 0;
     generate_new_path<<<divide_and_ceil(queues.new_path_counter, threads), threads>>>(
-        base, filter, &path_state, &queues);
+        base, &path_state, &queues);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     uint pass = 0;
@@ -884,7 +885,7 @@ void WavefrontPathIntegrator::render(Film *film, const Filter *filter,
 
         if (queues.new_path_counter > 0) {
             generate_new_path<<<divide_and_ceil(queues.new_path_counter, threads), threads>>>(
-                base, filter, &path_state, &queues);
+                base, &path_state, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 

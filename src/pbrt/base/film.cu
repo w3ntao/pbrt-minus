@@ -1,6 +1,7 @@
 #include "ext/lodepng/lodepng.h"
 #include "pbrt/base/film.h"
 #include "pbrt/films/rgb_film.h"
+#include "pbrt/spectrum_util/color_encoding.h"
 #include <vector>
 
 Film *Film::create_rgb_film(const ParameterDictionary &parameters,
@@ -18,6 +19,17 @@ Film *Film::create_rgb_film(const ParameterDictionary &parameters,
 void Film::init(RGBFilm *rgb_film) {
     ptr = rgb_film;
     type = Type::rgb;
+}
+
+PBRT_CPU_GPU
+Point2i Film::get_resolution() const {
+    switch (type) {
+    case (Type::rgb): {
+        return ((RGBFilm *)ptr)->get_resolution();
+    }
+    }
+
+    REPORT_FATAL_ERROR();
 }
 
 PBRT_CPU_GPU
@@ -56,7 +68,9 @@ RGB Film::get_pixel_rgb(const Point2i &p) const {
     return {};
 }
 
-void Film::write_to_png(const std::string &filename, const Point2i &resolution) const {
+void Film::write_to_png(const std::string &filename) const {
+    auto resolution = get_resolution();
+
     int width = resolution.x;
     int height = resolution.y;
 

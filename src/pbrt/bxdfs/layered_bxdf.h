@@ -11,7 +11,7 @@ template <typename TopBxDF, typename BottomBxDF, bool twoSided>
 class LayeredBxDF {
   public:
     PBRT_GPU
-    LayeredBxDF(){};
+    LayeredBxDF() {};
 
     PBRT_GPU
     LayeredBxDF(TopBxDF top, BottomBxDF bottom, FloatType thickness, const SampledSpectrum &albedo,

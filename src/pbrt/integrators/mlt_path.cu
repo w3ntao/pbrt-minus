@@ -27,7 +27,7 @@ struct MLTSample {
 __global__ void build_seed_path(PathSample *initial_paths, PathSample *seed_path_candidates,
                                 uint num_seed_paths_per_worker, double *sum_illuminance_array,
                                 double *luminance_of_paths, MLTPathIntegrator *mlt_integrator,
-                                RNG *rngs, const Filter *filter) {
+                                RNG *rngs) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_SAMPLERS) {
         return;
@@ -46,7 +46,7 @@ __global__ void build_seed_path(PathSample *initial_paths, PathSample *seed_path
 
     for (int path_idx = 0; path_idx < num_seed_paths_per_worker; path_idx++) {
         mlt_sampler->init_sample_idx();
-        auto path_sample = mlt_integrator->generate_new_path(sampler, filter);
+        auto path_sample = mlt_integrator->generate_path_sample(sampler);
         seed_path_candidates[worker_idx * num_seed_paths_per_worker + path_idx] = path_sample;
 
         mlt_sampler->global_time += 1;
@@ -81,8 +81,7 @@ __global__ void build_seed_path(PathSample *initial_paths, PathSample *seed_path
 }
 
 __global__ void wavefront_render(MLTSample *mlt_samples, PathSample *path_samples,
-                                 MLTPathIntegrator *mlt_integrator, RNG *rngs, const Filter *filter,
-                                 double brightness) {
+                                 MLTPathIntegrator *mlt_integrator, RNG *rngs, double brightness) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_SAMPLERS) {
         return;
@@ -102,7 +101,7 @@ __global__ void wavefront_render(MLTSample *mlt_samples, PathSample *path_sample
     mlt_sampler->init_sample_idx();
     mlt_sampler->large_step = rng->uniform<FloatType>() < p_large;
 
-    auto new_path = mlt_integrator->generate_new_path(sampler, filter);
+    auto new_path = mlt_integrator->generate_path_sample(sampler);
 
     const auto new_path_luminance =
         mlt_integrator->compute_luminance(new_path.radiance, new_path.lambda);
@@ -147,7 +146,7 @@ MLTPathIntegrator *MLTPathIntegrator::create(std::optional<int> samples_per_pixe
     if (samples_per_pixel.has_value()) {
         integrator->mutation_per_pixel = samples_per_pixel.value();
     } else {
-        integrator->mutation_per_pixel = parameters.get_integer("mutationsperpixel", 10);
+        integrator->mutation_per_pixel = parameters.get_integer("mutationsperpixel", 4);
     }
 
     integrator->base = base;
@@ -172,8 +171,7 @@ MLTPathIntegrator *MLTPathIntegrator::create(std::optional<int> samples_per_pixe
 }
 
 PBRT_GPU
-PathSample MLTPathIntegrator::generate_new_path(Sampler *sampler, const Filter *filter) const {
-    // TODO: move filter into IntegratorBase
+PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
     auto u = sampler->get_2d();
 
     auto p_film = Point2f(u.x * film_dimension.x, u.y * film_dimension.y);
@@ -190,7 +188,7 @@ PathSample MLTPathIntegrator::generate_new_path(Sampler *sampler, const Filter *
     return PathSample(p_film, radiance, lambda);
 }
 
-void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const Filter *filter) {
+void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) {
     const auto num_paths_per_worker = film_dimension.x * film_dimension.y / NUM_MLT_SAMPLERS;
     const auto num_seed_paths = num_paths_per_worker * NUM_MLT_SAMPLERS;
 
@@ -214,8 +212,7 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const Filter
     auto blocks = divide_and_ceil<uint>(NUM_MLT_SAMPLERS, threads);
     // TODO: stratify seed path building
     build_seed_path<<<blocks, threads>>>(path_samples, seed_path_candidates, num_paths_per_worker,
-                                         sum_illuminance_array, luminance_of_paths, this, rngs,
-                                         filter);
+                                         sum_illuminance_array, luminance_of_paths, this, rngs);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -254,8 +251,7 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const Filter
         }
 
         // TODO: render preview with OpenGL
-        wavefront_render<<<blocks, threads>>>(mlt_samples, path_samples, this, rngs, filter,
-                                              brightness);
+        wavefront_render<<<blocks, threads>>>(mlt_samples, path_samples, this, rngs, brightness);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 

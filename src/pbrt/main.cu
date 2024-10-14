@@ -4,7 +4,8 @@
 
 using namespace std;
 
-// taken from `cuda-samples/Common/helper_cuda.h`
+// TODO: update this function
+// taken from https://github.com/NVIDIA/cuda-samples/blob/master/Common/helper_cuda.h
 inline int _ConvertSMVer2Cores(int major, int minor) {
     // Defines for GPU Architecture types (using the SM version to determine
     // the # of cores per SM

@@ -7,7 +7,6 @@
 #include <vector>
 
 class Film;
-class Filter;
 class GreyScaleFilm;
 class IntegratorBase;
 class MLTSampler;
@@ -31,7 +30,7 @@ class MLTPathIntegrator {
                                      const IntegratorBase *base,
                                      std::vector<void *> &gpu_dynamic_pointers);
 
-    void render(Film *film, GreyScaleFilm &heat_map, const Filter *filter);
+    void render(Film *film, GreyScaleFilm &heat_map);
 
     uint get_mutation_per_pixel() const {
         return mutation_per_pixel;
@@ -44,7 +43,7 @@ class MLTPathIntegrator {
     }
 
     PBRT_GPU
-    PathSample generate_new_path(Sampler *sampler, const Filter *filter) const;
+    PathSample generate_path_sample(Sampler *sampler) const;
 
     const IntegratorBase *base;
     Point2i film_dimension;

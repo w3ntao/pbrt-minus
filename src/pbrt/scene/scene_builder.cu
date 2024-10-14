@@ -8,7 +8,7 @@
 #include "pbrt/base/primitive.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/base/shape.h"
-#include "pbrt/gpu/renderer.h"
+#include "pbrt/films/grey_scale_film.h"
 #include "pbrt/integrators/mlt_path.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/light_samplers/uniform_light_sampler.h"
@@ -159,7 +159,9 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
         {"metal-Cu-eta", cu_eta}, {"metal-Cu-k", cu_k},     {"glass-BK7", glass_bk7_eta},
     };
 
-    renderer = Renderer::create(gpu_dynamic_pointers);
+    CHECK_CUDA_ERROR(cudaMallocManaged(&integrator_base, sizeof(IntegratorBase)));
+    gpu_dynamic_pointers.push_back(integrator_base);
+    integrator_base->init();
 
     auto texture = SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
     graphics_state.material = Material::create_diffuse_material(texture, gpu_dynamic_pointers);
@@ -180,8 +182,8 @@ void SceneBuilder::build_camera() {
 
         render_from_world = camera_transform.render_from_world;
 
-        renderer->camera = Camera::create_perspective_camera(
-            film_resolution.value(), camera_transform, parameters, gpu_dynamic_pointers);
+        integrator_base->camera = Camera::create_perspective_camera(
+            film->get_resolution(), camera_transform, parameters, gpu_dynamic_pointers);
 
         return;
     }
@@ -191,16 +193,12 @@ void SceneBuilder::build_camera() {
 }
 
 void SceneBuilder::build_filter() {
-    renderer->filter = Filter::create_box_filter(0.5, gpu_dynamic_pointers);
+    // TODO: change to MitchellFilter
+    integrator_base->filter = Filter::create_box_filter(0.5, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::build_film() {
     const auto parameters = build_parameter_dictionary(sub_vector(film_tokens, 2));
-
-    auto resolution_x = parameters.get_integer("xresolution");
-    auto resolution_y = parameters.get_integer("yresolution");
-
-    film_resolution = Point2i(resolution_x, resolution_y);
 
     if (output_filename.empty()) {
         output_filename = parameters.get_one_string("filename");
@@ -211,41 +209,22 @@ void SceneBuilder::build_film() {
         output_filename = p.replace_extension(".png").filename();
     }
 
-    renderer->film = Film::create_rgb_film(parameters, gpu_dynamic_pointers);
+    film = Film::create_rgb_film(parameters, gpu_dynamic_pointers);
 }
 
-void SceneBuilder::build_sampler_for_megakernel_integrator(const std::string &sampler_type) {
-    // TODO: sampler is not parsed, only pixelsamples read
-    const auto parameters = build_parameter_dictionary(sub_vector(sampler_tokens, 2));
-
-    uint total_pixel_num = film_resolution->x * film_resolution->y;
-
-    if (sampler_type == "stratified") {
-        samples_per_pixel = sqr(std::sqrt(samples_per_pixel.value()));
-    }
-
-    renderer->samplers = Sampler::create(sampler_type, samples_per_pixel.value(), total_pixel_num,
-                                         gpu_dynamic_pointers);
-}
-
-const IntegratorBase *SceneBuilder::build_integrator_base() {
-    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
-
-    IntegratorBase *integrator_base;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&integrator_base, sizeof(IntegratorBase)));
-
+void SceneBuilder::build_gpu_lights() {
     const Light **light_array;
     CHECK_CUDA_ERROR(cudaMallocManaged(&light_array, sizeof(Light *) * gpu_lights.size()));
+    gpu_dynamic_pointers.push_back(light_array);
+
     CHECK_CUDA_ERROR(cudaMemcpy(light_array, gpu_lights.data(), sizeof(Light *) * gpu_lights.size(),
                                 cudaMemcpyHostToDevice));
 
-    auto light_sampler =
-        PowerLightSampler::create(light_array, gpu_lights.size(), gpu_dynamic_pointers);
+    integrator_base->lights = light_array;
+    integrator_base->light_num = gpu_lights.size();
 
-    /*
-    auto light_sampler =
-        UniformLightSampler::create(light_array, gpu_lights.size(), gpu_dynamic_pointers);
-    */
+    integrator_base->light_sampler =
+        PowerLightSampler::create(light_array, gpu_lights.size(), gpu_dynamic_pointers);
 
     std::vector<const Light *> infinite_lights;
     for (auto light : gpu_lights) {
@@ -257,72 +236,58 @@ const IntegratorBase *SceneBuilder::build_integrator_base() {
     const Light **gpu_infinite_lights;
     CHECK_CUDA_ERROR(
         cudaMallocManaged(&gpu_infinite_lights, sizeof(Light *) * infinite_lights.size()));
+    gpu_dynamic_pointers.push_back(gpu_infinite_lights);
+
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_infinite_lights, infinite_lights.data(),
                                 sizeof(Light *) * infinite_lights.size(), cudaMemcpyHostToDevice));
 
-    integrator_base->bvh = renderer->bvh;
-    integrator_base->camera = renderer->camera;
-
-    integrator_base->lights = light_array;
-    integrator_base->light_num = gpu_lights.size();
-
-    integrator_base->light_sampler = light_sampler;
-
     integrator_base->infinite_lights = gpu_infinite_lights;
     integrator_base->infinite_light_num = infinite_lights.size();
-
-    for (auto ptr : std::vector<void *>({
-             integrator_base,
-             light_array,
-             gpu_infinite_lights,
-         })) {
-        gpu_dynamic_pointers.push_back(ptr);
-    }
-
-    return integrator_base;
 }
 
 void SceneBuilder::build_integrator(bool wavefront) {
-    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
+    build_gpu_lights();
 
-    auto integrator_base = build_integrator_base();
+    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
 
     const std::string sampler_type = "stratified";
     // const std::string sampler_type = "independent";
 
-    printf("sampler: %s\n", sampler_type.c_str());
-
-    integrator_name = "mlt";
-    // TODO: rewrite this part
-
-    printf("DEBUGGING: integrator name: %s\n", integrator_name->c_str());
+    if (sampler_type == "stratified") {
+        samples_per_pixel = sqr(std::sqrt(samples_per_pixel.value()));
+    }
 
     if (!integrator_name.has_value()) {
-        printf("integrator not set in PBRT file, changed to path\n");
-        integrator_name = "path";
-    } else if (integrator_name == "volpath") {
+        integrator_name = parameters.get_one_string("Integrator", "path");
+    }
+
+    if (integrator_name == "volpath") {
         printf("integrator `%s` not implemented, changed to path\n",
                integrator_name.value().c_str());
         integrator_name = "path";
     }
 
     if (integrator_name == "mlt" || integrator_name == "mlt-path") {
-        renderer->mlt_integrator = MLTPathIntegrator::create(samples_per_pixel, parameters,
-                                                             integrator_base, gpu_dynamic_pointers);
+        mlt_integrator = MLTPathIntegrator::create(samples_per_pixel, parameters, integrator_base,
+                                                   gpu_dynamic_pointers);
         return;
     }
 
+    if (!samples_per_pixel.has_value()) {
+        samples_per_pixel = 4;
+    }
+
+    printf("sampler: %s\n", sampler_type.c_str());
+
     if (integrator_name == "path" and wavefront) {
-        renderer->wavefront_integrator =
+        wavefront_integrator =
             WavefrontPathIntegrator::create(parameters, integrator_base, sampler_type,
                                             samples_per_pixel.value(), gpu_dynamic_pointers);
         return;
     }
 
-    build_sampler_for_megakernel_integrator(sampler_type);
-
-    renderer->megakernel_integrator = Integrator::create(parameters, integrator_name.value(),
-                                                         integrator_base, gpu_dynamic_pointers);
+    megakernel_integrator = Integrator::create(parameters, integrator_name.value(), integrator_base,
+                                               gpu_dynamic_pointers);
 }
 
 void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
@@ -421,8 +386,6 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
     }
 
     if (keyword == "Sampler") {
-        sampler_tokens = tokens;
-
         const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
         if (!samples_per_pixel.has_value()) {
@@ -838,30 +801,21 @@ void SceneBuilder::parse_file(const std::string &_filename) {
 }
 
 void SceneBuilder::preprocess(bool wavefront) {
-    renderer->bvh = HLBVH::create(gpu_primitives, gpu_dynamic_pointers, thread_pool);
+    integrator_base->bvh = HLBVH::create(gpu_primitives, gpu_dynamic_pointers, thread_pool);
 
-    auto full_scene_bounds = renderer->bvh->bounds();
+    auto full_scene_bounds = integrator_base->bvh->bounds();
     for (auto light : gpu_lights) {
         light->preprocess(full_scene_bounds);
     }
 
-    if (!samples_per_pixel.has_value()) {
-        samples_per_pixel = 4;
-    }
-
-    renderer->wavefront_integrator = nullptr;
-    renderer->megakernel_integrator = nullptr;
-    renderer->mlt_integrator = nullptr;
-
     build_integrator(wavefront);
 
-    if (renderer->mlt_integrator != nullptr) {
+    if (mlt_integrator != nullptr) {
         printf("Integrator: (megakernel) mlt\n");
-    } else if (renderer->wavefront_integrator != nullptr) {
+    } else if (wavefront_integrator != nullptr) {
         printf("Integrator: (wavefront) path\n");
-    } else if (renderer->megakernel_integrator != nullptr) {
-        printf("Integrator: (megakernel) %s\n",
-               renderer->megakernel_integrator->get_name().c_str());
+    } else if (megakernel_integrator != nullptr) {
+        printf("Integrator: (megakernel) %s\n", megakernel_integrator->get_name().c_str());
     } else {
         REPORT_FATAL_ERROR();
     }
@@ -888,9 +842,54 @@ void SceneBuilder::preprocess(bool wavefront) {
 }
 
 void SceneBuilder::render() const {
+    if (!integrator_base->is_ready()) {
+        REPORT_FATAL_ERROR();
+    }
+
+    if (!samples_per_pixel.has_value()) {
+        REPORT_FATAL_ERROR();
+    }
+
+    auto film_resolution = film->get_resolution();
+
+    std::string sampler_type = "stratified";
+    // TODO: configure sampler_type
+
     auto start = std::chrono::system_clock::now();
 
-    renderer->render(output_filename, samples_per_pixel.value());
+    std::cout << "\n"
+              << "rendering a " << film_resolution.x << "x" << film_resolution.y << " image";
+
+    if (mlt_integrator != nullptr) {
+        std::cout << " (mutations per pixel: " << mlt_integrator->get_mutation_per_pixel() << ")"
+                  << " with MLT integrator.\n"
+                  << std::flush;
+
+        GreyScaleFilm heatmap(film_resolution);
+
+        mlt_integrator->render(film, heatmap);
+
+        film->write_to_png(output_filename);
+
+        heatmap.write_to_png("heatmap-" + output_filename);
+
+    } else if (wavefront_integrator != nullptr) {
+        std::cout << " (samples per pixel: " << samples_per_pixel.value() << ")"
+                  << " with wavefront integrator.\n"
+                  << std::flush;
+
+        wavefront_integrator->render(film, output_filename);
+
+        film->write_to_png(output_filename);
+
+    } else if (megakernel_integrator != nullptr) {
+        megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(),
+                                      integrator_base);
+
+        film->write_to_png(output_filename);
+    } else {
+        REPORT_FATAL_ERROR();
+    }
 
     const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
 
