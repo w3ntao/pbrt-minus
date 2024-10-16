@@ -5,11 +5,11 @@
 #include "pbrt/util/basic_math.h"
 #include <algorithm>
 
-/*
-
 const std::vector<RGB> colors = {
     RGB(0, 0, 0), RGB(0, 0, 1), RGB(0, 1, 1), RGB(0, 1, 0), RGB(1, 1, 0), RGB(1, 0, 0),
 };
+
+/*
 
 const std::vector<RGB> colors = {RGB(0, 0, 0), RGB(0, 0, 1), RGB(0, 1, 1), RGB(0, 1, 0),
                                  RGB(1, 1, 0), RGB(1, 0, 0), RGB(1, 1, 1)};
@@ -19,12 +19,12 @@ const std::vector<RGB> colors = {
     RGB(68, 1, 84) / 255,   RGB(59, 82, 139) / 255,  RGB(33, 145, 140) / 255,
     RGB(94, 201, 98) / 255, RGB(253, 231, 37) / 255,
 };
-*/
 
 const std::vector<RGB> colors = {RGB(68, 1, 84) / 255,    RGB(68, 57, 131) / 255,
                                  RGB(49, 104, 142) / 255, RGB(33, 145, 140) / 255,
                                  RGB(53, 183, 121) / 255, RGB(144, 215, 67) / 251,
                                  RGB(253, 231, 37) / 255};
+*/
 
 /*
 taken from https://www.andrewnoske.com/wiki/Code_-_heatmaps_and_color_gradients

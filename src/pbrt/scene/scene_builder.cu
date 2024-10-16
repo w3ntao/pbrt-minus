@@ -168,6 +168,10 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
 }
 
 void SceneBuilder::build_camera() {
+    if (film == nullptr) {
+        REPORT_FATAL_ERROR();
+    }
+
     const auto parameters = build_parameter_dictionary(sub_vector(camera_tokens, 2));
 
     const auto camera_type = camera_tokens[1].values[0];
@@ -248,7 +252,9 @@ void SceneBuilder::build_gpu_lights() {
 void SceneBuilder::build_integrator(bool wavefront) {
     build_gpu_lights();
 
-    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
+    if (!samples_per_pixel.has_value()) {
+        samples_per_pixel = 4;
+    }
 
     const std::string sampler_type = "stratified";
     // const std::string sampler_type = "independent";
@@ -256,6 +262,8 @@ void SceneBuilder::build_integrator(bool wavefront) {
     if (sampler_type == "stratified") {
         samples_per_pixel = sqr(std::sqrt(samples_per_pixel.value()));
     }
+
+    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
 
     if (!integrator_name.has_value()) {
         integrator_name = parameters.get_one_string("Integrator", "path");
@@ -271,10 +279,6 @@ void SceneBuilder::build_integrator(bool wavefront) {
         mlt_integrator = MLTPathIntegrator::create(samples_per_pixel, parameters, integrator_base,
                                                    gpu_dynamic_pointers);
         return;
-    }
-
-    if (!samples_per_pixel.has_value()) {
-        samples_per_pixel = 4;
     }
 
     printf("sampler: %s\n", sampler_type.c_str());
@@ -847,6 +851,10 @@ void SceneBuilder::render() const {
     }
 
     if (!samples_per_pixel.has_value()) {
+        REPORT_FATAL_ERROR();
+    }
+
+    if (film == nullptr) {
         REPORT_FATAL_ERROR();
     }
 
