@@ -38,6 +38,11 @@ class Bounds2 {
     }
 
     PBRT_CPU_GPU
+    Point2<T> lerp(Point2f t) const {
+        return Point2<T>(::lerp(t.x, p_min.x, p_max.x), ::lerp(t.y, p_min.y, p_max.y));
+    }
+
+    PBRT_CPU_GPU
     T area() const {
         Vector2<T> d = p_max - p_min;
         return d.x * d.y;
@@ -96,7 +101,13 @@ class Bounds2 {
         return o;
     }
 
+    friend std::ostream &operator<<(std::ostream &stream, const Bounds2 &b) {
+        stream << "Bounds2: (p_min: " << b.p_min << ", p_max: " << b.p_max << ")";
+        return stream;
+    }
+
     Point2<T> p_min, p_max;
 };
 
+using Bounds2i = Bounds2<int>;
 using Bounds2f = Bounds2<FloatType>;

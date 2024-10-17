@@ -30,6 +30,7 @@ Point2i Film::get_resolution() const {
     }
 
     REPORT_FATAL_ERROR();
+    return {};
 }
 
 PBRT_CPU_GPU

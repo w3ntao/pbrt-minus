@@ -1,10 +1,12 @@
 #pragma once
 
 #include "pbrt/euclidean_space/point2.h"
-#include "pbrt/util/macro.h"
+#include "pbrt/util/array_2d.h"
+#include "pbrt/util/piecewise_constant_2d.h"
 #include <vector>
 
 class BoxFilter;
+class MitchellFilter;
 
 struct FilterSample {
     Point2f p;
@@ -22,12 +24,24 @@ class Filter {
   public:
     enum class Type {
         box,
+        mitchell,
     };
 
     static const Filter *create_box_filter(FloatType radius,
                                            std::vector<void *> &gpu_dynamic_pointers);
 
+    static const Filter *create_mitchell_filter(const Vector2f &radius, FloatType b, FloatType c,
+                                                std::vector<void *> &gpu_dynamic_pointers);
+
     void init(const BoxFilter *box_filter);
+
+    void init(const MitchellFilter *mitchell_filter);
+
+    PBRT_CPU_GPU
+    Vector2f radius() const;
+
+    PBRT_CPU_GPU
+    inline FloatType evaluate(Point2f p) const;
 
     PBRT_CPU_GPU
     FilterSample sample(Point2f u) const;
@@ -35,4 +49,26 @@ class Filter {
   private:
     Type type;
     const void *ptr;
+};
+
+class FilterSampler {
+  public:
+    static const FilterSampler *create(const Filter *filter,
+                                       std::vector<void *> &gpu_dynamic_pointers);
+
+    void init(const Filter *filter, std::vector<void *> &gpu_dynamic_pointers);
+
+    PBRT_CPU_GPU
+    FilterSample sample(Point2f u) const {
+        FloatType pdf;
+        Point2i pi;
+        Point2f p = distrib.sample(u, &pdf, &pi);
+
+        return FilterSample(p, f[pi] / pdf);
+    }
+
+  private:
+    Array2D<FloatType> f;
+    Bounds2f domain;
+    PiecewiseConstant2D distrib;
 };

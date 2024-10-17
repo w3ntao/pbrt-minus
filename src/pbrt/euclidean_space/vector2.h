@@ -9,7 +9,27 @@ class Vector2 {
 
     PBRT_CPU_GPU Vector2(T _x, T _y) : x(_x), y(_y) {}
 
-    PBRT_CPU_GPU T &operator[](uint8_t index) {
+    PBRT_CPU_GPU Vector2 operator-() const {
+        return Vector2(-x, -y);
+    }
+
+    PBRT_CPU_GPU
+    T &operator[](uint8_t index) {
+        switch (index) {
+        case 0: {
+            return x;
+        }
+        case 1: {
+            return y;
+        }
+        }
+
+        REPORT_FATAL_ERROR();
+        return x;
+    }
+
+    PBRT_CPU_GPU
+    T operator[](uint8_t index) const {
         switch (index) {
         case 0: {
             return x;

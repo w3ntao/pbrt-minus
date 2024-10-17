@@ -109,7 +109,7 @@ class TrowbridgeReitzDistribution {
   public:
     // TrowbridgeReitzDistribution Public Methods
     PBRT_CPU_GPU
-    TrowbridgeReitzDistribution() {};
+    TrowbridgeReitzDistribution(){};
 
     PBRT_CPU_GPU
     TrowbridgeReitzDistribution(FloatType ax, FloatType ay) : alpha_x(ax), alpha_y(ay) {

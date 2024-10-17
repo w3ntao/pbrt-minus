@@ -197,8 +197,8 @@ void SceneBuilder::build_camera() {
 }
 
 void SceneBuilder::build_filter() {
-    // TODO: change to MitchellFilter
-    integrator_base->filter = Filter::create_box_filter(0.5, gpu_dynamic_pointers);
+    integrator_base->filter = Filter::create_mitchell_filter(Vector2f(2.0, 2.0), 1.0 / 3.0,
+                                                             1.0 / 3.0, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::build_film() {

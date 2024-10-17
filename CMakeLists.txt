@@ -84,6 +84,8 @@ add_executable(${PROJ_NAME}
         src/pbrt/films/grey_scale_film.cu
         src/pbrt/films/rgb_film.cu
 
+        src/pbrt/filters/mitchell.cu
+
         src/pbrt/integrators/ambient_occlusion.cu
         src/pbrt/integrators/mlt_path.cu
         src/pbrt/integrators/path.cu

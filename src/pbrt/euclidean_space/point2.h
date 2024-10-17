@@ -13,6 +13,9 @@ class Point2 {
 
     PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y) {};
 
+    PBRT_CPU_GPU
+    explicit Point2(const Vector2<T> v) : x(v.x), y(v.y) {}
+
     PBRT_CPU_GPU T &operator[](uint8_t index) {
         switch (index) {
         case 0: {
@@ -89,17 +92,17 @@ class Point2 {
         return Point2(std::max(x, p.x), std::max(y, p.y));
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const Point2 &p) {
-        stream << "Point2(" << p.x << ", " << p.y << ")";
-        return stream;
-    }
-
     PBRT_CPU_GPU Point2<FloatType> to_point2f() const {
         return Point2<FloatType>(FloatType(x), FloatType(y));
     }
 
     PBRT_CPU_GPU Vector2<FloatType> to_vector2f() const {
         return Vector2<FloatType>(FloatType(x), FloatType(y));
+    }
+
+    friend std::ostream &operator<<(std::ostream &stream, const Point2 &p) {
+        stream << "[ " << p.x << ", " << p.y << " ]";
+        return stream;
     }
 };
 

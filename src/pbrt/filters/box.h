@@ -1,13 +1,12 @@
 #pragma once
 
-#include "pbrt/base/filter.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/util/basic_math.h"
 
 class BoxFilter {
   public:
     void init(FloatType _radius) {
-        radius = Point2f(_radius, _radius);
+        radius = Vector2f(_radius, _radius);
     }
 
     PBRT_CPU_GPU
@@ -16,6 +15,11 @@ class BoxFilter {
         return FilterSample(p, 1.0);
     }
 
+    PBRT_CPU_GPU
+    Vector2f get_radius() const {
+        return radius;
+    }
+
   private:
-    Point2f radius;
+    Vector2f radius;
 };

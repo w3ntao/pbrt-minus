@@ -49,6 +49,7 @@ class RGBFilm {
 
   private:
     Pixel *pixels;
+    // TODO: change Pixel* to Array2D<Pixel>
     const PixelSensor *sensor;
     Point2i resolution;
     SquareMatrix<3> output_rgb_from_sensor_rgb;
