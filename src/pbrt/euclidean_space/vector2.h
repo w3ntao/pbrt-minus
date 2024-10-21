@@ -50,3 +50,4 @@ class Vector2 {
 };
 
 using Vector2f = Vector2<FloatType>;
+using Vector2i = Vector2<int>;

@@ -64,6 +64,10 @@ class Point2 {
         return Vector2<T>(x - right.x, y - right.y);
     }
 
+    PBRT_CPU_GPU Point2 operator-(const Point2 &p) const {
+        return Point2(x - p.x, y - p.y);
+    }
+
     PBRT_CPU_GPU Point2 operator-(const Vector2f &v) const {
         return Point2(x - v.x, y - v.y);
     }
@@ -90,6 +94,10 @@ class Point2 {
 
     PBRT_CPU_GPU Point2 max(const Point2 &p) const {
         return Point2(std::max(x, p.x), std::max(y, p.y));
+    }
+
+    PBRT_CPU_GPU Point2<int> floor() const {
+        return Point2<int>(std::floor(x), std::floor(y));
     }
 
     PBRT_CPU_GPU Point2<FloatType> to_point2f() const {

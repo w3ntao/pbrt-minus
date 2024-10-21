@@ -41,10 +41,10 @@ class Filter {
     Vector2f radius() const;
 
     PBRT_CPU_GPU
-    inline FloatType evaluate(Point2f p) const;
+    FloatType evaluate(const Point2f p) const;
 
     PBRT_CPU_GPU
-    FilterSample sample(Point2f u) const;
+    FilterSample sample(const Point2f u) const;
 
   private:
     Type type;

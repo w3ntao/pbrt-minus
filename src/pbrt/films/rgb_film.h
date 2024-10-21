@@ -4,6 +4,7 @@
 #include "pbrt/euclidean_space/squared_matrix.h"
 #include "pbrt/spectrum_util/rgb.h"
 
+class Filter;
 class ParameterDictionary;
 class PixelSensor;
 class RGBColorSpace;
@@ -44,6 +45,9 @@ class RGBFilm {
         add_sample(pixel_index, radiance_l, lambda, weight);
     }
 
+    void add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
+                   const SampledWavelengths &lambda, FloatType weight, const Filter *filter);
+
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i p) const;
 
@@ -52,5 +56,7 @@ class RGBFilm {
     // TODO: change Pixel* to Array2D<Pixel>
     const PixelSensor *sensor;
     Point2i resolution;
+    Bounds2i pixel_bound;
+
     SquareMatrix<3> output_rgb_from_sensor_rgb;
 };

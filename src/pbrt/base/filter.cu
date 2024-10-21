@@ -63,7 +63,7 @@ Vector2f Filter::radius() const {
 }
 
 PBRT_CPU_GPU
-inline FloatType Filter::evaluate(Point2f p) const {
+FloatType Filter::evaluate(const Point2f p) const {
     switch (type) {
     case (Type::mitchell): {
         return ((MitchellFilter *)ptr)->evaluate(p);
@@ -75,7 +75,7 @@ inline FloatType Filter::evaluate(Point2f p) const {
 }
 
 PBRT_CPU_GPU
-FilterSample Filter::sample(Point2f u) const {
+FilterSample Filter::sample(const Point2f u) const {
     switch (type) {
     case (Type::box): {
         return ((BoxFilter *)ptr)->sample(u);

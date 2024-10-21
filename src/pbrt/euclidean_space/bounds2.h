@@ -3,6 +3,7 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/vector2.h"
 #include "pbrt/util/basic_math.h"
+#include <vector>
 
 // Bounds2 Definition
 template <typename T>
@@ -22,16 +23,7 @@ class Bounds2 {
 
     PBRT_CPU_GPU
     Bounds2(Point2<T> p1, Point2<T> p2) : p_min(p1.min(p2)), p_max(p1.max(p2)) {}
-
-    PBRT_CPU_GPU explicit Bounds2(const Bounds2<T> &b) {
-        if (b.is_empty()) {
-            *this = Bounds2<T>();
-        } else {
-            p_min = Point2<T>(b.p_min);
-            p_max = Point2<T>(b.p_max);
-        }
-    }
-
+    
     PBRT_CPU_GPU
     Vector2<T> Diagonal() const {
         return p_max - p_min;
@@ -44,8 +36,7 @@ class Bounds2 {
 
     PBRT_CPU_GPU
     T area() const {
-        Vector2<T> d = p_max - p_min;
-        return d.x * d.y;
+        return (p_max.x - p_min.x) * (p_max.y - p_min.y);
     }
 
     PBRT_CPU_GPU
@@ -99,6 +90,30 @@ class Bounds2 {
             o.y /= p_max.y - p_min.y;
         }
         return o;
+    }
+
+    PBRT_CPU_GPU
+    Bounds2 intersect(const Bounds2 &b) const {
+        Bounds2 result;
+        result.p_min = this->p_min.max(b.p_min);
+        result.p_max = this->p_max.min(b.p_max);
+
+        return result;
+    }
+
+    std::vector<Point2i> range() const {
+        static_assert(std::is_same<T, int>::value);
+
+        std::vector<Point2i> result;
+        result.reserve(this->area());
+
+        for (int x = p_min.x; x < p_max.x; ++x) {
+            for (int y = p_min.y; y < p_max.y; ++y) {
+                result.push_back(Point2i(x, y));
+            }
+        }
+
+        return result;
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Bounds2 &b) {

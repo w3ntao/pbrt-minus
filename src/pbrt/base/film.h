@@ -5,6 +5,7 @@
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include <vector>
 
+class Filter;
 class ParameterDictionary;
 class RGBFilm;
 
@@ -29,6 +30,10 @@ class Film {
     PBRT_CPU_GPU
     void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
                     const SampledWavelengths &lambda, FloatType weight);
+
+    // CPU only
+    void add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
+                   const SampledWavelengths &lambda, FloatType weight, const Filter *filter);
 
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i &p) const;

@@ -1,3 +1,4 @@
+#include "pbrt/base/filter.h"
 #include "pbrt/films/pixel_sensor.h"
 #include "pbrt/films/rgb_film.h"
 #include "pbrt/scene/parameter_dictionary.h"
@@ -66,12 +67,18 @@ void RGBFilm::init(Pixel *_pixels, const PixelSensor *_sensor, const Point2i &_r
     sensor = _sensor;
     resolution = _resolution;
 
+    pixel_bound = Bounds2i(Point2i(0, 0), Point2i(_resolution.x, _resolution.y));
+
     output_rgb_from_sensor_rgb = rgb_color_space->rgb_from_xyz * sensor->xyz_from_sensor_rgb;
 }
 
 PBRT_CPU_GPU
 void RGBFilm::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
                          const SampledWavelengths &lambda, FloatType weight) {
+    if (weight == 0) {
+        return;
+    }
+    
     auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
 
     if (DEBUG_MODE && rgb.has_nan()) {
@@ -82,6 +89,36 @@ void RGBFilm::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
 
     pixels[pixel_index].rgb_sum += weight * rgb;
     pixels[pixel_index].weight_sum += weight;
+}
+
+void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
+                        const SampledWavelengths &lambda, FloatType weight, const Filter *filter) {
+    if (weight == 0) {
+        return;
+    }
+
+    auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
+
+    // Compute bounds of affected pixels for splat, _splatBounds_
+    Point2f pDiscrete = p_film + Vector2f(0.5, 0.5);
+    Vector2f radius = filter->radius();
+
+    Bounds2i splatBounds((pDiscrete - radius).floor(),
+                         (pDiscrete + radius).floor() + Vector2i(1, 1));
+
+    splatBounds = splatBounds.intersect(pixel_bound);
+
+    for (const auto pi : splatBounds.range()) {
+        // Evaluate filter at _pi_ and add splat contribution
+        auto splat_weight =
+            filter->evaluate(Point2f(p_film - pi.to_point2f() - Vector2f(0.5, 0.5)));
+        if (splat_weight == 0) {
+            continue;
+        }
+        auto pixel_index = pi.x + pi.y * resolution.x;
+        pixels[pixel_index].rgb_sum += weight * splat_weight * rgb;
+        pixels[pixel_index].weight_sum += weight * splat_weight;
+    }
 }
 
 PBRT_CPU_GPU

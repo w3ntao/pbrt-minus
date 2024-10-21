@@ -5,8 +5,6 @@
 
 template <typename T>
 class Array2D {
-    // TODO: progress 2024/10/18: implement Array2D
-
   public:
     void init(int nx, int ny, std::vector<void *> &gpu_dynamic_pointers) {
         CHECK_CUDA_ERROR(cudaMallocManaged(&values, sizeof(T) * nx * ny));

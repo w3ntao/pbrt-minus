@@ -57,6 +57,17 @@ void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
     REPORT_FATAL_ERROR();
 }
 
+void Film::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
+                     const SampledWavelengths &lambda, FloatType weight, const Filter *filter) {
+    switch (type) {
+    case (Type::rgb): {
+        return ((RGBFilm *)ptr)->add_splat(p_film, radiance_l, lambda, weight, filter);
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+}
+
 PBRT_CPU_GPU
 RGB Film::get_pixel_rgb(const Point2i &p) const {
     switch (type) {
