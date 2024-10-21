@@ -28,9 +28,6 @@ class HGPhaseFunction {
         FloatType pdf;
         Vector3f wi = SampleHenyeyGreenstein(wo, g, u, &pdf);
         return PhaseFunctionSample{pdf, wi, pdf};
-        // .p = pdf
-        // .pdf = pdf
-        // TODO: .p = pdf: is this a bug?
     }
 
     PBRT_GPU

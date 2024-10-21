@@ -79,7 +79,9 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/cameras/perspective.cu
 
+        src/pbrt/euclidean_space/frame.cu
         src/pbrt/euclidean_space/squared_matrix.cu
+        src/pbrt/euclidean_space/transform.cu
 
         src/pbrt/films/grey_scale_film.cu
         src/pbrt/films/rgb_film.cu
@@ -96,6 +98,8 @@ add_executable(${PROJ_NAME}
         src/pbrt/lights/diffuse_area_light.cu
         src/pbrt/lights/distant_light.cu
         src/pbrt/lights/image_infinite_light.cu
+        src/pbrt/lights/spot_light.cu
+        src/pbrt/lights/uniform_infinite_light.cu
 
         src/pbrt/light_samplers/power_light_sampler.cu
 

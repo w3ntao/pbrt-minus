@@ -3,6 +3,10 @@
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/lights/distant_light.h"
 #include "pbrt/lights/image_infinite_light.h"
+#include "pbrt/lights/spot_light.h"
+#include "pbrt/lights/uniform_infinite_light.h"
+#include "pbrt/scene/parameter_dictionary.h"
+#include "pbrt/spectrum_util/global_spectra.h"
 
 template <typename TypeOfLight>
 static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, uint num) {
@@ -30,14 +34,35 @@ Light *Light::create(const std::string &type_of_light, const Transform &render_f
     }
 
     if (type_of_light == "infinite") {
-        auto image_infinite_light =
-            ImageInfiniteLight::create(render_from_light, parameters, gpu_dynamic_pointers);
+        if (parameters.has_string("filename")) {
+            auto image_infinite_light =
+                ImageInfiniteLight::create(render_from_light, parameters, gpu_dynamic_pointers);
+            Light *light;
+            CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
+            gpu_dynamic_pointers.push_back(light);
+
+            light->init(image_infinite_light);
+            return light;
+        } else {
+            auto uniform_infinite_light =
+                UniformInfiniteLight::create(render_from_light, parameters, gpu_dynamic_pointers);
+            Light *light;
+            CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
+            gpu_dynamic_pointers.push_back(light);
+
+            light->init(uniform_infinite_light);
+            return light;
+        }
+    }
+
+    if (type_of_light == "spot") {
+        auto spot_light = SpotLight::create(render_from_light, parameters, gpu_dynamic_pointers);
 
         Light *light;
         CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
         gpu_dynamic_pointers.push_back(light);
 
-        light->init(image_infinite_light);
+        light->init(spot_light);
         return light;
     }
 
@@ -93,6 +118,18 @@ void Light::init(ImageInfiniteLight *image_infinite_light) {
 }
 
 PBRT_CPU_GPU
+void Light::init(SpotLight *spot_light) {
+    type = Type::spot_light;
+    ptr = spot_light;
+}
+
+PBRT_CPU_GPU
+void Light::init(UniformInfiniteLight *uniform_infinite_light) {
+    type = Type::uniform_infinite_light;
+    ptr = uniform_infinite_light;
+}
+
+PBRT_CPU_GPU
 LightType Light::get_light_type() const {
     switch (type) {
     case (Type::diffuse_area_light): {
@@ -105,6 +142,14 @@ LightType Light::get_light_type() const {
 
     case (Type::image_infinite_light): {
         return ((ImageInfiniteLight *)ptr)->get_light_type();
+    }
+
+    case (Type::spot_light): {
+        return ((SpotLight *)ptr)->get_light_type();
+    }
+
+    case (Type::uniform_infinite_light): {
+        return ((UniformInfiniteLight *)ptr)->get_light_type();
     }
     }
 
@@ -131,6 +176,10 @@ SampledSpectrum Light::le(const Ray &ray, const SampledWavelengths &lambda) cons
     case (Type::image_infinite_light): {
         return ((ImageInfiniteLight *)ptr)->le(ray, lambda);
     }
+
+    case (Type::uniform_infinite_light): {
+        return ((UniformInfiniteLight *)ptr)->le(ray, lambda);
+    }
     }
 
     REPORT_FATAL_ERROR();
@@ -152,6 +201,14 @@ cuda::std::optional<LightLiSample> Light::sample_li(const LightSampleContext &ct
     case (Type::image_infinite_light): {
         return ((ImageInfiniteLight *)ptr)->sample_li(ctx, u, lambda);
     }
+
+    case (Type::spot_light): {
+        return ((SpotLight *)ptr)->sample_li(ctx, u, lambda);
+    }
+
+    case (Type::uniform_infinite_light): {
+        return ((UniformInfiniteLight *)ptr)->sample_li(ctx, u, lambda);
+    }
     }
 
     REPORT_FATAL_ERROR();
@@ -169,7 +226,16 @@ FloatType Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
     case (Type::image_infinite_light): {
         return ((ImageInfiniteLight *)ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
     }
+
+    case (Type::spot_light): {
+        return ((SpotLight *)ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
     }
+
+    case (Type::uniform_infinite_light): {
+        return ((UniformInfiniteLight *)ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
+    }
+    }
+
     REPORT_FATAL_ERROR();
     return NAN;
 }
@@ -188,6 +254,14 @@ SampledSpectrum Light::phi(const SampledWavelengths &lambda) const {
     case (Type::image_infinite_light): {
         return ((ImageInfiniteLight *)ptr)->phi(lambda);
     }
+
+    case (Type::spot_light): {
+        return ((SpotLight *)ptr)->phi(lambda);
+    }
+
+    case (Type::uniform_infinite_light): {
+        return ((UniformInfiniteLight *)ptr)->phi(lambda);
+    }
     }
 
     REPORT_FATAL_ERROR();
@@ -201,6 +275,11 @@ void Light::preprocess(const Bounds3<FloatType> &scene_bounds) {
         return;
     }
 
+    case (Type::spot_light): {
+        // do nothing
+        return;
+    }
+
     case (Type::distant_light): {
         ((DistantLight *)ptr)->preprocess(scene_bounds);
         return;
@@ -208,6 +287,11 @@ void Light::preprocess(const Bounds3<FloatType> &scene_bounds) {
 
     case (Type::image_infinite_light): {
         ((ImageInfiniteLight *)ptr)->preprocess(scene_bounds);
+        return;
+    }
+
+    case (Type::uniform_infinite_light): {
+        ((UniformInfiniteLight *)ptr)->preprocess(scene_bounds);
         return;
     }
     }

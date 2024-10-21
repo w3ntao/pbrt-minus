@@ -2,6 +2,8 @@
 
 #include "pbrt/euclidean_space/vector3.h"
 
+class Transform;
+
 class Frame {
   public:
     Vector3f x;
@@ -42,4 +44,8 @@ class Frame {
     Vector3f to_local(Vector3f v) const {
         return Vector3f(v.dot(x), v.dot(y), v.dot(z));
     }
+
+    PBRT_CPU_GPU
+    Transform to_transform() const;
+    // TODO: move this to Transform
 };

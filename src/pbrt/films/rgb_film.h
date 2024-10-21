@@ -53,7 +53,6 @@ class RGBFilm {
 
   private:
     Pixel *pixels;
-    // TODO: change Pixel* to Array2D<Pixel>
     const PixelSensor *sensor;
     Point2i resolution;
     Bounds2i pixel_bound;

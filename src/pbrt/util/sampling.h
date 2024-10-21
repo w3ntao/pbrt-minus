@@ -203,6 +203,11 @@ inline Vector3f sample_uniform_sphere(Point2f u) {
 }
 
 PBRT_CPU_GPU
+inline FloatType uniform_sphere_pdf() {
+    return 1.0 / (4.0 * compute_pi());
+}
+
+PBRT_CPU_GPU
 inline Vector3f sample_cosine_hemisphere(Point2f u) {
     auto d = sample_uniform_disk_concentric(u);
     auto z = safe_sqrt(1.0 - sqr(d.x) - sqr(d.y));

@@ -16,7 +16,9 @@ class GlobalSpectra;
 class ImageInfiniteLight;
 class Light;
 class Shape;
+class SpotLight;
 class ParameterDictionary;
+class UniformInfiniteLight;
 
 enum class LightType {
     delta_position,
@@ -80,6 +82,8 @@ class Light {
         diffuse_area_light,
         distant_light,
         image_infinite_light,
+        spot_light,
+        uniform_infinite_light,
     };
 
     static Light *create(const std::string &type_of_light, const Transform &render_from_light,
@@ -99,6 +103,12 @@ class Light {
 
     PBRT_CPU_GPU
     void init(ImageInfiniteLight *image_infinite_light);
+
+    PBRT_CPU_GPU
+    void init(SpotLight *spot_light);
+
+    PBRT_CPU_GPU
+    void init(UniformInfiniteLight *uniform_infinite_light);
 
     PBRT_CPU_GPU
     LightType get_light_type() const;

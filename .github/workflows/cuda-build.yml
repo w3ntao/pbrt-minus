@@ -1,4 +1,4 @@
-name: cuda-build
+name: cuda build
 
 on:
   push:

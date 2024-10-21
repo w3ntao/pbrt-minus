@@ -62,6 +62,17 @@ std::map<std::string, uint> count_light_type(const std::vector<Light *> &gpu_lig
             add_one_to_map("ImageInfiniteLight", counter);
             break;
         }
+
+        case (Light::Type::spot_light): {
+            add_one_to_map("SpotLight", counter);
+            break;
+        }
+
+        case (Light::Type::uniform_infinite_light): {
+            add_one_to_map("UniformInfiniteLight", counter);
+            break;
+        }
+
         default: {
             REPORT_FATAL_ERROR();
         }

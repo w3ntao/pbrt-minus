@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/euclidean_space/vector3.h"
+// TODO: move this to point3.cu
 
 template <typename T>
 class Point3 {
@@ -103,6 +104,7 @@ class Point3 {
     }
 
     PBRT_CPU_GPU Vector3<T> to_vector3() const {
+        // TODO: rewrite to_vector3()
         return Vector3<T>(x, y, z);
     }
 

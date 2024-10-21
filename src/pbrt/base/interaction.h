@@ -7,6 +7,7 @@
 #include "pbrt/euclidean_space/point3fi.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 
+class BSDF;
 class Camera;
 class Light;
 class Material;

@@ -3,6 +3,8 @@
 #include "pbrt/spectrum_util/spectrum_constants_cie.h"
 #include "pbrt/spectrum_util/xyz.h"
 
+// TODO: move those function into sampled_spectrum.cpp
+
 class Spectrum;
 class SampledWavelengths;
 
@@ -173,23 +175,18 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     bool operator==(const SampledSpectrum &s) const {
-        return values == s.values;
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
+            if (values[i] != s.values[i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     PBRT_CPU_GPU
     bool operator!=(const SampledSpectrum &s) const {
-        return values != s.values;
-    }
-
-    PBRT_CPU_GPU
-    bool is_nonzero() const {
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
-            if (values[i] != 0) {
-                return true;
-            }
-        }
-
-        return false;
+        return !(*this == s);
     }
 
     PBRT_CPU_GPU

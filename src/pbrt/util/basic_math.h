@@ -155,3 +155,13 @@ template <typename T, std::enable_if_t<std::is_same_v<T, uint32_t>, bool> = true
 PBRT_CPU_GPU constexpr T encode_morton3(T x, T y, T z) {
     return (left_shift3(z) << 2) | (left_shift3(y) << 1) | left_shift3(x);
 }
+
+PBRT_CPU_GPU
+inline FloatType smooth_step(FloatType x, FloatType a, FloatType b) {
+    if (a == b) {
+        return (x < a) ? 0 : 1;
+    }
+
+    auto t = clamp<FloatType>((x - a) / (b - a), 0, 1);
+    return t * t * (3 - 2 * t);
+}

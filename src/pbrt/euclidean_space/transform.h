@@ -1,17 +1,54 @@
 #pragma once
 
-#include "pbrt/base/interaction.h"
 #include "pbrt/base/ray.h"
+// TODO: delete #include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/point3fi.h"
 #include "pbrt/euclidean_space/squared_matrix.h"
 #include "pbrt/euclidean_space/vector3fi.h"
 
+class SurfaceInteraction;
+
 class Transform {
-  public:
+  private:
     SquareMatrix<4> m;
     SquareMatrix<4> inv_m;
+
+  public:
+    PBRT_CPU_GPU
+    explicit Transform(const FloatType values[16]) {
+        for (uint y = 0; y < 4; ++y) {
+            for (uint x = 0; x < 4; ++x) {
+                auto idx = y * 4 + x;
+                m[y][x] = values[idx];
+            }
+        }
+
+        inv_m = m.inverse();
+    }
+
+    PBRT_CPU_GPU
+    explicit Transform(const FloatType values[4][4]) {
+        for (uint y = 0; y < 4; ++y) {
+            for (uint x = 0; x < 4; ++x) {
+                m[y][x] = values[y][x];
+            }
+        }
+
+        inv_m = m.inverse();
+    }
+
+    PBRT_CPU_GPU Transform() {
+        m = SquareMatrix<4>::identity();
+        inv_m = m;
+    }
+
+    PBRT_CPU_GPU
+    Transform(const SquareMatrix<4> &_m) : m(_m), inv_m(m.inverse()) {}
+
+    PBRT_CPU_GPU
+    Transform(const SquareMatrix<4> &_m, const SquareMatrix<4> &_inv_m) : m(_m), inv_m(_inv_m) {}
 
     PBRT_CPU_GPU static Transform identity() {
         return {};
@@ -164,26 +201,6 @@ class Transform {
 
         return Transform(camera_from_world, world_from_camera);
     }
-
-    PBRT_CPU_GPU Transform() {
-        m = SquareMatrix<4>::identity();
-        inv_m = m;
-    }
-
-    PBRT_CPU_GPU
-    Transform(const FloatType _m[4][4]) {
-        for (uint x = 0; x < 4; ++x) {
-            for (uint y = 0; y < 4; ++y) {
-                m[y][x] = _m[y][x];
-            }
-        }
-    }
-
-    PBRT_CPU_GPU
-    Transform(const SquareMatrix<4> &_m) : m(_m), inv_m(m.inverse()) {}
-
-    PBRT_CPU_GPU
-    Transform(const SquareMatrix<4> &_m, const SquareMatrix<4> &_inv_m) : m(_m), inv_m(_inv_m) {}
 
     bool swaps_handedness() const {
         SquareMatrix<3> s;
@@ -342,47 +359,7 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    SurfaceInteraction operator()(const SurfaceInteraction &si) const {
-        SurfaceInteraction ret;
-        const Transform &t = *this;
-
-        ret.pi = t(si.pi);
-        // Transform remaining members of _SurfaceInteraction_
-
-        ret.n = t(si.n).normalize();
-        ret.wo = t(si.wo).normalize();
-
-        ret.uv = si.uv;
-        ret.dpdu = t(si.dpdu);
-        ret.dpdv = t(si.dpdv);
-
-        ret.dndu = t(si.dndu);
-        ret.dndv = t(si.dndv);
-
-        ret.shading.n = t(si.shading.n).normalize();
-
-        ret.shading.dpdu = t(si.shading.dpdu);
-        ret.shading.dpdv = t(si.shading.dpdv);
-        ret.shading.dndu = t(si.shading.dndu);
-        ret.shading.dndv = t(si.shading.dndv);
-
-        ret.dudx = si.dudx;
-        ret.dvdx = si.dvdx;
-        ret.dudy = si.dudy;
-        ret.dvdy = si.dvdy;
-        ret.dpdx = t(si.dpdx);
-        ret.dpdy = t(si.dpdy);
-
-        ret.material = si.material;
-        ret.area_light = si.area_light;
-
-        ret.n = ret.n.face_forward(ret.shading.n);
-        ret.shading.n = ret.shading.n.face_forward(ret.n);
-
-        ret.faceIndex = si.faceIndex;
-
-        return ret;
-    }
+    SurfaceInteraction operator()(const SurfaceInteraction &si) const;
 
     template <typename T>
     PBRT_CPU_GPU Vector3<T> apply_inverse(Vector3<T> v) const {
