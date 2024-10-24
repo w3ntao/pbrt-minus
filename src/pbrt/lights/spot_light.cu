@@ -20,7 +20,7 @@ SpotLight *SpotLight::create(const Transform &renderFromLight,
     Point3f from = parameters.get_point3("from", Point3f(0, 0, 0));
     Point3f to = parameters.get_point3("to", Point3f(0, 0, 1));
 
-    auto dirToZ = Frame::from_z((to - from).normalize()).to_transform();
+    auto dirToZ = Transform(Frame::from_z((to - from).normalize()));
     auto t = Transform::translate(from.x, from.y, from.z) * dirToZ.inverse();
     auto finalRenderFromLight = renderFromLight * t;
 
@@ -59,6 +59,7 @@ PBRT_GPU
 SampledSpectrum SpotLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                              const SampledWavelengths &lambda) const {
     REPORT_FATAL_ERROR();
+    return {};
 }
 
 PBRT_GPU

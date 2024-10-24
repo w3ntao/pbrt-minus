@@ -79,7 +79,6 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/cameras/perspective.cu
 
-        src/pbrt/euclidean_space/frame.cu
         src/pbrt/euclidean_space/squared_matrix.cu
         src/pbrt/euclidean_space/transform.cu
 

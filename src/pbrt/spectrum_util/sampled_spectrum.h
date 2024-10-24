@@ -1,9 +1,8 @@
 #pragma once
 
 #include "pbrt/spectrum_util/spectrum_constants_cie.h"
-#include "pbrt/spectrum_util/xyz.h"
-
-// TODO: move those function into sampled_spectrum.cpp
+#include "pbrt/util/basic_math.h"
+#include "pbrt/util/macro.h"
 
 class Spectrum;
 class SampledWavelengths;
@@ -58,12 +57,12 @@ class SampledSpectrum {
     FloatType y(const SampledWavelengths &lambda, const Spectrum *cie_y) const;
 
     PBRT_CPU_GPU
-    inline FloatType operator[](uint8_t i) const {
+    FloatType operator[](uint8_t i) const {
         return values[i];
     }
 
     PBRT_CPU_GPU
-    inline FloatType &operator[](uint8_t i) {
+    FloatType &operator[](uint8_t i) {
         return values[i];
     }
 

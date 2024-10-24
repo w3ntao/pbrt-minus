@@ -114,7 +114,6 @@ std::map<std::string, uint> count_material_type(const std::vector<const Primitiv
         }
 
         case (Material::Type::mix): {
-            // TODO: count different mixed material
             add_one_to_map("Mix", counter);
             break;
         }

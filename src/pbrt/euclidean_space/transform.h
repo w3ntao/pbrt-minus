@@ -1,13 +1,13 @@
 #pragma once
 
-#include "pbrt/base/ray.h"
-// TODO: delete #include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/point3fi.h"
 #include "pbrt/euclidean_space/squared_matrix.h"
 #include "pbrt/euclidean_space/vector3fi.h"
 
+class Frame;
+class Ray;
 class SurfaceInteraction;
 
 class Transform {
@@ -16,6 +16,11 @@ class Transform {
     SquareMatrix<4> inv_m;
 
   public:
+    PBRT_CPU_GPU Transform() {
+        m = SquareMatrix<4>::identity();
+        inv_m = m;
+    }
+
     PBRT_CPU_GPU
     explicit Transform(const FloatType values[16]) {
         for (uint y = 0; y < 4; ++y) {
@@ -39,10 +44,8 @@ class Transform {
         inv_m = m.inverse();
     }
 
-    PBRT_CPU_GPU Transform() {
-        m = SquareMatrix<4>::identity();
-        inv_m = m;
-    }
+    PBRT_CPU_GPU
+    explicit Transform(const Frame &frame);
 
     PBRT_CPU_GPU
     Transform(const SquareMatrix<4> &_m) : m(_m), inv_m(m.inverse()) {}
@@ -314,21 +317,7 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    Ray operator()(const Ray &r, FloatType *tMax = nullptr) const {
-        Point3fi o = (*this)(Point3fi(r.o));
-        Vector3f d = (*this)(r.d);
-
-        // Offset ray origin to edge of error bounds and compute _tMax_
-        if (FloatType lengthSquared = d.squared_length(); lengthSquared > 0) {
-            FloatType dt = d.abs_dot(o.error()) / lengthSquared;
-            o += d * dt;
-            if (tMax) {
-                *tMax -= dt;
-            }
-        }
-
-        return Ray(o.to_point3f(), d);
-    }
+    Ray operator()(const Ray &r, FloatType *tMax = nullptr) const;
 
     PBRT_CPU_GPU
     Bounds3f operator()(const Bounds3f &bounds) const {
@@ -420,25 +409,7 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    inline Ray apply_inverse(const Ray &r, FloatType *tMax) const {
-        Point3fi o = apply_inverse(Point3fi(r.o));
-        Vector3f d = apply_inverse(r.d);
-
-        // Offset ray origin to edge of error bounds and compute _tMax_
-        auto lengthSquared = d.squared_length();
-
-        if (lengthSquared > 0) {
-            Vector3f oError(o.x.width() / 2, o.y.width() / 2, o.z.width() / 2);
-            auto dt = d.abs_dot(oError) / lengthSquared;
-
-            o += d * dt;
-            if (tMax) {
-                *tMax -= dt;
-            }
-        }
-
-        return Ray(o.to_point3f(), d);
-    }
+    Ray apply_inverse(const Ray &r, FloatType *tMax) const;
 
     friend std::ostream &operator<<(std::ostream &stream, const Transform &transform) {
         stream << "Transform -- m: ";
