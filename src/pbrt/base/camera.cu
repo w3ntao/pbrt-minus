@@ -29,7 +29,7 @@ PBRT_CPU_GPU
 const CameraBase *Camera::get_camerabase() const {
     switch (type) {
     case (Type::perspective): {
-        return &((PerspectiveCamera *)ptr)->camera_base;
+        return &(static_cast<const PerspectiveCamera *>(ptr)->camera_base);
     }
     }
 
@@ -41,7 +41,7 @@ PBRT_CPU_GPU
 CameraRay Camera::generate_ray(const CameraSample &sample, Sampler *sampler) const {
     switch (type) {
     case (Type::perspective): {
-        return ((PerspectiveCamera *)ptr)->generate_ray(sample, sampler);
+        return static_cast<const PerspectiveCamera *>(ptr)->generate_ray(sample, sampler);
     }
     }
 

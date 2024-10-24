@@ -67,8 +67,8 @@ const Spectrum *Spectrum::create_cie_d(FloatType temperature, const FloatType *c
         cpu_values.push_back((cie_s0[idx] + cie_s1[idx] * M1 + cie_s2[idx] * M2) * 0.01);
     }
 
-    return Spectrum::create_piecewise_linear_spectrum_from_lambdas_and_values(
-        cpu_cie_lambdas, cpu_values, gpu_dynamic_pointer);
+    return create_piecewise_linear_spectrum_from_lambdas_and_values(cpu_cie_lambdas, cpu_values,
+                                                                    gpu_dynamic_pointer);
 }
 
 const Spectrum *Spectrum::create_constant_spectrum(FloatType val,
@@ -223,31 +223,31 @@ PBRT_CPU_GPU
 FloatType Spectrum::operator()(FloatType lambda) const {
     switch (type) {
     case (Type::black_body): {
-        return ((BlackbodySpectrum *)ptr)->operator()(lambda);
+        return static_cast<const BlackbodySpectrum *>(ptr)->operator()(lambda);
     }
 
     case (Type::constant): {
-        return ((ConstantSpectrum *)ptr)->operator()(lambda);
+        return static_cast<const ConstantSpectrum *>(ptr)->operator()(lambda);
     }
 
     case (Type::densely_sampled): {
-        return ((DenselySampledSpectrum *)ptr)->operator()(lambda);
+        return static_cast<const DenselySampledSpectrum *>(ptr)->operator()(lambda);
     }
 
     case (Type::piecewise_linear): {
-        return ((PiecewiseLinearSpectrum *)ptr)->operator()(lambda);
+        return static_cast<const PiecewiseLinearSpectrum *>(ptr)->operator()(lambda);
     }
 
     case (Type::rgb_albedo): {
-        return ((RGBAlbedoSpectrum *)ptr)->operator()(lambda);
+        return static_cast<const RGBAlbedoSpectrum *>(ptr)->operator()(lambda);
     }
 
     case (Type::rgb_illuminant): {
-        return ((RGBIlluminantSpectrum *)ptr)->operator()(lambda);
+        return static_cast<const RGBIlluminantSpectrum *>(ptr)->operator()(lambda);
     }
 
     case (Type::rgb_unbounded): {
-        return ((RGBUnboundedSpectrum *)ptr)->operator()(lambda);
+        return static_cast<const RGBUnboundedSpectrum *>(ptr)->operator()(lambda);
     }
     }
 
@@ -258,7 +258,7 @@ FloatType Spectrum::operator()(FloatType lambda) const {
 PBRT_CPU_GPU
 FloatType Spectrum::to_photometric(const Spectrum *cie_y) const {
     if (type == Type::rgb_illuminant) {
-        return ((RGBIlluminantSpectrum *)ptr)->to_photometric(cie_y);
+        return static_cast<const RGBIlluminantSpectrum *>(ptr)->to_photometric(cie_y);
     }
 
     return inner_product(cie_y);
@@ -268,31 +268,31 @@ PBRT_CPU_GPU
 SampledSpectrum Spectrum::sample(const SampledWavelengths &lambda) const {
     switch (type) {
     case (Type::black_body): {
-        return ((BlackbodySpectrum *)ptr)->sample(lambda);
+        return static_cast<const BlackbodySpectrum *>(ptr)->sample(lambda);
     }
 
     case (Type::constant): {
-        return ((ConstantSpectrum *)ptr)->sample(lambda);
+        return static_cast<const ConstantSpectrum *>(ptr)->sample(lambda);
     }
 
     case (Type::densely_sampled): {
-        return ((DenselySampledSpectrum *)ptr)->sample(lambda);
+        return static_cast<const DenselySampledSpectrum *>(ptr)->sample(lambda);
     }
 
     case (Type::piecewise_linear): {
-        return ((PiecewiseLinearSpectrum *)ptr)->sample(lambda);
+        return static_cast<const PiecewiseLinearSpectrum *>(ptr)->sample(lambda);
     }
 
     case (Type::rgb_albedo): {
-        return ((RGBAlbedoSpectrum *)ptr)->sample(lambda);
+        return static_cast<const RGBAlbedoSpectrum *>(ptr)->sample(lambda);
     }
 
     case (Type::rgb_illuminant): {
-        return ((RGBIlluminantSpectrum *)ptr)->sample(lambda);
+        return static_cast<const RGBIlluminantSpectrum *>(ptr)->sample(lambda);
     }
 
     case (Type::rgb_unbounded): {
-        return ((RGBUnboundedSpectrum *)ptr)->sample(lambda);
+        return static_cast<const RGBUnboundedSpectrum *>(ptr)->sample(lambda);
     }
     }
 

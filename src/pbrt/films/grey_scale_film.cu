@@ -5,51 +5,55 @@
 #include "pbrt/util/basic_math.h"
 #include <algorithm>
 
-const std::vector<RGB> colors = {
-    RGB(0, 0, 0), RGB(0, 0, 1), RGB(0, 1, 1), RGB(0, 1, 0), RGB(1, 1, 0), RGB(1, 0, 0),
-};
-
-/*
-
-const std::vector<RGB> colors = {RGB(0, 0, 0), RGB(0, 0, 1), RGB(0, 1, 1), RGB(0, 1, 0),
-                                 RGB(1, 1, 0), RGB(1, 0, 0), RGB(1, 1, 1)};
-
-
-const std::vector<RGB> colors = {
-    RGB(68, 1, 84) / 255,   RGB(59, 82, 139) / 255,  RGB(33, 145, 140) / 255,
-    RGB(94, 201, 98) / 255, RGB(253, 231, 37) / 255,
-};
-
-const std::vector<RGB> colors = {RGB(68, 1, 84) / 255,    RGB(68, 57, 131) / 255,
-                                 RGB(49, 104, 142) / 255, RGB(33, 145, 140) / 255,
-                                 RGB(53, 183, 121) / 255, RGB(144, 215, 67) / 251,
-                                 RGB(253, 231, 37) / 255};
-*/
+const auto black = RGB(0, 0, 0);
+const auto blue = RGB(0, 0, 1);
+const auto cyan = RGB(0, 1, 1);
+const auto green = RGB(0, 1, 0);
+const auto yellow = RGB(1, 1, 0);
+const auto red = RGB(1, 0, 0);
+const auto white = RGB(1, 1, 0);
 
 /*
 taken from https://www.andrewnoske.com/wiki/Code_-_heatmaps_and_color_gradients
-6 colors rainbow: black, blue, cyan, green, yellow, red
 5 colors rainbow:        blue, cyan, green, yellow, red
+6 colors rainbow: black, blue, cyan, green, yellow, red
 7 colors rainbow: black, blue, cyan, green, yellow, red, white
 7 color viridis: https://waldyrious.net/viridis-palette-generator/
 */
 
+const std::vector rainbow_5 = {
+    blue, cyan, green, yellow, red,
+};
+
+const std::vector rainbow_6 = {
+    black, blue, cyan, green, yellow, red,
+};
+
+const std::vector rainbow_7 = {black, blue, cyan, green, yellow, red, white};
+
+const std::vector palette_viridis_7 = {RGB(68, 1, 84) / 255,    RGB(68, 57, 131) / 255,
+                                       RGB(49, 104, 142) / 255, RGB(33, 145, 140) / 255,
+                                       RGB(53, 183, 121) / 255, RGB(144, 215, 67) / 251,
+                                       RGB(253, 231, 37) / 255};
+
 static RGB convert_to_heatmap_rgb(double linear) {
+    auto colors = &rainbow_6;
+
     /*
     const auto gamma = 2.0;
     linear = pow(linear, 1.0 / gamma);
     */
 
-    const auto gap = 1.0 / (colors.size() - 1);
+    const auto gap = 1.0 / (colors->size() - 1);
 
-    for (int idx = 0; idx < colors.size() - 1; ++idx) {
+    for (int idx = 0; idx < colors->size() - 1; ++idx) {
         if (linear >= gap * idx && linear < gap * (idx + 1)) {
             auto x = 1 - (linear - gap * idx) / gap;
-            return colors[idx] * x + colors[idx + 1] * (1 - x);
+            return colors->at(idx) * x + colors->at(idx + 1) * (1 - x);
         }
     }
 
-    return colors[colors.size() - 1];
+    return colors->at(colors->size() - 1);
 }
 
 void GreyScaleFilm::write_to_png(const std::string &filename) const {

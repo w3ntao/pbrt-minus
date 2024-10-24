@@ -50,11 +50,11 @@ PBRT_CPU_GPU
 Vector2f Filter::radius() const {
     switch (type) {
     case (Type::box): {
-        return ((BoxFilter *)ptr)->get_radius();
+        return static_cast<const BoxFilter *>(ptr)->get_radius();
     }
 
     case (Type::mitchell): {
-        return ((MitchellFilter *)ptr)->get_radius();
+        return static_cast<const MitchellFilter *>(ptr)->get_radius();
     }
     }
 
@@ -66,7 +66,7 @@ PBRT_CPU_GPU
 FloatType Filter::evaluate(const Point2f p) const {
     switch (type) {
     case (Type::mitchell): {
-        return ((MitchellFilter *)ptr)->evaluate(p);
+        return static_cast<const MitchellFilter *>(ptr)->evaluate(p);
     }
     }
 
@@ -78,11 +78,11 @@ PBRT_CPU_GPU
 FilterSample Filter::sample(const Point2f u) const {
     switch (type) {
     case (Type::box): {
-        return ((BoxFilter *)ptr)->sample(u);
+        return static_cast<const BoxFilter *>(ptr)->sample(u);
     }
 
     case (Type::mitchell): {
-        return ((MitchellFilter *)ptr)->sample(u);
+        return static_cast<const MitchellFilter *>(ptr)->sample(u);
     }
     }
 

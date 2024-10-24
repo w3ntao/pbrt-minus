@@ -43,16 +43,17 @@ Light *Light::create(const std::string &type_of_light, const Transform &render_f
 
             light->init(image_infinite_light);
             return light;
-        } else {
-            auto uniform_infinite_light =
-                UniformInfiniteLight::create(render_from_light, parameters, gpu_dynamic_pointers);
-            Light *light;
-            CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
-            gpu_dynamic_pointers.push_back(light);
-
-            light->init(uniform_infinite_light);
-            return light;
         }
+        // otherwise it's UniformInfiniteLight
+
+        auto uniform_infinite_light =
+            UniformInfiniteLight::create(render_from_light, parameters, gpu_dynamic_pointers);
+        Light *light;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
+        gpu_dynamic_pointers.push_back(light);
+
+        light->init(uniform_infinite_light);
+        return light;
     }
 
     if (type_of_light == "spot") {
@@ -133,23 +134,23 @@ PBRT_CPU_GPU
 LightType Light::get_light_type() const {
     switch (type) {
     case (Type::diffuse_area_light): {
-        return ((DiffuseAreaLight *)ptr)->get_light_type();
+        return static_cast<const DiffuseAreaLight *>(ptr)->get_light_type();
     }
 
     case (Type::distant_light): {
-        return ((DistantLight *)ptr)->get_light_type();
+        return static_cast<const DistantLight *>(ptr)->get_light_type();
     }
 
     case (Type::image_infinite_light): {
-        return ((ImageInfiniteLight *)ptr)->get_light_type();
+        return static_cast<const ImageInfiniteLight *>(ptr)->get_light_type();
     }
 
     case (Type::spot_light): {
-        return ((SpotLight *)ptr)->get_light_type();
+        return static_cast<const SpotLight *>(ptr)->get_light_type();
     }
 
     case (Type::uniform_infinite_light): {
-        return ((UniformInfiniteLight *)ptr)->get_light_type();
+        return static_cast<const UniformInfiniteLight *>(ptr)->get_light_type();
     }
     }
 
@@ -162,7 +163,7 @@ SampledSpectrum Light::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                          const SampledWavelengths &lambda) const {
     switch (type) {
     case (Type::diffuse_area_light): {
-        return ((DiffuseAreaLight *)ptr)->l(p, n, uv, w, lambda);
+        return static_cast<const DiffuseAreaLight *>(ptr)->l(p, n, uv, w, lambda);
     }
     }
 
@@ -174,11 +175,11 @@ PBRT_GPU
 SampledSpectrum Light::le(const Ray &ray, const SampledWavelengths &lambda) const {
     switch (type) {
     case (Type::image_infinite_light): {
-        return ((ImageInfiniteLight *)ptr)->le(ray, lambda);
+        return static_cast<const ImageInfiniteLight *>(ptr)->le(ray, lambda);
     }
 
     case (Type::uniform_infinite_light): {
-        return ((UniformInfiniteLight *)ptr)->le(ray, lambda);
+        return static_cast<const UniformInfiniteLight *>(ptr)->le(ray, lambda);
     }
     }
 
@@ -191,23 +192,23 @@ cuda::std::optional<LightLiSample> Light::sample_li(const LightSampleContext &ct
                                                     SampledWavelengths &lambda) const {
     switch (type) {
     case (Type::diffuse_area_light): {
-        return ((DiffuseAreaLight *)ptr)->sample_li(ctx, u, lambda);
+        return static_cast<const DiffuseAreaLight *>(ptr)->sample_li(ctx, u, lambda);
     }
 
     case (Type::distant_light): {
-        return ((DistantLight *)ptr)->sample_li(ctx, u, lambda);
+        return static_cast<const DistantLight *>(ptr)->sample_li(ctx, u, lambda);
     }
 
     case (Type::image_infinite_light): {
-        return ((ImageInfiniteLight *)ptr)->sample_li(ctx, u, lambda);
+        return static_cast<const ImageInfiniteLight *>(ptr)->sample_li(ctx, u, lambda);
     }
 
     case (Type::spot_light): {
-        return ((SpotLight *)ptr)->sample_li(ctx, u, lambda);
+        return static_cast<const SpotLight *>(ptr)->sample_li(ctx, u, lambda);
     }
 
     case (Type::uniform_infinite_light): {
-        return ((UniformInfiniteLight *)ptr)->sample_li(ctx, u, lambda);
+        return static_cast<const UniformInfiniteLight *>(ptr)->sample_li(ctx, u, lambda);
     }
     }
 
@@ -220,19 +221,20 @@ FloatType Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                         bool allow_incomplete_pdf) const {
     switch (type) {
     case (Type::diffuse_area_light): {
-        return ((DiffuseAreaLight *)ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
+        return static_cast<const DiffuseAreaLight *>(ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
     }
 
     case (Type::image_infinite_light): {
-        return ((ImageInfiniteLight *)ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
+        return static_cast<const ImageInfiniteLight *>(ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
     }
 
     case (Type::spot_light): {
-        return ((SpotLight *)ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
+        return static_cast<const SpotLight *>(ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
     }
 
     case (Type::uniform_infinite_light): {
-        return ((UniformInfiniteLight *)ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
+        return static_cast<const UniformInfiniteLight *>(ptr)->pdf_li(ctx, wi,
+                                                                      allow_incomplete_pdf);
     }
     }
 
@@ -244,23 +246,23 @@ PBRT_CPU_GPU
 SampledSpectrum Light::phi(const SampledWavelengths &lambda) const {
     switch (type) {
     case (Type::diffuse_area_light): {
-        return ((DiffuseAreaLight *)ptr)->phi(lambda);
+        return static_cast<const DiffuseAreaLight *>(ptr)->phi(lambda);
     }
 
     case (Type::distant_light): {
-        return ((DistantLight *)ptr)->phi(lambda);
+        return static_cast<const DistantLight *>(ptr)->phi(lambda);
     }
 
     case (Type::image_infinite_light): {
-        return ((ImageInfiniteLight *)ptr)->phi(lambda);
+        return static_cast<const ImageInfiniteLight *>(ptr)->phi(lambda);
     }
 
     case (Type::spot_light): {
-        return ((SpotLight *)ptr)->phi(lambda);
+        return static_cast<const SpotLight *>(ptr)->phi(lambda);
     }
 
     case (Type::uniform_infinite_light): {
-        return ((UniformInfiniteLight *)ptr)->phi(lambda);
+        return static_cast<const UniformInfiniteLight *>(ptr)->phi(lambda);
     }
     }
 
@@ -281,17 +283,17 @@ void Light::preprocess(const Bounds3<FloatType> &scene_bounds) {
     }
 
     case (Type::distant_light): {
-        ((DistantLight *)ptr)->preprocess(scene_bounds);
+        static_cast<DistantLight *>(ptr)->preprocess(scene_bounds);
         return;
     }
 
     case (Type::image_infinite_light): {
-        ((ImageInfiniteLight *)ptr)->preprocess(scene_bounds);
+        static_cast<ImageInfiniteLight *>(ptr)->preprocess(scene_bounds);
         return;
     }
 
     case (Type::uniform_infinite_light): {
-        ((UniformInfiniteLight *)ptr)->preprocess(scene_bounds);
+        static_cast<UniformInfiniteLight *>(ptr)->preprocess(scene_bounds);
         return;
     }
     }

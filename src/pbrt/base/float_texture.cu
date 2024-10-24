@@ -88,15 +88,15 @@ PBRT_CPU_GPU
 FloatType FloatTexture::evaluate(const TextureEvalContext &ctx) const {
     switch (type) {
     case (Type::constant): {
-        return ((FloatConstantTexture *)ptr)->evaluate(ctx);
+        return static_cast<const FloatConstantTexture *>(ptr)->evaluate(ctx);
     }
 
     case (Type::image): {
-        return ((FloatImageTexture *)ptr)->evaluate(ctx);
+        return static_cast<const FloatImageTexture *>(ptr)->evaluate(ctx);
     }
 
     case (Type::scale): {
-        return ((FloatScaledTexture *)ptr)->evaluate(ctx);
+        return static_cast<const FloatScaledTexture *>(ptr)->evaluate(ctx);
     }
     }
 

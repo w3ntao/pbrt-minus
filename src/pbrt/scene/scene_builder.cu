@@ -11,10 +11,8 @@
 #include "pbrt/films/grey_scale_film.h"
 #include "pbrt/integrators/mlt_path.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
-#include "pbrt/light_samplers/uniform_light_sampler.h"
 #include "pbrt/scene/scene_builder.h"
 #include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/spectrum_util/spectrum_constants_glass.h"
 #include "pbrt/spectrum_util/spectrum_constants_metal.h"
 #include "pbrt/textures/spectrum_constant_texture.h"
@@ -260,6 +258,7 @@ void SceneBuilder::build_gpu_lights() {
 }
 
 void SceneBuilder::build_integrator(bool wavefront) {
+    // TODO: delete wavefront and rename path with wavefront to wavefrontpath
     build_gpu_lights();
 
     if (!samples_per_pixel.has_value()) {
@@ -896,7 +895,8 @@ void SceneBuilder::render() const {
                   << " with wavefront integrator.\n"
                   << std::flush;
 
-        wavefront_integrator->render(film, output_filename);
+        wavefront_integrator->render(film, output_filename, false);
+        // TODO: make preview a command line option
 
         film->write_to_png(output_filename);
 

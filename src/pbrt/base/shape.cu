@@ -106,15 +106,15 @@ PBRT_CPU_GPU
 Bounds3f Shape::bounds() const {
     switch (type) {
     case (Type::disk): {
-        return ((Disk *)ptr)->bounds();
+        return static_cast<const Disk *>(ptr)->bounds();
     }
 
     case (Type::sphere): {
-        return ((Sphere *)ptr)->bounds();
+        return static_cast<const Sphere *>(ptr)->bounds();
     }
 
     case (Type::triangle): {
-        return ((Triangle *)ptr)->bounds();
+        return static_cast<const Triangle *>(ptr)->bounds();
     }
     }
 
@@ -126,15 +126,15 @@ PBRT_CPU_GPU
 FloatType Shape::area() const {
     switch (type) {
     case (Type::disk): {
-        return ((Disk *)ptr)->area();
+        return static_cast<const Disk *>(ptr)->area();
     }
 
     case (Type::sphere): {
-        return ((Sphere *)ptr)->area();
+        return static_cast<const Sphere *>(ptr)->area();
     }
 
     case (Type::triangle): {
-        return ((Triangle *)ptr)->area();
+        return static_cast<const Triangle *>(ptr)->area();
     }
     }
 
@@ -146,15 +146,15 @@ PBRT_GPU
 bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
     switch (type) {
     case (Type::disk): {
-        return ((Disk *)ptr)->fast_intersect(ray, t_max);
+        return static_cast<const Disk *>(ptr)->fast_intersect(ray, t_max);
     }
 
     case (Type::triangle): {
-        return ((Triangle *)ptr)->fast_intersect(ray, t_max);
+        return static_cast<const Triangle *>(ptr)->fast_intersect(ray, t_max);
     }
 
     case (Type::sphere): {
-        return ((Sphere *)ptr)->fast_intersect(ray, t_max);
+        return static_cast<const Sphere *>(ptr)->fast_intersect(ray, t_max);
     }
     }
 
@@ -166,15 +166,15 @@ PBRT_GPU
 cuda::std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
     switch (type) {
     case (Type::disk): {
-        return ((Disk *)ptr)->intersect(ray, t_max);
+        return static_cast<const Disk *>(ptr)->intersect(ray, t_max);
     }
 
     case (Type::triangle): {
-        return ((Triangle *)ptr)->intersect(ray, t_max);
+        return static_cast<const Triangle *>(ptr)->intersect(ray, t_max);
     }
 
     case (Type::sphere): {
-        return ((Sphere *)ptr)->intersect(ray, t_max);
+        return static_cast<const Sphere *>(ptr)->intersect(ray, t_max);
     }
     }
 
@@ -187,15 +187,15 @@ cuda::std::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
                                                const Point2f &u) const {
     switch (type) {
     case (Type::disk): {
-        return ((Disk *)ptr)->sample(ctx, u);
+        return static_cast<const Disk *>(ptr)->sample(ctx, u);
     }
 
     case (Type::sphere): {
-        return ((Sphere *)ptr)->sample(ctx, u);
+        return static_cast<const Sphere *>(ptr)->sample(ctx, u);
     }
 
     case (Type::triangle): {
-        return ((Triangle *)ptr)->sample(ctx, u);
+        return static_cast<const Triangle *>(ptr)->sample(ctx, u);
     }
     }
 
@@ -207,15 +207,15 @@ PBRT_GPU
 FloatType Shape::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     switch (type) {
     case (Type::disk): {
-        return ((Disk *)ptr)->pdf(ctx, wi);
+        return static_cast<const Disk *>(ptr)->pdf(ctx, wi);
     }
 
     case (Type::sphere): {
-        return ((Sphere *)ptr)->pdf(ctx, wi);
+        return static_cast<const Sphere *>(ptr)->pdf(ctx, wi);
     }
 
     case (Type::triangle): {
-        return ((Triangle *)ptr)->pdf(ctx, wi);
+        return static_cast<const Triangle *>(ptr)->pdf(ctx, wi);
     }
     }
 
