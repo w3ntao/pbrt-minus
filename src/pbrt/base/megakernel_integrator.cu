@@ -165,8 +165,8 @@ void Integrator::render(Film *film, const std::string &sampler_type, uint sample
     uint thread_width = 8;
     uint thread_height = 8;
 
-    std::cout << " (samples per pixel: " << samples_per_pixel << ") " << "in " << thread_width
-              << "x" << thread_height << " blocks.\n"
+    std::cout << " (samples per pixel: " << samples_per_pixel << ") "
+              << "in " << thread_width << "x" << thread_height << " blocks.\n"
               << std::flush;
 
     dim3 blocks(divide_and_ceil(uint(film_resolution.x), thread_width),

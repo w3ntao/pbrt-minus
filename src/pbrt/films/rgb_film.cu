@@ -78,7 +78,7 @@ void RGBFilm::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
     if (weight == 0) {
         return;
     }
-    
+
     auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
 
     if (DEBUG_MODE && rgb.has_nan()) {

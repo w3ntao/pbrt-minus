@@ -22,7 +22,7 @@ class SpotLight : public LightBase {
     PBRT_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                       const SampledWavelengths &lambda) const;
-    
+
     PBRT_GPU
     cuda::std::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;

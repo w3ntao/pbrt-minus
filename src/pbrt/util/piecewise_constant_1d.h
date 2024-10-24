@@ -75,7 +75,7 @@ class PiecewiseConstant1D {
 
         // Compute offset along CDF segment
         FloatType du = u - cdf[o];
-        
+
         if (cdf[o + 1] - cdf[o] > 0) {
             du /= cdf[o + 1] - cdf[o];
         }

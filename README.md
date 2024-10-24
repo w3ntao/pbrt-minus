@@ -1,6 +1,7 @@
 # pbrt-minus
 
 [![cuda-build](https://github.com/w3ntao/pbrt-minus/actions/workflows/cuda-build.yml/badge.svg)](https://github.com/w3ntao/pbrt-minus/actions/workflows/cuda-build.yml)
+[![formatting with clang-format-16](https://github.com/w3ntao/pbrt-minus/actions/workflows/clang-format.yml/badge.svg)](https://github.com/w3ntao/pbrt-minus/actions/workflows/clang-format.yml)
 
 A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT-v4.
 

@@ -8,9 +8,9 @@ class Point3 {
   public:
     T x, y, z;
 
-    PBRT_CPU_GPU Point3() : x(NAN), y(NAN), z(NAN) {};
+    PBRT_CPU_GPU Point3() : x(NAN), y(NAN), z(NAN){};
 
-    PBRT_CPU_GPU Point3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {};
+    PBRT_CPU_GPU Point3(T _x, T _y, T _z) : x(_x), y(_y), z(_z){};
 
     PBRT_CPU_GPU T &operator[](uint8_t index) {
         switch (index) {

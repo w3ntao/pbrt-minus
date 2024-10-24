@@ -9,7 +9,7 @@ class Vector3 {
   public:
     T x, y, z;
 
-    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN) {};
+    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN){};
 
     PBRT_CPU_GPU Vector3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {}
 

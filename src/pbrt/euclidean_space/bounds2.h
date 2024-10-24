@@ -23,7 +23,7 @@ class Bounds2 {
 
     PBRT_CPU_GPU
     Bounds2(Point2<T> p1, Point2<T> p2) : p_min(p1.min(p2)), p_max(p1.max(p2)) {}
-    
+
     PBRT_CPU_GPU
     Vector2<T> Diagonal() const {
         return p_max - p_min;
