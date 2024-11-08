@@ -28,7 +28,7 @@ enum class LightType {
 };
 
 // Light Inline Functions
-PBRT_CPU_GPU inline bool is_deltaLight(LightType type) {
+PBRT_CPU_GPU inline bool is_delta_light(LightType type) {
     return type == LightType::delta_position || type == LightType::delta_direction;
 }
 
@@ -68,12 +68,47 @@ struct LightSampleContext {
         : pi(Point3fi()), n(Normal3f(NAN, NAN, NAN)), ns(Normal3f(NAN, NAN, NAN)) {}
 
     PBRT_CPU_GPU
-    LightSampleContext(const SurfaceInteraction si) : pi(si.pi), n(si.n), ns(si.shading.n) {}
+    LightSampleContext(const SurfaceInteraction &si) : pi(si.pi), n(si.n), ns(si.shading.n) {}
+
+    PBRT_CPU_GPU
+    LightSampleContext(const Interaction &intr)
+        : pi(intr.pi), n(Normal3f(NAN, NAN, NAN)), ns(Normal3f(NAN, NAN, NAN)) {}
 
     PBRT_CPU_GPU
     Point3f p() const {
         return pi.to_point3f();
     }
+};
+
+// LightLeSample Definition
+struct LightLeSample {
+    // LightLeSample Public Methods
+
+    PBRT_CPU_GPU
+    LightLeSample() : pdfPos(0), pdfDir(0) {}
+
+    PBRT_CPU_GPU
+    LightLeSample(const SampledSpectrum &L, const Ray &ray, FloatType pdfPos, FloatType pdfDir)
+        : L(L), ray(ray), pdfPos(pdfPos), pdfDir(pdfDir) {}
+    PBRT_CPU_GPU
+    LightLeSample(const SampledSpectrum &_L, const Ray &_ray, const Interaction &_intr,
+                  FloatType _pdfPos, FloatType _pdfDir)
+        : L(_L), ray(_ray), intr(_intr), pdfPos(_pdfPos), pdfDir(_pdfDir) {
+        if (DEBUG_MODE && this->intr->n != Normal3f(0, 0, 0)) {
+            REPORT_FATAL_ERROR();
+        }
+    }
+
+    PBRT_CPU_GPU
+    FloatType abs_cos_theta(const Vector3f w) const {
+        return intr ? intr->n.abs_dot(w) : 1;
+    }
+
+    SampledSpectrum L;
+    Ray ray;
+    cuda::std::optional<Interaction> intr;
+    FloatType pdfPos;
+    FloatType pdfDir;
 };
 
 class Light {
@@ -125,14 +160,26 @@ class Light {
                                                  SampledWavelengths &lambda) const;
 
     PBRT_GPU
+    cuda::std::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
+                                                 SampledWavelengths &lambda) const;
+
+    PBRT_GPU
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf = false) const;
+
+    PBRT_GPU
+    void pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos, FloatType *pdfDir) const;
+
+    PBRT_GPU
+    void pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
+
     PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
     void preprocess(const Bounds3<FloatType> &scene_bounds);
 
-  public:
     Type type;
+
+  private:
     void *ptr;
 };

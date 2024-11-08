@@ -4,13 +4,9 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
-#include "pbrt/bxdfs/coated_conductor_bxdf.h"
-#include "pbrt/bxdfs/coated_diffuse_bxdf.h"
-#include "pbrt/bxdfs/conductor_bxdf.h"
-#include "pbrt/bxdfs/dielectric_bxdf.h"
-#include "pbrt/bxdfs/diffuse_bxdf.h"
+#include "pbrt/bxdfs/full_bxdf.h"
 #include "pbrt/integrators/path.h"
-#include "pbrt/lights/diffuse_area_light.h"
+#include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/lights/image_infinite_light.h"
 #include "pbrt/scene/parameter_dictionary.h"
 
@@ -52,16 +48,12 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
     auto ray = primary_ray;
 
     BSDF bsdf;
-    CoatedConductorBxDF coated_conductor_bxdf;
-    CoatedDiffuseBxDF coated_diffuse_bxdf;
-    ConductorBxDF conductor_bxdf;
-    DielectricBxDF dielectric_bxdf;
-    DiffuseBxDF diffuse_bxdf;
+    FullBxDF full_bxdf;
 
     // Sample path from camera and accumulate radiance estimate
     while (true) {
         // Trace ray and find closest path vertex and its BSDF
-        auto si = base->bvh->intersect(ray, Infinity);
+        auto si = base->intersect(ray, Infinity);
         // Add emitted light at intersection point or from the environment
         if (!si) {
             // Incorporate emission from infinite lights for escaped ray
@@ -105,42 +97,8 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
             }
         }
 
-        switch (isect.material->get_material_type()) {
-        case (Material::Type::coated_conductor): {
-            isect.init_coated_conductor_bsdf(bsdf, coated_conductor_bxdf, ray, lambda, base->camera,
-                                             sampler);
-            break;
-        }
-        case (Material::Type::coated_diffuse): {
-            isect.init_coated_diffuse_bsdf(bsdf, coated_diffuse_bxdf, ray, lambda, base->camera,
-                                           sampler);
-            break;
-        }
-
-        case (Material::Type::conductor): {
-            isect.init_conductor_bsdf(bsdf, conductor_bxdf, ray, lambda, base->camera, sampler);
-            break;
-        }
-
-        case (Material::Type::dielectric): {
-            isect.init_dielectric_bsdf(bsdf, dielectric_bxdf, ray, lambda, base->camera, sampler);
-            break;
-        }
-
-        case (Material::Type::diffuse): {
-            isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
-            break;
-        }
-
-        case (Material::Type::mix): {
-            printf("\nyou should not see MixMaterial here\n\n");
-            REPORT_FATAL_ERROR();
-        }
-
-        default: {
-            REPORT_FATAL_ERROR();
-        }
-        }
+        isect.init_bsdf(bsdf, full_bxdf, ray, lambda, base->camera,
+                        sampler->get_samples_per_pixel());
 
         if (regularize && any_non_specular_bounces) {
             bsdf.regularize();
@@ -198,7 +156,7 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
 }
 
 PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
-                                            Sampler *sampler) {
+                                            Sampler *sampler) const {
     return eval_li(primary_ray, lambda, base, sampler, max_depth);
 }
 
@@ -243,7 +201,7 @@ SampledSpectrum PathIntegrator::sample_ld(const SurfaceInteraction &intr, const 
 
     // Return light's contribution to reflected radiance
     FloatType pdf_light = sampled_light->p * ls->pdf;
-    if (is_deltaLight(light->get_light_type())) {
+    if (is_delta_light(light->get_light_type())) {
         return ls->l * f / pdf_light;
     }
 

@@ -351,7 +351,7 @@ class Transform {
     SurfaceInteraction operator()(const SurfaceInteraction &si) const;
 
     template <typename T>
-    PBRT_CPU_GPU Vector3<T> apply_inverse(Vector3<T> v) const {
+    PBRT_CPU_GPU Vector3<T> apply_inverse(const Vector3<T> v) const {
         T x = v.x;
         T y = v.y;
         T z = v.z;
@@ -359,6 +359,18 @@ class Transform {
         return Vector3<T>(inv_m[0][0] * x + inv_m[0][1] * y + inv_m[0][2] * z,
                           inv_m[1][0] * x + inv_m[1][1] * y + inv_m[1][2] * z,
                           inv_m[2][0] * x + inv_m[2][1] * y + inv_m[2][2] * z);
+    }
+
+    template <typename T>
+    PBRT_CPU_GPU Point3<T> apply_inverse(const Point3<T> p) const {
+        T x = p.x, y = p.y, z = p.z;
+
+        T xp = (inv_m[0][0] * x + inv_m[0][1] * y) + (inv_m[0][2] * z + inv_m[0][3]);
+        T yp = (inv_m[1][0] * x + inv_m[1][1] * y) + (inv_m[1][2] * z + inv_m[1][3]);
+        T zp = (inv_m[2][0] * x + inv_m[2][1] * y) + (inv_m[2][2] * z + inv_m[2][3]);
+        T wp = (inv_m[3][0] * x + inv_m[3][1] * y) + (inv_m[3][2] * z + inv_m[3][3]);
+
+        return wp == 1 ? Point3<T>(xp, yp, zp) : Point3<T>(xp, yp, zp) / wp;
     }
 
     PBRT_CPU_GPU

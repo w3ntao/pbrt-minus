@@ -82,6 +82,53 @@ cuda::std::optional<LightLiSample> SpotLight::sample_li(const LightSampleContext
 }
 
 PBRT_GPU
+cuda::std::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point2f u2,
+                                                        SampledWavelengths &lambda) const {
+    // Choose whether to sample spotlight center cone or falloff region
+    FloatType p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};
+    FloatType sectionPDF;
+    int section = SampleDiscrete(p, 2, u2[0], &sectionPDF);
+
+    // Sample chosen region of spotlight cone
+    Vector3f wLight;
+    FloatType pdfDir;
+    if (section == 0) {
+        // Sample spotlight center cone
+        wLight = SampleUniformCone(u1, cosFalloffStart);
+        pdfDir = UniformConePDF(cosFalloffStart) * sectionPDF;
+
+    } else {
+        // Sample spotlight falloff region
+        FloatType cosTheta = SampleSmoothStep(u1[0], cosFalloffEnd, cosFalloffStart);
+
+        FloatType sinTheta = safe_sqrt(1 - sqr(cosTheta));
+        FloatType phi = u1[1] * 2 * compute_pi();
+        wLight = SphericalDirection(sinTheta, cosTheta, phi);
+        pdfDir = SmoothStepPDF(cosTheta, cosFalloffEnd, cosFalloffStart) * sectionPDF /
+                 (2 * compute_pi());
+    }
+
+    // Return sampled spotlight ray
+    auto ray = render_from_light(Ray(Point3f(0, 0, 0), wLight));
+
+    return LightLeSample(I(wLight, lambda), ray, 1, pdfDir);
+}
+
+PBRT_GPU
+void SpotLight::pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const {
+    FloatType p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};
+    *pdfPos = 0;
+    // Find spotlight directional PDF based on $\cos \theta$
+    FloatType cosTheta = render_from_light.apply_inverse(ray.d).cos_theta();
+    if (cosTheta >= cosFalloffStart) {
+        *pdfDir = UniformConePDF(cosFalloffStart) * p[0] / (p[0] + p[1]);
+    } else {
+        *pdfDir = SmoothStepPDF(cosTheta, cosFalloffEnd, cosFalloffStart) * p[1] /
+                  ((p[0] + p[1]) * (2 * compute_pi()));
+    }
+}
+
+PBRT_GPU
 FloatType SpotLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                             bool allow_incomplete_pdf) const {
     return 0.0;

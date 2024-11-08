@@ -4,26 +4,23 @@
 #include "pbrt/euclidean_space/point2.h"
 #include <vector>
 
-class CameraSample;
-class CameraRay;
 class Film;
-class FrameBuffer;
-class IntegratorBase;
 class MISParameter;
 class ParameterDictionary;
 class Sampler;
 class SampledSpectrum;
 class SampledWavelengths;
-class ShapeIntersection;
 class Spectrum;
 class SurfaceInteraction;
 
 class BSDF;
-class CoatedConductorBxDF;
-class CoatedDiffuseBxDF;
-class ConductorBxDF;
-class DielectricBxDF;
-class DiffuseBxDF;
+struct FullBxDF;
+
+struct CameraSample;
+struct CameraRay;
+struct FrameBuffer;
+struct IntegratorBase;
+struct ShapeIntersection;
 
 struct PathState {
     CameraSample *camera_samples;
@@ -41,11 +38,7 @@ struct PathState {
     bool *finished;
 
     BSDF *bsdf;
-    CoatedConductorBxDF *coated_conductor_bxdf;
-    CoatedDiffuseBxDF *coated_diffuse_bxdf;
-    ConductorBxDF *conductor_bxdf;
-    DielectricBxDF *dielectric_bxdf;
-    DiffuseBxDF *diffuse_bxdf;
+    FullBxDF *full_bxdf;
 
     MISParameter *mis_parameters;
 

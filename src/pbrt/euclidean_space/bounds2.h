@@ -101,7 +101,12 @@ class Bounds2 {
         return result;
     }
 
-    std::vector<Point2i> range() const {
+    PBRT_CPU_GPU
+    bool contain(const Point2<T> pt) const {
+        return pt.x >= p_min.x && pt.x <= p_max.x && pt.y >= p_min.y && pt.y <= p_max.y;
+    }
+
+    [[nodiscard]] std::vector<Point2i> range() const {
         static_assert(std::is_same<T, int>::value);
 
         std::vector<Point2i> result;

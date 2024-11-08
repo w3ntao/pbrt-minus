@@ -3,10 +3,6 @@
 #include "pbrt/util/macro.h"
 #include <limits>
 
-constexpr FloatType Infinity = std::numeric_limits<FloatType>::infinity();
-
-constexpr FloatType MachineEpsilon = std::numeric_limits<FloatType>::epsilon() * 0.5;
-
 #define _DoubleOneMinusEpsilon 0x1.fffffffffffffp-1
 #define _FloatOneMinusEpsilon float(0x1.fffffep-1)
 
@@ -15,6 +11,13 @@ constexpr FloatType MachineEpsilon = std::numeric_limits<FloatType>::epsilon() *
 #else
 #define OneMinusEpsilon _FloatOneMinusEpsilon
 #endif
+
+constexpr FloatType Infinity = std::numeric_limits<FloatType>::infinity();
+
+constexpr FloatType MachineEpsilon = std::numeric_limits<FloatType>::epsilon() * 0.5;
+
+// Mathematical Constants
+constexpr FloatType ShadowEpsilon = 0.0001;
 
 PBRT_CPU_GPU
 constexpr FloatType gamma(int n) {
@@ -164,4 +167,47 @@ inline FloatType smooth_step(FloatType x, FloatType a, FloatType b) {
 
     auto t = clamp<FloatType>((x - a) / (b - a), 0, 1);
     return t * t * (3 - 2 * t);
+}
+
+template <typename Func>
+PBRT_CPU_GPU inline FloatType NewtonBisection(FloatType x0, FloatType x1, Func f,
+                                              FloatType xEps = 1e-6f, FloatType fEps = 1e-6f) {
+    // Check function endpoints for roots
+    FloatType fx0 = f(x0).first;
+    FloatType fx1 = f(x1).first;
+
+    if (std::abs(fx0) < fEps) {
+        return x0;
+    }
+    if (std::abs(fx1) < fEps) {
+        return x1;
+    }
+
+    bool startIsNegative = fx0 < 0;
+
+    // Set initial midpoint using linear approximation of _f_
+    FloatType xMid = x0 + (x1 - x0) * -fx0 / (fx1 - fx0);
+
+    while (true) {
+        // Fall back to bisection if _xMid_ is out of bounds
+        if (!(x0 < xMid && xMid < x1)) {
+            xMid = (x0 + x1) / 2;
+        }
+
+        // Evaluate function and narrow bracket range _[x0, x1]_
+        std::pair<FloatType, FloatType> fxMid = f(xMid);
+        if (startIsNegative == (fxMid.first < 0)) {
+            x0 = xMid;
+        } else {
+            x1 = xMid;
+        }
+
+        // Stop the iteration if converged
+        if ((x1 - x0) < xEps || std::abs(fxMid.first) < fEps) {
+            return xMid;
+        }
+
+        // Perform a Newton step
+        xMid -= fxMid.first / fxMid.second;
+    }
 }

@@ -14,6 +14,8 @@ class SpectrumConstantTexture;
 class SpectrumImageTexture;
 class SpectrumScaledTexture;
 
+struct TextureEvalContext;
+
 class SpectrumTexture {
   public:
     enum class Type {

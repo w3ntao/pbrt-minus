@@ -3,9 +3,7 @@
 #include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/base/integrator_base.h"
 #include "pbrt/base/ray.h"
-#include "pbrt/base/sampler.h"
 #include "pbrt/base/spectrum.h"
-#include "pbrt/euclidean_space/frame.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
 #include "pbrt/util/sampling.h"
@@ -26,7 +24,7 @@ class SurfaceNormalIntegrator {
     }
 
     PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda) const {
-        const auto shape_intersection = base->bvh->intersect(ray, Infinity);
+        const auto shape_intersection = base->intersect(ray, Infinity);
         if (!shape_intersection) {
             return SampledSpectrum(0.0);
         }

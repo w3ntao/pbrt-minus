@@ -6,7 +6,6 @@
 class Filter;
 class IndependentSampler;
 class MLTSampler;
-class PathSample;
 class StratifiedSampler;
 
 class Sampler {

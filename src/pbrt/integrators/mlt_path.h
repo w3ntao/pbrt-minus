@@ -3,15 +3,14 @@
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/macro.h"
 #include <optional>
-#include <string>
 #include <vector>
 
 class Film;
 class GreyScaleFilm;
-class IntegratorBase;
 class MLTSampler;
 class ParameterDictionary;
 class Spectrum;
+struct IntegratorBase;
 
 struct PathSample {
     Point2f p_film;
@@ -37,8 +36,8 @@ class MLTPathIntegrator {
     }
 
     PBRT_CPU_GPU
-    inline FloatType compute_luminance(const SampledSpectrum &radiance,
-                                       const SampledWavelengths &lambda) const {
+    FloatType compute_luminance(const SampledSpectrum &radiance,
+                                const SampledWavelengths &lambda) const {
         return radiance.y(lambda, cie_y);
     }
 

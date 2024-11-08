@@ -15,11 +15,11 @@
 class Film;
 class GlobalSpectra;
 class Integrator;
-class IntegratorBase;
 class MLTPathIntegrator;
 class Primitive;
 class Renderer;
 class WavefrontPathIntegrator;
+struct IntegratorBase;
 
 struct AreaLightEntity {
     std::string name;
@@ -41,7 +41,6 @@ class GraphicsState {
 };
 
 class SceneBuilder {
-  private:
     ThreadPool thread_pool;
     std::string root;
 
@@ -138,7 +137,7 @@ class SceneBuilder {
 
     void build_gpu_lights();
 
-    void build_integrator(bool wavefront);
+    void build_integrator();
 
     void parse_keyword(const std::vector<Token> &tokens);
 
@@ -176,7 +175,7 @@ class SceneBuilder {
 
     void parse_file(const std::string &_filename);
 
-    void preprocess(bool wavefront);
+    void preprocess();
 
     void render() const;
 
@@ -199,8 +198,7 @@ class SceneBuilder {
 
         builder.parse_file(input_file);
 
-        auto wavefront = !command_line_option.megakernel;
-        builder.preprocess(wavefront);
+        builder.preprocess();
 
         builder.render();
     }

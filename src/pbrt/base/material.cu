@@ -1,3 +1,4 @@
+#include "pbrt/base/interaction.h"
 #include "pbrt/base/material.h"
 #include "pbrt/bxdfs/coated_conductor_bxdf.h"
 #include "pbrt/bxdfs/conductor_bxdf.h"
@@ -161,7 +162,7 @@ const Material *Material::get_mix_material(const SurfaceInteraction *si) const {
         REPORT_FATAL_ERROR();
     }
 
-    return ((MixMaterial *)ptr)->get_material(si);
+    return static_cast<const MixMaterial *>(ptr)->get_material(si);
 }
 
 PBRT_CPU_GPU
@@ -171,7 +172,8 @@ CoatedConductorBxDF Material::get_coated_conductor_bsdf(const MaterialEvalContex
         REPORT_FATAL_ERROR();
     }
 
-    return ((CoatedConductorMaterial *)ptr)->get_coated_conductor_bsdf(ctx, lambda);
+    return static_cast<const CoatedConductorMaterial *>(ptr)->get_coated_conductor_bsdf(ctx,
+                                                                                        lambda);
 }
 
 PBRT_CPU_GPU
@@ -181,7 +183,7 @@ CoatedDiffuseBxDF Material::get_coated_diffuse_bsdf(const MaterialEvalContext &c
         REPORT_FATAL_ERROR();
     }
 
-    return ((CoatedDiffuseMaterial *)ptr)->get_coated_diffuse_bsdf(ctx, lambda);
+    return static_cast<const CoatedDiffuseMaterial *>(ptr)->get_coated_diffuse_bsdf(ctx, lambda);
 }
 
 PBRT_CPU_GPU
@@ -191,7 +193,7 @@ ConductorBxDF Material::get_conductor_bsdf(const MaterialEvalContext &ctx,
         REPORT_FATAL_ERROR();
     }
 
-    return ((ConductorMaterial *)ptr)->get_conductor_bsdf(ctx, lambda);
+    return static_cast<const ConductorMaterial *>(ptr)->get_conductor_bsdf(ctx, lambda);
 }
 
 PBRT_CPU_GPU
@@ -201,7 +203,7 @@ DielectricBxDF Material::get_dielectric_bsdf(const MaterialEvalContext &ctx,
         REPORT_FATAL_ERROR();
     }
 
-    return ((DielectricMaterial *)ptr)->get_dielectric_bsdf(ctx, lambda);
+    return static_cast<const DielectricMaterial *>(ptr)->get_dielectric_bsdf(ctx, lambda);
 }
 
 PBRT_CPU_GPU
@@ -211,5 +213,5 @@ DiffuseBxDF Material::get_diffuse_bsdf(const MaterialEvalContext &ctx,
         REPORT_FATAL_ERROR();
     }
 
-    return ((DiffuseMaterial *)ptr)->get_diffuse_bsdf(ctx, lambda);
+    return static_cast<const DiffuseMaterial *>(ptr)->get_diffuse_bsdf(ctx, lambda);
 }

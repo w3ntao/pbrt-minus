@@ -10,6 +10,7 @@
 #include "pbrt/base/shape.h"
 #include "pbrt/films/grey_scale_film.h"
 #include "pbrt/integrators/mlt_path.h"
+#include "pbrt/integrators/wavefront_path.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/scene/scene_builder.h"
 #include "pbrt/spectrum_util/global_spectra.h"
@@ -17,7 +18,6 @@
 #include "pbrt/spectrum_util/spectrum_constants_metal.h"
 #include "pbrt/textures/spectrum_constant_texture.h"
 #include "pbrt/util/std_container.h"
-#include "pbrt/wavefront_integrators/wavefront_path.h"
 #include <set>
 
 uint next_keyword_position(const std::vector<Token> &tokens, uint start) {
@@ -194,8 +194,13 @@ void SceneBuilder::build_camera() {
 
         render_from_world = camera_transform.render_from_world;
 
+        if (this->film == nullptr || integrator_base->filter == nullptr) {
+            REPORT_FATAL_ERROR();
+        }
+
         integrator_base->camera = Camera::create_perspective_camera(
-            film->get_resolution(), camera_transform, parameters, gpu_dynamic_pointers);
+            film->get_resolution(), camera_transform, this->film, integrator_base->filter,
+            parameters, gpu_dynamic_pointers);
 
         return;
     }
@@ -221,7 +226,10 @@ void SceneBuilder::build_film() {
         output_filename = p.replace_extension(".png").filename();
     }
 
-    film = Film::create_rgb_film(parameters, gpu_dynamic_pointers);
+    if (integrator_base->filter == nullptr) {
+        REPORT_FATAL_ERROR();
+    }
+    film = Film::create_rgb_film(integrator_base->filter, parameters, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::build_gpu_lights() {
@@ -257,7 +265,7 @@ void SceneBuilder::build_gpu_lights() {
     integrator_base->infinite_light_num = infinite_lights.size();
 }
 
-void SceneBuilder::build_integrator(bool wavefront) {
+void SceneBuilder::build_integrator() {
     // TODO: delete wavefront and rename path with wavefront to wavefrontpath
     build_gpu_lights();
 
@@ -278,12 +286,6 @@ void SceneBuilder::build_integrator(bool wavefront) {
         integrator_name = parameters.get_one_string("Integrator", "path");
     }
 
-    if (integrator_name == "volpath") {
-        printf("integrator `%s` not implemented, changed to path\n",
-               integrator_name.value().c_str());
-        integrator_name = "path";
-    }
-
     if (integrator_name == "mlt" || integrator_name == "mlt-path") {
         mlt_integrator = MLTPathIntegrator::create(samples_per_pixel, parameters, integrator_base,
                                                    gpu_dynamic_pointers);
@@ -292,7 +294,7 @@ void SceneBuilder::build_integrator(bool wavefront) {
 
     printf("sampler: %s\n", sampler_type.c_str());
 
-    if (integrator_name == "path" and wavefront) {
+    if (integrator_name == "wavefrontpath") {
         wavefront_integrator =
             WavefrontPathIntegrator::create(parameters, integrator_base, sampler_type,
                                             samples_per_pixel.value(), gpu_dynamic_pointers);
@@ -696,8 +698,8 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
     while (token_idx < tokens.size()) {
         const Token &first_token = tokens[token_idx];
         if (first_token.type == TokenType::WorldBegin) {
-            build_film();
             build_filter();
+            build_film();
             build_camera();
 
             graphics_state.transform = Transform::identity();
@@ -813,7 +815,7 @@ void SceneBuilder::parse_file(const std::string &_filename) {
     parse_tokens(all_tokens);
 }
 
-void SceneBuilder::preprocess(bool wavefront) {
+void SceneBuilder::preprocess() {
     integrator_base->bvh = HLBVH::create(gpu_primitives, gpu_dynamic_pointers, thread_pool);
 
     auto full_scene_bounds = integrator_base->bvh->bounds();
@@ -821,7 +823,7 @@ void SceneBuilder::preprocess(bool wavefront) {
         light->preprocess(full_scene_bounds);
     }
 
-    build_integrator(wavefront);
+    build_integrator();
 
     if (mlt_integrator != nullptr) {
         printf("Integrator: (megakernel) mlt\n");
@@ -895,7 +897,7 @@ void SceneBuilder::render() const {
                   << " with wavefront integrator.\n"
                   << std::flush;
 
-        wavefront_integrator->render(film, output_filename, false);
+        wavefront_integrator->render(film, output_filename, true);
         // TODO: make preview a command line option
 
         film->write_to_png(output_filename);

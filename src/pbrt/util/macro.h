@@ -12,6 +12,9 @@ using FloatType = double;
 using FloatType = float;
 #endif
 
+#define FLAG_COLORFUL_PRINT_RED_START "\033[0;31m"
+#define FLAG_COLORFUL_PRINT_END "\033[0m\n"
+
 namespace HIDDEN {
 static void _check_cuda_error(cudaError_t error_code, char const *const func,
                               const char *const file, int const line) {

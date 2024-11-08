@@ -18,7 +18,8 @@ class ConductorMaterial {
     void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
-    ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda);
+    ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,
+                                     SampledWavelengths &lambda) const;
 
   private:
     const SpectrumTexture *eta;

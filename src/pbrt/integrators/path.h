@@ -1,10 +1,11 @@
 #pragma once
 
-#include "pbrt/light_samplers/power_light_sampler.h"
-#include "pbrt/light_samplers/uniform_light_sampler.h"
+#include "pbrt/util/macro.h"
 
-class IntegratorBase;
+class BSDF;
 class Sampler;
+class ParameterDictionary;
+struct IntegratorBase;
 
 class PathIntegrator {
   public:
@@ -24,7 +25,7 @@ class PathIntegrator {
                                             Sampler *sampler);
 
     PBRT_GPU
-    SampledSpectrum li(const Ray &primary_ray, SampledWavelengths &lambda, Sampler *sampler);
+    SampledSpectrum li(const Ray &primary_ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
   private:
     const IntegratorBase *base;

@@ -9,9 +9,9 @@ class Point2 {
   public:
     T x, y;
 
-    PBRT_CPU_GPU Point2(){};
+    PBRT_CPU_GPU Point2() {};
 
-    PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y){};
+    PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y) {};
 
     PBRT_CPU_GPU
     explicit Point2(const Vector2<T> v) : x(v.x), y(v.y) {}
@@ -52,48 +52,48 @@ class Point2 {
         return !((*this) == p);
     }
 
-    PBRT_CPU_GPU Point2 operator+(const Point2 &p) const {
-        return Point2(x + p.x, y + p.y);
+    PBRT_CPU_GPU Point2<T> operator+(const Point2<T> &p) const {
+        return Point2<T>(x + p.x, y + p.y);
     }
 
-    PBRT_CPU_GPU Point2 operator+(const Vector2<T> &v) const {
-        return Point2(x + v.x, y + v.y);
+    PBRT_CPU_GPU Point2<T> operator+(const Vector2<T> &v) const {
+        return Point2<T>(x + v.x, y + v.y);
     }
 
     PBRT_CPU_GPU Vector2<T> operator-(const Point2<T> &right) {
         return Vector2<T>(x - right.x, y - right.y);
     }
 
-    PBRT_CPU_GPU Point2 operator-(const Point2 &p) const {
-        return Point2(x - p.x, y - p.y);
+    PBRT_CPU_GPU Point2<T> operator-(const Point2<T> &p) const {
+        return Point2<T>(x - p.x, y - p.y);
     }
 
-    PBRT_CPU_GPU Point2 operator-(const Vector2f &v) const {
-        return Point2(x - v.x, y - v.y);
+    PBRT_CPU_GPU Point2<T> operator-(const Vector2<T> &v) const {
+        return Point2<T>(x - v.x, y - v.y);
     }
 
-    PBRT_CPU_GPU Point2 operator*(T factor) const {
-        return Point2(x * factor, y * factor);
+    PBRT_CPU_GPU Point2<T> operator*(T factor) const {
+        return Point2<T>(x * factor, y * factor);
     }
 
     PBRT_CPU_GPU void operator*=(T factor) {
         *this = *this * factor;
     }
 
-    PBRT_CPU_GPU Point2 operator/(T divisor) const {
-        return Point2(x / divisor, y / divisor);
+    PBRT_CPU_GPU Point2<T> operator/(T divisor) const {
+        return Point2<T>(x / divisor, y / divisor);
     }
 
     PBRT_CPU_GPU void operator/=(T divisor) {
         *this = *this / divisor;
     }
 
-    PBRT_CPU_GPU Point2 min(const Point2 &p) const {
-        return Point2(std::min(x, p.x), std::min(y, p.y));
+    PBRT_CPU_GPU Point2<T> min(const Point2<T> &p) const {
+        return Point2<T>(std::min(x, p.x), std::min(y, p.y));
     }
 
-    PBRT_CPU_GPU Point2 max(const Point2 &p) const {
-        return Point2(std::max(x, p.x), std::max(y, p.y));
+    PBRT_CPU_GPU Point2<T> max(const Point2<T> &p) const {
+        return Point2<T>(std::max(x, p.x), std::max(y, p.y));
     }
 
     PBRT_CPU_GPU Point2<int> floor() const {
@@ -101,11 +101,11 @@ class Point2 {
     }
 
     PBRT_CPU_GPU Point2<FloatType> to_point2f() const {
-        return Point2<FloatType>(FloatType(x), FloatType(y));
+        return {FloatType(x), FloatType(y)};
     }
 
     PBRT_CPU_GPU Vector2<FloatType> to_vector2f() const {
-        return Vector2<FloatType>(FloatType(x), FloatType(y));
+        return {FloatType(x), FloatType(y)};
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Point2 &p) {

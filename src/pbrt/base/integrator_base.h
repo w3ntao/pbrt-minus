@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
+#include <cuda/std/optional>
 
 class Camera;
 class Filter;
@@ -8,6 +9,8 @@ class HLBVH;
 class Light;
 class UniformLightSampler;
 class PowerLightSampler;
+
+struct ShapeIntersection;
 
 class Ray;
 class Interaction;
@@ -24,12 +27,6 @@ struct IntegratorBase {
     uint infinite_light_num;
 
     const PowerLightSampler *light_sampler;
-
-    PBRT_GPU
-    bool fast_intersect(const Ray &ray, FloatType t_max) const;
-
-    PBRT_GPU
-    bool unoccluded(const Interaction &p0, const Interaction &p1) const;
 
     void init() {
         bvh = nullptr;
@@ -59,4 +56,16 @@ struct IntegratorBase {
 
         return true;
     }
+
+    PBRT_GPU
+    bool fast_intersect(const Ray &ray, FloatType t_max) const;
+
+    PBRT_GPU
+    bool unoccluded(const Interaction &p0, const Interaction &p1) const;
+
+    PBRT_GPU
+    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+
+    PBRT_GPU
+    SampledSpectrum tr(const Interaction &p0, const Interaction &p1) const;
 };

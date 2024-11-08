@@ -216,6 +216,20 @@ inline Vector3f sample_cosine_hemisphere(Point2f u) {
 }
 
 PBRT_CPU_GPU
+inline Vector3f SampleUniformCone(Point2f u, FloatType cosThetaMax) {
+    FloatType cosTheta = (1 - u[0]) + u[0] * cosThetaMax;
+    FloatType sinTheta = safe_sqrt(1 - sqr(cosTheta));
+
+    FloatType phi = u[1] * 2 * compute_pi();
+    return SphericalDirection(sinTheta, cosTheta, phi);
+}
+
+PBRT_CPU_GPU
+inline FloatType UniformConePDF(FloatType cosThetaMax) {
+    return 1.0 / (2.0 * compute_pi() * (1.0 - cosThetaMax));
+}
+
+PBRT_CPU_GPU
 inline FloatType visible_wavelengths_pdf(FloatType lambda) {
     if (lambda < LAMBDA_MIN || lambda > LAMBDA_MAX) {
         return 0;
@@ -247,6 +261,26 @@ inline FloatType power_heuristic(int nf, FloatType fPdf, int ng, FloatType gPdf)
 }
 
 PBRT_CPU_GPU
+inline FloatType SmoothStepPDF(FloatType x, FloatType a, FloatType b) {
+    if (x < a || x > b) {
+        return 0;
+    }
+
+    return (2 / (b - a)) * smooth_step(x, a, b);
+}
+
+PBRT_CPU_GPU
+inline FloatType SampleSmoothStep(FloatType u, FloatType a, FloatType b) {
+    auto cdfMinusU = [=](FloatType x) -> std::pair<FloatType, FloatType> {
+        FloatType t = (x - a) / (b - a);
+        FloatType P = 2 * pstd::pow<3>(t) - pstd::pow<4>(t);
+        FloatType PDeriv = SmoothStepPDF(x, a, b);
+        return {P - u, PDeriv};
+    };
+    return NewtonBisection(a, b, cdfMinusU);
+}
+
+PBRT_CPU_GPU
 Vector3f SampleHenyeyGreenstein(Vector3f wo, FloatType g, Point2f u, FloatType *pdf);
 
 PBRT_CPU_GPU
@@ -258,3 +292,44 @@ Point2f EqualAreaSphereToSquare(Vector3f v);
 
 PBRT_CPU_GPU
 Vector3f EqualAreaSquareToSphere(Point2f p);
+
+PBRT_CPU_GPU
+inline int SampleDiscrete(FloatType *weights, uint num_weights, FloatType u,
+                          FloatType *pmf = nullptr, FloatType *uRemapped = nullptr) {
+    // Handle empty _weights_ for discrete sampling
+    if (num_weights == 0) {
+        if (pmf) {
+            *pmf = 0;
+        }
+        return -1;
+    }
+
+    // Compute sum of _weights_
+    FloatType sumWeights = 0;
+    for (uint idx = 0; idx < num_weights; ++idx) {
+        sumWeights += weights[idx];
+    }
+
+    // Compute rescaled $u'$ sample
+    FloatType up = u * sumWeights;
+    if (up == sumWeights) {
+        up = next_float_down(up);
+    }
+
+    // Find offset in _weights_ corresponding to $u'$
+    int offset = 0;
+    FloatType sum = 0;
+    while (sum + weights[offset] <= up) {
+        sum += weights[offset++];
+    }
+
+    // Compute PMF and remapped _u_ value, if necessary
+    if (pmf) {
+        *pmf = weights[offset] / sumWeights;
+    }
+    if (uRemapped) {
+        *uRemapped = std::min((up - sum) / weights[offset], OneMinusEpsilon);
+    }
+
+    return offset;
+}

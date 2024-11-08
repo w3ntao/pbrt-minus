@@ -120,7 +120,7 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
 PBRT_CPU_GPU
 SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     if (eta == 1 || mfDistrib.effectively_smooth()) {
-        return SampledSpectrum(0.f);
+        return SampledSpectrum(0.0);
     }
 
     // Evaluate rough dielectric BSDF
@@ -137,14 +137,14 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
     Vector3f wm = wi * etap + wo;
 
     if (cosTheta_i == 0 || cosTheta_o == 0 || wm.squared_length() == 0) {
-        return {};
+        return SampledSpectrum(0.0);
     }
 
     wm = wm.face_forward(Vector3f(0, 0, 1)).normalize();
 
     // Discard backfacing microfacets
     if (wm.dot(wi) * cosTheta_i < 0 || wm.dot(wo) * cosTheta_o < 0) {
-        return {};
+        return SampledSpectrum(0.0);
     }
 
     FloatType F = FrDielectric(wo.dot(wm), eta);

@@ -1,11 +1,15 @@
 #pragma once
 
+#include "pbrt/base/interaction.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
+#include <cuda/std/optional>
 #include <vector>
 
+class Film;
+class Filter;
 class Sampler;
 class ParameterDictionary;
 class PerspectiveCamera;
@@ -43,6 +47,10 @@ struct CameraTransform {
             world_from_render = Transform::identity();
             break;
         }
+
+        default: {
+            REPORT_FATAL_ERROR();
+        }
         }
 
         render_from_world = world_from_render.inverse();
@@ -59,6 +67,22 @@ struct CameraSample {
     PBRT_CPU_GPU
     CameraSample(const Point2f _p_film, FloatType _filter_weight)
         : p_film(_p_film), filter_weight(_filter_weight) {}
+};
+
+// CameraWiSample Definition
+struct CameraWiSample {
+    // CameraWiSample Public Methods
+    CameraWiSample() = default;
+    PBRT_CPU_GPU
+    CameraWiSample(const SampledSpectrum &Wi, const Vector3f &wi, FloatType pdf, Point2f pRaster,
+                   const Interaction &pRef, const Interaction &pLens)
+        : Wi(Wi), wi(wi), pdf(pdf), pRaster(pRaster), pRef(pRef), pLens(pLens) {}
+
+    SampledSpectrum Wi;
+    Vector3f wi;
+    FloatType pdf;
+    Point2f pRaster;
+    Interaction pRef, pLens;
 };
 
 // CameraRay Definition
@@ -129,6 +153,7 @@ class Camera {
 
     static Camera *create_perspective_camera(const Point2i &resolution,
                                              const CameraTransform &camera_transform,
+                                             const Film *film, const Filter *filter,
                                              const ParameterDictionary &parameters,
                                              std::vector<void *> &gpu_dynamic_pointers);
 
@@ -145,6 +170,13 @@ class Camera {
                             Vector3f *dpdx, Vector3f *dpdy) const {
         get_camerabase()->approximate_dp_dxy(p, n, samples_per_pixel, dpdx, dpdy);
     }
+
+    PBRT_CPU_GPU
+    void pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
+
+    PBRT_GPU
+    cuda::std::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,
+                                                  SampledWavelengths &lambda) const;
 
   private:
     Type type;

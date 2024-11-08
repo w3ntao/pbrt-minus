@@ -16,6 +16,11 @@ class PowerLightSampler {
                                            std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_GPU
+    const Light *get_light_by_idx(int idx) const {
+        return lights[idx];
+    }
+
+    PBRT_GPU
     cuda::std::optional<SampledLight> sample(FloatType u) const;
 
     PBRT_GPU
@@ -29,10 +34,12 @@ class PowerLightSampler {
         return pmf(light);
     }
 
+    uint light_num;
+
   private:
     const Light **lights;
     const Distribution1D *lights_power_distribution;
-    const HashMap *light_ptr_to_idx;
 
-    uint light_num;
+    // TODO: rewrite Distribution1D with AliasTable: Ray Tracing Gem 2: chapter 21
+    const HashMap *light_ptr_to_idx;
 };

@@ -3,6 +3,7 @@
 #include "pbrt/base/ray.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/integrators/ambient_occlusion.h"
+#include "pbrt/integrators/bdpt.h"
 #include "pbrt/integrators/path.h"
 #include "pbrt/integrators/random_walk.h"
 #include "pbrt/integrators/simple_path.h"
@@ -32,7 +33,7 @@ static void evaluate_pixel_sample(Film *film, const Point2i p_pixel, const uint 
 
         auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, local_sampler);
 
-        if (DEBUG_MODE && radiance_l.has_nan()) {
+        if constexpr (DEBUG_MODE && radiance_l.has_nan()) {
             printf("%s(): pixel(%d, %d), samples %u: has NAN\n", __func__, p_pixel.x, p_pixel.y, i);
         }
 
@@ -72,6 +73,14 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
         return integrator;
     }
 
+    if (integrator_name == "bdpt") {
+        auto bdpt_integrator =
+            BDPTIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
+
+        integrator->init(bdpt_integrator);
+        return integrator;
+    }
+
     if (integrator_name == "path") {
         auto path_integrator =
             PathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
@@ -106,6 +115,11 @@ void Integrator::init(const AmbientOcclusionIntegrator *ambient_occlusion_integr
     ptr = ambient_occlusion_integrator;
 }
 
+void Integrator::init(const BDPTIntegrator *bdpt_integrator) {
+    type = Type::bdpt;
+    ptr = bdpt_integrator;
+}
+
 void Integrator::init(const PathIntegrator *path_integrator) {
     type = Type::path;
     ptr = path_integrator;
@@ -129,24 +143,28 @@ void Integrator::init(const SimplePathIntegrator *simple_path_integrator) {
 PBRT_GPU
 SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const {
     switch (type) {
-    case (Type::ambient_occlusion): {
-        return ((AmbientOcclusionIntegrator *)ptr)->li(ray, lambda, sampler);
+    case Type::ambient_occlusion: {
+        return static_cast<const AmbientOcclusionIntegrator *>(ptr)->li(ray, lambda, sampler);
     }
 
-    case (Type::path): {
-        return ((PathIntegrator *)ptr)->li(ray, lambda, sampler);
+    case Type::bdpt: {
+        return static_cast<const BDPTIntegrator *>(ptr)->li(ray, lambda, sampler);
     }
 
-    case (Type::random_walk): {
-        return ((RandomWalkIntegrator *)ptr)->li(ray, lambda, sampler);
+    case Type::path: {
+        return static_cast<const PathIntegrator *>(ptr)->li(ray, lambda, sampler);
     }
 
-    case (Type::simple_path): {
-        return ((SimplePathIntegrator *)ptr)->li(ray, lambda, sampler);
+    case Type::random_walk: {
+        return static_cast<const RandomWalkIntegrator *>(ptr)->li(ray, lambda, sampler);
     }
 
-    case (Type::surface_normal): {
-        return ((SurfaceNormalIntegrator *)ptr)->li(ray, lambda);
+    case Type::simple_path: {
+        return static_cast<const SimplePathIntegrator *>(ptr)->li(ray, lambda, sampler);
+    }
+
+    case Type::surface_normal: {
+        return static_cast<const SurfaceNormalIntegrator *>(ptr)->li(ray, lambda);
     }
     }
 
@@ -162,8 +180,8 @@ void Integrator::render(Film *film, const std::string &sampler_type, uint sample
     auto samplers = Sampler::create(sampler_type, samples_per_pixel,
                                     film_resolution.x * film_resolution.y, gpu_dynamic_pointers);
 
-    uint thread_width = 8;
-    uint thread_height = 8;
+    const uint thread_width = 8;
+    const uint thread_height = 8;
 
     std::cout << " (samples per pixel: " << samples_per_pixel << ") "
               << "in " << thread_width << "x" << thread_height << " blocks.\n"

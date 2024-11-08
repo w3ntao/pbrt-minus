@@ -28,6 +28,13 @@ class SpotLight : public LightBase {
                                                  SampledWavelengths &lambda) const;
 
     PBRT_GPU
+    cuda::std::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
+                                                 SampledWavelengths &lambda) const;
+
+    PBRT_GPU
+    void pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
+
+    PBRT_GPU
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf = false) const;
     PBRT_CPU_GPU

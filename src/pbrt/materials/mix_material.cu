@@ -1,3 +1,4 @@
+#include "pbrt/base/interaction.h"
 #include "pbrt/materials/mix_material.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/util/hash.h"

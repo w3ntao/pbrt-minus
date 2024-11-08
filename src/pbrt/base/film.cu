@@ -4,13 +4,13 @@
 #include "pbrt/spectrum_util/color_encoding.h"
 #include <vector>
 
-Film *Film::create_rgb_film(const ParameterDictionary &parameters,
+Film *Film::create_rgb_film(const Filter *filter, const ParameterDictionary &parameters,
                             std::vector<void *> &gpu_dynamic_pointers) {
     Film *film;
     CHECK_CUDA_ERROR(cudaMallocManaged(&film, sizeof(Film)));
     gpu_dynamic_pointers.push_back(film);
 
-    auto rgb_film = RGBFilm::create(parameters, gpu_dynamic_pointers);
+    auto rgb_film = RGBFilm::create(filter, parameters, gpu_dynamic_pointers);
     film->init(rgb_film);
 
     return film;
@@ -25,7 +25,19 @@ PBRT_CPU_GPU
 Point2i Film::get_resolution() const {
     switch (type) {
     case (Type::rgb): {
-        return static_cast<RGBFilm *>(ptr)->get_resolution();
+        return static_cast<const RGBFilm *>(ptr)->get_resolution();
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return {};
+}
+
+PBRT_CPU_GPU
+Bounds2f Film::sample_bounds() const {
+    switch (type) {
+    case (Type::rgb): {
+        return static_cast<const RGBFilm *>(ptr)->sample_bounds();
     }
     }
 
@@ -58,10 +70,10 @@ void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
 }
 
 void Film::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                     const SampledWavelengths &lambda, FloatType weight, const Filter *filter) {
+                     const SampledWavelengths &lambda, FloatType weight) {
     switch (type) {
     case (Type::rgb): {
-        return static_cast<RGBFilm *>(ptr)->add_splat(p_film, radiance_l, lambda, weight, filter);
+        return static_cast<RGBFilm *>(ptr)->add_splat(p_film, radiance_l, lambda, weight);
     }
     }
 
@@ -107,8 +119,9 @@ void Film::write_to_png(const std::string &filename) const {
     }
 
     if (nan_pixels > 0) {
-        printf("%s(): %d/%d (roughly 1/%.1f) pixel has NAN component\n", __func__, nan_pixels,
-               width * height, FloatType(width * height) / nan_pixels);
+        printf("%sFilm::%s(): %d/%d (%.2f%) pixels with NAN component%s",
+               FLAG_COLORFUL_PRINT_RED_START, __func__, nan_pixels, width * height,
+               double(nan_pixels) / (width * height) * 100, FLAG_COLORFUL_PRINT_END);
     }
 
     // Encode the image

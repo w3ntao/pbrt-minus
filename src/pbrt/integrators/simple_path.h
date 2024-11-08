@@ -14,7 +14,7 @@ class SimplePathIntegrator {
     void init(const IntegratorBase *_base, uint _max_depth);
 
     PBRT_GPU
-    SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler);
+    SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
   private:
     const IntegratorBase *base;

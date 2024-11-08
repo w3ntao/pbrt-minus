@@ -15,13 +15,16 @@ class Film {
         rgb,
     };
 
-    static Film *create_rgb_film(const ParameterDictionary &parameters,
+    static Film *create_rgb_film(const Filter *filter, const ParameterDictionary &parameters,
                                  std::vector<void *> &gpu_dynamic_pointers);
 
     void init(RGBFilm *rgb_film);
 
     PBRT_CPU_GPU
     Point2i get_resolution() const;
+
+    PBRT_CPU_GPU
+    Bounds2f sample_bounds() const;
 
     PBRT_CPU_GPU
     void add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
@@ -33,7 +36,7 @@ class Film {
 
     // CPU only
     void add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                   const SampledWavelengths &lambda, FloatType weight, const Filter *filter);
+                   const SampledWavelengths &lambda, FloatType weight);
 
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i &p) const;

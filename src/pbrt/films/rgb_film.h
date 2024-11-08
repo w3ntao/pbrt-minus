@@ -22,16 +22,19 @@ struct Pixel {
 
 class RGBFilm {
   public:
-    static RGBFilm *create(const ParameterDictionary &parameters,
+    static RGBFilm *create(const Filter *filter, const ParameterDictionary &parameters,
                            std::vector<void *> &gpu_dynamic_pointers);
 
-    void init(Pixel *_pixels, const PixelSensor *_sensor, const Point2i &_resolution,
-              const RGBColorSpace *rgb_color_space);
+    void init(Pixel *_pixels, const Filter *_filter, const PixelSensor *_sensor,
+              const Point2i &_resolution, const RGBColorSpace *rgb_color_space);
 
     PBRT_CPU_GPU
     Point2i get_resolution() const {
         return resolution;
     }
+
+    PBRT_CPU_GPU
+    Bounds2f sample_bounds() const;
 
     PBRT_CPU_GPU
     void add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
@@ -46,7 +49,7 @@ class RGBFilm {
     }
 
     void add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                   const SampledWavelengths &lambda, FloatType weight, const Filter *filter);
+                   const SampledWavelengths &lambda, FloatType weight);
 
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i p) const;
@@ -56,6 +59,8 @@ class RGBFilm {
     const PixelSensor *sensor;
     Point2i resolution;
     Bounds2i pixel_bound;
+
+    const Filter *filter;
 
     SquareMatrix<3> output_rgb_from_sensor_rgb;
 };

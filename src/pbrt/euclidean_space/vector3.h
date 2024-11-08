@@ -61,9 +61,9 @@ class Vector3 {
     }
 
     PBRT_CPU_GPU void operator+=(const Vector3 &v) {
-        this->x += v.x;
-        this->y += v.y;
-        this->z += v.z;
+        x += v.x;
+        y += v.y;
+        z += v.z;
     }
 
     PBRT_CPU_GPU Vector3 operator-() const {
@@ -78,20 +78,26 @@ class Vector3 {
         return Vector3(x * factor, y * factor, z * factor);
     }
 
-    PBRT_CPU_GPU friend Vector3 operator*(T factor, const Vector3 &v) {
+    PBRT_CPU_GPU
+    friend Vector3 operator*(T factor, const Vector3 &v) {
         return v * factor;
     }
 
-    PBRT_CPU_GPU Vector3 operator*=(FloatType v) {
-        this->x += v;
-        this->y += v;
-        this->z += v;
-
-        return *this;
+    PBRT_CPU_GPU
+    void operator*=(FloatType v) {
+        x *= v;
+        y *= v;
+        z *= v;
     }
 
-    PBRT_CPU_GPU Vector3 operator/(T divisor) const {
+    PBRT_CPU_GPU
+    Vector3 operator/(T divisor) const {
         return Vector3(x / divisor, y / divisor, z / divisor);
+    }
+
+    PBRT_CPU_GPU
+    void operator/=(T divisor) {
+        *this = *this / divisor;
     }
 
     PBRT_CPU_GPU uint max_component_index() const {

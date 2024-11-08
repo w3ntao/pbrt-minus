@@ -14,7 +14,7 @@ void RandomWalkIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
 PBRT_GPU
 SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWavelengths &lambda,
                                                      Sampler *sampler, uint depth) const {
-    auto si = base->bvh->intersect(ray, Infinity);
+    auto si = base->intersect(ray, Infinity);
     if (!si) {
         return SampledSpectrum(0.0);
     }
@@ -33,7 +33,9 @@ SampledSpectrum RandomWalkIntegrator::li_random_walk(const Ray &ray, SampledWave
     if (isect.material->get_material_type() == Material::Type::diffuse) {
         BSDF bsdf;
         DiffuseBxDF diffuse_bxdf;
-        isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
+
+        REPORT_FATAL_ERROR();
+        // isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
 
         // Randomly sample direction leaving surface for random walk
         Point2f u = sampler->get_2d();

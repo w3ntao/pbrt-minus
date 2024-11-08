@@ -4,10 +4,6 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
-#include "pbrt/bxdfs/coated_diffuse_bxdf.h"
-#include "pbrt/bxdfs/conductor_bxdf.h"
-#include "pbrt/bxdfs/dielectric_bxdf.h"
-#include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/integrators/simple_path.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/lights/diffuse_area_light.h"
@@ -32,7 +28,8 @@ void SimplePathIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
 }
 
 PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const Ray &primary_ray,
-                                                  SampledWavelengths &lambda, Sampler *sampler) {
+                                                  SampledWavelengths &lambda,
+                                                  Sampler *sampler) const {
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
     bool specular_bounce = true;
@@ -41,13 +38,10 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const Ray &primary_ray,
     auto ray = primary_ray;
 
     BSDF bsdf;
-    CoatedDiffuseBxDF coated_diffuse_bxdf;
-    ConductorBxDF conductor_bxdf;
-    DielectricBxDF dielectric_bxdf;
-    DiffuseBxDF diffuse_bxdf;
+    FullBxDF full_bxdf;
 
     while (beta.is_positive()) {
-        auto si = base->bvh->intersect(ray, Infinity);
+        auto si = base->intersect(ray, Infinity);
 
         if (!si) {
             if (specular_bounce) {
@@ -73,33 +67,8 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const Ray &primary_ray,
             break;
         }
 
-        switch (isect.material->get_material_type()) {
-
-        case (Material::Type::coated_diffuse): {
-            isect.init_coated_diffuse_bsdf(bsdf, coated_diffuse_bxdf, ray, lambda, base->camera,
-                                           sampler);
-            break;
-        }
-
-        case (Material::Type::conductor): {
-            isect.init_conductor_bsdf(bsdf, conductor_bxdf, ray, lambda, base->camera, sampler);
-            break;
-        }
-
-        case (Material::Type::dielectric): {
-            isect.init_dielectric_bsdf(bsdf, dielectric_bxdf, ray, lambda, base->camera, sampler);
-            break;
-        }
-
-        case (Material::Type::diffuse): {
-            isect.init_diffuse_bsdf(bsdf, diffuse_bxdf, ray, lambda, base->camera, sampler);
-            break;
-        }
-
-        default: {
-            REPORT_FATAL_ERROR();
-        }
-        }
+        isect.init_bsdf(bsdf, full_bxdf, ray, lambda, base->camera,
+                        sampler->get_samples_per_pixel());
 
         // Sample direct illumination if _sampleLights_ is true
         auto sampled_light = base->light_sampler->sample(sampler->get_1d());

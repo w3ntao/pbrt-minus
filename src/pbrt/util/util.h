@@ -27,4 +27,23 @@ PBRT_CPU_GPU inline double copysign(double mag, double sign) {
 #endif
 }
 
+template <int n>
+PBRT_CPU_GPU constexpr float pow(float v) {
+    if constexpr (n < 0) {
+        return 1 / pow<-n>(v);
+    }
+
+    float n2 = pow<n / 2>(v);
+    return n2 * n2 * pow<n & 1>(v);
+}
+
+template <>
+PBRT_CPU_GPU constexpr float pow<1>(float v) {
+    return v;
+}
+template <>
+PBRT_CPU_GPU constexpr float pow<0>(float v) {
+    return 1;
+}
+
 } // namespace pstd

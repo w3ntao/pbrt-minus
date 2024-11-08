@@ -4,20 +4,16 @@
 #include "pbrt/base/light.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
-#include "pbrt/bxdfs/coated_conductor_bxdf.h"
-#include "pbrt/bxdfs/coated_diffuse_bxdf.h"
-#include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/gui/gl_object.h"
+#include "pbrt/integrators/wavefront_path.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/samplers/independent.h"
 #include "pbrt/samplers/stratified.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/color_encoding.h"
-#include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/util/basic_math.h"
-#include "pbrt/wavefront_integrators/wavefront_path.h"
 
 const uint PATH_POOL_SIZE = 2 * 1024 * 1024;
 
@@ -368,48 +364,8 @@ __global__ void gpu_evaluate_material(const WavefrontPathIntegrator *integrator,
 
     auto &isect = path_state->shape_intersections[path_idx].interaction;
 
-    if (DEBUG_MODE && isect.material->get_material_type() != material_type) {
-        REPORT_FATAL_ERROR();
-    }
-
-    switch (material_type) {
-    case (Material::Type::coated_conductor): {
-        isect.init_coated_conductor_bsdf(path_state->bsdf[path_idx],
-                                         path_state->coated_conductor_bxdf[path_idx], ray, lambda,
-                                         integrator->base->camera, sampler);
-        break;
-    }
-
-    case (Material::Type::coated_diffuse): {
-        isect.init_coated_diffuse_bsdf(path_state->bsdf[path_idx],
-                                       path_state->coated_diffuse_bxdf[path_idx], ray, lambda,
-                                       integrator->base->camera, sampler);
-        break;
-    }
-
-    case (Material::Type::conductor): {
-        isect.init_conductor_bsdf(path_state->bsdf[path_idx], path_state->conductor_bxdf[path_idx],
-                                  ray, lambda, integrator->base->camera, sampler);
-        break;
-    }
-
-    case (Material::Type::dielectric): {
-        isect.init_dielectric_bsdf(path_state->bsdf[path_idx],
-                                   path_state->dielectric_bxdf[path_idx], ray, lambda,
-                                   integrator->base->camera, sampler);
-        break;
-    }
-
-    case (Material::Type::diffuse): {
-        isect.init_diffuse_bsdf(path_state->bsdf[path_idx], path_state->diffuse_bxdf[path_idx], ray,
-                                lambda, integrator->base->camera, sampler);
-        break;
-    }
-
-    default: {
-        REPORT_FATAL_ERROR();
-    }
-    }
+    isect.init_bsdf(path_state->bsdf[path_idx], path_state->full_bxdf[path_idx], ray, lambda,
+                    integrator->base->camera, sampler->get_samples_per_pixel());
 
     integrator->sample_bsdf(path_idx, path_state);
 
@@ -428,7 +384,7 @@ __global__ void ray_cast(const WavefrontPathIntegrator *integrator, PathState *p
 
     const auto camera_ray = path_state->camera_rays[path_idx];
 
-    auto intersection = integrator->base->bvh->intersect(camera_ray.ray, Infinity);
+    auto intersection = integrator->base->intersect(camera_ray.ray, Infinity);
 
     path_state->intersected[path_idx] = intersection.has_value();
 
@@ -557,14 +513,7 @@ void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
     CHECK_CUDA_ERROR(cudaMallocManaged(&sample_indices, sizeof(uint) * PATH_POOL_SIZE));
 
     CHECK_CUDA_ERROR(cudaMallocManaged(&bsdf, sizeof(BSDF) * PATH_POOL_SIZE));
-
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&coated_conductor_bxdf, sizeof(CoatedConductorBxDF) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&coated_diffuse_bxdf, sizeof(CoatedDiffuseBxDF) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&conductor_bxdf, sizeof(ConductorBxDF) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&dielectric_bxdf, sizeof(DielectricBxDF) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_bxdf, sizeof(DiffuseBxDF) * PATH_POOL_SIZE));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&full_bxdf, sizeof(FullBxDF) * PATH_POOL_SIZE));
 
     CHECK_CUDA_ERROR(cudaMallocManaged(&mis_parameters, sizeof(MISParameter) * PATH_POOL_SIZE));
 
@@ -573,8 +522,7 @@ void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
     for (auto ptr :
          std::vector<void *>({camera_samples, camera_rays, lambdas, L, beta, shape_intersections,
                               path_length, intersected, finished, pixel_indices, sample_indices,
-                              bsdf, coated_conductor_bxdf, coated_diffuse_bxdf, conductor_bxdf,
-                              dielectric_bxdf, diffuse_bxdf, mis_parameters, samplers})) {
+                              bsdf, full_bxdf, mis_parameters, samplers})) {
         gpu_dynamic_pointers.push_back(ptr);
     }
 
@@ -702,7 +650,7 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
 
     // Return light's contribution to reflected radiance
     FloatType pdf_light = sampled_light->p * ls->pdf;
-    if (is_deltaLight(light->get_light_type())) {
+    if (is_delta_light(light->get_light_type())) {
         return ls->l * f / pdf_light;
     }
 

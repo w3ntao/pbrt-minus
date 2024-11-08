@@ -1,11 +1,14 @@
 #pragma once
 
+#include "material.h"
 #include "pbrt/base/bsdf.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/point3fi.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
+
+#include <pbrt/bxdfs/full_bxdf.h>
 
 class BSDF;
 class Camera;
@@ -26,17 +29,26 @@ class Interaction {
     Point2f uv;
 
     PBRT_CPU_GPU
+    Interaction()
+        : pi(Point3fi(NAN, NAN, NAN)), wo(Vector3f(NAN, NAN, NAN)), n(Normal3f(0, 0, 0)),
+          uv(Point2f(NAN, NAN)) {}
+
+    PBRT_CPU_GPU
     explicit Interaction(const Point3fi &_pi, const Normal3f &_n, const Point2f &_uv,
-                         const Vector3f &wo)
-        : pi(_pi), n(_n), uv(_uv), wo(wo.normalize()) {}
+                         const Vector3f &_wo)
+        : pi(_pi), n(_n), uv(_uv), wo(_wo.normalize()) {}
 
     PBRT_CPU_GPU
     explicit Interaction(const Point3fi &_pi, const Normal3f &_n, const Point2f &_uv)
         : pi(_pi), n(_n), uv(_uv), wo(Vector3f(NAN, NAN, NAN)) {}
 
     PBRT_CPU_GPU
-    Interaction(const Point3f &p)
-        : pi(p), n(Normal3f(0, 0, 0)), uv(Point2f(NAN, NAN)), wo(Vector3f(NAN, NAN, NAN)) {}
+    Interaction(const Point3f &_p)
+        : pi(_p), n(Normal3f(0, 0, 0)), uv(Point2f(NAN, NAN)), wo(Vector3f(NAN, NAN, NAN)) {}
+
+    PBRT_CPU_GPU
+    Interaction(const Point3f &_p, const Normal3f &_n)
+        : pi(_p), n(_n), uv(Point2f(NAN, NAN)), wo(Vector3f(NAN, NAN, NAN)) {}
 
     PBRT_CPU_GPU
     Point3f p() const {
@@ -44,12 +56,17 @@ class Interaction {
     }
 
     PBRT_CPU_GPU
-    Point3f offset_ray_origin(const Vector3f &w) const {
-        return Ray::offset_ray_origin(pi, n, w);
+    bool is_surface_interaction() const {
+        return !n.has_nan() && n != Normal3f(0, 0, 0);
     }
 
-    PBRT_GPU Ray spawn_ray(const Vector3f &d) const {
-        return Ray(offset_ray_origin(d), d);
+    PBRT_CPU_GPU
+    Point3f offset_ray_origin(const Vector3f &_w) const {
+        return Ray::offset_ray_origin(pi, n, _w);
+    }
+
+    PBRT_GPU Ray spawn_ray(const Vector3f &_d) const {
+        return Ray(offset_ray_origin(_d), _d);
     }
 
     PBRT_CPU_GPU
@@ -80,7 +97,7 @@ class SurfaceInteraction : public Interaction {
     const Light *area_light;
     PBRT_CPU_GPU
     SurfaceInteraction()
-        : Interaction(Point3fi(NAN, NAN, NAN), Normal3f(NAN, NAN, NAN), Point2f(NAN, NAN),
+        : Interaction(Point3fi(NAN, NAN, NAN), Normal3f(0, 0, 0), Point2f(NAN, NAN),
                       Vector3f(NAN, NAN, NAN)),
           dpdu(Vector3f(NAN, NAN, NAN)), dpdv(Vector3f(NAN, NAN, NAN)),
           dndu(Vector3f(NAN, NAN, NAN)), dndv(Vector3f(NAN, NAN, NAN)), material(nullptr),
@@ -107,34 +124,40 @@ class SurfaceInteraction : public Interaction {
     }
 
     PBRT_GPU
-    void compute_differentials(const Ray &ray, const Camera *camera, int samples_per_pixel);
+    void compute_differentials(const Ray &ray, const Camera *camera, uint samples_per_pixel);
 
     PBRT_GPU
     void set_intersection_properties(const Material *_material, const Light *_area_light);
 
+    PBRT_GPU SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
+
+    PBRT_GPU
+    void init_bsdf(BSDF &bsdf, FullBxDF &full_bxdf, const Ray &ray, SampledWavelengths &lambda,
+                   const Camera *camera, uint samples_per_pixel);
+
+  private:
     PBRT_GPU
     void init_coated_conductor_bsdf(BSDF &bsdf, CoatedConductorBxDF &coated_conductor_bxdf,
-                                    const Ray &ray, SampledWavelengths &lambda,
-                                    const Camera *camera, Sampler *sampler);
+                                    SampledWavelengths &lambda,
+                                    const MaterialEvalContext &material_eval_context);
 
     PBRT_GPU
     void init_coated_diffuse_bsdf(BSDF &bsdf, CoatedDiffuseBxDF &coated_diffuse_bxdf,
-                                  const Ray &ray, SampledWavelengths &lambda, const Camera *camera,
-                                  Sampler *sampler);
+                                  SampledWavelengths &lambda,
+                                  const MaterialEvalContext &material_eval_context);
 
     PBRT_GPU
-    void init_conductor_bsdf(BSDF &bsdf, ConductorBxDF &conductor_bxdf, const Ray &ray,
-                             SampledWavelengths &lambda, const Camera *camera, Sampler *sampler);
+    void init_conductor_bsdf(BSDF &bsdf, ConductorBxDF &conductor_bxdf, SampledWavelengths &lambda,
+                             const MaterialEvalContext &material_eval_context);
 
     PBRT_GPU
-    void init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielectric_bxdf, const Ray &ray,
-                              SampledWavelengths &lambda, const Camera *camera, Sampler *sampler);
+    void init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielectric_bxdf,
+                              SampledWavelengths &lambda,
+                              const MaterialEvalContext &material_eval_context);
 
     PBRT_GPU
-    void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, const Ray &ray,
-                           SampledWavelengths &lambda, const Camera *camera, Sampler *sampler);
-
-    PBRT_GPU SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
+    void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, SampledWavelengths &lambda,
+                           const MaterialEvalContext &material_eval_context);
 };
 
 // ShapeIntersection Definition

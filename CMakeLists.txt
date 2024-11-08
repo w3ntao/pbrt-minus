@@ -71,6 +71,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/shape.cu
         src/pbrt/base/spectrum.cu
         src/pbrt/base/spectrum_texture.cu
+        src/pbrt/base/texture_eval_context.cu
 
         src/pbrt/accelerator/hlbvh.cu
 
@@ -88,11 +89,13 @@ add_executable(${PROJ_NAME}
         src/pbrt/filters/mitchell.cu
 
         src/pbrt/integrators/ambient_occlusion.cu
+        src/pbrt/integrators/bdpt.cu
         src/pbrt/integrators/mlt_path.cu
         src/pbrt/integrators/path.cu
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu
         src/pbrt/integrators/surface_normal.cu
+        src/pbrt/integrators/wavefront_path.cu
 
         src/pbrt/lights/diffuse_area_light.cu
         src/pbrt/lights/distant_light.cu
@@ -141,8 +144,6 @@ add_executable(${PROJ_NAME}
         src/pbrt/util/distribution_2d.cu
         src/pbrt/util/hash_map.cu
         src/pbrt/util/sampling.cu
-
-        src/pbrt/wavefront_integrators/wavefront_path.cu
 
         src/ext/glad-3.3-core/src/glad.c
         src/ext/lodepng/lodepng.cpp

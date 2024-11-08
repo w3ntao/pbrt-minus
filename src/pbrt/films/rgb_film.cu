@@ -14,7 +14,7 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     pixels[idx].init_zero();
 }
 
-RGBFilm *RGBFilm::create(const ParameterDictionary &parameters,
+RGBFilm *RGBFilm::create(const Filter *filter, const ParameterDictionary &parameters,
                          std::vector<void *> &gpu_dynamic_pointers) {
     auto resolution_x = parameters.get_integer("xresolution");
     auto resolution_y = parameters.get_integer("yresolution");
@@ -56,20 +56,30 @@ RGBFilm *RGBFilm::create(const ParameterDictionary &parameters,
     CHECK_CUDA_ERROR(cudaMallocManaged(&rgb_film, sizeof(RGBFilm)));
     gpu_dynamic_pointers.push_back(rgb_film);
 
-    rgb_film->init(gpu_pixels, sensor, film_resolution, parameters.global_spectra->rgb_color_space);
+    rgb_film->init(gpu_pixels, filter, sensor, film_resolution,
+                   parameters.global_spectra->rgb_color_space);
 
     return rgb_film;
 }
 
-void RGBFilm::init(Pixel *_pixels, const PixelSensor *_sensor, const Point2i &_resolution,
-                   const RGBColorSpace *rgb_color_space) {
+void RGBFilm::init(Pixel *_pixels, const Filter *_filter, const PixelSensor *_sensor,
+                   const Point2i &_resolution, const RGBColorSpace *rgb_color_space) {
     pixels = _pixels;
+    filter = _filter;
     sensor = _sensor;
     resolution = _resolution;
 
     pixel_bound = Bounds2i(Point2i(0, 0), Point2i(_resolution.x, _resolution.y));
 
     output_rgb_from_sensor_rgb = rgb_color_space->rgb_from_xyz * sensor->xyz_from_sensor_rgb;
+}
+
+PBRT_CPU_GPU
+Bounds2f RGBFilm::sample_bounds() const {
+    Vector2f radius = filter->radius();
+
+    return Bounds2f(pixel_bound.p_min.to_point2f() - radius + Vector2f(0.5f, 0.5f),
+                    pixel_bound.p_max.to_point2f() + radius - Vector2f(0.5f, 0.5f));
 }
 
 PBRT_CPU_GPU
@@ -92,7 +102,7 @@ void RGBFilm::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
 }
 
 void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                        const SampledWavelengths &lambda, FloatType weight, const Filter *filter) {
+                        const SampledWavelengths &lambda, FloatType weight) {
     if (weight == 0) {
         return;
     }
