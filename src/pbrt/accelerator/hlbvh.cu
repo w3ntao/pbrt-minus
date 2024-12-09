@@ -624,7 +624,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
                                                                start_bottom_bvh};
 
     printf("BVH constructing took %.2f seconds "
-           "(sorting: %.2f, top BVH building: %.2f, bottom BVH building: %.2f)\n",
+           "(sorting: %.2f, top SAH-BVH building: %.2f, bottom BVH building: %.2f)\n",
            (duration_sorting + duration_top_bvh + duration_bottom_bvh).count(),
            duration_sorting.count(), duration_top_bvh.count(), duration_bottom_bvh.count());
 }

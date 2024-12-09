@@ -208,8 +208,8 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) {
         rngs[idx].set_sequence(idx);
     }
 
-    auto threads = 32;
-    auto blocks = divide_and_ceil<uint>(NUM_MLT_SAMPLERS, threads);
+    constexpr uint threads = 64;
+    const uint blocks = divide_and_ceil<uint>(NUM_MLT_SAMPLERS, threads);
     // TODO: stratify seed path building
     build_seed_path<<<blocks, threads>>>(path_samples, seed_path_candidates, num_paths_per_worker,
                                          sum_illuminance_array, luminance_of_paths, this, rngs);
@@ -265,7 +265,7 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) {
             auto pixel_y = clamp<int>(std::floor(p_film.y), 0, film_dimension.y - 1);
 
             auto pixel_coord = Point2i(pixel_x, pixel_y);
-            
+
             film->add_splat(p_film, path_sample->radiance, path_sample->lambda, weight);
 
             heat_map.add_sample(pixel_coord, sampling_density);

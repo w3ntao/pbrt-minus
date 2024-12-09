@@ -12,6 +12,7 @@
 #include <set>
 #include <stack>
 
+class BDPTIntegrator;
 class Film;
 class GlobalSpectra;
 class Integrator;
@@ -62,6 +63,7 @@ class SceneBuilder {
 
     const Integrator *megakernel_integrator = nullptr;
     WavefrontPathIntegrator *wavefront_integrator = nullptr;
+    BDPTIntegrator *bdpt_integrator = nullptr;
     MLTPathIntegrator *mlt_integrator = nullptr;
 
     IntegratorBase *integrator_base = nullptr;

@@ -12,7 +12,6 @@ class SampledWavelengths;
 class Sampler;
 
 class AmbientOcclusionIntegrator;
-class BDPTIntegrator;
 class PathIntegrator;
 class RandomWalkIntegrator;
 class SurfaceNormalIntegrator;
@@ -22,7 +21,6 @@ class Integrator {
   public:
     enum class Type {
         ambient_occlusion,
-        bdpt,
         path,
         random_walk,
         simple_path,
@@ -40,12 +38,12 @@ class Integrator {
             return "ambientocclusion";
         }
 
-        case Type::bdpt: {
-            return "bdpt";
-        }
-
         case Type::path: {
             return "path";
+        }
+
+        case Type::random_walk: {
+            return "radomwalk";
         }
 
         case Type::simple_path: {
@@ -68,8 +66,6 @@ class Integrator {
 
   private:
     void init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator);
-
-    void init(const BDPTIntegrator *bdpt_integrator);
 
     void init(const PathIntegrator *path_integrator);
 

@@ -5,7 +5,6 @@
 #include <vector>
 
 class Film;
-class MISParameter;
 class ParameterDictionary;
 class Sampler;
 class SampledSpectrum;
@@ -19,6 +18,7 @@ struct FullBxDF;
 struct CameraSample;
 struct CameraRay;
 struct FrameBuffer;
+struct MISParameter;
 struct IntegratorBase;
 struct ShapeIntersection;
 

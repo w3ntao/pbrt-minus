@@ -3,7 +3,6 @@
 #include "pbrt/base/ray.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/integrators/ambient_occlusion.h"
-#include "pbrt/integrators/bdpt.h"
 #include "pbrt/integrators/path.h"
 #include "pbrt/integrators/random_walk.h"
 #include "pbrt/integrators/simple_path.h"
@@ -73,14 +72,6 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
         return integrator;
     }
 
-    if (integrator_name == "bdpt") {
-        auto bdpt_integrator =
-            BDPTIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
-
-        integrator->init(bdpt_integrator);
-        return integrator;
-    }
-
     if (integrator_name == "path") {
         auto path_integrator =
             PathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
@@ -115,11 +106,6 @@ void Integrator::init(const AmbientOcclusionIntegrator *ambient_occlusion_integr
     ptr = ambient_occlusion_integrator;
 }
 
-void Integrator::init(const BDPTIntegrator *bdpt_integrator) {
-    type = Type::bdpt;
-    ptr = bdpt_integrator;
-}
-
 void Integrator::init(const PathIntegrator *path_integrator) {
     type = Type::path;
     ptr = path_integrator;
@@ -145,10 +131,6 @@ SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampl
     switch (type) {
     case Type::ambient_occlusion: {
         return static_cast<const AmbientOcclusionIntegrator *>(ptr)->li(ray, lambda, sampler);
-    }
-
-    case Type::bdpt: {
-        return static_cast<const BDPTIntegrator *>(ptr)->li(ray, lambda, sampler);
     }
 
     case Type::path: {

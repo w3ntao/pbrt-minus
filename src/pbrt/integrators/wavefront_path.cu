@@ -57,8 +57,9 @@ struct MISParameter {
     }
 };
 
-__global__ void gpu_init_independent_samplers(Sampler *samplers,
-                                              IndependentSampler *independent_samplers, uint num) {
+static __global__ void gpu_init_independent_samplers(Sampler *samplers,
+                                                     IndependentSampler *independent_samplers,
+                                                     uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
@@ -67,9 +68,9 @@ __global__ void gpu_init_independent_samplers(Sampler *samplers,
     samplers[worker_idx].init(&independent_samplers[worker_idx]);
 }
 
-__global__ void gpu_init_stratified_samplers(Sampler *samplers,
-                                             StratifiedSampler *stratified_samplers,
-                                             uint samples_per_dimension, uint num) {
+static __global__ void gpu_init_stratified_samplers(Sampler *samplers,
+                                                    StratifiedSampler *stratified_samplers,
+                                                    uint samples_per_dimension, uint num) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
@@ -80,7 +81,7 @@ __global__ void gpu_init_stratified_samplers(Sampler *samplers,
     samplers[worker_idx].init(&stratified_samplers[worker_idx]);
 }
 
-__global__ void gpu_init_path_state(PathState *path_state) {
+static __global__ void gpu_init_path_state(PathState *path_state) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= PATH_POOL_SIZE) {
         return;
@@ -436,29 +437,29 @@ PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *pat
 
 template <Material::Type material_type>
 void WavefrontPathIntegrator::evaluate_material() {
-    uint material_counter = UINT_MAX;
+    uint material_counter = 0;
     switch (material_type) {
-    case (Material::Type::coated_conductor): {
+    case Material::Type::coated_conductor: {
         material_counter = queues.coated_conductor_material_counter;
         break;
     }
 
-    case (Material::Type::coated_diffuse): {
+    case Material::Type::coated_diffuse: {
         material_counter = queues.coated_diffuse_material_counter;
         break;
     }
 
-    case (Material::Type::conductor): {
+    case Material::Type::conductor: {
         material_counter = queues.conductor_material_counter;
         break;
     }
 
-    case (Material::Type::dielectric): {
+    case Material::Type::dielectric: {
         material_counter = queues.dielectric_material_counter;
         break;
     }
 
-    case (Material::Type::diffuse): {
+    case Material::Type::diffuse: {
         material_counter = queues.diffuse_material_counter;
         break;
     }
@@ -748,7 +749,7 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
         gl_object.build();
     }
 
-    const uint threads = 256;
+    constexpr uint threads = 256;
 
     // generate new paths for the whole pool
     fill_new_path_queue<<<PATH_POOL_SIZE, threads>>>(&queues);

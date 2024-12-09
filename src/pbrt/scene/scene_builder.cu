@@ -18,6 +18,7 @@
 #include "pbrt/spectrum_util/spectrum_constants_metal.h"
 #include "pbrt/textures/spectrum_constant_texture.h"
 #include "pbrt/util/std_container.h"
+#include <pbrt/integrators/bdpt.h>
 #include <set>
 
 uint next_keyword_position(const std::vector<Token> &tokens, uint start) {
@@ -277,13 +278,20 @@ void SceneBuilder::build_integrator() {
     // const std::string sampler_type = "independent";
 
     if (sampler_type == "stratified") {
-        samples_per_pixel = sqr(std::sqrt(samples_per_pixel.value()));
+        auto sqrt_val = int(std::sqrt(samples_per_pixel.value()));
+        samples_per_pixel = sqr(sqrt_val);
     }
 
     const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
 
     if (!integrator_name.has_value()) {
         integrator_name = parameters.get_one_string("Integrator", "path");
+    }
+
+    if (integrator_name == "bdpt") {
+        bdpt_integrator = BDPTIntegrator::create(parameters, integrator_base, sampler_type,
+                                                 samples_per_pixel.value(), gpu_dynamic_pointers);
+        return;
     }
 
     if (integrator_name == "mlt" || integrator_name == "mlt-path") {
@@ -825,8 +833,10 @@ void SceneBuilder::preprocess() {
 
     build_integrator();
 
-    if (mlt_integrator != nullptr) {
-        printf("Integrator: (megakernel) mlt\n");
+    if (bdpt_integrator != nullptr) {
+        printf("Integrator: (wavefront) bdpt\n");
+    } else if (mlt_integrator != nullptr) {
+        printf("Integrator: (wavefront) mlt\n");
     } else if (wavefront_integrator != nullptr) {
         printf("Integrator: (wavefront) path\n");
     } else if (megakernel_integrator != nullptr) {
@@ -879,7 +889,11 @@ void SceneBuilder::render() const {
     std::cout << "\n"
               << "rendering a " << film_resolution.x << "x" << film_resolution.y << " image";
 
-    if (mlt_integrator != nullptr) {
+    if (bdpt_integrator != nullptr) {
+        bdpt_integrator->render(film, samples_per_pixel.value(), true);
+        film->write_to_png(output_filename);
+
+    } else if (mlt_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << mlt_integrator->get_mutation_per_pixel() << ")"
                   << " with MLT integrator.\n"
                   << std::flush;
