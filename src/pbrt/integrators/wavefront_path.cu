@@ -10,7 +10,6 @@
 #include "pbrt/samplers/independent.h"
 #include "pbrt/samplers/stratified.h"
 #include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
 #include "pbrt/util/basic_math.h"
@@ -311,35 +310,35 @@ __global__ void generate_new_path(const IntegratorBase *base, PathState *path_st
 template <Material::Type material_type>
 __global__ void gpu_evaluate_material(const WavefrontPathIntegrator *integrator,
                                       PathState *path_state, Queues *queues) {
-    uint material_counter = UINT_MAX;
+    uint material_counter = 0;
     uint *material_queue = nullptr;
 
     switch (material_type) {
-    case (Material::Type::coated_conductor): {
+    case Material::Type::coated_conductor: {
         material_counter = queues->coated_conductor_material_counter;
         material_queue = queues->coated_conductor_material_queue;
         break;
     }
 
-    case (Material::Type::coated_diffuse): {
+    case Material::Type::coated_diffuse: {
         material_counter = queues->coated_diffuse_material_counter;
         material_queue = queues->coated_diffuse_material_queue;
         break;
     }
 
-    case (Material::Type::conductor): {
+    case Material::Type::conductor: {
         material_counter = queues->conductor_material_counter;
         material_queue = queues->conductor_material_queue;
         break;
     }
 
-    case (Material::Type::dielectric): {
+    case Material::Type::dielectric: {
         material_counter = queues->dielectric_material_counter;
         material_queue = queues->dielectric_material_queue;
         break;
     }
 
-    case (Material::Type::diffuse): {
+    case Material::Type::diffuse: {
         material_counter = queues->diffuse_material_counter;
         material_queue = queues->diffuse_material_queue;
         break;
@@ -662,31 +661,6 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
     return weight_light * ls->l * f / pdf_light;
 }
 
-__global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint width, uint height) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= width * height) {
-        return;
-    }
-
-    auto y = worker_idx / width;
-    auto x = worker_idx % width;
-
-    auto rgb = film->get_pixel_rgb(Point2i(x, y));
-    if (rgb.has_nan()) {
-        gpu_frame_buffer[worker_idx * 3 + 0] = 0;
-        gpu_frame_buffer[worker_idx * 3 + 1] = 0;
-        gpu_frame_buffer[worker_idx * 3 + 2] = 0;
-
-        return;
-    }
-
-    const SRGBColorEncoding srgb_encoding;
-
-    gpu_frame_buffer[worker_idx * 3 + 0] = srgb_encoding.from_linear(rgb.r);
-    gpu_frame_buffer[worker_idx * 3 + 1] = srgb_encoding.from_linear(rgb.g);
-    gpu_frame_buffer[worker_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
-}
-
 void WavefrontPathIntegrator::render(Film *film, const std::string &output_filename,
                                      const bool preview) {
     printf("wavefront: path pool size: %u\n", PATH_POOL_SIZE);
@@ -695,58 +669,11 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
 
     const auto image_resolution = this->path_state.image_resolution;
 
-    uint8_t *gpu_frame_buffer;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x *
-                                                              image_resolution.y));
     std::vector<uint8_t> cpu_frame_buffer(3 * image_resolution.x * image_resolution.y);
 
     GLObject gl_object;
     if (preview) {
-        glfwInit();
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        // thus disable window resizing
-
-        const GLFWvidmode *gflw_vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-        const auto monitor_resolution = Point2i(gflw_vid_mode->width, gflw_vid_mode->height);
-
-        auto window_dimension = image_resolution;
-
-        auto scale_numerator = 20;
-        auto scale_denominator = 20;
-        while (true) {
-            // compute the maximal window size that can fit into the user screen
-            window_dimension = image_resolution * scale_numerator / scale_denominator;
-
-            const auto window_ratio = 0.9;
-            if (window_dimension.x <= monitor_resolution.x * window_ratio &&
-                window_dimension.y <= monitor_resolution.y * window_ratio) {
-                break;
-            }
-
-            scale_numerator -= 1;
-            if (scale_numerator <= 0) {
-                REPORT_FATAL_ERROR();
-            }
-        }
-
-        gl_object.create_window(window_dimension.x, window_dimension.y, output_filename);
-        glfwMakeContextCurrent(gl_object.window);
-
-        // center the window
-        glfwSetWindowPos(gl_object.window, (monitor_resolution.x - window_dimension.x) / 2,
-                         (monitor_resolution.y - window_dimension.y) / 2);
-
-        // glad: load all OpenGL function pointers
-        // ---------------------------------------
-        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-            std::cout << "ERROR: failed to initialize GLAD\n";
-            REPORT_FATAL_ERROR();
-        }
-
-        gl_object.build();
+        gl_object.init(output_filename, image_resolution);
     }
 
     constexpr uint threads = 256;
@@ -801,24 +728,7 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
             if (preview) {
                 auto start_preview = std::chrono::system_clock::now();
 
-                auto blocks =
-                    divide_and_ceil<uint>(image_resolution.x * image_resolution.y, threads);
-                copy_pixels<<<blocks, threads>>>(gpu_frame_buffer, film, image_resolution.x,
-                                                 image_resolution.y);
-                CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-                CHECK_CUDA_ERROR(
-                    cudaMemcpy(cpu_frame_buffer.data(), gpu_frame_buffer,
-                               sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y,
-                               cudaMemcpyDeviceToHost));
-
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_resolution.x, image_resolution.y, 0,
-                             GL_RGB, GL_UNSIGNED_BYTE, cpu_frame_buffer.data());
-                glGenerateMipmap(GL_TEXTURE_2D);
-                glBindTexture(GL_TEXTURE_2D, gl_object.texture);
-
-                gl_object.use_shader();
-                glBindVertexArray(gl_object.VAO);
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+                film->copy_to_frame_buffer(cpu_frame_buffer);
 
                 auto total_pixel_num = image_resolution.x * image_resolution.y;
                 auto current_sample_idx = clamp<uint>(
@@ -827,12 +737,8 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
                 auto title = output_filename + " - samples: " + std::to_string(current_sample_idx) +
                              "/" + std::to_string(samples_per_pixel) +
                              " - pass: " + std::to_string(pass);
-                glfwSetWindowTitle(gl_object.window, title.c_str());
 
-                // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-                // -------------------------------------------------------------------------------
-                glfwSwapBuffers(gl_object.window);
-                glfwPollEvents();
+                gl_object.draw_frame(cpu_frame_buffer, title, image_resolution);
 
                 total_preview_time += std::chrono::system_clock::now() - start_preview;
             }
@@ -855,13 +761,6 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
         evaluate_material<Material::Type::diffuse>();
 
         pass += 1;
-    }
-
-    CHECK_CUDA_ERROR(cudaFree(gpu_frame_buffer));
-
-    if (preview) {
-        gl_object.release();
-        glfwTerminate();
     }
 
     std::cout << std::fixed << std::setprecision(3) << "wavefront: total write frame buffer time: "

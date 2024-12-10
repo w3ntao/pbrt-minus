@@ -288,6 +288,10 @@ void SceneBuilder::build_integrator() {
         integrator_name = parameters.get_one_string("Integrator", "path");
     }
 
+    if (integrator_name == "volpath") {
+        integrator_name = "wavefrontpath";
+    }
+
     if (integrator_name == "bdpt") {
         bdpt_integrator = BDPTIntegrator::create(parameters, integrator_base, sampler_type,
                                                  samples_per_pixel.value(), gpu_dynamic_pointers);
@@ -890,7 +894,7 @@ void SceneBuilder::render() const {
               << "rendering a " << film_resolution.x << "x" << film_resolution.y << " image";
 
     if (bdpt_integrator != nullptr) {
-        bdpt_integrator->render(film, samples_per_pixel.value(), true);
+        bdpt_integrator->render(film, samples_per_pixel.value(), output_filename, true);
         film->write_to_png(output_filename);
 
     } else if (mlt_integrator != nullptr) {

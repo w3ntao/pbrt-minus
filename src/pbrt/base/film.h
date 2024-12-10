@@ -41,6 +41,8 @@ class Film {
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i &p) const;
 
+    void copy_to_frame_buffer(std::vector<uint8_t> &cpu_frame_buffer) const;
+
     void write_to_png(const std::string &filename) const;
 
   private:

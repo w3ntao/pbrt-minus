@@ -2,7 +2,7 @@
 
 #include "shader.h"
 
-struct GLObject {
+class GLObject {
     uint VBO = 0;
     uint VAO = 0;
     uint EBO = 0;
@@ -11,12 +11,73 @@ struct GLObject {
     Shader shader;
     unsigned int texture;
 
+    bool initialized = false;
+
+  public:
+    ~GLObject() {
+        if (initialized) {
+            this->release();
+        }
+    }
+
+    void init(const std::string &title, const Point2i &image_resolution) {
+        initialized = true;
+
+        glfwInit();
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        // thus disable window resizing
+
+        const GLFWvidmode *gflw_vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        const auto monitor_resolution = Point2i(gflw_vid_mode->width, gflw_vid_mode->height);
+
+        auto window_dimension = image_resolution;
+
+        auto scale_numerator = 20;
+        auto scale_denominator = 20;
+        while (true) {
+            // compute the maximal window size that can fit into the user screen
+            window_dimension = image_resolution * scale_numerator / scale_denominator;
+
+            const auto window_ratio = 0.9;
+            if (window_dimension.x <= monitor_resolution.x * window_ratio &&
+                window_dimension.y <= monitor_resolution.y * window_ratio) {
+                break;
+            }
+
+            scale_numerator -= 1;
+            if (scale_numerator <= 0) {
+                REPORT_FATAL_ERROR();
+            }
+        }
+
+        create_window(window_dimension.x, window_dimension.y, title);
+        glfwMakeContextCurrent(window);
+
+        // center the window
+        glfwSetWindowPos(window, (monitor_resolution.x - window_dimension.x) / 2,
+                         (monitor_resolution.y - window_dimension.y) / 2);
+
+        // glad: load all OpenGL function pointers
+        // ---------------------------------------
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+            std::cout << "ERROR: failed to initialize GLAD\n";
+            REPORT_FATAL_ERROR();
+        }
+
+        build_triangles();
+    }
+
     void release() {
         // optional: de-allocate all resources once they've outlived their purpose:
         // ------------------------------------------------------------------------
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &EBO);
+
+        glfwTerminate();
     }
 
     void create_window(uint width, uint height, const std::string &window_initial_name) {
@@ -28,7 +89,23 @@ struct GLObject {
         }
     }
 
-    void build() {
+    void draw_frame(const std::vector<uint8_t> &cpu_frame_buffer, const std::string &title,
+                    const Point2i &image_resolution) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_resolution.x, image_resolution.y, 0, GL_RGB,
+                     GL_UNSIGNED_BYTE, cpu_frame_buffer.data());
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        shader.use();
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glfwSwapBuffers(window);
+
+        glfwSetWindowTitle(window, title.c_str());
+        glfwPollEvents();
+    }
+
+    void build_triangles() {
         shader.build();
 
         // set up vertex data (and buffer(s)) and configure vertex attributes
@@ -83,9 +160,5 @@ struct GLObject {
         // set texture filtering parameters
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    }
-
-    void use_shader() {
-        shader.use();
     }
 };

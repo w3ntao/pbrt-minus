@@ -5,6 +5,7 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
+#include "pbrt/gui/gl_object.h"
 #include "pbrt/integrators/bdpt.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/lights/image_infinite_light.h"
@@ -944,7 +945,16 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, Vertex *global_camera
     bdpt_samples[pixel_idx] = {p_pixel, camera_sample.filter_weight, radiance_l, lambda};
 }
 
-void BDPTIntegrator::render(Film *film, uint samples_per_pixel, bool preview) {
+void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::string &output_filename,
+                            bool preview) {
+    const auto image_resolution = film->get_resolution();
+
+    GLObject gl_object;
+    if (preview) {
+        gl_object.init(output_filename, image_resolution);
+    }
+
+    std::vector<uint8_t> cpu_frame_buffer(3 * image_resolution.x * image_resolution.y);
 
     std::vector<void *> gpu_dynamic_pointers;
 
@@ -961,7 +971,7 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, bool preview) {
     gpu_dynamic_pointers.push_back(global_camera_vertices);
     gpu_dynamic_pointers.push_back(global_light_vertices);
 
-    auto num_pixels = film->get_resolution().x * film->get_resolution().y;
+    auto num_pixels = image_resolution.x * image_resolution.y;
 
     constexpr uint threads = 256;
     const uint blocks = divide_and_ceil<uint>(num_pixels, threads);
@@ -981,6 +991,17 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, bool preview) {
 
             const auto sample = &bdpt_samples[idx];
             film->add_sample(sample->p_pixel, sample->radiance, sample->lambda, sample->weight);
+        }
+
+        if (preview) {
+            film->copy_to_frame_buffer(cpu_frame_buffer);
+
+            auto current_sample_idx = (long long)(NUM_SAMPLERS)*pass / num_pixels;
+            auto title = output_filename + " - samples: " + std::to_string(current_sample_idx + 1) +
+                         "/" + std::to_string(samples_per_pixel) +
+                         " - pass: " + std::to_string(pass);
+
+            gl_object.draw_frame(cpu_frame_buffer, title, image_resolution);
         }
     }
 

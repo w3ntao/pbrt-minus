@@ -92,6 +92,50 @@ RGB Film::get_pixel_rgb(const Point2i &p) const {
     return {};
 }
 
+__global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint width, uint height) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= width * height) {
+        return;
+    }
+
+    auto y = worker_idx / width;
+    auto x = worker_idx % width;
+
+    auto rgb = film->get_pixel_rgb(Point2i(x, y));
+    if (rgb.has_nan()) {
+        gpu_frame_buffer[worker_idx * 3 + 0] = 0;
+        gpu_frame_buffer[worker_idx * 3 + 1] = 0;
+        gpu_frame_buffer[worker_idx * 3 + 2] = 0;
+
+        return;
+    }
+
+    const SRGBColorEncoding srgb_encoding;
+
+    gpu_frame_buffer[worker_idx * 3 + 0] = srgb_encoding.from_linear(rgb.r);
+    gpu_frame_buffer[worker_idx * 3 + 1] = srgb_encoding.from_linear(rgb.g);
+    gpu_frame_buffer[worker_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
+}
+
+void Film::copy_to_frame_buffer(std::vector<uint8_t> &cpu_frame_buffer) const {
+    auto image_resolution = this->get_resolution();
+
+    uint8_t *gpu_frame_buffer;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x *
+                                                              image_resolution.y));
+
+    constexpr int threads = 1024;
+    const auto blocks = divide_and_ceil<uint>(image_resolution.x * image_resolution.y, threads);
+    copy_pixels<<<blocks, threads>>>(gpu_frame_buffer, this, image_resolution.x,
+                                     image_resolution.y);
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    CHECK_CUDA_ERROR(cudaMemcpy(cpu_frame_buffer.data(), gpu_frame_buffer,
+                                sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y,
+                                cudaMemcpyDeviceToHost));
+
+    CHECK_CUDA_ERROR(cudaFree(gpu_frame_buffer));
+}
+
 void Film::write_to_png(const std::string &filename) const {
     auto resolution = get_resolution();
 
