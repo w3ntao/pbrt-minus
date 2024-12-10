@@ -89,10 +89,10 @@ class GLObject {
         }
     }
 
-    void draw_frame(const std::vector<uint8_t> &cpu_frame_buffer, const std::string &title,
+    void draw_frame(const uint8_t *frame_buffer, const std::string &title,
                     const Point2i &image_resolution) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_resolution.x, image_resolution.y, 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, cpu_frame_buffer.data());
+                     GL_UNSIGNED_BYTE, frame_buffer);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, texture);
 

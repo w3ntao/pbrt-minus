@@ -13,6 +13,7 @@ class SurfaceInteraction;
 
 struct IntegratorBase;
 struct Vertex;
+struct FilmSample;
 
 class BDPTIntegrator {
   public:
@@ -25,11 +26,14 @@ class BDPTIntegrator {
                 bool preview);
 
     PBRT_GPU
-    SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler,
-                       Vertex *camera_vertices, Vertex *light_vertices) const;
+    SampledSpectrum li(FilmSample *film_samples, const Ray &ray, SampledWavelengths &lambda,
+                       Sampler *sampler, Vertex *camera_vertices, Vertex *light_vertices) const;
 
     const IntegratorBase *base;
     Sampler *samplers;
 
     uint max_depth;
+
+  private:
+    bool regularize;
 };

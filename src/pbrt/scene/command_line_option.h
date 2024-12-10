@@ -28,7 +28,7 @@ struct CommandLineOption {
                     continue;
                 }
 
-                if (argument == "--output") {
+                if (argument == "--outfile") {
                     output_file = argv[idx + 1];
                     idx += 2;
                     continue;

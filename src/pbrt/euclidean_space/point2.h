@@ -9,9 +9,9 @@ class Point2 {
   public:
     T x, y;
 
-    PBRT_CPU_GPU Point2() {};
+    PBRT_CPU_GPU Point2(){};
 
-    PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y) {};
+    PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y){};
 
     PBRT_CPU_GPU
     explicit Point2(const Vector2<T> v) : x(v.x), y(v.y) {}
@@ -60,12 +60,8 @@ class Point2 {
         return Point2<T>(x + v.x, y + v.y);
     }
 
-    PBRT_CPU_GPU Vector2<T> operator-(const Point2<T> &right) {
-        return Vector2<T>(x - right.x, y - right.y);
-    }
-
-    PBRT_CPU_GPU Point2<T> operator-(const Point2<T> &p) const {
-        return Point2<T>(x - p.x, y - p.y);
+    PBRT_CPU_GPU Vector2<T> operator-(const Point2<T> &p) const {
+        return Vector2<T>(x - p.x, y - p.y);
     }
 
     PBRT_CPU_GPU Point2<T> operator-(const Vector2<T> &v) const {

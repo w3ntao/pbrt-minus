@@ -12,11 +12,14 @@ class RGBColorSpace;
 struct Pixel {
     RGB rgb_sum;
     FloatType weight_sum;
+    RGB rgb_splat;
 
     PBRT_CPU_GPU
     void init_zero() {
-        rgb_sum = RGB(0.0, 0.0, 0.0);
+        rgb_sum = RGB(0, 0, 0);
         weight_sum = 0;
+
+        rgb_splat = RGB(0, 0, 0);
     }
 };
 
@@ -49,10 +52,10 @@ class RGBFilm {
     }
 
     void add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                   const SampledWavelengths &lambda, FloatType weight);
+                   const SampledWavelengths &lambda);
 
     PBRT_CPU_GPU
-    RGB get_pixel_rgb(const Point2i p) const;
+    RGB get_pixel_rgb(const Point2i p, FloatType splat_scale = 1) const;
 
   private:
     Pixel *pixels;
@@ -61,6 +64,8 @@ class RGBFilm {
     Bounds2i pixel_bound;
 
     const Filter *filter;
+
+    FloatType filter_integral;
 
     SquareMatrix<3> output_rgb_from_sensor_rgb;
 };

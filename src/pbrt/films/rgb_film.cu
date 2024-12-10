@@ -72,6 +72,8 @@ void RGBFilm::init(Pixel *_pixels, const Filter *_filter, const PixelSensor *_se
     pixel_bound = Bounds2i(Point2i(0, 0), Point2i(_resolution.x, _resolution.y));
 
     output_rgb_from_sensor_rgb = rgb_color_space->rgb_from_xyz * sensor->xyz_from_sensor_rgb;
+
+    filter_integral = _filter->get_integral();
 }
 
 PBRT_CPU_GPU
@@ -102,13 +104,8 @@ void RGBFilm::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
 }
 
 void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                        const SampledWavelengths &lambda, FloatType weight) {
-    if (weight == 0) {
-        return;
-    }
-
+                        const SampledWavelengths &lambda) {
     auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
-
     // Compute bounds of affected pixels for splat, _splatBounds_
     Point2f pDiscrete = p_film + Vector2f(0.5, 0.5);
     Vector2f radius = filter->radius();
@@ -120,24 +117,30 @@ void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l
 
     for (const auto pi : splatBounds.range()) {
         // Evaluate filter at _pi_ and add splat contribution
-        auto splat_weight =
-            filter->evaluate(Point2f(p_film - pi.to_point2f() - Vector2f(0.5, 0.5)));
-        if (splat_weight == 0) {
+        auto wt = filter->evaluate(Point2f(p_film - pi.to_point2f() - Vector2f(0.5, 0.5)));
+        if (wt == 0) {
             continue;
         }
+
         auto pixel_index = pi.x + pi.y * resolution.x;
-        pixels[pixel_index].rgb_sum += weight * splat_weight * rgb;
-        pixels[pixel_index].weight_sum += weight * splat_weight;
+
+        pixels[pixel_index].rgb_splat += wt * rgb;
     }
 }
 
 PBRT_CPU_GPU
-RGB RGBFilm::get_pixel_rgb(const Point2i p) const {
-    int idx = p.x + p.y * resolution.x;
-    auto pixel_rgb = pixels[idx].rgb_sum;
-    if (pixels[idx].weight_sum != 0) {
-        pixel_rgb /= pixels[idx].weight_sum;
+RGB RGBFilm::get_pixel_rgb(const Point2i p, FloatType splat_scale) const {
+    const int idx = p.x + p.y * resolution.x;
+
+    const Pixel &pixel = pixels[idx];
+
+    auto rgb = pixel.rgb_sum;
+    if (pixel.weight_sum != 0) {
+        rgb /= pixel.weight_sum;
     }
 
-    return output_rgb_from_sensor_rgb * pixel_rgb;
+    // Add splat value at pixel
+    rgb += pixel.rgb_splat * (splat_scale / filter_integral);
+
+    return output_rgb_from_sensor_rgb * rgb;
 }

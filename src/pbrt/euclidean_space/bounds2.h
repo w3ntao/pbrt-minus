@@ -94,9 +94,16 @@ class Bounds2 {
 
     PBRT_CPU_GPU
     Bounds2 intersect(const Bounds2 &b) const {
+        auto p_min = this->p_min.max(b.p_min);
+        auto p_max = this->p_max.min(b.p_max);
+
+        if (p_min.x > p_max.x || p_min.y > p_max.y) {
+            return Bounds2(Point2<T>(NAN, NAN));
+        }
+
         Bounds2 result;
-        result.p_min = this->p_min.max(b.p_min);
-        result.p_max = this->p_max.min(b.p_max);
+        result.p_min = p_min;
+        result.p_max = p_max;
 
         return result;
     }
@@ -112,8 +119,8 @@ class Bounds2 {
         std::vector<Point2i> result;
         result.reserve(this->area());
 
-        for (int x = p_min.x; x < p_max.x; ++x) {
-            for (int y = p_min.y; y < p_max.y; ++y) {
+        for (int y = p_min.y; y < p_max.y; ++y) {
+            for (int x = p_min.x; x < p_max.x; ++x) {
                 result.push_back(Point2i(x, y));
             }
         }

@@ -664,16 +664,18 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
 void WavefrontPathIntegrator::render(Film *film, const std::string &output_filename,
                                      const bool preview) {
     printf("wavefront: path pool size: %u\n", PATH_POOL_SIZE);
-    std::chrono::duration<FloatType> total_preview_time = std::chrono::seconds(0);
-    std::chrono::duration<FloatType> total_write_frame_buffer_time = std::chrono::seconds(0);
 
     const auto image_resolution = this->path_state.image_resolution;
 
-    std::vector<uint8_t> cpu_frame_buffer(3 * image_resolution.x * image_resolution.y);
-
+    std::vector<void *> gpu_dynamic_pointers;
+    uint8_t *gpu_frame_buffer = nullptr;
     GLObject gl_object;
     if (preview) {
         gl_object.init(output_filename, image_resolution);
+
+        CHECK_CUDA_ERROR(cudaMallocManaged(
+            &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
+        gpu_dynamic_pointers.push_back(gpu_frame_buffer);
     }
 
     constexpr uint threads = 256;
@@ -712,9 +714,6 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
 
         if (queues.frame_buffer_counter > 0) {
             // sort to make film writing deterministic
-            auto start_write_frame_buffer = std::chrono::system_clock::now();
-
-            // TODO: rewriting sorting with CUDA
             std::sort(queues.frame_buffer_queue + 0,
                       queues.frame_buffer_queue + queues.frame_buffer_counter, FBComparator());
 
@@ -722,13 +721,8 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
                 film, &queues);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-            total_write_frame_buffer_time +=
-                std::chrono::system_clock::now() - start_write_frame_buffer;
-
             if (preview) {
-                auto start_preview = std::chrono::system_clock::now();
-
-                film->copy_to_frame_buffer(cpu_frame_buffer);
+                film->copy_to_frame_buffer(gpu_frame_buffer);
 
                 auto total_pixel_num = image_resolution.x * image_resolution.y;
                 auto current_sample_idx = clamp<uint>(
@@ -738,9 +732,7 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
                              "/" + std::to_string(samples_per_pixel) +
                              " - pass: " + std::to_string(pass);
 
-                gl_object.draw_frame(cpu_frame_buffer, title, image_resolution);
-
-                total_preview_time += std::chrono::system_clock::now() - start_preview;
+                gl_object.draw_frame(gpu_frame_buffer, title, image_resolution);
             }
         }
 
@@ -763,9 +755,8 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
         pass += 1;
     }
 
-    std::cout << std::fixed << std::setprecision(3) << "wavefront: total write frame buffer time: "
-              << total_write_frame_buffer_time.count() << " seconds.\n";
-
-    std::cout << std::fixed << std::setprecision(3)
-              << "wavefront: total preview time: " << total_preview_time.count() << " seconds.\n";
+    for (auto ptr : gpu_dynamic_pointers) {
+        CHECK_CUDA_ERROR(cudaFree(ptr));
+    }
+    CHECK_CUDA_ERROR(cudaGetLastError());
 }

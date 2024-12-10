@@ -70,10 +70,10 @@ void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
 }
 
 void Film::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                     const SampledWavelengths &lambda, FloatType weight) {
+                     const SampledWavelengths &lambda) {
     switch (type) {
     case (Type::rgb): {
-        return static_cast<RGBFilm *>(ptr)->add_splat(p_film, radiance_l, lambda, weight);
+        return static_cast<RGBFilm *>(ptr)->add_splat(p_film, radiance_l, lambda);
     }
     }
 
@@ -81,10 +81,10 @@ void Film::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
 }
 
 PBRT_CPU_GPU
-RGB Film::get_pixel_rgb(const Point2i &p) const {
+RGB Film::get_pixel_rgb(const Point2i &p, FloatType splat_scale) const {
     switch (type) {
-    case (Type::rgb): {
-        return static_cast<RGBFilm *>(ptr)->get_pixel_rgb(p);
+    case Type::rgb: {
+        return static_cast<RGBFilm *>(ptr)->get_pixel_rgb(p, splat_scale);
     }
     }
 
@@ -117,26 +117,17 @@ __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint wi
     gpu_frame_buffer[worker_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
 }
 
-void Film::copy_to_frame_buffer(std::vector<uint8_t> &cpu_frame_buffer) const {
+void Film::copy_to_frame_buffer(uint8_t *gpu_frame_buffer) const {
     auto image_resolution = this->get_resolution();
-
-    uint8_t *gpu_frame_buffer;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x *
-                                                              image_resolution.y));
 
     constexpr int threads = 1024;
     const auto blocks = divide_and_ceil<uint>(image_resolution.x * image_resolution.y, threads);
     copy_pixels<<<blocks, threads>>>(gpu_frame_buffer, this, image_resolution.x,
                                      image_resolution.y);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    CHECK_CUDA_ERROR(cudaMemcpy(cpu_frame_buffer.data(), gpu_frame_buffer,
-                                sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y,
-                                cudaMemcpyDeviceToHost));
-
-    CHECK_CUDA_ERROR(cudaFree(gpu_frame_buffer));
 }
 
-void Film::write_to_png(const std::string &filename) const {
+void Film::write_to_png(const std::string &filename, FloatType splat_scale) const {
     auto resolution = get_resolution();
 
     int width = resolution.x;
@@ -150,7 +141,7 @@ void Film::write_to_png(const std::string &filename) const {
     for (uint y = 0; y < height; y++) {
         for (uint x = 0; x < width; x++) {
             uint index = y * width + x;
-            auto rgb = get_pixel_rgb(Point2i(x, y));
+            auto rgb = get_pixel_rgb(Point2i(x, y), splat_scale);
             if (rgb.has_nan()) {
                 nan_pixels += 1;
             }

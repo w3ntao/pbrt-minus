@@ -298,7 +298,7 @@ inline int SampleDiscrete(FloatType *weights, uint num_weights, FloatType u,
                           FloatType *pmf = nullptr, FloatType *uRemapped = nullptr) {
     // Handle empty _weights_ for discrete sampling
     if (num_weights == 0) {
-        if (pmf) {
+        if (pmf != nullptr) {
             *pmf = 0;
         }
         return -1;
@@ -324,10 +324,10 @@ inline int SampleDiscrete(FloatType *weights, uint num_weights, FloatType u,
     }
 
     // Compute PMF and remapped _u_ value, if necessary
-    if (pmf) {
+    if (pmf != nullptr) {
         *pmf = weights[offset] / sumWeights;
     }
-    if (uRemapped) {
+    if (uRemapped != nullptr) {
         *uRemapped = std::min((up - sum) / weights[offset], OneMinusEpsilon);
     }
 

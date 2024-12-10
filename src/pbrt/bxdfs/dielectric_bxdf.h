@@ -7,7 +7,7 @@
 class DielectricBxDF {
   public:
     PBRT_CPU_GPU
-    DielectricBxDF() {}
+    DielectricBxDF() : eta(NAN) {}
 
     PBRT_CPU_GPU
     DielectricBxDF(FloatType eta, TrowbridgeReitzDistribution mfDistrib)
@@ -17,6 +17,7 @@ class DielectricBxDF {
     BxDFFlags flags() const {
         BxDFFlags _flags = (eta == 1) ? BxDFFlags::Transmission
                                       : (BxDFFlags::Reflection | BxDFFlags::Transmission);
+
         return _flags | (mfDistrib.effectively_smooth() ? BxDFFlags::Specular : BxDFFlags::Glossy);
     }
 

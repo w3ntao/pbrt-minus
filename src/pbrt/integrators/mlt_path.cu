@@ -266,7 +266,7 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) {
 
             auto pixel_coord = Point2i(pixel_x, pixel_y);
 
-            film->add_splat(p_film, path_sample->radiance, path_sample->lambda, weight);
+            film->add_splat(p_film, path_sample->radiance, path_sample->lambda);
 
             heat_map.add_sample(pixel_coord, sampling_density);
         }

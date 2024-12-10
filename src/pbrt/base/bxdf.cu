@@ -38,23 +38,23 @@ void BxDF::init(DiffuseBxDF *diffuse_bxdf) {
 PBRT_CPU_GPU
 BxDFFlags BxDF::flags() const {
     switch (type) {
-    case (Type::coated_conductor): {
+    case Type::coated_conductor: {
         return static_cast<CoatedConductorBxDF *>(ptr)->flags();
     }
 
-    case (Type::coated_diffuse): {
+    case Type::coated_diffuse: {
         return static_cast<CoatedDiffuseBxDF *>(ptr)->flags();
     }
 
-    case (Type::conductor): {
+    case Type::conductor: {
         return static_cast<ConductorBxDF *>(ptr)->flags();
     }
 
-    case (Type::dielectric): {
+    case Type::dielectric: {
         return static_cast<DielectricBxDF *>(ptr)->flags();
     }
 
-    case (Type::diffuse): {
+    case Type::diffuse: {
         return static_cast<DiffuseBxDF *>(ptr)->flags();
     }
     }
@@ -66,25 +66,25 @@ BxDFFlags BxDF::flags() const {
 PBRT_GPU
 void BxDF::regularize() {
     switch (type) {
-    case (Type::coated_conductor): {
+    case Type::coated_conductor: {
         static_cast<CoatedConductorBxDF *>(ptr)->regularize();
         return;
     }
 
-    case (Type::coated_diffuse): {
+    case Type::coated_diffuse: {
         static_cast<CoatedDiffuseBxDF *>(ptr)->regularize();
         return;
     }
 
-    case (Type::conductor): {
+    case Type::conductor: {
         return static_cast<ConductorBxDF *>(ptr)->regularize();
     }
 
-    case (Type::dielectric): {
+    case Type::dielectric: {
         return static_cast<DielectricBxDF *>(ptr)->regularize();
     }
 
-    case (Type::diffuse): {
+    case Type::diffuse: {
         return static_cast<DiffuseBxDF *>(ptr)->regularize();
     }
     }
@@ -94,23 +94,23 @@ void BxDF::regularize() {
 PBRT_GPU
 SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     switch (type) {
-    case (Type::coated_conductor): {
+    case Type::coated_conductor: {
         return static_cast<CoatedConductorBxDF *>(ptr)->f(wo, wi, mode);
     }
 
-    case (Type::coated_diffuse): {
+    case Type::coated_diffuse: {
         return static_cast<CoatedDiffuseBxDF *>(ptr)->f(wo, wi, mode);
     }
 
-    case (Type::conductor): {
+    case Type::conductor: {
         return static_cast<ConductorBxDF *>(ptr)->f(wo, wi, mode);
     }
 
-    case (Type::dielectric): {
+    case Type::dielectric: {
         return static_cast<DielectricBxDF *>(ptr)->f(wo, wi, mode);
     }
 
-    case (Type::diffuse): {
+    case Type::diffuse: {
         return static_cast<DiffuseBxDF *>(ptr)->f(wo, wi, mode);
     }
     }
@@ -124,23 +124,23 @@ cuda::std::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2
                                                TransportMode mode,
                                                BxDFReflTransFlags sampleFlags) const {
     switch (type) {
-    case (Type::coated_conductor): {
+    case Type::coated_conductor: {
         return static_cast<CoatedConductorBxDF *>(ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
 
-    case (Type::coated_diffuse): {
+    case Type::coated_diffuse: {
         return static_cast<CoatedDiffuseBxDF *>(ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
 
-    case (Type::conductor): {
+    case Type::conductor: {
         return static_cast<ConductorBxDF *>(ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
 
-    case (Type::dielectric): {
+    case Type::dielectric: {
         return static_cast<DielectricBxDF *>(ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
 
-    case (Type::diffuse): {
+    case Type::diffuse: {
         return static_cast<DiffuseBxDF *>(ptr)->sample_f(wo, uc, u, mode, sampleFlags);
     }
     }
@@ -153,23 +153,23 @@ PBRT_GPU
 FloatType BxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                     BxDFReflTransFlags sampleFlags) const {
     switch (type) {
-    case (Type::coated_conductor): {
+    case Type::coated_conductor: {
         return static_cast<CoatedConductorBxDF *>(ptr)->pdf(wo, wi, mode, sampleFlags);
     }
 
-    case (Type::coated_diffuse): {
+    case Type::coated_diffuse: {
         return static_cast<CoatedDiffuseBxDF *>(ptr)->pdf(wo, wi, mode, sampleFlags);
     }
 
-    case (Type::conductor): {
+    case Type::conductor: {
         return static_cast<ConductorBxDF *>(ptr)->pdf(wo, wi, mode, sampleFlags);
     }
 
-    case (Type::diffuse): {
+    case Type::diffuse: {
         return static_cast<DiffuseBxDF *>(ptr)->pdf(wo, wi, mode, sampleFlags);
     }
 
-    case (Type::dielectric): {
+    case Type::dielectric: {
         return static_cast<DielectricBxDF *>(ptr)->pdf(wo, wi, mode, sampleFlags);
     }
     }

@@ -9,17 +9,28 @@
 #include "pbrt/integrators/bdpt.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/lights/image_infinite_light.h"
+#include "pbrt/samplers/independent.h"
 #include "pbrt/samplers/stratified.h"
 #include "pbrt/scene/parameter_dictionary.h"
 
-const size_t NUM_SAMPLERS = 2 * 1024 * 1024;
+const size_t NUM_SAMPLERS = 1 * 32 * 1024;
 // TODO: investigate the optimal NUM_SAMPLERS?
+
+const size_t NUM_FILM_SAMPLES = 5;
+
+struct FilmSample {
+    size_t num;
+    Point2f p_film;
+    SampledSpectrum l_path;
+};
 
 struct BDPTSample {
     Point2i p_pixel;
     FloatType weight;
     SampledSpectrum radiance;
     SampledWavelengths lambda;
+
+    FilmSample film_samples[NUM_FILM_SAMPLES];
 };
 
 static __global__ void gpu_init_stratified_samplers(Sampler *samplers,
@@ -33,6 +44,17 @@ static __global__ void gpu_init_stratified_samplers(Sampler *samplers,
     stratified_samplers[worker_idx].init(samples_per_dimension);
 
     samplers[worker_idx].init(&stratified_samplers[worker_idx]);
+}
+
+static __global__ void gpu_init_independent_samplers(Sampler *samplers,
+                                                     IndependentSampler *independent_samplers,
+                                                     uint num) {
+    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (worker_idx >= num) {
+        return;
+    }
+
+    samplers[worker_idx].init(&independent_samplers[worker_idx]);
 }
 
 enum class VertexType { Camera, Light, Surface };
@@ -118,7 +140,7 @@ struct Vertex {
     SurfaceInteraction si;
     BSDF bsdf;
     FullBxDF full_bxdf;
-    // TODO: probably has to embed Bxdf into BSDF
+    // TODO: probably should embed Bxdf into BSDF
 
     bool delta;
     FloatType pdfFwd;
@@ -777,7 +799,8 @@ SampledSpectrum ConnectBDPT(const IntegratorBase *integrator_base, SampledWavele
         // Sample a point on the camera and connect it to the light subpath
         const Vertex &qs = lightVertices[s - 1];
         if (qs.IsConnectible()) {
-            if (auto cs = camera->sample_wi(qs.get_interaction(), sampler->get_2d(), lambda)) {
+            auto cs = camera->sample_wi(qs.get_interaction(), sampler->get_2d(), lambda);
+            if (cs) {
                 *pRaster = cs->pRaster;
                 // Initialize dynamically sampled vertex and _L_ for $t=1$ case
                 sampled = Vertex::CreateCamera(camera, cs->pLens, cs->Wi / cs->pdf);
@@ -858,7 +881,7 @@ SampledSpectrum ConnectBDPT(const IntegratorBase *integrator_base, SampledWavele
                         : 0.0;
 
     L *= misWeight;
-    if (misWeightPtr) {
+    if (misWeightPtr != nullptr) {
         *misWeightPtr = misWeight;
     }
 
@@ -880,8 +903,20 @@ BDPTIntegrator *BDPTIntegrator::create(const ParameterDictionary &parameters,
     bdpt_integrator->samplers = samplers;
     bdpt_integrator->base = integrator_base;
     bdpt_integrator->max_depth = parameters.get_integer("maxdepth", 10);
+    bdpt_integrator->regularize = parameters.get_bool("regularize", false);
 
-    if (sampler_type == "stratified") {
+    const uint threads = 1024;
+    uint blocks = divide_and_ceil<uint>(NUM_SAMPLERS, threads);
+
+    if (sampler_type == "independent") {
+        IndependentSampler *independent_samplers;
+        CHECK_CUDA_ERROR(
+            cudaMallocManaged(&independent_samplers, sizeof(IndependentSampler) * NUM_SAMPLERS));
+        gpu_dynamic_pointers.push_back(independent_samplers);
+
+        gpu_init_independent_samplers<<<blocks, threads>>>(samplers, independent_samplers,
+                                                           NUM_SAMPLERS);
+    } else if (sampler_type == "stratified") {
         const uint samples_per_dimension = std::sqrt(samples_per_pixel);
         if (samples_per_dimension * samples_per_dimension != samples_per_pixel) {
             REPORT_FATAL_ERROR();
@@ -892,8 +927,6 @@ BDPTIntegrator *BDPTIntegrator::create(const ParameterDictionary &parameters,
             cudaMallocManaged(&stratified_samplers, sizeof(StratifiedSampler) * NUM_SAMPLERS));
         gpu_dynamic_pointers.push_back(stratified_samplers);
 
-        const uint threads = 1024;
-        uint blocks = divide_and_ceil<uint>(NUM_SAMPLERS, threads);
         gpu_init_stratified_samplers<<<blocks, threads>>>(samplers, stratified_samplers,
                                                           samples_per_dimension, NUM_SAMPLERS);
     } else {
@@ -918,11 +951,11 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, Vertex *global_camera
 
     auto pixel_idx = global_idx % (width * height);
     auto sample_idx = global_idx / (width * height);
-    if (sample_idx >= samples_per_pixel) {
+    if (pixel_idx >= width * height || sample_idx >= samples_per_pixel) {
         return;
     }
 
-    auto local_sampler = &bdpt_integrator->samplers[pixel_idx];
+    auto local_sampler = &bdpt_integrator->samplers[worker_idx];
     local_sampler->start_pixel_sample(pixel_idx, sample_idx, 0);
 
     auto p_pixel = Point2i(pixel_idx % width, pixel_idx / width);
@@ -939,24 +972,33 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, Vertex *global_camera
     auto local_light_vertices =
         &global_light_vertices[worker_idx * (bdpt_integrator->max_depth + 1)];
 
-    auto radiance_l = ray.weight * bdpt_integrator->li(ray.ray, lambda, local_sampler,
-                                                       local_camera_vertices, local_light_vertices);
+    auto rendered_sample = &bdpt_samples[worker_idx];
 
-    bdpt_samples[pixel_idx] = {p_pixel, camera_sample.filter_weight, radiance_l, lambda};
+    auto radiance_l = ray.weight * bdpt_integrator->li(rendered_sample->film_samples, ray.ray,
+                                                       lambda, local_sampler, local_camera_vertices,
+                                                       local_light_vertices);
+
+    rendered_sample->p_pixel = p_pixel;
+    rendered_sample->weight = camera_sample.filter_weight;
+    rendered_sample->radiance = radiance_l;
+    rendered_sample->lambda = lambda;
 }
 
 void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::string &output_filename,
                             bool preview) {
-    const auto image_resolution = film->get_resolution();
+    preview = false;
 
+    const auto image_resolution = film->get_resolution();
+    std::vector<void *> gpu_dynamic_pointers;
+
+    uint8_t *gpu_frame_buffer = nullptr;
     GLObject gl_object;
     if (preview) {
         gl_object.init(output_filename, image_resolution);
+        CHECK_CUDA_ERROR(cudaMallocManaged(
+            &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
+        gpu_dynamic_pointers.push_back(gpu_frame_buffer);
     }
-
-    std::vector<uint8_t> cpu_frame_buffer(3 * image_resolution.x * image_resolution.y);
-
-    std::vector<void *> gpu_dynamic_pointers;
 
     BDPTSample *bdpt_samples;
     CHECK_CUDA_ERROR(cudaMallocManaged(&bdpt_samples, sizeof(BDPTSample) * NUM_SAMPLERS));
@@ -973,8 +1015,8 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::strin
 
     auto num_pixels = image_resolution.x * image_resolution.y;
 
-    constexpr uint threads = 256;
-    const uint blocks = divide_and_ceil<uint>(num_pixels, threads);
+    constexpr uint threads = 32;
+    const uint blocks = divide_and_ceil<uint>(NUM_SAMPLERS, threads);
 
     auto total_pass = divide_and_ceil<long long>(num_pixels * samples_per_pixel, NUM_SAMPLERS);
     for (uint pass = 0; pass < total_pass; ++pass) {
@@ -983,25 +1025,32 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::strin
                                               film->get_resolution(), this);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        for (uint idx = 0; idx < NUM_SAMPLERS; ++idx) {
-            auto global_idx = (long long)(NUM_SAMPLERS)*pass + idx;
+        for (uint bdpt_sample_idx = 0; bdpt_sample_idx < NUM_SAMPLERS; ++bdpt_sample_idx) {
+            auto global_idx = (long long)(NUM_SAMPLERS)*pass + bdpt_sample_idx;
             if (global_idx / num_pixels >= samples_per_pixel) {
                 break;
             }
 
-            const auto sample = &bdpt_samples[idx];
-            film->add_sample(sample->p_pixel, sample->radiance, sample->lambda, sample->weight);
+            const auto current_sample = &bdpt_samples[bdpt_sample_idx];
+
+            film->add_sample(current_sample->p_pixel, current_sample->radiance,
+                             current_sample->lambda, current_sample->weight);
+
+            auto film_samples = current_sample->film_samples;
+            for (uint film_sample_idx = 0; film_sample_idx < film_samples->num; ++film_sample_idx) {
+                film->add_splat(film_samples->p_film, film_samples->l_path, current_sample->lambda);
+            }
         }
 
         if (preview) {
-            film->copy_to_frame_buffer(cpu_frame_buffer);
+            film->copy_to_frame_buffer(gpu_frame_buffer);
 
             auto current_sample_idx = (long long)(NUM_SAMPLERS)*pass / num_pixels;
             auto title = output_filename + " - samples: " + std::to_string(current_sample_idx + 1) +
                          "/" + std::to_string(samples_per_pixel) +
                          " - pass: " + std::to_string(pass);
 
-            gl_object.draw_frame(cpu_frame_buffer, title, image_resolution);
+            gl_object.draw_frame(gpu_frame_buffer, title, image_resolution);
         }
     }
 
@@ -1012,17 +1061,18 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::strin
 }
 
 PBRT_GPU
-SampledSpectrum BDPTIntegrator::li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler,
+SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, const Ray &ray,
+                                   SampledWavelengths &lambda, Sampler *sampler,
                                    Vertex *camera_vertices, Vertex *light_vertices) const {
     // Trace the camera and light subpaths
-    const auto regularize = true;
-
     int nCamera = GenerateCameraSubpath(base, ray, lambda, sampler, max_depth + 2, camera_vertices,
                                         regularize);
     int nLight =
         GenerateLightSubpath(base, lambda, sampler, max_depth + 1, light_vertices, regularize);
 
     SampledSpectrum accumulated_l(0);
+
+    int film_sample_idx = 0;
     // Execute all BDPT connection strategies
     for (int t = 1; t <= nCamera; ++t) {
         for (int s = 0; s <= nLight; ++s) {
@@ -1032,25 +1082,30 @@ SampledSpectrum BDPTIntegrator::li(const Ray &ray, SampledWavelengths &lambda, S
             }
 
             // Execute the $(s, t)$ connection strategy and update _L_
-            cuda::std::optional<Point2f> pFilmNew;
+            cuda::std::optional<Point2f> optional_p_film_new;
             FloatType misWeight = 0;
             SampledSpectrum l_path = ConnectBDPT(base, lambda, light_vertices, camera_vertices, s,
-                                                 t, sampler, &pFilmNew, &misWeight);
+                                                 t, sampler, &optional_p_film_new, &misWeight);
 
             if (t != 1) {
                 accumulated_l += l_path;
             } else if (l_path.is_positive()) {
-                if constexpr (DEBUG_MODE && !pFilmNew.has_value()) {
+                if constexpr (DEBUG_MODE && !optional_p_film_new.has_value()) {
                     REPORT_FATAL_ERROR();
                 }
 
-                /*
-                film->add_splat(*pFilmNew, Lpath, lambda, 1);
-                // TODO: record splat spectrum
-                */
+                if (film_sample_idx >= NUM_FILM_SAMPLES) {
+                    REPORT_FATAL_ERROR();
+                }
+
+                film_samples[film_sample_idx].p_film = optional_p_film_new.value();
+                film_samples[film_sample_idx].l_path = l_path;
+                film_sample_idx += 1;
             }
         }
     }
+
+    film_samples->num = film_sample_idx;
 
     return accumulated_l;
 }

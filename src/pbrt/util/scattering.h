@@ -109,7 +109,7 @@ class TrowbridgeReitzDistribution {
   public:
     // TrowbridgeReitzDistribution Public Methods
     PBRT_CPU_GPU
-    TrowbridgeReitzDistribution(){};
+    TrowbridgeReitzDistribution() : alpha_x(NAN), alpha_y(NAN) {};
 
     PBRT_CPU_GPU
     TrowbridgeReitzDistribution(FloatType ax, FloatType ay) : alpha_x(ax), alpha_y(ay) {
@@ -122,7 +122,8 @@ class TrowbridgeReitzDistribution {
         }
     }
 
-    PBRT_CPU_GPU inline FloatType D(const Vector3f wm) const {
+    PBRT_CPU_GPU
+    inline FloatType D(const Vector3f wm) const {
         // FloatType tan2Theta = Tan2Theta(wm);
 
         FloatType tan2Theta = wm.tan2_theta();
@@ -223,6 +224,6 @@ class TrowbridgeReitzDistribution {
     }
 
   private:
-    // TrowbridgeReitzDistribution Private Members
-    FloatType alpha_x, alpha_y;
+    FloatType alpha_x;
+    FloatType alpha_y;
 };

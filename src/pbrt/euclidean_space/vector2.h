@@ -9,8 +9,14 @@ class Vector2 {
 
     PBRT_CPU_GPU Vector2(T _x, T _y) : x(_x), y(_y) {}
 
-    PBRT_CPU_GPU Vector2 operator-() const {
+    PBRT_CPU_GPU
+    Vector2 operator-() const {
         return Vector2(-x, -y);
+    }
+
+    PBRT_CPU_GPU
+    Vector2 operator-(const Vector2 &v) const {
+        return Vector2(x - v.x, y - v.y);
     }
 
     PBRT_CPU_GPU

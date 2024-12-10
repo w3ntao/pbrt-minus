@@ -49,17 +49,30 @@ void Filter::init(const MitchellFilter *mitchell_filter) {
 PBRT_CPU_GPU
 Vector2f Filter::radius() const {
     switch (type) {
-    case (Type::box): {
+    case Type::box: {
         return static_cast<const BoxFilter *>(ptr)->get_radius();
     }
 
-    case (Type::mitchell): {
+    case Type::mitchell: {
         return static_cast<const MitchellFilter *>(ptr)->get_radius();
     }
     }
 
     REPORT_FATAL_ERROR();
     return Vector2f(NAN, NAN);
+}
+
+PBRT_CPU_GPU
+FloatType Filter::get_integral() const {
+    switch (type) {
+    case Type::mitchell: {
+        return static_cast<const MitchellFilter *>(ptr)->get_integral();
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+
+    return NAN;
 }
 
 PBRT_CPU_GPU

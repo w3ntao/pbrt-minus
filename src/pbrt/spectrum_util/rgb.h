@@ -34,7 +34,8 @@ class RGB {
         return std::max(std::max(r, g), b);
     }
 
-    PBRT_CPU_GPU FloatType operator[](uint8_t idx) const {
+    PBRT_CPU_GPU
+    FloatType operator[](uint8_t idx) const {
         switch (idx) {
         case 0: {
             return r;
@@ -49,6 +50,24 @@ class RGB {
 
         REPORT_FATAL_ERROR();
         return NAN;
+    }
+
+    PBRT_CPU_GPU
+    FloatType &operator[](uint8_t index) {
+        switch (index) {
+        case 0: {
+            return r;
+        }
+        case 1: {
+            return g;
+        }
+        case 2: {
+            return b;
+        }
+        }
+
+        REPORT_FATAL_ERROR();
+        return r;
     }
 
     PBRT_CPU_GPU bool operator==(const RGB &rhs) const {

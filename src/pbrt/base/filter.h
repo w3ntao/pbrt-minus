@@ -41,6 +41,9 @@ class Filter {
     Vector2f radius() const;
 
     PBRT_CPU_GPU
+    FloatType get_integral() const;
+
+    PBRT_CPU_GPU
     FloatType evaluate(const Point2f p) const;
 
     PBRT_CPU_GPU

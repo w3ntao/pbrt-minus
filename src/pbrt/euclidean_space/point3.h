@@ -7,9 +7,9 @@ class Point3 {
   public:
     T x, y, z;
 
-    PBRT_CPU_GPU Point3() : x(NAN), y(NAN), z(NAN) {};
+    PBRT_CPU_GPU Point3() : x(NAN), y(NAN), z(NAN){};
 
-    PBRT_CPU_GPU Point3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {};
+    PBRT_CPU_GPU Point3(T _x, T _y, T _z) : x(_x), y(_y), z(_z){};
 
     PBRT_CPU_GPU T &operator[](uint8_t index) {
         switch (index) {
@@ -107,6 +107,11 @@ class Point3 {
         return Point3<T>(std::max(x, p.x), std::max(y, p.y), std::max(z, p.z));
     }
 
+    PBRT_CPU_GPU
+    bool has_nan() const {
+        return std::isnan(x) || std::isnan(y) || std::isnan(z);
+    }
+
     PBRT_CPU_GPU Vector3<T> to_vector3() const {
         return Vector3<T>(x, y, z);
     }
@@ -124,12 +129,12 @@ class Point3 {
     }
 
     PBRT_CPU_GPU
-    FloatType inline squared_distance(const Point3<T> &p) const {
+    FloatType squared_distance(const Point3<T> &p) const {
         return sqr(x - p.x) + sqr(y - p.y) + sqr(z - p.z);
     }
 
     PBRT_CPU_GPU
-    FloatType inline distance(const Point3<T> &p) const {
+    FloatType distance(const Point3<T> &p) const {
         return std::sqrt(this->squared_distance(p));
     }
 

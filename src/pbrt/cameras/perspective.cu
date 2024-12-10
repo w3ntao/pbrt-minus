@@ -125,8 +125,8 @@ SampledSpectrum PerspectiveCamera::we(const Ray &ray, SampledWavelengths &lambda
     Point3f pCamera = camera_base.camera_transform.camera_from_render(pFocus);
     Point3f pRaster = camera_from_raster.apply_inverse(pCamera);
 
-    // Return raster position if requested
-    if (pRasterOut) {
+    if (pRasterOut != nullptr) {
+        // Return raster position if requested
         *pRasterOut = Point2f(pRaster.x, pRaster.y);
     }
 
@@ -166,6 +166,7 @@ cuda::std::optional<CameraWiSample> PerspectiveCamera::sample_wi(const Interacti
     // Compute importance and return _CameraWiSample_
     Point2f pRaster;
     SampledSpectrum spectrum_wi = we(lensIntr.spawn_ray(-wi), lambda, &pRaster);
+
     if (!spectrum_wi.is_positive()) {
         return {};
     }

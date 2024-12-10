@@ -211,6 +211,17 @@ void SceneBuilder::build_camera() {
 }
 
 void SceneBuilder::build_filter() {
+    // TODO: rewrite Filter initialization
+    if (!pixel_filter_tokens.empty()) {
+        const auto parameters = build_parameter_dictionary(sub_vector(pixel_filter_tokens, 2));
+        const auto filter_type = pixel_filter_tokens[1].values[0];
+
+        if (filter_type != "mitchell") {
+            printf("\n%s(): PixelFilter type `%s` not implemented, changed to mitchell.\n",
+                   __func__, filter_type.c_str());
+        }
+    }
+
     integrator_base->filter = Filter::create_mitchell_filter(Vector2f(2.0, 2.0), 1.0 / 3.0,
                                                              1.0 / 3.0, gpu_dynamic_pointers);
 }
@@ -402,6 +413,11 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
         return;
     }
 
+    if (keyword == "PixelFilter") {
+        pixel_filter_tokens = tokens;
+        return;
+    }
+
     if (keyword == "ReverseOrientation") {
         graphics_state.reverse_orientation = !graphics_state.reverse_orientation;
         return;
@@ -447,7 +463,7 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
         return;
     }
 
-    if (keyword == "MakeNamedMedium" || keyword == "MediumInterface" || keyword == "PixelFilter") {
+    if (keyword == "MakeNamedMedium" || keyword == "MediumInterface") {
 
         static std::set<std::string> unimplemented_keywords;
         if (unimplemented_keywords.find(keyword) == unimplemented_keywords.end()) {
@@ -893,9 +909,13 @@ void SceneBuilder::render() const {
     std::cout << "\n"
               << "rendering a " << film_resolution.x << "x" << film_resolution.y << " image";
 
+    const auto spp = samples_per_pixel.value();
+    auto splat_scale = 1.0 / spp;
+
     if (bdpt_integrator != nullptr) {
-        bdpt_integrator->render(film, samples_per_pixel.value(), output_filename, true);
-        film->write_to_png(output_filename);
+
+        bdpt_integrator->render(film, spp, output_filename, true);
+        film->write_to_png(output_filename, splat_scale);
 
     } else if (mlt_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << mlt_integrator->get_mutation_per_pixel() << ")"
@@ -906,7 +926,7 @@ void SceneBuilder::render() const {
 
         mlt_integrator->render(film, heatmap);
 
-        film->write_to_png(output_filename);
+        film->write_to_png(output_filename, splat_scale);
 
         heatmap.write_to_png("heatmap-" + output_filename);
 
@@ -918,20 +938,20 @@ void SceneBuilder::render() const {
         wavefront_integrator->render(film, output_filename, true);
         // TODO: make preview a command line option
 
-        film->write_to_png(output_filename);
+        film->write_to_png(output_filename, splat_scale);
 
     } else if (megakernel_integrator != nullptr) {
         megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(),
                                       integrator_base);
 
-        film->write_to_png(output_filename);
+        film->write_to_png(output_filename, splat_scale);
     } else {
         REPORT_FATAL_ERROR();
     }
 
     const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
 
-    std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count()
+    std::cout << std::fixed << std::setprecision(1) << "\nrendering took " << duration.count()
               << " seconds.\n"
               << std::flush;
 

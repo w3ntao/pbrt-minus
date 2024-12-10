@@ -88,6 +88,7 @@ class SceneBuilder {
     std::vector<Token> camera_tokens;
     std::vector<Token> film_tokens;
     std::vector<Token> integrator_tokens;
+    std::vector<Token> pixel_filter_tokens;
 
     std::vector<const Primitive *> gpu_primitives;
     std::vector<Light *> gpu_lights;

@@ -24,6 +24,11 @@ class MitchellFilter {
     }
 
     PBRT_CPU_GPU
+    FloatType get_integral() const {
+        return radius.x * radius.y / 4;
+    }
+
+    PBRT_CPU_GPU
     FilterSample sample(const Point2f u) const {
         return sampler->sample(u);
     }
