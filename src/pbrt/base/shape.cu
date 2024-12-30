@@ -43,7 +43,7 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
 
         if (!ply_mesh.triIndices.empty()) {
             auto result = TriangleMesh::build_triangles(render_from_object, reverse_orientation,
-                                                        ply_mesh.p, ply_mesh.triIndices,
+                                                        ply_mesh.p, ply_mesh.triIndices, ply_mesh.n,
                                                         ply_mesh.uv, gpu_dynamic_pointers);
             shapes = result.first;
             num_shapes = result.second;
@@ -61,9 +61,10 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
         auto uv = parameters.get_point2_array("uv");
         auto indices = parameters.get_integers("indices");
         auto points = parameters.get_point3_array("P");
+        auto normals = parameters.get_normal_array("N");
 
         return TriangleMesh::build_triangles(render_from_object, reverse_orientation, points,
-                                             indices, uv, gpu_dynamic_pointers);
+                                             indices, normals, uv, gpu_dynamic_pointers);
     }
 
     if (type_of_shape == "loopsubdiv") {
@@ -73,15 +74,16 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
 
         const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);
 
-        return TriangleMesh::build_triangles(
-            render_from_object, reverse_orientation, loop_subdivide_data.p_limit,
-            loop_subdivide_data.vertex_indices, {}, gpu_dynamic_pointers);
+        return TriangleMesh::build_triangles(render_from_object, reverse_orientation,
+                                             loop_subdivide_data.p_limit,
+                                             loop_subdivide_data.vertex_indices,
+                                             loop_subdivide_data.normals, {}, gpu_dynamic_pointers);
     }
 
     printf("\nShape `%s` not implemented\n", type_of_shape.c_str());
 
     REPORT_FATAL_ERROR();
-    return {nullptr, NAN};
+    return {nullptr, 0};
 }
 
 PBRT_CPU_GPU

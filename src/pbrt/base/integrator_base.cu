@@ -15,7 +15,7 @@ bool IntegratorBase::unoccluded(const Interaction &p0, const Interaction &p1) co
 PBRT_GPU
 cuda::std::optional<ShapeIntersection> IntegratorBase::intersect(const Ray &ray,
                                                                  FloatType t_max) const {
-    return this->bvh->intersect(ray, t_max);
+    return bvh->intersect(ray, t_max);
 }
 
 PBRT_GPU

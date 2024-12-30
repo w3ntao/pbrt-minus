@@ -45,8 +45,9 @@ __global__ static void megakernel_render(Film *film, const uint samples_per_pixe
                                          const IntegratorBase *integrator_base) {
     auto resolution = film->get_resolution();
 
-    uint x = threadIdx.x + blockIdx.x * blockDim.x;
-    uint y = threadIdx.y + blockIdx.y * blockDim.y;
+    const auto x = threadIdx.x + blockIdx.x * blockDim.x;
+    const auto y = threadIdx.y + blockIdx.y * blockDim.y;
+    
     if (x >= resolution.x || y >= resolution.y) {
         return;
     }

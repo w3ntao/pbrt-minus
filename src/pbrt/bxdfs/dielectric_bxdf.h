@@ -15,10 +15,9 @@ class DielectricBxDF {
 
     PBRT_CPU_GPU
     BxDFFlags flags() const {
-        BxDFFlags _flags = (eta == 1) ? BxDFFlags::Transmission
-                                      : (BxDFFlags::Reflection | BxDFFlags::Transmission);
+        BxDFFlags _flags = eta == 1 ? Transmission : Reflection | Transmission;
 
-        return _flags | (mfDistrib.effectively_smooth() ? BxDFFlags::Specular : BxDFFlags::Glossy);
+        return _flags | (mfDistrib.effectively_smooth() ? Specular : Glossy);
     }
 
     PBRT_CPU_GPU

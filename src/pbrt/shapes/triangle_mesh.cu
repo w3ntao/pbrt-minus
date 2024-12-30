@@ -34,7 +34,7 @@ static __global__ void init_shapes(Shape *shapes, const TypeOfShape *concrete_sh
 std::pair<const Shape *, uint>
 TriangleMesh::build_triangles(const Transform &render_from_object, bool reverse_orientation,
                               const std::vector<Point3f> &points, const std::vector<int> &indices,
-                              const std::vector<Point2f> &uv,
+                              const std::vector<Normal3f> &normals, const std::vector<Point2f> &uv,
                               std::vector<void *> &gpu_dynamic_pointers) {
     Point3f *gpu_points;
     CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_points, sizeof(Point3f) * points.size()));
@@ -53,6 +53,14 @@ TriangleMesh::build_triangles(const Transform &render_from_object, bool reverse_
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_indices, indices.data(), sizeof(int) * indices.size(),
                                 cudaMemcpyHostToDevice));
 
+    Normal3f *gpu_normals = nullptr;
+    if (!normals.empty()) {
+        CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_normals, sizeof(Normal3f) * normals.size()));
+        CHECK_CUDA_ERROR(cudaMemcpy(gpu_normals, normals.data(), sizeof(Normal3f) * normals.size(),
+                                    cudaMemcpyHostToDevice));
+        gpu_dynamic_pointers.push_back(gpu_normals);
+    }
+
     Point2f *gpu_uv = nullptr;
     if (!uv.empty()) {
         CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_uv, sizeof(Point2f) * uv.size()));
@@ -63,7 +71,7 @@ TriangleMesh::build_triangles(const Transform &render_from_object, bool reverse_
 
     TriangleMesh *mesh;
     CHECK_CUDA_ERROR(cudaMallocManaged(&mesh, sizeof(TriangleMesh)));
-    mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, gpu_uv);
+    mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, gpu_normals, gpu_uv);
 
     uint num_triangles = mesh->triangles_num;
     Triangle *triangles;

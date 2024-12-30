@@ -4,11 +4,8 @@
 #include "pbrt/base/integrator_base.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/base/sampler.h"
-#include "pbrt/base/spectrum.h"
-#include "pbrt/euclidean_space/frame.h"
-#include "pbrt/util/sampling.h"
 
-class IntegratorBase;
+struct IntegratorBase;
 class ParameterDictionary;
 
 class AmbientOcclusionIntegrator {
@@ -24,7 +21,8 @@ class AmbientOcclusionIntegrator {
         illuminant_scale = _illuminant_scale;
     }
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
+    PBRT_GPU
+    SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
   private:
     const IntegratorBase *base;

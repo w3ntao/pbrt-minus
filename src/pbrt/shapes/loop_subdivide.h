@@ -6,6 +6,7 @@
 struct LoopSubdivide {
     std::vector<int> vertex_indices;
     std::vector<Point3f> p_limit;
+    std::vector<Normal3f> normals;
 
     LoopSubdivide(int nLevels, const std::vector<int> &vertexIndices,
                   const std::vector<Point3f> &p);

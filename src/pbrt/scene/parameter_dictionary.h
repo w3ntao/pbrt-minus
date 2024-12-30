@@ -163,6 +163,14 @@ class ParameterDictionary {
         return point3s.at(key);
     }
 
+    std::vector<Normal3f> get_normal_array(const std::string &key) const {
+        if (normals.find(key) == normals.end()) {
+            return {};
+        }
+
+        return normals.at(key);
+    }
+
     RGB get_rgb(const std::string &key, std::optional<RGB> default_val) const {
         if (rgbs.find(key) == rgbs.end()) {
             if (!default_val.has_value()) {

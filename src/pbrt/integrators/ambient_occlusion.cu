@@ -22,8 +22,9 @@ AmbientOcclusionIntegrator::create(const ParameterDictionary &parameters,
     return ambient_occlusion_integrator;
 }
 
-PBRT_GPU SampledSpectrum AmbientOcclusionIntegrator::li(const Ray &ray, SampledWavelengths &lambda,
-                                                        Sampler *sampler) const {
+PBRT_GPU
+SampledSpectrum AmbientOcclusionIntegrator::li(const Ray &ray, SampledWavelengths &lambda,
+                                               Sampler *sampler) const {
     const auto shape_intersection = base->intersect(ray, Infinity);
 
     if (!shape_intersection) {
@@ -32,7 +33,7 @@ PBRT_GPU SampledSpectrum AmbientOcclusionIntegrator::li(const Ray &ray, SampledW
 
     const SurfaceInteraction &isect = shape_intersection->interaction;
 
-    auto normal = isect.n.to_vector3().face_forward(-ray.d);
+    const auto normal = isect.n.to_vector3().face_forward(-ray.d);
 
     auto u = sampler->get_2d();
     auto local_wi = sample_cosine_hemisphere(u);

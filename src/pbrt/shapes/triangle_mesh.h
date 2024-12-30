@@ -22,11 +22,12 @@ class TriangleMesh {
     static std::pair<const Shape *, uint>
     build_triangles(const Transform &render_from_object, bool reverse_orientation,
                     const std::vector<Point3f> &points, const std::vector<int> &indices,
-                    const std::vector<Point2f> &uv, std::vector<void *> &gpu_dynamic_pointers);
+                    const std::vector<Normal3f> &normals, const std::vector<Point2f> &uv,
+                    std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     void init(bool _reverse_orientation, const int *_vertex_indices, uint num_indices,
-              const Point3f *_p, const Point2f *_uv) {
+              const Point3f *_p, const Normal3f *_n, const Point2f *_uv) {
         reverse_orientation = _reverse_orientation;
 
         triangles_num = num_indices / 3;
@@ -35,7 +36,7 @@ class TriangleMesh {
         uv = _uv;
 
         // default value:
-        n = nullptr;
+        n = _n;
         s = nullptr;
 
         transformSwapsHandedness = false;

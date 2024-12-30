@@ -28,7 +28,7 @@ void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_l
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
     }
 
-    light_type = LightType::delta_direction;
+    light_type = LightType::area;
     render_from_light = _render_from_light;
 
     shape = _shape;

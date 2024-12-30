@@ -470,7 +470,74 @@ class Triangle {
         }
 
         if (mesh->n || mesh->s) {
-            REPORT_FATAL_ERROR();
+            // Initialize _Triangle_ shading geometry
+            // Compute shading normal _ns_ for triangle
+            Normal3f ns;
+            if (mesh->n) {
+                ns = ti.b0 * mesh->n[v[0]] + ti.b1 * mesh->n[v[1]] + ti.b2 * mesh->n[v[2]];
+                ns = ns.squared_length() > 0 ? ns.normalize() : isect.n;
+            } else {
+                ns = isect.n;
+            }
+
+            // Compute shading tangent _ss_ for triangle
+            Vector3f ss;
+            if (mesh->s) {
+                ss = ti.b0 * mesh->s[v[0]] + ti.b1 * mesh->s[v[1]] + ti.b2 * mesh->s[v[2]];
+                if (ss.squared_length() == 0) {
+                    ss = isect.dpdu;
+                }
+            } else {
+                ss = isect.dpdu;
+            }
+
+            // Compute shading bitangent _ts_ for triangle and adjust _ss_
+            auto ts = ns.to_vector3().cross(ss);
+            if (ts.squared_length() > 0) {
+                ss = ts.cross(ns.to_vector3());
+            } else {
+                ns.to_vector3().coordinate_system(&ss, &ts);
+            }
+
+            // Compute $\dndu$ and $\dndv$ for triangle shading geometry
+            Normal3f dndu, dndv;
+            if (mesh->n) {
+                // Compute deltas for triangle partial derivatives of normal
+                Vector2f duv02 = uv[0] - uv[2];
+                Vector2f duv12 = uv[1] - uv[2];
+                Normal3f dn1 = mesh->n[v[0]] - mesh->n[v[2]];
+                Normal3f dn2 = mesh->n[v[1]] - mesh->n[v[2]];
+
+                auto determinant = difference_of_products(duv02[0], duv12[1], duv02[1], duv12[0]);
+                bool degenerateUV = std::abs(determinant) < 1e-9;
+                if (degenerateUV) {
+                    // We can still compute dndu and dndv, with respect to the
+                    // same arbitrary coordinate system we use to compute dpdu
+                    // and dpdv when this happens. It's important to do this
+                    // (rather than giving up) so that ray differentials for
+                    // rays reflected from triangles with degenerate
+                    // parameterizations are still reasonable.
+
+                    auto dn = (mesh->n[v[2]] - mesh->n[v[0]]).cross(mesh->n[v[1]] - mesh->n[v[0]]);
+
+                    if (dn.squared_length() == 0) {
+                        dndu = dndv = Normal3f(0, 0, 0);
+                    } else {
+                        Vector3f dnu, dnv;
+                        dn.coordinate_system(&dnu, &dnv);
+                        dndu = Normal3f(dnu);
+                        dndv = Normal3f(dnv);
+                    }
+                } else {
+                    auto invDet = 1 / determinant;
+                    dndu = difference_of_products(duv12[1], dn1, duv02[1], dn2) * invDet;
+                    dndv = difference_of_products(duv02[0], dn2, duv12[0], dn1) * invDet;
+                }
+            } else {
+                dndu = dndv = Normal3f(0, 0, 0);
+            }
+
+            isect.set_shading_geometry(ns, ss, ts, dndu, dndv, true);
         }
 
         return isect;

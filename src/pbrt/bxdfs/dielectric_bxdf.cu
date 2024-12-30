@@ -32,89 +32,85 @@ cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType 
             // SampledSpectrum fr(R / AbsCosTheta(wi));
             auto fr = SampledSpectrum(R / wi.abs_cos_theta());
             return BSDFSample(fr, wi, pr / (pr + pt), BxDFFlags::SpecularReflection);
-
-        } else {
-            // Sample perfect specular dielectric BTDF
-            // Compute ray direction for specular transmission
-            Vector3f wi;
-            FloatType etap;
-            bool valid = refract(wo, Normal3f(0, 0, 1), eta, &etap, &wi);
-            if (!valid) {
-                return {};
-            }
-
-            auto ft = SampledSpectrum(T / wi.abs_cos_theta());
-            // Account for non-symmetry with transmission to different medium
-            if (mode == TransportMode::Radiance) {
-                ft /= sqr(etap);
-            }
-
-            return BSDFSample(ft, wi, pt / (pr + pt), BxDFFlags::SpecularTransmission, etap);
         }
 
-    } else {
-        // Sample rough dielectric BSDF
-        Vector3f wm = mfDistrib.sample_wm(wo, u);
-        FloatType R = FrDielectric(wo.dot(wm), eta);
-        FloatType T = 1 - R;
-        // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission
-        FloatType pr = R, pt = T;
-        if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
-            pr = 0;
-        }
-
-        if (!(sample_flags & BxDFReflTransFlags::Transmission)) {
-            pt = 0;
-        }
-
-        if (pr == 0 && pt == 0) {
+        // Sample perfect specular dielectric BTDF
+        // Compute ray direction for specular transmission
+        Vector3f wi;
+        FloatType etap;
+        bool valid = refract(wo, Normal3f(0, 0, 1), eta, &etap, &wi);
+        if (!valid) {
             return {};
         }
 
-        FloatType _pdf;
-        if (uc < pr / (pr + pt)) {
-            // Sample reflection at rough dielectric interface
-            Vector3f wi = Reflect(wo, wm);
-            if (!wo.same_hemisphere(wi)) {
-                return {};
-            }
-            // Compute PDF of rough dielectric reflection
-
-            _pdf = mfDistrib.pdf(wo, wm) / (4 * wo.abs_dot(wm)) * pr / (pr + pt);
-            SampledSpectrum f = SampledSpectrum(mfDistrib.D(wm) * mfDistrib.G(wo, wi) * R /
-                                                (4 * wi.cos_theta() * wo.cos_theta()));
-
-            return BSDFSample(f, wi, _pdf, BxDFFlags::GlossyReflection);
-
-        } else {
-            // Sample transmission at rough dielectric interface
-            FloatType etap;
-            Vector3f wi;
-            bool tir = !refract(wo, (Normal3f)wm, eta, &etap, &wi);
-
-            if (wo.same_hemisphere(wi) || wi.z == 0 || tir) {
-                return {};
-            }
-
-            // Compute PDF of rough dielectric transmission
-            FloatType denom = sqr(wi.dot(wm) + wo.dot(wm) / etap);
-
-            FloatType dwm_dwi = wi.abs_dot(wm) / denom;
-            _pdf = mfDistrib.pdf(wo, wm) * dwm_dwi * pt / (pr + pt);
-
-            // Evaluate BRDF and return _BSDFSample_ for rough transmission
-            auto ft = SampledSpectrum(
-                T * mfDistrib.D(wm) * mfDistrib.G(wo, wi) *
-                std::abs(wi.dot(wm) * wo.dot(wm) / (wi.cos_theta() * wo.cos_theta() * denom)));
-
-            // Account for non-symmetry with transmission to different medium
-            if (mode == TransportMode::Radiance) {
-                ft /= sqr(etap);
-            }
-
-            return BSDFSample(ft, wi, _pdf, BxDFFlags::GlossyTransmission, etap);
+        auto ft = SampledSpectrum(T / wi.abs_cos_theta());
+        // Account for non-symmetry with transmission to different medium
+        if (mode == TransportMode::Radiance) {
+            ft /= sqr(etap);
         }
+
+        return BSDFSample(ft, wi, pt / (pr + pt), BxDFFlags::SpecularTransmission, etap);
     }
+    // Sample rough dielectric BSDF
+    Vector3f wm = mfDistrib.sample_wm(wo, u);
+    FloatType R = FrDielectric(wo.dot(wm), eta);
+    FloatType T = 1 - R;
+    // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission
+    FloatType pr = R, pt = T;
+    if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
+        pr = 0;
+    }
+
+    if (!(sample_flags & BxDFReflTransFlags::Transmission)) {
+        pt = 0;
+    }
+
+    if (pr == 0 && pt == 0) {
+        return {};
+    }
+
+    FloatType _pdf;
+    if (uc < pr / (pr + pt)) {
+        // Sample reflection at rough dielectric interface
+        Vector3f wi = Reflect(wo, wm);
+        if (!wo.same_hemisphere(wi)) {
+            return {};
+        }
+        // Compute PDF of rough dielectric reflection
+
+        _pdf = mfDistrib.pdf(wo, wm) / (4 * wo.abs_dot(wm)) * pr / (pr + pt);
+        SampledSpectrum f = SampledSpectrum(mfDistrib.D(wm) * mfDistrib.G(wo, wi) * R /
+                                            (4 * wi.cos_theta() * wo.cos_theta()));
+
+        return BSDFSample(f, wi, _pdf, BxDFFlags::GlossyReflection);
+    }
+
+    // Sample transmission at rough dielectric interface
+    FloatType etap;
+    Vector3f wi;
+    bool tir = !refract(wo, (Normal3f)wm, eta, &etap, &wi);
+
+    if (wo.same_hemisphere(wi) || wi.z == 0 || tir) {
+        return {};
+    }
+
+    // Compute PDF of rough dielectric transmission
+    FloatType denom = sqr(wi.dot(wm) + wo.dot(wm) / etap);
+
+    FloatType dwm_dwi = wi.abs_dot(wm) / denom;
+    _pdf = mfDistrib.pdf(wo, wm) * dwm_dwi * pt / (pr + pt);
+
+    // Evaluate BRDF and return _BSDFSample_ for rough transmission
+    auto ft = SampledSpectrum(
+        T * mfDistrib.D(wm) * mfDistrib.G(wo, wi) *
+        std::abs(wi.dot(wm) * wo.dot(wm) / (wi.cos_theta() * wo.cos_theta() * denom)));
+
+    // Account for non-symmetry with transmission to different medium
+    if (mode == TransportMode::Radiance) {
+        ft /= sqr(etap);
+    }
+
+    return BSDFSample(ft, wi, _pdf, BxDFFlags::GlossyTransmission, etap);
 }
 
 PBRT_CPU_GPU

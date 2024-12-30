@@ -373,8 +373,8 @@ LoopSubdivide::LoopSubdivide(int nLevels, const std::vector<int> &vertexIndices,
     }
 
     // Compute vertex tangents on limit surface
-    std::vector<Normal3f> Ns;
-    Ns.reserve(v.size());
+
+    normals.reserve(v.size());
     std::vector<Point3f> pRing(16, Point3f());
     for (SDVertex *vertex : v) {
         Vector3f S(0, 0, 0), T(0, 0, 0);
@@ -410,7 +410,7 @@ LoopSubdivide::LoopSubdivide(int nLevels, const std::vector<int> &vertexIndices,
                 T = -T;
             }
         }
-        Ns.push_back(Normal3f(S.cross(T)));
+        normals.push_back(Normal3f(S.cross(T)));
     }
 
     {

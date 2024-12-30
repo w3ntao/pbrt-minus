@@ -278,7 +278,6 @@ void SceneBuilder::build_gpu_lights() {
 }
 
 void SceneBuilder::build_integrator() {
-    // TODO: delete wavefront and rename path with wavefront to wavefrontpath
     build_gpu_lights();
 
     if (!samples_per_pixel.has_value()) {

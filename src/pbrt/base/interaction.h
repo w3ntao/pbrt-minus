@@ -61,12 +61,13 @@ class Interaction {
     }
 
     PBRT_CPU_GPU
-    Point3f offset_ray_origin(const Vector3f &_w) const {
-        return Ray::offset_ray_origin(pi, n, _w);
+    Point3f offset_ray_origin(const Vector3f &w) const {
+        return Ray::offset_ray_origin(pi, n, w);
     }
 
-    PBRT_GPU Ray spawn_ray(const Vector3f &_d) const {
-        return Ray(offset_ray_origin(_d), _d);
+    PBRT_GPU
+    Ray spawn_ray(const Vector3f &d) const {
+        return Ray(offset_ray_origin(d), d);
     }
 
     PBRT_CPU_GPU
@@ -129,7 +130,33 @@ class SurfaceInteraction : public Interaction {
     PBRT_GPU
     void set_intersection_properties(const Material *_material, const Light *_area_light);
 
-    PBRT_GPU SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
+    PBRT_CPU_GPU
+    void set_shading_geometry(const Normal3f &ns, const Vector3f &dpdus, const Vector3f &dpdvs,
+                              const Normal3f &dndus, const Normal3f &dndvs,
+                              bool orientationIsAuthoritative) {
+        // Compute _shading.n_ for _SurfaceInteraction_
+        shading.n = ns;
+
+        if (orientationIsAuthoritative) {
+            n = n.face_forward(shading.n);
+        } else {
+            shading.n = shading.n.face_forward(n);
+        }
+
+        // Initialize _shading_ partial derivative values
+        shading.dpdu = dpdus;
+        shading.dpdv = dpdvs;
+        shading.dndu = dndus;
+        shading.dndv = dndvs;
+
+        while (shading.dpdu.squared_length() > 1e16f || shading.dpdv.squared_length() > 1e16f) {
+            shading.dpdu /= 1e8f;
+            shading.dpdv /= 1e8f;
+        }
+    }
+
+    PBRT_GPU
+    SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
 
     PBRT_GPU
     void init_bsdf(BSDF &bsdf, FullBxDF &full_bxdf, const Ray &ray, SampledWavelengths &lambda,
@@ -139,25 +166,25 @@ class SurfaceInteraction : public Interaction {
     PBRT_GPU
     void init_coated_conductor_bsdf(BSDF &bsdf, CoatedConductorBxDF &coated_conductor_bxdf,
                                     SampledWavelengths &lambda,
-                                    const MaterialEvalContext &material_eval_context);
+                                    const MaterialEvalContext &material_eval_context) const;
 
     PBRT_GPU
     void init_coated_diffuse_bsdf(BSDF &bsdf, CoatedDiffuseBxDF &coated_diffuse_bxdf,
                                   SampledWavelengths &lambda,
-                                  const MaterialEvalContext &material_eval_context);
+                                  const MaterialEvalContext &material_eval_context) const;
 
     PBRT_GPU
     void init_conductor_bsdf(BSDF &bsdf, ConductorBxDF &conductor_bxdf, SampledWavelengths &lambda,
-                             const MaterialEvalContext &material_eval_context);
+                             const MaterialEvalContext &material_eval_context) const;
 
     PBRT_GPU
     void init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielectric_bxdf,
                               SampledWavelengths &lambda,
-                              const MaterialEvalContext &material_eval_context);
+                              const MaterialEvalContext &material_eval_context) const;
 
     PBRT_GPU
     void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, SampledWavelengths &lambda,
-                           const MaterialEvalContext &material_eval_context);
+                           const MaterialEvalContext &material_eval_context) const;
 };
 
 // ShapeIntersection Definition

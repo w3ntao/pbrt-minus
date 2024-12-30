@@ -9,7 +9,7 @@ class Vector3 {
   public:
     T x, y, z;
 
-    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN){};
+    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN) {};
 
     PBRT_CPU_GPU Vector3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {}
 
@@ -147,7 +147,8 @@ class Vector3 {
         return std::abs(this->dot(right));
     }
 
-    PBRT_CPU_GPU Vector3 cross(const Vector3 &right) const {
+    PBRT_CPU_GPU
+    Vector3 cross(const Vector3 &right) const {
         return Vector3(difference_of_products(y, right.z, z, right.y),
                        difference_of_products(z, right.x, x, right.z),
                        difference_of_products(x, right.y, y, right.x));

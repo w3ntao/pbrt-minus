@@ -41,7 +41,7 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
     bool specular_bounce = true;
     bool any_non_specular_bounces = false;
 
-    uint path_length = 0;
+    uint depth = 0;
     FloatType pdf_bsdf = NAN;
     FloatType eta_scale = 1.0;
     LightSampleContext prev_interaction_light_sample_ctx;
@@ -62,7 +62,7 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
                 auto light = base->infinite_lights[idx];
                 auto Le = light->le(ray, lambda);
 
-                if (path_length == 0 || specular_bounce) {
+                if (depth == 0 || specular_bounce) {
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
@@ -83,9 +83,9 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
         // Incorporate emission from surface hit by ray
         SampledSpectrum Le = isect.le(-ray.d, lambda);
         if (Le.is_positive()) {
-            if (path_length == 0 || specular_bounce)
+            if (depth == 0 || specular_bounce) {
                 L += beta * Le;
-            else {
+            } else {
                 // Compute MIS weight for area light
                 auto area_light = isect.area_light;
 
@@ -105,14 +105,14 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
             bsdf.regularize();
         }
 
-        if (path_length++ == max_depth) {
+        if (depth++ == max_depth) {
             break;
         }
 
         // Sample direct illumination from the light sources
 
         if (_is_non_specular(bsdf.flags())) {
-            SampledSpectrum Ld = PathIntegrator::sample_ld(isect, &bsdf, lambda, base, sampler);
+            SampledSpectrum Ld = sample_ld(isect, &bsdf, lambda, base, sampler);
             L += beta * Ld;
         }
 
@@ -140,7 +140,7 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
         // different with PBRT-v4: ignore the DifferentialRay
 
         // Possibly terminate the path with Russian roulette
-        if (path_length > 8) {
+        if (depth > 8) {
             SampledSpectrum russian_roulette_beta = beta * eta_scale;
             if (russian_roulette_beta.max_component_value() < 1) {
                 auto q = clamp<FloatType>(1 - russian_roulette_beta.max_component_value(), 0, 0.95);

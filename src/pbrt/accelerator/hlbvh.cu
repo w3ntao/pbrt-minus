@@ -203,8 +203,8 @@ PBRT_GPU bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
     return false;
 }
 
-PBRT_GPU cuda::std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray,
-                                                                 FloatType t_max) const {
+PBRT_GPU
+cuda::std::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray, FloatType t_max) const {
     if (build_nodes == nullptr) {
         return {};
     }
