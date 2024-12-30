@@ -19,22 +19,23 @@ const PathIntegrator *PathIntegrator::create(const ParameterDictionary &paramete
 
     auto max_depth = parameters.get_integer("maxdepth", 5);
 
-    path_integrator->init(integrator_base, max_depth);
+    auto regularize = parameters.get_bool("regularize", false);
+
+    path_integrator->init(integrator_base, max_depth, regularize);
 
     return path_integrator;
 }
 
-void PathIntegrator::init(const IntegratorBase *_base, uint _max_depth) {
+void PathIntegrator::init(const IntegratorBase *_base, uint _max_depth, bool _regularize) {
     base = _base;
     max_depth = _max_depth;
+    regularize = _regularize;
 }
 
 PBRT_GPU
 SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengths &lambda,
                                         const IntegratorBase *base, Sampler *sampler,
-                                        uint max_depth) {
-    const bool regularize = true;
-
+                                        uint max_depth, bool regularize) {
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
     bool specular_bounce = true;
@@ -129,7 +130,7 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
         pdf_bsdf = bs->pdf_is_proportional ? bsdf.pdf(wo, bs->wi) : bs->pdf;
 
         specular_bounce = bs->is_specular();
-        any_non_specular_bounces |= (!bs->is_specular());
+        any_non_specular_bounces |= !bs->is_specular();
 
         if (bs->is_transmission()) {
             eta_scale *= sqr(bs->eta);
@@ -157,7 +158,7 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
 
 PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
                                             Sampler *sampler) const {
-    return eval_li(primary_ray, lambda, base, sampler, max_depth);
+    return eval_li(primary_ray, lambda, base, sampler, max_depth, regularize);
 }
 
 PBRT_GPU

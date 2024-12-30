@@ -164,8 +164,10 @@ MLTPathIntegrator *MLTPathIntegrator::create(std::optional<int> samples_per_pixe
     }
 
     integrator->film_dimension = base->camera->get_camerabase()->resolution;
-    integrator->max_depth = 5;
     integrator->cie_y = parameters.global_spectra->cie_y;
+
+    integrator->max_depth = parameters.get_integer("maxdepth", 5);
+    integrator->regularize = parameters.get_bool("regularize", false);
 
     return integrator;
 }
@@ -183,7 +185,8 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
 
     auto ray = base->camera->generate_ray(camera_sample, sampler);
 
-    auto radiance = ray.weight * PathIntegrator::eval_li(ray.ray, lambda, base, sampler, max_depth);
+    auto radiance =
+        ray.weight * PathIntegrator::eval_li(ray.ray, lambda, base, sampler, max_depth, regularize);
 
     return PathSample(p_film, radiance, lambda);
 }

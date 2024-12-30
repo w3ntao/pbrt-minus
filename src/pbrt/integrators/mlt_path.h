@@ -52,6 +52,7 @@ class MLTPathIntegrator {
     uint mutation_per_pixel;
 
     uint max_depth;
+    bool regularize;
 
     const Spectrum *cie_y;
 };

@@ -935,7 +935,7 @@ void SceneBuilder::render() const {
                   << " with wavefront integrator.\n"
                   << std::flush;
 
-        wavefront_integrator->render(film, output_filename, true);
+        wavefront_integrator->render(film, output_filename, false);
         // TODO: make preview a command line option
 
         film->write_to_png(output_filename, splat_scale);

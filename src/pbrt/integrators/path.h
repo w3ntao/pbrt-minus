@@ -13,11 +13,12 @@ class PathIntegrator {
                                         const IntegratorBase *integrator_base,
                                         std::vector<void *> &gpu_dynamic_pointers);
 
-    void init(const IntegratorBase *_base, uint _max_depth);
+    void init(const IntegratorBase *_base, uint _max_depth, bool _regularize);
 
     PBRT_GPU
     static SampledSpectrum eval_li(const Ray &primary_ray, SampledWavelengths &lambda,
-                                   const IntegratorBase *base, Sampler *sampler, uint max_depth);
+                                   const IntegratorBase *base, Sampler *sampler, uint max_depth,
+                                   bool regularize);
 
     PBRT_GPU
     static inline SampledSpectrum sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
@@ -30,4 +31,5 @@ class PathIntegrator {
   private:
     const IntegratorBase *base;
     uint max_depth;
+    bool regularize;
 };
