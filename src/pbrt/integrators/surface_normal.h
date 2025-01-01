@@ -1,12 +1,11 @@
 #pragma once
 
-#include "pbrt/accelerator/hlbvh.h"
 #include "pbrt/base/integrator_base.h"
-#include "pbrt/base/ray.h"
 #include "pbrt/base/spectrum.h"
 #include "pbrt/spectra/rgb_albedo_spectrum.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
-#include "pbrt/util/sampling.h"
+
+class ParameterDictionary;
 
 class SurfaceNormalIntegrator {
   public:
@@ -23,20 +22,8 @@ class SurfaceNormalIntegrator {
         rgb_spectra[2].init(RGB(0, 0, scale), rgb_color_space);
     }
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda) const {
-        const auto shape_intersection = base->intersect(ray, Infinity);
-        if (!shape_intersection) {
-            return SampledSpectrum(0.0);
-        }
-
-        const Vector3f normal =
-            shape_intersection->interaction.n.to_vector3().face_forward(-ray.d).normalize();
-
-        const auto color = normal.softmax();
-
-        return color[0] * rgb_spectra[0].sample(lambda) + color[1] * rgb_spectra[1].sample(lambda) +
-               color[2] * rgb_spectra[2].sample(lambda);
-    }
+    PBRT_GPU
+    SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda) const;
 
   private:
     const IntegratorBase *base;

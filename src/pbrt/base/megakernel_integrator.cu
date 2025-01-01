@@ -47,7 +47,7 @@ __global__ static void megakernel_render(Film *film, const uint samples_per_pixe
 
     const auto x = threadIdx.x + blockIdx.x * blockDim.x;
     const auto y = threadIdx.y + blockIdx.y * blockDim.y;
-    
+
     if (x >= resolution.x || y >= resolution.y) {
         return;
     }
@@ -68,32 +68,32 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
     if (integrator_name == "ambientocclusion") {
         auto ambient_occlusion_integrator =
             AmbientOcclusionIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
-
         integrator->init(ambient_occlusion_integrator);
+
         return integrator;
     }
 
     if (integrator_name == "path") {
         auto path_integrator =
             PathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
-
         integrator->init(path_integrator);
+
         return integrator;
     }
 
     if (integrator_name == "surfacenormal") {
         auto surface_normal_integrator =
             SurfaceNormalIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
-
         integrator->init(surface_normal_integrator);
+
         return integrator;
     }
 
     if (integrator_name == "simplepath") {
         auto simple_path_integrator =
             SimplePathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
-
         integrator->init(simple_path_integrator);
+
         return integrator;
     }
 
@@ -157,6 +157,7 @@ SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampl
 
 void Integrator::render(Film *film, const std::string &sampler_type, uint samples_per_pixel,
                         const IntegratorBase *integrator_base) const {
+    // TODO: rewrite render for ambientocclusion and surfacenomal
     auto film_resolution = integrator_base->camera->get_camerabase()->resolution;
 
     std::vector<void *> gpu_dynamic_pointers;

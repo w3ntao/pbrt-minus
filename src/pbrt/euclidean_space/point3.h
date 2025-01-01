@@ -63,6 +63,11 @@ class Point3 {
         }
     }
 
+    PBRT_CPU_GPU
+    Point3 operator-() const {
+        return Point3(-x, -y, -z);
+    }
+
     PBRT_CPU_GPU Vector3<T> operator-(const Point3<T> &p) const {
         return Vector3<T>(x - p.x, y - p.y, z - p.z);
     }
