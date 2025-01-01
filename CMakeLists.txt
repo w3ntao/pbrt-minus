@@ -121,6 +121,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/shapes/disk.cu
         src/pbrt/shapes/loop_subdivide.cu
         src/pbrt/shapes/sphere.cu
+        src/pbrt/shapes/triangle.cu
         src/pbrt/shapes/triangle_mesh.cu
         src/pbrt/shapes/tri_quad_mesh.cu
 

@@ -55,6 +55,32 @@ void SurfaceInteraction::set_intersection_properties(const Material *_material,
     area_light = _area_light;
 }
 
+PBRT_CPU_GPU
+void SurfaceInteraction::set_shading_geometry(const Normal3f &ns, const Vector3f &dpdus,
+                                              const Vector3f &dpdvs, const Normal3f &dndus,
+                                              const Normal3f &dndvs,
+                                              bool orientationIsAuthoritative) {
+    // Compute _shading.n_ for _SurfaceInteraction_
+    shading.n = ns;
+
+    if (orientationIsAuthoritative) {
+        n = n.face_forward(shading.n);
+    } else {
+        shading.n = shading.n.face_forward(n);
+    }
+
+    // Initialize _shading_ partial derivative values
+    shading.dpdu = dpdus;
+    shading.dpdv = dpdvs;
+    shading.dndu = dndus;
+    shading.dndv = dndvs;
+
+    while (shading.dpdu.squared_length() > 1e16f || shading.dpdv.squared_length() > 1e16f) {
+        shading.dpdu /= 1e8f;
+        shading.dpdv /= 1e8f;
+    }
+}
+
 PBRT_GPU
 void SurfaceInteraction::init_bsdf(BSDF &bsdf, FullBxDF &full_bxdf, const Ray &ray,
                                    SampledWavelengths &lambda, const Camera *camera,
