@@ -727,9 +727,8 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
                 auto current_sample_idx = clamp<uint>(
                     path_state.global_path_counter / total_pixel_num, 0, samples_per_pixel);
 
-                auto title = output_filename + " - samples: " + std::to_string(current_sample_idx) +
-                             "/" + std::to_string(samples_per_pixel) +
-                             " - pass: " + std::to_string(pass);
+                auto title = "samples: " + std::to_string(current_sample_idx) + "/" +
+                             std::to_string(samples_per_pixel) + " - pass: " + std::to_string(pass);
 
                 gl_object.draw_frame(gpu_frame_buffer, title, image_resolution);
             }

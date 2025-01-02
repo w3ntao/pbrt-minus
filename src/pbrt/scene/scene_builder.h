@@ -60,6 +60,7 @@ class SceneBuilder {
 
     std::optional<int> samples_per_pixel;
     std::optional<std::string> integrator_name;
+    bool preview = false;
 
     const Integrator *megakernel_integrator = nullptr;
     WavefrontPathIntegrator *wavefront_integrator = nullptr;

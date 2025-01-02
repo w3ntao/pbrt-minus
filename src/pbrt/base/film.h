@@ -41,7 +41,7 @@ class Film {
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i &p, FloatType splat_scale = 1) const;
 
-    void copy_to_frame_buffer(uint8_t *gpu_frame_buffer) const;
+    void copy_to_frame_buffer(uint8_t *gpu_frame_buffer, FloatType splat_scale = 1) const;
 
     void write_to_png(const std::string &filename, FloatType splat_scale = 1) const;
 

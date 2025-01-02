@@ -13,7 +13,7 @@
 #include "pbrt/samplers/stratified.h"
 #include "pbrt/scene/parameter_dictionary.h"
 
-const size_t NUM_SAMPLERS = 1 * 32 * 1024;
+const size_t NUM_SAMPLERS = 1 * 64 * 1024;
 // TODO: investigate the optimal NUM_SAMPLERS?
 
 const size_t NUM_FILM_SAMPLES = 5;
@@ -979,9 +979,7 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, Vertex *global_camera
 }
 
 void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::string &output_filename,
-                            bool preview) {
-    preview = false;
-
+                            const bool preview) {
     const auto image_resolution = film->get_resolution();
     std::vector<void *> gpu_dynamic_pointers;
 
@@ -1013,6 +1011,7 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::strin
     const uint blocks = divide_and_ceil<uint>(NUM_SAMPLERS, threads);
 
     auto total_pass = divide_and_ceil<long long>(num_pixels * samples_per_pixel, NUM_SAMPLERS);
+
     for (uint pass = 0; pass < total_pass; ++pass) {
         wavefront_render<<<blocks, threads>>>(bdpt_samples, global_camera_vertices,
                                               global_light_vertices, pass, samples_per_pixel,
@@ -1037,12 +1036,15 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::strin
         }
 
         if (preview) {
-            film->copy_to_frame_buffer(gpu_frame_buffer);
+            const auto current_num_samples = std::min<uint>(
+                (long long)(NUM_SAMPLERS) * (pass + 1) / num_pixels, samples_per_pixel);
 
-            auto current_sample_idx = (long long)(NUM_SAMPLERS)*pass / num_pixels;
-            auto title = output_filename + " - samples: " + std::to_string(current_sample_idx + 1) +
-                         "/" + std::to_string(samples_per_pixel) +
-                         " - pass: " + std::to_string(pass);
+            film->copy_to_frame_buffer(gpu_frame_buffer, current_num_samples == 0
+                                                             ? 1.0 / samples_per_pixel
+                                                             : 1.0 / current_num_samples);
+
+            auto title = "samples: " + std::to_string(current_num_samples) + "/" +
+                         std::to_string(samples_per_pixel) + " - pass: " + std::to_string(pass);
 
             gl_object.draw_frame(gpu_frame_buffer, title, image_resolution);
         }

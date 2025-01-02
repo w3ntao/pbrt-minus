@@ -129,7 +129,8 @@ std::map<std::string, uint> count_material_type(const std::vector<const Primitiv
 SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
     : integrator_name(command_line_option.integrator_name),
       output_filename(command_line_option.output_file),
-      samples_per_pixel(command_line_option.samples_per_pixel) {
+      samples_per_pixel(command_line_option.samples_per_pixel),
+      preview(command_line_option.preview) {
 
     global_spectra =
         GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, thread_pool, gpu_dynamic_pointers);
@@ -912,8 +913,7 @@ void SceneBuilder::render() const {
     auto splat_scale = 1.0 / spp;
 
     if (bdpt_integrator != nullptr) {
-
-        bdpt_integrator->render(film, spp, output_filename, true);
+        bdpt_integrator->render(film, spp, output_filename, preview);
         film->write_to_png(output_filename, splat_scale);
 
     } else if (mlt_integrator != nullptr) {
@@ -934,7 +934,7 @@ void SceneBuilder::render() const {
                   << " with wavefront integrator.\n"
                   << std::flush;
 
-        wavefront_integrator->render(film, output_filename, false);
+        wavefront_integrator->render(film, output_filename, preview);
         // TODO: make preview a command line option
 
         film->write_to_png(output_filename, splat_scale);
