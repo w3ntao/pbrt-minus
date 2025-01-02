@@ -13,7 +13,6 @@ class Spectrum;
 class SurfaceInteraction;
 
 class BSDF;
-struct FullBxDF;
 
 struct CameraSample;
 struct CameraRay;
@@ -38,7 +37,6 @@ struct PathState {
     bool *finished;
 
     BSDF *bsdf;
-    FullBxDF *full_bxdf;
 
     MISParameter *mis_parameters;
 

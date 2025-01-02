@@ -49,7 +49,6 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
     auto ray = primary_ray;
 
     BSDF bsdf;
-    FullBxDF full_bxdf;
 
     // Sample path from camera and accumulate radiance estimate
     while (true) {
@@ -98,8 +97,7 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
             }
         }
 
-        isect.init_bsdf(bsdf, full_bxdf, ray, lambda, base->camera,
-                        sampler->get_samples_per_pixel());
+        isect.init_bsdf(bsdf, ray, lambda, base->camera, sampler->get_samples_per_pixel());
 
         if (regularize && any_non_specular_bounces) {
             bsdf.regularize();

@@ -38,7 +38,6 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const Ray &primary_ray,
     auto ray = primary_ray;
 
     BSDF bsdf;
-    FullBxDF full_bxdf;
 
     while (beta.is_positive()) {
         auto si = base->intersect(ray, Infinity);
@@ -67,8 +66,7 @@ PBRT_GPU SampledSpectrum SimplePathIntegrator::li(const Ray &primary_ray,
             break;
         }
 
-        isect.init_bsdf(bsdf, full_bxdf, ray, lambda, base->camera,
-                        sampler->get_samples_per_pixel());
+        isect.init_bsdf(bsdf, ray, lambda, base->camera, sampler->get_samples_per_pixel());
 
         // Sample direct illumination if _sampleLights_ is true
         auto sampled_light = base->light_sampler->sample(sampler->get_1d());

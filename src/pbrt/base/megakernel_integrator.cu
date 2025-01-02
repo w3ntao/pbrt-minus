@@ -157,7 +157,6 @@ SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampl
 
 void Integrator::render(Film *film, const std::string &sampler_type, uint samples_per_pixel,
                         const IntegratorBase *integrator_base) const {
-    // TODO: rewrite render for ambientocclusion and surfacenomal
     auto film_resolution = integrator_base->camera->get_camerabase()->resolution;
 
     std::vector<void *> gpu_dynamic_pointers;

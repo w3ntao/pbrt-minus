@@ -1,6 +1,5 @@
 #pragma once
 
-#include "pbrt/base/bxdf.h"
 #include "pbrt/util/macro.h"
 #include <cuda/std/optional>
 

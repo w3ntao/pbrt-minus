@@ -3,7 +3,6 @@
 #include "pbrt/base/bxdf.h"
 #include "pbrt/euclidean_space/frame.h"
 #include "pbrt/euclidean_space/normal3f.h"
-#include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include <cuda/std/optional>
 
@@ -11,15 +10,15 @@ class BSDF {
   public:
     PBRT_GPU void init_frame(const Normal3f &ns, const Vector3f &dpdus);
 
-    PBRT_GPU void init_bxdf(CoatedConductorBxDF *coated_conductor_bxdf);
+    PBRT_GPU void init_bxdf(const CoatedConductorBxDF &coated_conductor_bxdf);
 
-    PBRT_GPU void init_bxdf(CoatedDiffuseBxDF *coated_diffuse_bxdf);
+    PBRT_GPU void init_bxdf(const CoatedDiffuseBxDF &coated_diffuse_bxdf);
 
-    PBRT_GPU void init_bxdf(ConductorBxDF *conductor_bxdf);
+    PBRT_GPU void init_bxdf(const ConductorBxDF &conductor_bxdf);
 
-    PBRT_GPU void init_bxdf(DielectricBxDF *dielectric_bxdf);
+    PBRT_GPU void init_bxdf(const DielectricBxDF &dielectric_bxdf);
 
-    PBRT_GPU void init_bxdf(DiffuseBxDF *diffuse_bxdf);
+    PBRT_GPU void init_bxdf(const DiffuseBxDF &diffuse_bxdf);
 
     PBRT_GPU
     void regularize() {

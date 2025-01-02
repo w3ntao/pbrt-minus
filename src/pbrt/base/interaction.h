@@ -139,31 +139,28 @@ class SurfaceInteraction : public Interaction {
     SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
 
     PBRT_GPU
-    void init_bsdf(BSDF &bsdf, FullBxDF &full_bxdf, const Ray &ray, SampledWavelengths &lambda,
-                   const Camera *camera, uint samples_per_pixel);
+    void init_bsdf(BSDF &bsdf, const Ray &ray, SampledWavelengths &lambda, const Camera *camera,
+                   uint samples_per_pixel);
 
   private:
     PBRT_GPU
-    void init_coated_conductor_bsdf(BSDF &bsdf, CoatedConductorBxDF &coated_conductor_bxdf,
-                                    SampledWavelengths &lambda,
+    void init_coated_conductor_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
                                     const MaterialEvalContext &material_eval_context) const;
 
     PBRT_GPU
-    void init_coated_diffuse_bsdf(BSDF &bsdf, CoatedDiffuseBxDF &coated_diffuse_bxdf,
-                                  SampledWavelengths &lambda,
+    void init_coated_diffuse_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
                                   const MaterialEvalContext &material_eval_context) const;
 
     PBRT_GPU
-    void init_conductor_bsdf(BSDF &bsdf, ConductorBxDF &conductor_bxdf, SampledWavelengths &lambda,
+    void init_conductor_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
                              const MaterialEvalContext &material_eval_context) const;
 
     PBRT_GPU
-    void init_dielectric_bsdf(BSDF &bsdf, DielectricBxDF &dielectric_bxdf,
-                              SampledWavelengths &lambda,
+    void init_dielectric_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
                               const MaterialEvalContext &material_eval_context) const;
 
     PBRT_GPU
-    void init_diffuse_bsdf(BSDF &bsdf, DiffuseBxDF &diffuse_bxdf, SampledWavelengths &lambda,
+    void init_diffuse_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
                            const MaterialEvalContext &material_eval_context) const;
 };
 

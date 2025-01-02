@@ -1,5 +1,10 @@
 #include "pbrt/euclidean_space/squared_matrix.h"
 
+PBRT_CPU_GPU
+static void print_warning_on_nan_result() {
+    printf("WARNING: can't inverse a singular matrix\n");
+}
+
 template <>
 PBRT_CPU_GPU FloatType SquareMatrix<3>::determinant() const {
     const auto m = this->val;
@@ -50,7 +55,9 @@ template <>
 PBRT_CPU_GPU SquareMatrix<3> SquareMatrix<3>::inverse() const {
     const FloatType det = determinant();
     if (det == 0.0) {
-        printf("warning: can't inverse a singular matrix\n");
+        if (DEBUG_MODE) {
+            print_warning_on_nan_result();
+        }
         return SquareMatrix::nan();
     }
 
@@ -107,7 +114,9 @@ Via: https://github.com/google/ion/blob/master/ion/math/matrixutils.cc,
 
     FloatType determinant = inner_product(s0, c5, -s1, c4, s2, c3, s3, c2, s5, c0, -s4, c1);
     if (determinant == 0) {
-        printf("WARNING: can't inverse a singular matrix\n");
+        if (DEBUG_MODE) {
+            print_warning_on_nan_result();
+        }
         return SquareMatrix::nan();
     }
 
@@ -144,10 +153,7 @@ Via: https://github.com/google/ion/blob/master/ion/math/matrixutils.cc,
 template <uint N>
 PBRT_CPU_GPU SquareMatrix<N> SquareMatrix<N>::inverse() const {
     printf("inverse() not implemented for SquareMatrix<%u>\n", N);
+    REPORT_FATAL_ERROR();
 
-#if defined(__CUDA_ARCH__)
-    asm("trap;");
-#else
-    throw std::runtime_error("SquareMatrix<N>::inverse() not implemented");
-#endif
+    return SquareMatrix::nan();
 }

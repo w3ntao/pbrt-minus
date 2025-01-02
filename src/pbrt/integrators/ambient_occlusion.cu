@@ -33,7 +33,7 @@ SampledSpectrum AmbientOcclusionIntegrator::li(const Ray &ray, SampledWavelength
 
     const SurfaceInteraction &isect = shape_intersection->interaction;
 
-    const auto normal = isect.n.to_vector3().face_forward(-ray.d);
+    const auto normal = isect.shading.n.to_vector3().face_forward(-ray.d);
 
     auto u = sampler->get_2d();
     auto local_wi = sample_cosine_hemisphere(u);

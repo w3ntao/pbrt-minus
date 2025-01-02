@@ -139,8 +139,6 @@ struct Vertex {
     EndpointInteraction ei;
     SurfaceInteraction si;
     BSDF bsdf;
-    FullBxDF full_bxdf;
-    // TODO: probably should embed Bxdf into BSDF
 
     bool delta;
     FloatType pdfFwd;
@@ -154,10 +152,9 @@ struct Vertex {
         : type(_type), beta(_beta), delta(false), pdfFwd(0), pdfRev(0), ei(_ei) {}
 
     PBRT_CPU_GPU
-    Vertex(const SurfaceInteraction &_si, const BSDF &_bsdf, const FullBxDF &_full_bxdf,
-           const SampledSpectrum &_beta)
+    Vertex(const SurfaceInteraction &_si, const BSDF &_bsdf, const SampledSpectrum &_beta)
         : type(VertexType::Surface), beta(_beta), delta(false), pdfFwd(0), pdfRev(0), si(_si),
-          bsdf(_bsdf), full_bxdf(_full_bxdf) {}
+          bsdf(_bsdf) {}
 
     PBRT_CPU_GPU
     bool IsLight() const {
@@ -207,9 +204,8 @@ struct Vertex {
 
     PBRT_CPU_GPU
     static Vertex CreateSurface(const SurfaceInteraction &si, const BSDF &bsdf,
-                                const FullBxDF &full_bxdf, const SampledSpectrum &beta,
-                                FloatType pdf, const Vertex &prev) {
-        Vertex v(si, bsdf, full_bxdf, beta);
+                                const SampledSpectrum &beta, FloatType pdf, const Vertex &prev) {
+        Vertex v(si, bsdf, beta);
         v.pdfFwd = prev.ConvertDensity(pdf, v);
         return v;
     }
@@ -645,8 +641,7 @@ int RandomWalk(const IntegratorBase *integrator_base, SampledWavelengths &lambda
         // Handle surface interaction for path generation
         SurfaceInteraction &isect = si->interaction;
         // Get BSDF and skip over medium boundaries
-        isect.init_bsdf(vertex.bsdf, vertex.full_bxdf, ray, lambda, camera,
-                        sampler->get_samples_per_pixel());
+        isect.init_bsdf(vertex.bsdf, ray, lambda, camera, sampler->get_samples_per_pixel());
 
         // Possibly regularize the BSDF
         if (regularize && anyNonSpecularBounces) {
@@ -654,8 +649,7 @@ int RandomWalk(const IntegratorBase *integrator_base, SampledWavelengths &lambda
         }
 
         // Initialize _vertex_ with surface intersection information
-        vertex = Vertex::CreateSurface(isect, vertex.bsdf, vertex.full_bxdf, beta, pdfFwd, prev);
-        // TODO: rewrite Vertex::CreateSurface() to get rid of FullBxDF
+        vertex = Vertex::CreateSurface(isect, vertex.bsdf, beta, pdfFwd, prev);
 
         if (++bounces >= maxDepth) {
             break;
