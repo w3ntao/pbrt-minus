@@ -29,7 +29,7 @@ class MLTPathIntegrator {
                                      const IntegratorBase *base,
                                      std::vector<void *> &gpu_dynamic_pointers);
 
-    void render(Film *film, GreyScaleFilm &heat_map);
+    void render(Film *film, GreyScaleFilm &heat_map, bool preview);
 
     uint get_mutation_per_pixel() const {
         return mutation_per_pixel;

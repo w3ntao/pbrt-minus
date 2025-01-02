@@ -22,8 +22,7 @@ class BDPTIntegrator {
                                   const std::string &sampler_type, int samples_per_pixel,
                                   std::vector<void *> &gpu_dynamic_pointers);
 
-    void render(Film *film, uint samples_per_pixel, const std::string &output_filename,
-                bool preview);
+    void render(Film *film, uint samples_per_pixel, bool preview);
 
     PBRT_GPU
     SampledSpectrum li(FilmSample *film_samples, const Ray &ray, SampledWavelengths &lambda,

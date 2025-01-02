@@ -1,9 +1,9 @@
 #include "pbrt/base/camera.h"
 #include "pbrt/base/film.h"
-#include "pbrt/base/filter.h"
 #include "pbrt/base/integrator_base.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/films/grey_scale_film.h"
+#include "pbrt/gui/gl_object.h"
 #include "pbrt/integrators/mlt_path.h"
 #include "pbrt/integrators/path.h"
 #include "pbrt/samplers/mlt.h"
@@ -191,7 +191,19 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
     return PathSample(p_film, radiance, lambda);
 }
 
-void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) {
+void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool preview) {
+    const auto image_resolution = film->get_resolution();
+    std::vector<void *> gpu_dynamic_pointers;
+
+    uint8_t *gpu_frame_buffer = nullptr;
+    GLObject gl_object;
+    if (preview) {
+        gl_object.init("initializing", image_resolution);
+        CHECK_CUDA_ERROR(cudaMallocManaged(
+            &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
+        gpu_dynamic_pointers.push_back(gpu_frame_buffer);
+    }
+
     const auto num_paths_per_worker = film_dimension.x * film_dimension.y / NUM_MLT_SAMPLERS;
     const auto num_seed_paths = num_paths_per_worker * NUM_MLT_SAMPLERS;
 
@@ -245,14 +257,7 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) {
         REPORT_FATAL_ERROR();
     }
 
-    auto gap = std::max(int(total_pass / 10), 1);
-
     for (uint pass = 0; pass < total_pass; ++pass) {
-        if (pass % gap == 0 || pass == total_pass - 1) {
-            printf("mutation: %u, pass %d/%llu\n", mutation_per_pixel, pass + 1, total_pass);
-            std::cout << std::flush;
-        }
-
         // TODO: render preview with OpenGL
         wavefront_render<<<blocks, threads>>>(mlt_samples, path_samples, this, rngs, brightness);
         CHECK_CUDA_ERROR(cudaGetLastError());
@@ -261,7 +266,7 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) {
         for (uint idx = 0; idx < 2 * NUM_MLT_SAMPLERS; ++idx) {
             auto path_sample = &mlt_samples[idx].path_sample;
             auto p_film = path_sample->p_film;
-            auto weight = mlt_samples[idx].weight;
+            auto weight = mlt_samples[idx].weight; // TODO: check if this weight is necessary
             auto sampling_density = mlt_samples[idx].sampling_density;
 
             auto pixel_x = clamp<int>(std::floor(p_film.x), 0, film_dimension.x - 1);
@@ -272,6 +277,19 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) {
             film->add_splat(p_film, path_sample->radiance, path_sample->lambda);
 
             heat_map.add_sample(pixel_coord, sampling_density);
+        }
+
+        if (preview) {
+            film->copy_to_frame_buffer(gpu_frame_buffer, 1.0 / mutation_per_pixel);
+
+            const auto current_num_samples = std::min<uint>(
+                (long long)(NUM_MLT_SAMPLERS) * (pass + 1) / (film_dimension.x * film_dimension.y),
+                mutation_per_pixel);
+
+            auto title = "samples: " + std::to_string(current_num_samples) + "/" +
+                         std::to_string(mutation_per_pixel) + " - pass: " + std::to_string(pass);
+
+            gl_object.draw_frame(gpu_frame_buffer, title, image_resolution);
         }
     }
 

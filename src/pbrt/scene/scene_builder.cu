@@ -309,7 +309,7 @@ void SceneBuilder::build_integrator() {
         return;
     }
 
-    if (integrator_name == "mlt" || integrator_name == "mlt-path") {
+    if (integrator_name == "mlt" || integrator_name == "mltpath") {
         mlt_integrator = MLTPathIntegrator::create(samples_per_pixel, parameters, integrator_base,
                                                    gpu_dynamic_pointers);
         return;
@@ -913,7 +913,7 @@ void SceneBuilder::render() const {
     auto splat_scale = 1.0 / spp;
 
     if (bdpt_integrator != nullptr) {
-        bdpt_integrator->render(film, spp, output_filename, preview);
+        bdpt_integrator->render(film, spp, preview);
         film->write_to_png(output_filename, splat_scale);
 
     } else if (mlt_integrator != nullptr) {
@@ -923,7 +923,7 @@ void SceneBuilder::render() const {
 
         GreyScaleFilm heatmap(film_resolution);
 
-        mlt_integrator->render(film, heatmap);
+        mlt_integrator->render(film, heatmap, preview);
 
         film->write_to_png(output_filename, splat_scale);
 

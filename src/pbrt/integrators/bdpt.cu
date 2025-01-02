@@ -1,5 +1,4 @@
 #include "pbrt/accelerator/hlbvh.h"
-#include "pbrt/base/bxdf.h"
 #include "pbrt/base/film.h"
 #include "pbrt/base/integrator_base.h"
 #include "pbrt/base/interaction.h"
@@ -978,15 +977,14 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, Vertex *global_camera
     rendered_sample->lambda = lambda;
 }
 
-void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::string &output_filename,
-                            const bool preview) {
+void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool preview) {
     const auto image_resolution = film->get_resolution();
     std::vector<void *> gpu_dynamic_pointers;
 
     uint8_t *gpu_frame_buffer = nullptr;
     GLObject gl_object;
     if (preview) {
-        gl_object.init(output_filename, image_resolution);
+        gl_object.init("initializing", image_resolution);
         CHECK_CUDA_ERROR(cudaMallocManaged(
             &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
         gpu_dynamic_pointers.push_back(gpu_frame_buffer);
@@ -1036,12 +1034,10 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const std::strin
         }
 
         if (preview) {
+            film->copy_to_frame_buffer(gpu_frame_buffer, 1.0 / samples_per_pixel);
+
             const auto current_num_samples = std::min<uint>(
                 (long long)(NUM_SAMPLERS) * (pass + 1) / num_pixels, samples_per_pixel);
-
-            film->copy_to_frame_buffer(gpu_frame_buffer, current_num_samples == 0
-                                                             ? 1.0 / samples_per_pixel
-                                                             : 1.0 / current_num_samples);
 
             auto title = "samples: " + std::to_string(current_num_samples) + "/" +
                          std::to_string(samples_per_pixel) + " - pass: " + std::to_string(pass);
