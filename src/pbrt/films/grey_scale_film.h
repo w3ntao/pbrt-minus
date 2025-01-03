@@ -17,8 +17,6 @@ class GreyScaleFilm {
         pixels[coord.y * resolution.x + coord.x] += val;
     }
 
-    void add_splat(const Point2f &p_film, FloatType val, const Filter *filter);
-
     void write_to_png(const std::string &filename) const;
 
   private:

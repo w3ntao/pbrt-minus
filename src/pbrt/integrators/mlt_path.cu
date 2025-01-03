@@ -193,7 +193,8 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
 
 void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool preview) {
     const auto image_resolution = film->get_resolution();
-    std::vector<void *> gpu_dynamic_pointers;
+    std::vector<void *> gpu_dynamic_pointers_second_stage;
+    std::vector<void *> gpu_dynamic_pointers_first_stage;
 
     uint8_t *gpu_frame_buffer = nullptr;
     GLObject gl_object;
@@ -201,7 +202,7 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
         gl_object.init("initializing", image_resolution);
         CHECK_CUDA_ERROR(cudaMallocManaged(
             &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
-        gpu_dynamic_pointers.push_back(gpu_frame_buffer);
+        gpu_dynamic_pointers_second_stage.push_back(gpu_frame_buffer);
     }
 
     const auto num_paths_per_worker = film_dimension.x * film_dimension.y / NUM_MLT_SAMPLERS;
@@ -213,12 +214,19 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
     double *luminance_of_paths;
 
     CHECK_CUDA_ERROR(cudaMallocManaged(&seed_path_candidates, sizeof(PathSample) * num_seed_paths));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&path_samples, sizeof(PathSample) * NUM_MLT_SAMPLERS));
     CHECK_CUDA_ERROR(cudaMallocManaged(&sum_illuminance_array, sizeof(double) * NUM_MLT_SAMPLERS));
     CHECK_CUDA_ERROR(cudaMallocManaged(&luminance_of_paths, sizeof(double) * num_seed_paths));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&path_samples, sizeof(PathSample) * NUM_MLT_SAMPLERS));
+
+    gpu_dynamic_pointers_second_stage.push_back(path_samples);
+    gpu_dynamic_pointers_first_stage.push_back(seed_path_candidates);
+    gpu_dynamic_pointers_first_stage.push_back(sum_illuminance_array);
+    gpu_dynamic_pointers_first_stage.push_back(luminance_of_paths);
 
     RNG *rngs;
     CHECK_CUDA_ERROR(cudaMallocManaged(&rngs, sizeof(RNG) * NUM_MLT_SAMPLERS));
+    gpu_dynamic_pointers_second_stage.push_back(rngs);
+
     for (uint idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
         rngs[idx].set_sequence(idx);
     }
@@ -242,13 +250,13 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
         REPORT_FATAL_ERROR();
     }
 
-    for (auto ptr :
-         std::vector<void *>({seed_path_candidates, sum_illuminance_array, luminance_of_paths})) {
+    for (auto ptr : gpu_dynamic_pointers_first_stage) {
         CHECK_CUDA_ERROR(cudaFree(ptr));
     }
 
     MLTSample *mlt_samples;
     CHECK_CUDA_ERROR(cudaMallocManaged(&mlt_samples, sizeof(MLTSample) * 2 * NUM_MLT_SAMPLERS));
+    gpu_dynamic_pointers_second_stage.push_back(mlt_samples);
 
     auto total_pass =
         (long long)(mutation_per_pixel)*film_dimension.x * film_dimension.y / NUM_MLT_SAMPLERS;
@@ -270,7 +278,11 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
 
             film->add_splat(p_film, path_sample->radiance * weight, path_sample->lambda);
 
-            heat_map.add_splat(p_film, sampling_density, film->get_filter());
+            auto p_discrete = (p_film + Vector2f(0.5, 0.5)).floor();
+            p_discrete.x = clamp<int>(p_discrete.x, 0, image_resolution.x - 1);
+            p_discrete.y = clamp<int>(p_discrete.y, 0, image_resolution.y - 1);
+
+            heat_map.add_sample(p_discrete, sampling_density);
         }
 
         if (preview) {
@@ -282,7 +294,7 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
         }
     }
 
-    for (auto ptr : std::vector<void *>({path_samples, mlt_samples, rngs})) {
+    for (auto ptr : gpu_dynamic_pointers_second_stage) {
         CHECK_CUDA_ERROR(cudaFree(ptr));
     }
 }
