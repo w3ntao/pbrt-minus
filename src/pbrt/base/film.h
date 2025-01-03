@@ -24,6 +24,9 @@ class Film {
     Point2i get_resolution() const;
 
     PBRT_CPU_GPU
+    const Filter *get_filter() const;
+
+    PBRT_CPU_GPU
     Bounds2f sample_bounds() const;
 
     PBRT_CPU_GPU

@@ -44,7 +44,7 @@ void PerspectiveCamera::init(const Point2i &resolution, const CameraTransform &c
         camera_from_raster(Point3f(0.0, 1.0, 0.0)) - camera_from_raster(Point3f(0.0, 0.0, 0.0));
 
     // Compute _cosTotalWidth_ for perspective camera
-    auto radius = Point2f(filter->radius());
+    auto radius = Point2f(filter->get_radius());
     Point3f pCorner(-radius.x, -radius.y, 0.f);
 
     Vector3f wCornerCamera = this->camera_from_raster(pCorner).to_vector3().normalize();

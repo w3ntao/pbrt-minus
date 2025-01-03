@@ -77,8 +77,13 @@ void RGBFilm::init(Pixel *_pixels, const Filter *_filter, const PixelSensor *_se
 }
 
 PBRT_CPU_GPU
+const Filter *RGBFilm::get_filter() const {
+    return filter;
+}
+
+PBRT_CPU_GPU
 Bounds2f RGBFilm::sample_bounds() const {
-    Vector2f radius = filter->radius();
+    Vector2f radius = filter->get_radius();
 
     return Bounds2f(pixel_bound.p_min.to_point2f() - radius + Vector2f(0.5f, 0.5f),
                     pixel_bound.p_max.to_point2f() + radius - Vector2f(0.5f, 0.5f));
@@ -108,7 +113,7 @@ void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l
     auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
     // Compute bounds of affected pixels for splat, _splatBounds_
     Point2f pDiscrete = p_film + Vector2f(0.5, 0.5);
-    Vector2f radius = filter->radius();
+    Vector2f radius = filter->get_radius();
 
     Bounds2i splatBounds((pDiscrete - radius).floor(),
                          (pDiscrete + radius).floor() + Vector2i(1, 1));
@@ -117,14 +122,14 @@ void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l
 
     for (const auto pi : splatBounds.range()) {
         // Evaluate filter at _pi_ and add splat contribution
-        auto wt = filter->evaluate(Point2f(p_film - pi.to_point2f() - Vector2f(0.5, 0.5)));
-        if (wt == 0) {
+        auto weight = filter->evaluate(Point2f(p_film - pi.to_point2f() - Vector2f(0.5, 0.5)));
+        if (weight == 0) {
             continue;
         }
 
         auto pixel_index = pi.x + pi.y * resolution.x;
 
-        pixels[pixel_index].rgb_splat += wt * rgb;
+        pixels[pixel_index].rgb_splat += weight * rgb;
     }
 }
 

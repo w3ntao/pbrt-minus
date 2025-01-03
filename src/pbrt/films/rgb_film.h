@@ -28,13 +28,13 @@ class RGBFilm {
     static RGBFilm *create(const Filter *filter, const ParameterDictionary &parameters,
                            std::vector<void *> &gpu_dynamic_pointers);
 
-    void init(Pixel *_pixels, const Filter *_filter, const PixelSensor *_sensor,
-              const Point2i &_resolution, const RGBColorSpace *rgb_color_space);
-
     PBRT_CPU_GPU
     Point2i get_resolution() const {
         return resolution;
     }
+
+    PBRT_CPU_GPU
+    const Filter *get_filter() const;
 
     PBRT_CPU_GPU
     Bounds2f sample_bounds() const;
@@ -68,4 +68,7 @@ class RGBFilm {
     FloatType filter_integral;
 
     SquareMatrix<3> output_rgb_from_sensor_rgb;
+
+    void init(Pixel *_pixels, const Filter *_filter, const PixelSensor *_sensor,
+              const Point2i &_resolution, const RGBColorSpace *rgb_color_space);
 };

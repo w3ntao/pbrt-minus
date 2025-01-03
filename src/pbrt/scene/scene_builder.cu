@@ -212,19 +212,14 @@ void SceneBuilder::build_camera() {
 }
 
 void SceneBuilder::build_filter() {
-    // TODO: rewrite Filter initialization
+    ParameterDictionary parameters;
+    std::string filter_type = "mitchell";
     if (!pixel_filter_tokens.empty()) {
-        const auto parameters = build_parameter_dictionary(sub_vector(pixel_filter_tokens, 2));
-        const auto filter_type = pixel_filter_tokens[1].values[0];
-
-        if (filter_type != "mitchell") {
-            printf("\n%s(): PixelFilter type `%s` not implemented, changed to mitchell.\n",
-                   __func__, filter_type.c_str());
-        }
+        parameters = build_parameter_dictionary(sub_vector(pixel_filter_tokens, 2));
+        filter_type = pixel_filter_tokens[1].values[0];
     }
 
-    integrator_base->filter = Filter::create_mitchell_filter(Vector2f(2.0, 2.0), 1.0 / 3.0,
-                                                             1.0 / 3.0, gpu_dynamic_pointers);
+    integrator_base->filter = Filter::create(filter_type, parameters, gpu_dynamic_pointers);
 }
 
 void SceneBuilder::build_film() {

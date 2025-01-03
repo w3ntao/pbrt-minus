@@ -6,7 +6,9 @@
 #include <vector>
 
 class BoxFilter;
+class GaussianFilter;
 class MitchellFilter;
+class ParameterDictionary;
 
 struct FilterSample {
     Point2f p;
@@ -24,21 +26,16 @@ class Filter {
   public:
     enum class Type {
         box,
+        gaussian,
         mitchell,
     };
 
-    static const Filter *create_box_filter(FloatType radius,
-                                           std::vector<void *> &gpu_dynamic_pointers);
-
-    static const Filter *create_mitchell_filter(const Vector2f &radius, FloatType b, FloatType c,
-                                                std::vector<void *> &gpu_dynamic_pointers);
-
-    void init(const BoxFilter *box_filter);
-
-    void init(const MitchellFilter *mitchell_filter);
+    static const Filter *create(const std::string &filter_type,
+                                const ParameterDictionary &parameters,
+                                std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
-    Vector2f radius() const;
+    Vector2f get_radius() const;
 
     PBRT_CPU_GPU
     FloatType get_integral() const;
@@ -52,6 +49,12 @@ class Filter {
   private:
     Type type;
     const void *ptr;
+
+    void init(const BoxFilter *box_filter);
+
+    void init(const GaussianFilter *gaussian_filter);
+
+    void init(const MitchellFilter *mitchell_filter);
 };
 
 class FilterSampler {

@@ -1,4 +1,5 @@
 #include "ext/lodepng/lodepng.h"
+#include "pbrt/base/filter.h"
 #include "pbrt/films/grey_scale_film.h"
 #include "pbrt/spectrum_util/color_encoding.h"
 #include "pbrt/spectrum_util/rgb.h"
@@ -88,5 +89,33 @@ void GreyScaleFilm::write_to_png(const std::string &filename) const {
         std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error)
                   << std::endl;
         throw std::runtime_error("lodepng::encode() fail");
+    }
+}
+
+void GreyScaleFilm::add_splat(const Point2f &p_film, FloatType val, const Filter *filter) {
+    if (filter == nullptr) {
+        REPORT_FATAL_ERROR();
+    }
+
+    Point2f pDiscrete = p_film + Vector2f(0.5, 0.5);
+
+    Vector2f radius = filter->get_radius();
+
+    Bounds2i splatBounds((pDiscrete - radius).floor(),
+                         (pDiscrete + radius).floor() + Vector2i(1, 1));
+
+    splatBounds = splatBounds.intersect(pixel_bound);
+
+    for (const auto pi : splatBounds.range()) {
+        auto weight =
+            std::abs(filter->evaluate(Point2f(p_film - pi.to_point2f() - Vector2f(0.5, 0.5))));
+        // note: with std::abs(), it contributes differently than the original Film::add_splat()
+
+        if (weight == 0) {
+            continue;
+        }
+
+        auto pixel_index = pi.x + pi.y * resolution.x;
+        pixels[pixel_index] += weight * val;
     }
 }

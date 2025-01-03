@@ -268,14 +268,9 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
             auto weight = mlt_samples[idx].weight;
             auto sampling_density = mlt_samples[idx].sampling_density;
 
-            auto pixel_x = clamp<int>(std::floor(p_film.x), 0, film_dimension.x - 1);
-            auto pixel_y = clamp<int>(std::floor(p_film.y), 0, film_dimension.y - 1);
-
-            auto pixel_coord = Point2i(pixel_x, pixel_y);
-
             film->add_splat(p_film, path_sample->radiance * weight, path_sample->lambda);
 
-            heat_map.add_sample(pixel_coord, sampling_density);
+            heat_map.add_splat(p_film, sampling_density, film->get_filter());
         }
 
         if (preview) {

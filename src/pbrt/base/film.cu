@@ -24,7 +24,7 @@ void Film::init(RGBFilm *rgb_film) {
 PBRT_CPU_GPU
 Point2i Film::get_resolution() const {
     switch (type) {
-    case (Type::rgb): {
+    case Type::rgb: {
         return static_cast<const RGBFilm *>(ptr)->get_resolution();
     }
     }
@@ -34,9 +34,21 @@ Point2i Film::get_resolution() const {
 }
 
 PBRT_CPU_GPU
+const Filter *Film::get_filter() const {
+    switch (type) {
+    case Type::rgb: {
+        return static_cast<const RGBFilm *>(ptr)->get_filter();
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return nullptr;
+}
+
+PBRT_CPU_GPU
 Bounds2f Film::sample_bounds() const {
     switch (type) {
-    case (Type::rgb): {
+    case Type::rgb: {
         return static_cast<const RGBFilm *>(ptr)->sample_bounds();
     }
     }
@@ -49,7 +61,7 @@ PBRT_CPU_GPU
 void Film::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
                       const SampledWavelengths &lambda, FloatType weight) {
     switch (type) {
-    case (Type::rgb): {
+    case Type::rgb: {
         return static_cast<RGBFilm *>(ptr)->add_sample(pixel_index, radiance_l, lambda, weight);
     }
     }
@@ -61,7 +73,7 @@ PBRT_CPU_GPU
 void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
                       const SampledWavelengths &lambda, FloatType weight) {
     switch (type) {
-    case (Type::rgb): {
+    case Type::rgb: {
         return static_cast<RGBFilm *>(ptr)->add_sample(p_film, radiance_l, lambda, weight);
     }
     }
@@ -72,7 +84,7 @@ void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
 void Film::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
                      const SampledWavelengths &lambda) {
     switch (type) {
-    case (Type::rgb): {
+    case Type::rgb: {
         return static_cast<RGBFilm *>(ptr)->add_splat(p_film, radiance_l, lambda);
     }
     }

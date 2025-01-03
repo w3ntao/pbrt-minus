@@ -1,12 +1,24 @@
 #pragma once
 
+#include "pbrt/base/filter.h"
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/util/basic_math.h"
 
 class BoxFilter {
   public:
-    void init(FloatType _radius) {
-        radius = Vector2f(_radius, _radius);
+    static const BoxFilter *create(const ParameterDictionary &parameters,
+                                   std::vector<void *> &gpu_dynamic_pointers);
+
+    BoxFilter() : radius(Vector2f(0.5, 0.5)) {}
+
+    PBRT_CPU_GPU
+    FloatType get_integral() const {
+        return 2 * radius.x * 2 * radius.y;
+    }
+
+    PBRT_CPU_GPU
+    FloatType evaluate(const Point2f p) const {
+        return std::abs(p.x) <= radius.x && std::abs(p.y) <= radius.y ? 1 : 0;
     }
 
     PBRT_CPU_GPU
@@ -22,4 +34,8 @@ class BoxFilter {
 
   private:
     Vector2f radius;
+
+    void init(const Vector2f &_radius) {
+        radius = _radius;
+    }
 };

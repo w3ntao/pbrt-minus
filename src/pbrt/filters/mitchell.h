@@ -1,22 +1,16 @@
 #pragma once
 
-#include "pbrt/euclidean_space/vector2.h"
+#include "pbrt/base/filter.h"
 #include <vector>
 
-class Filter;
-class FilterSampler;
+class ParameterDictionary;
 
 class MitchellFilter {
   public:
-    void init(const Vector2f &_radius, FloatType _b, FloatType _c) {
-        radius = _radius;
-        b = _b;
-        c = _c;
+    static MitchellFilter *create(const ParameterDictionary &parameters,
+                                  std::vector<void *> &gpu_dynamic_pointers);
 
-        sampler = nullptr;
-    }
-
-    void build_filter_sampler(const Filter *filter, std::vector<void *> &gpu_dynamic_pointers);
+    void init_sampler(const Filter *filter, std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     Vector2f get_radius() const {
@@ -35,7 +29,7 @@ class MitchellFilter {
 
     PBRT_CPU_GPU
     FloatType evaluate(const Point2f p) const {
-        return Mitchell1D(2 * p.x / radius.x) * Mitchell1D(2 * p.y / radius.y);
+        return mitchell_1d(2 * p.x / radius.x) * mitchell_1d(2 * p.y / radius.y);
     }
 
   private:
@@ -44,5 +38,13 @@ class MitchellFilter {
     const FilterSampler *sampler;
 
     PBRT_CPU_GPU
-    FloatType Mitchell1D(FloatType x) const;
+    FloatType mitchell_1d(FloatType x) const;
+
+    void init(const Vector2f &_radius, FloatType _b, FloatType _c) {
+        radius = _radius;
+        b = _b;
+        c = _c;
+
+        sampler = nullptr;
+    }
 };
