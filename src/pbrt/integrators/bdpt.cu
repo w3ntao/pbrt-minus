@@ -1036,13 +1036,9 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
         if (preview) {
             film->copy_to_frame_buffer(gpu_frame_buffer, 1.0 / samples_per_pixel);
 
-            const auto current_num_samples = std::min<uint>(
-                (long long)(NUM_SAMPLERS) * (pass + 1) / num_pixels, samples_per_pixel);
-
-            auto title = "samples: " + std::to_string(current_num_samples) + "/" +
-                         std::to_string(samples_per_pixel) + " - pass: " + std::to_string(pass);
-
-            gl_object.draw_frame(gpu_frame_buffer, title, image_resolution);
+            gl_object.draw_frame(gpu_frame_buffer,
+                                 GLObject::assemble_title(FloatType(pass + 1) / total_pass),
+                                 image_resolution);
         }
     }
 

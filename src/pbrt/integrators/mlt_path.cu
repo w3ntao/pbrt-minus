@@ -282,14 +282,9 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
         if (preview) {
             film->copy_to_frame_buffer(gpu_frame_buffer, 1.0 / mutation_per_pixel);
 
-            const auto current_num_samples = std::min<uint>(
-                (long long)(NUM_MLT_SAMPLERS) * (pass + 1) / (film_dimension.x * film_dimension.y),
-                mutation_per_pixel);
-
-            auto title = "samples: " + std::to_string(current_num_samples) + "/" +
-                         std::to_string(mutation_per_pixel) + " - pass: " + std::to_string(pass);
-
-            gl_object.draw_frame(gpu_frame_buffer, title, image_resolution);
+            gl_object.draw_frame(gpu_frame_buffer,
+                                 GLObject::assemble_title(FloatType(pass + 1) / total_pass),
+                                 image_resolution);
         }
     }
 

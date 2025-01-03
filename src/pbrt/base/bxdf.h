@@ -1,7 +1,11 @@
 #pragma once
 
 #include "pbrt/base/bxdf_util.h"
-#include "pbrt/bxdfs/full_bxdf.h"
+#include "pbrt/bxdfs/coated_conductor_bxdf.h"
+#include "pbrt/bxdfs/coated_diffuse_bxdf.h"
+#include "pbrt/bxdfs/conductor_bxdf.h"
+#include "pbrt/bxdfs/dielectric_bxdf.h"
+#include "pbrt/bxdfs/diffuse_bxdf.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/macro.h"
 #include <cuda/std/optional>

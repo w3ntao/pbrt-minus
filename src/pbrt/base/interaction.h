@@ -15,10 +15,6 @@ class Material;
 class Sampler;
 class SampledWavelengths;
 
-class CoatedConductorBxDF;
-class CoatedDiffuseBxDF;
-class ConductorBxDF;
-
 class Interaction {
   public:
     Point3fi pi;

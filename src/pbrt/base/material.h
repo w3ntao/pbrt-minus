@@ -2,7 +2,6 @@
 
 #include "pbrt/base/bsdf.h"
 #include "pbrt/base/spectrum_texture.h"
-#include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/macro.h"
 

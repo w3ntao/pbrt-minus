@@ -914,6 +914,7 @@ void SceneBuilder::render() const {
 
     if (bdpt_integrator != nullptr) {
         bdpt_integrator->render(film, spp, preview);
+
         film->write_to_png(output_filename, splat_scale);
 
     } else if (mlt_integrator != nullptr) {
@@ -934,8 +935,7 @@ void SceneBuilder::render() const {
                   << " with wavefront integrator.\n"
                   << std::flush;
 
-        wavefront_integrator->render(film, output_filename, preview);
-        // TODO: make preview a command line option
+        wavefront_integrator->render(film, preview);
 
         film->write_to_png(output_filename, splat_scale);
 
@@ -944,6 +944,7 @@ void SceneBuilder::render() const {
                                       integrator_base);
 
         film->write_to_png(output_filename, splat_scale);
+
     } else {
         REPORT_FATAL_ERROR();
     }

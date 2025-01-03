@@ -660,17 +660,18 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
     return weight_light * ls->l * f / pdf_light;
 }
 
-void WavefrontPathIntegrator::render(Film *film, const std::string &output_filename,
-                                     const bool preview) {
+void WavefrontPathIntegrator::render(Film *film, const bool preview) {
     printf("wavefront: path pool size: %u\n", PATH_POOL_SIZE);
 
     const auto image_resolution = this->path_state.image_resolution;
+
+    const auto num_pixels = image_resolution.x * image_resolution.y;
 
     std::vector<void *> gpu_dynamic_pointers;
     uint8_t *gpu_frame_buffer = nullptr;
     GLObject gl_object;
     if (preview) {
-        gl_object.init(output_filename, image_resolution);
+        gl_object.init("initializing", image_resolution);
 
         CHECK_CUDA_ERROR(cudaMallocManaged(
             &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
@@ -723,14 +724,13 @@ void WavefrontPathIntegrator::render(Film *film, const std::string &output_filen
             if (preview) {
                 film->copy_to_frame_buffer(gpu_frame_buffer);
 
-                auto total_pixel_num = image_resolution.x * image_resolution.y;
-                auto current_sample_idx = clamp<uint>(
-                    path_state.global_path_counter / total_pixel_num, 0, samples_per_pixel);
+                auto current_sample_idx =
+                    std::min<uint>(path_state.global_path_counter / num_pixels, samples_per_pixel);
 
-                auto title = "samples: " + std::to_string(current_sample_idx) + "/" +
-                             std::to_string(samples_per_pixel) + " - pass: " + std::to_string(pass);
-
-                gl_object.draw_frame(gpu_frame_buffer, title, image_resolution);
+                gl_object.draw_frame(
+                    gpu_frame_buffer,
+                    GLObject::assemble_title(FloatType(current_sample_idx) / samples_per_pixel),
+                    image_resolution);
             }
         }
 

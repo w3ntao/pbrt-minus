@@ -4,7 +4,6 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
-#include "pbrt/bxdfs/full_bxdf.h"
 #include "pbrt/integrators/path.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/lights/image_infinite_light.h"

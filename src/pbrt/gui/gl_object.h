@@ -89,6 +89,12 @@ class GLObject {
         }
     }
 
+    static std::string assemble_title(const FloatType progress_percentage) {
+        std::stringstream stream;
+        stream << std::fixed << std::setprecision(1) << (progress_percentage * 100.0);
+        return stream.str() + "%";
+    }
+
     void draw_frame(const uint8_t *frame_buffer, const std::string &title,
                     const Point2i &image_resolution) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_resolution.x, image_resolution.y, 0, GL_RGB,

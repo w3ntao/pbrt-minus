@@ -90,7 +90,7 @@ class WavefrontPathIntegrator {
                                            const std::string &sampler_type, uint samples_per_pixel,
                                            std::vector<void *> &gpu_dynamic_pointers);
 
-    void render(Film *film, const std::string &output_filename, bool preview);
+    void render(Film *film, bool preview);
 
     PathState path_state;
 
@@ -106,7 +106,8 @@ class WavefrontPathIntegrator {
     SampledSpectrum sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
                               SampledWavelengths &lambda, Sampler *sampler) const;
 
-    PBRT_GPU void sample_bsdf(uint path_idx, PathState *path_state) const;
+    PBRT_GPU
+    void sample_bsdf(uint path_idx, PathState *path_state) const;
 
     template <Material::Type material_type>
     void evaluate_material();
