@@ -2,16 +2,9 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/light.h"
 #include "pbrt/base/material.h"
-#include "pbrt/base/sampler.h"
-#include "pbrt/bxdfs/coated_conductor_bxdf.h"
-#include "pbrt/bxdfs/coated_diffuse_bxdf.h"
-#include "pbrt/bxdfs/conductor_bxdf.h"
-#include "pbrt/bxdfs/dielectric_bxdf.h"
-#include "pbrt/bxdfs/diffuse_bxdf.h"
 
 PBRT_GPU
-void SurfaceInteraction::compute_differentials(const Ray &ray, const Camera *camera,
-                                               uint samples_per_pixel) {
+void SurfaceInteraction::compute_differentials(const Camera *camera, uint samples_per_pixel) {
     // different with PBRT-v4: ignore the DifferentialRay
     camera->approximate_dp_dxy(p(), n, samples_per_pixel, &dpdx, &dpdy);
 
@@ -82,81 +75,17 @@ void SurfaceInteraction::set_shading_geometry(const Normal3f &ns, const Vector3f
 }
 
 PBRT_GPU
-void SurfaceInteraction::init_bsdf(BSDF &bsdf, const Ray &ray, SampledWavelengths &lambda,
-                                   const Camera *camera, uint samples_per_pixel) {
-    compute_differentials(ray, camera, samples_per_pixel);
+BSDF SurfaceInteraction::get_bsdf(SampledWavelengths &lambda, const Camera *camera,
+                                  uint samples_per_pixel) {
+    compute_differentials(camera, samples_per_pixel);
 
     auto material_eval_context = MaterialEvalContext(*this);
-    bsdf.init_frame(material_eval_context.ns, material_eval_context.dpdus);
 
-    switch (material->get_material_type()) {
-    case Material::Type::coated_conductor: {
-        init_coated_conductor_bsdf(bsdf, lambda, material_eval_context);
-        break;
-    }
-    case Material::Type::coated_diffuse: {
-        init_coated_diffuse_bsdf(bsdf, lambda, material_eval_context);
-        break;
-    }
+    BSDF bsdf(material_eval_context.ns, material_eval_context.dpdus);
 
-    case Material::Type::conductor: {
-        init_conductor_bsdf(bsdf, lambda, material_eval_context);
-        break;
-    }
+    bsdf.init_bxdf(material, lambda, material_eval_context);
 
-    case Material::Type::dielectric: {
-        init_dielectric_bsdf(bsdf, lambda, material_eval_context);
-        break;
-    }
-
-    case Material::Type::diffuse: {
-        init_diffuse_bsdf(bsdf, lambda, material_eval_context);
-        break;
-    }
-
-    case Material::Type::mix: {
-        printf("\nyou should not see MixMaterial here\n\n");
-        REPORT_FATAL_ERROR();
-    }
-
-    default: {
-        REPORT_FATAL_ERROR();
-    }
-    }
-}
-
-PBRT_GPU
-void SurfaceInteraction::init_coated_conductor_bsdf(
-    BSDF &bsdf, SampledWavelengths &lambda,
-    const MaterialEvalContext &material_eval_context) const {
-    bsdf.init_bxdf(material->get_coated_conductor_bsdf(material_eval_context, lambda));
-}
-
-PBRT_GPU
-void SurfaceInteraction::init_coated_diffuse_bsdf(
-    BSDF &bsdf, SampledWavelengths &lambda,
-    const MaterialEvalContext &material_eval_context) const {
-    bsdf.init_bxdf(material->get_coated_diffuse_bsdf(material_eval_context, lambda));
-}
-
-PBRT_GPU
-void SurfaceInteraction::init_conductor_bsdf(
-    BSDF &bsdf, SampledWavelengths &lambda,
-    const MaterialEvalContext &material_eval_context) const {
-    bsdf.init_bxdf(material->get_conductor_bsdf(material_eval_context, lambda));
-}
-
-PBRT_GPU
-void SurfaceInteraction::init_dielectric_bsdf(
-    BSDF &bsdf, SampledWavelengths &lambda,
-    const MaterialEvalContext &material_eval_context) const {
-    bsdf.init_bxdf(material->get_dielectric_bsdf(material_eval_context, lambda));
-}
-
-PBRT_GPU
-void SurfaceInteraction::init_diffuse_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
-                                           const MaterialEvalContext &material_eval_context) const {
-    bsdf.init_bxdf(material->get_diffuse_bsdf(material_eval_context, lambda));
+    return bsdf;
 }
 
 PBRT_GPU

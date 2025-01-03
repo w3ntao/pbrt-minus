@@ -356,16 +356,14 @@ __global__ void gpu_evaluate_material(const WavefrontPathIntegrator *integrator,
 
     const uint path_idx = material_queue[queue_idx];
 
-    const auto ray = path_state->camera_rays[path_idx].ray;
-
     auto &lambda = path_state->lambdas[path_idx];
 
     auto sampler = &path_state->samplers[path_idx];
 
     auto &isect = path_state->shape_intersections[path_idx].interaction;
 
-    isect.init_bsdf(path_state->bsdf[path_idx], ray, lambda, integrator->base->camera,
-                    sampler->get_samples_per_pixel());
+    path_state->bsdf[path_idx] =
+        isect.get_bsdf(lambda, integrator->base->camera, sampler->get_samples_per_pixel());
 
     integrator->sample_bsdf(path_idx, path_state);
 

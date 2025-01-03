@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pbrt/base/bsdf.h"
-#include "pbrt/base/material.h"
 #include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/normal3f.h"
 #include "pbrt/euclidean_space/point2.h"
@@ -83,10 +82,10 @@ class SurfaceInteraction : public Interaction {
 
     Vector3f dpdx;
     Vector3f dpdy;
-    FloatType dudx = NAN;
-    FloatType dvdx = NAN;
-    FloatType dudy = NAN;
-    FloatType dvdy = NAN;
+    FloatType dudx;
+    FloatType dvdx;
+    FloatType dudy;
+    FloatType dvdy;
 
     const Material *material;
     const Light *area_light;
@@ -119,7 +118,7 @@ class SurfaceInteraction : public Interaction {
     }
 
     PBRT_GPU
-    void compute_differentials(const Ray &ray, const Camera *camera, uint samples_per_pixel);
+    void compute_differentials(const Camera *camera, uint samples_per_pixel);
 
     PBRT_GPU
     void set_intersection_properties(const Material *_material, const Light *_area_light);
@@ -133,29 +132,7 @@ class SurfaceInteraction : public Interaction {
     SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
 
     PBRT_GPU
-    void init_bsdf(BSDF &bsdf, const Ray &ray, SampledWavelengths &lambda, const Camera *camera,
-                   uint samples_per_pixel);
-
-  private:
-    PBRT_GPU
-    void init_coated_conductor_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
-                                    const MaterialEvalContext &material_eval_context) const;
-
-    PBRT_GPU
-    void init_coated_diffuse_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
-                                  const MaterialEvalContext &material_eval_context) const;
-
-    PBRT_GPU
-    void init_conductor_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
-                             const MaterialEvalContext &material_eval_context) const;
-
-    PBRT_GPU
-    void init_dielectric_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
-                              const MaterialEvalContext &material_eval_context) const;
-
-    PBRT_GPU
-    void init_diffuse_bsdf(BSDF &bsdf, SampledWavelengths &lambda,
-                           const MaterialEvalContext &material_eval_context) const;
+    BSDF get_bsdf(SampledWavelengths &lambda, const Camera *camera, uint samples_per_pixel);
 };
 
 // ShapeIntersection Definition

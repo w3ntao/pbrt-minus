@@ -258,7 +258,6 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
     }
 
     for (uint pass = 0; pass < total_pass; ++pass) {
-        // TODO: render preview with OpenGL
         wavefront_render<<<blocks, threads>>>(mlt_samples, path_samples, this, rngs, brightness);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());

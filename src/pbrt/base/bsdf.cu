@@ -1,33 +1,46 @@
 #include "pbrt/base/bsdf.h"
+#include "pbrt/base/material.h"
 
-PBRT_GPU
-void BSDF::init_frame(const Normal3f &ns, const Vector3f &dpdus) {
-    shading_frame = Frame::from_xz(dpdus.normalize(), ns.to_vector3());
-}
+PBRT_CPU_GPU
+void BSDF::init_bxdf(const Material *material, SampledWavelengths &lambda,
+                     const MaterialEvalContext &material_eval_context) {
+    switch (material->get_material_type()) {
+    case Material::Type::coated_conductor: {
+        bxdf.init(material->get_coated_conductor_bsdf(material_eval_context, lambda));
+        return;
+    }
+    case Material::Type::coated_diffuse: {
+        bxdf.init(material->get_coated_diffuse_bsdf(material_eval_context, lambda));
+        return;
+    }
 
-PBRT_GPU
-void BSDF::init_bxdf(const ConductorBxDF &conductor_bxdf) {
-    bxdf.init(conductor_bxdf);
-}
+    case Material::Type::conductor: {
+        bxdf.init(material->get_conductor_bsdf(material_eval_context, lambda));
+        return;
+    }
 
-PBRT_GPU
-void BSDF::init_bxdf(const CoatedConductorBxDF &coated_conductor_bxdf) {
-    bxdf.init(coated_conductor_bxdf);
-}
+    case Material::Type::dielectric: {
+        bxdf.init(material->get_dielectric_bsdf(material_eval_context, lambda));
+        return;
+    }
 
-PBRT_GPU
-void BSDF::init_bxdf(const CoatedDiffuseBxDF &coated_diffuse_bxdf) {
-    bxdf.init(coated_diffuse_bxdf);
-}
+    case Material::Type::diffuse: {
+        bxdf.init(material->get_diffuse_bsdf(material_eval_context, lambda));
+        return;
+    }
 
-PBRT_GPU
-void BSDF::init_bxdf(const DielectricBxDF &dielectric_bxdf) {
-    bxdf.init(dielectric_bxdf);
-}
+    case Material::Type::mix: {
+        printf("\nyou should not see MixMaterial here\n\n");
+        REPORT_FATAL_ERROR();
+    }
 
-PBRT_GPU
-void BSDF::init_bxdf(const DiffuseBxDF &diffuse_bxdf) {
-    bxdf.init(diffuse_bxdf);
+    default: {
+        printf("\n%s(): there is a Material type not implemented\n");
+        REPORT_FATAL_ERROR();
+    }
+    }
+
+    REPORT_FATAL_ERROR();
 }
 
 PBRT_GPU

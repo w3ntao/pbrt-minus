@@ -1,30 +1,30 @@
 #include "pbrt/base/bxdf.h"
 
-PBRT_GPU
+PBRT_CPU_GPU
 void BxDF::init(const CoatedConductorBxDF &_coated_conductor_bxdf) {
     type = Type::coated_conductor;
     coated_conductor_bxdf = _coated_conductor_bxdf;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void BxDF::init(const CoatedDiffuseBxDF &_coated_diffuse_bxdf) {
     type = Type::coated_diffuse;
     coated_diffuse_bxdf = _coated_diffuse_bxdf;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void BxDF::init(const ConductorBxDF &_conductor_bxdf) {
     type = Type::conductor;
     conductor_bxdf = _conductor_bxdf;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void BxDF::init(const DielectricBxDF &_dielectric_bxdf) {
     type = Type::dielectric;
     dielectric_bxdf = _dielectric_bxdf;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void BxDF::init(const DiffuseBxDF &_diffuse_bxdf) {
     type = Type::diffuse;
     diffuse_bxdf = _diffuse_bxdf;

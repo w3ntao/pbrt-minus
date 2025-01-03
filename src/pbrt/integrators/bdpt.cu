@@ -640,15 +640,16 @@ int RandomWalk(const IntegratorBase *integrator_base, SampledWavelengths &lambda
         // Handle surface interaction for path generation
         SurfaceInteraction &isect = si->interaction;
         // Get BSDF and skip over medium boundaries
-        isect.init_bsdf(vertex.bsdf, ray, lambda, camera, sampler->get_samples_per_pixel());
+
+        auto bsdf = isect.get_bsdf(lambda, camera, sampler->get_samples_per_pixel());
 
         // Possibly regularize the BSDF
         if (regularize && anyNonSpecularBounces) {
-            vertex.bsdf.regularize();
+            bsdf.regularize();
         }
 
         // Initialize _vertex_ with surface intersection information
-        vertex = Vertex::CreateSurface(isect, vertex.bsdf, beta, pdfFwd, prev);
+        vertex = Vertex::CreateSurface(isect, bsdf, beta, pdfFwd, prev);
 
         if (++bounces >= maxDepth) {
             break;

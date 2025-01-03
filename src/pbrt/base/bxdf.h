@@ -21,22 +21,22 @@ class BxDF {
         diffuse,
     };
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     BxDF() : type(Type::null) {}
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void init(const CoatedConductorBxDF &_coated_conductor_bxdf);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void init(const CoatedDiffuseBxDF &_coated_diffuse_bxdf);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void init(const ConductorBxDF &_conductor_bxdf);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void init(const DielectricBxDF &_dielectric_bxdf);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void init(const DiffuseBxDF &_diffuse_bxdf);
 
     PBRT_CPU_GPU

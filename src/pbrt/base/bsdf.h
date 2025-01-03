@@ -3,22 +3,23 @@
 #include "pbrt/base/bxdf.h"
 #include "pbrt/euclidean_space/frame.h"
 #include "pbrt/euclidean_space/normal3f.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
 #include <cuda/std/optional>
+
+class Material;
+class MaterialEvalContext;
 
 class BSDF {
   public:
-    PBRT_GPU void init_frame(const Normal3f &ns, const Vector3f &dpdus);
+    PBRT_CPU_GPU
+    BSDF() {}
 
-    PBRT_GPU void init_bxdf(const CoatedConductorBxDF &coated_conductor_bxdf);
+    PBRT_CPU_GPU
+    BSDF(const Normal3f &ns, const Vector3f &dpdus)
+        : shading_frame(Frame::from_xz(dpdus.normalize(), ns.to_vector3())) {}
 
-    PBRT_GPU void init_bxdf(const CoatedDiffuseBxDF &coated_diffuse_bxdf);
-
-    PBRT_GPU void init_bxdf(const ConductorBxDF &conductor_bxdf);
-
-    PBRT_GPU void init_bxdf(const DielectricBxDF &dielectric_bxdf);
-
-    PBRT_GPU void init_bxdf(const DiffuseBxDF &diffuse_bxdf);
+    PBRT_CPU_GPU
+    void init_bxdf(const Material *material, SampledWavelengths &lambda,
+                   const MaterialEvalContext &material_eval_context);
 
     PBRT_GPU
     void regularize() {
