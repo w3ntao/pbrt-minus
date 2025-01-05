@@ -60,7 +60,6 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
                                      const std::string &integrator_name,
                                      const IntegratorBase *integrator_base,
                                      std::vector<void *> &gpu_dynamic_pointers) {
-
     Integrator *integrator;
     CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(Integrator)));
     gpu_dynamic_pointers.push_back(integrator);

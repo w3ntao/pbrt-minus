@@ -35,8 +35,8 @@ class GLObject {
 
         auto window_dimension = image_resolution;
 
-        auto scale_numerator = 20;
-        auto scale_denominator = 20;
+        auto scale_numerator = 40;
+        auto scale_denominator = 40;
         while (true) {
             // compute the maximal window size that can fit into the user screen
             window_dimension = image_resolution * scale_numerator / scale_denominator;
@@ -158,7 +158,7 @@ class GLObject {
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D,
                       texture); // all upcoming GL_TEXTURE_2D operations now have effect on this
-                                // texture object
+        // texture object
         // set the texture wrapping parameters
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
                         GL_REPEAT); // set texture wrapping to GL_REPEAT (default wrapping method)

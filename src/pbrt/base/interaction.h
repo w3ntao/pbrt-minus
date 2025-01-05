@@ -73,11 +73,13 @@ class SurfaceInteraction : public Interaction {
   public:
     Vector3f dpdu, dpdv;
     Normal3f dndu, dndv;
+
     struct {
         Normal3f n;
         Vector3f dpdu, dpdv;
         Normal3f dndu, dndv;
     } shading;
+
     int faceIndex = 0;
 
     Vector3f dpdx;
@@ -140,8 +142,8 @@ struct ShapeIntersection {
     SurfaceInteraction interaction;
     FloatType t_hit;
 
-    PBRT_CPU_GPU ShapeIntersection(const SurfaceInteraction &si, FloatType t)
-        : interaction(si), t_hit(t) {}
+    PBRT_CPU_GPU
+    ShapeIntersection(const SurfaceInteraction &si, FloatType t) : interaction(si), t_hit(t) {}
 };
 
 struct QuadricIntersection {
