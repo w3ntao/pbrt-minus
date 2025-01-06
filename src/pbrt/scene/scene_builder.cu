@@ -936,7 +936,7 @@ void SceneBuilder::render() const {
 
     } else if (megakernel_integrator != nullptr) {
         megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(),
-                                      integrator_base);
+                                      integrator_base, preview);
 
         film->write_to_png(output_filename, splat_scale);
 

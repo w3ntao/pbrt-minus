@@ -62,7 +62,7 @@ class Integrator {
     PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
     void render(Film *film, const std::string &sampler_type, uint samples_per_pixel,
-                const IntegratorBase *integrator_base) const;
+                const IntegratorBase *integrator_base, bool preview) const;
 
   private:
     void init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator);
