@@ -4,8 +4,6 @@
 #include "pbrt/gui/gl_object.h"
 #include "pbrt/integrators/ambient_occlusion.h"
 #include "pbrt/integrators/megakernel_path.h"
-#include "pbrt/integrators/random_walk.h"
-#include "pbrt/integrators/simple_path.h"
 #include "pbrt/integrators/surface_normal.h"
 #include "pbrt/spectrum_util/color_encoding.h"
 #include <chrono>
@@ -115,14 +113,6 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
         return integrator;
     }
 
-    if (integrator_name == "simplepath") {
-        auto simple_path_integrator =
-            SimplePathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
-        integrator->init(simple_path_integrator);
-
-        return integrator;
-    }
-
     printf("\n%s(): unknown Integrator: %s\n\n", __func__, integrator_name.c_str());
     REPORT_FATAL_ERROR();
     return nullptr;
@@ -134,23 +124,13 @@ void Integrator::init(const AmbientOcclusionIntegrator *ambient_occlusion_integr
 }
 
 void Integrator::init(const MegakernelPathIntegrator *megakernel_path_integrator) {
-    type = Type::path;
+    type = Type::megakernel_path;
     ptr = megakernel_path_integrator;
-}
-
-void Integrator::init(const RandomWalkIntegrator *random_walk_integrator) {
-    type = Type::random_walk;
-    ptr = random_walk_integrator;
 }
 
 void Integrator::init(const SurfaceNormalIntegrator *surface_normal_integrator) {
     type = Type::surface_normal;
     ptr = surface_normal_integrator;
-}
-
-void Integrator::init(const SimplePathIntegrator *simple_path_integrator) {
-    type = Type::simple_path;
-    ptr = simple_path_integrator;
 }
 
 PBRT_GPU
@@ -160,16 +140,8 @@ SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampl
         return static_cast<const AmbientOcclusionIntegrator *>(ptr)->li(ray, lambda, sampler);
     }
 
-    case Type::path: {
+    case Type::megakernel_path: {
         return static_cast<const MegakernelPathIntegrator *>(ptr)->li(ray, lambda, sampler);
-    }
-
-    case Type::random_walk: {
-        return static_cast<const RandomWalkIntegrator *>(ptr)->li(ray, lambda, sampler);
-    }
-
-    case Type::simple_path: {
-        return static_cast<const SimplePathIntegrator *>(ptr)->li(ray, lambda, sampler);
     }
 
     case Type::surface_normal: {
@@ -181,8 +153,8 @@ SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampl
     return {};
 }
 
-void Integrator::render(Film *film, const std::string &sampler_type, uint samples_per_pixel,
-                        const IntegratorBase *integrator_base, bool preview) const {
+void Integrator::render(Film *film, const std::string &sampler_type, const uint samples_per_pixel,
+                        const IntegratorBase *integrator_base, const bool preview) const {
     const auto film_resolution = integrator_base->camera->get_camerabase()->resolution;
     const auto num_pixels = film_resolution.x * film_resolution.y;
 

@@ -12,10 +12,11 @@
 #include "pbrt/samplers/stratified.h"
 #include "pbrt/scene/parameter_dictionary.h"
 
-const size_t NUM_SAMPLERS = 1 * 64 * 1024;
+const size_t NUM_SAMPLERS = 64 * 1024;
 // TODO: investigate the optimal NUM_SAMPLERS?
 
 const size_t NUM_FILM_SAMPLES = 5;
+// TODO: BDPT rewrite NUM_FILM_SAMPLES to accumulate in one global array
 
 struct FilmSample {
     size_t num;

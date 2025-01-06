@@ -139,6 +139,7 @@ SampledSpectrum MegakernelPathIntegrator::eval_li(const Ray &primary_ray,
 
         // Possibly terminate the path with Russian roulette
         if (depth > 8) {
+            // depth-8 and clamped-to-0.95 are taken from Mitsuba
             SampledSpectrum russian_roulette_beta = beta * eta_scale;
             if (russian_roulette_beta.max_component_value() < 1) {
                 auto q = clamp<FloatType>(1 - russian_roulette_beta.max_component_value(), 0, 0.95);
@@ -154,9 +155,9 @@ SampledSpectrum MegakernelPathIntegrator::eval_li(const Ray &primary_ray,
     return L;
 }
 
-PBRT_GPU SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray,
-                                                      SampledWavelengths &lambda,
-                                                      Sampler *sampler) const {
+PBRT_GPU
+SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
+                                             Sampler *sampler) const {
     return eval_li(primary_ray, lambda, base, sampler, max_depth, regularize);
 }
 

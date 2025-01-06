@@ -10,7 +10,7 @@
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 
-const size_t NUM_MLT_SAMPLERS = 1024 * 256;
+const size_t NUM_MLT_SAMPLERS = 256 * 1024;
 
 struct MLTSample {
     PathSample path_sample;

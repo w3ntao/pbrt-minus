@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
-# CUDA_ARCHITECTURES native is available in CMake since 3.24
+# `CUDA_ARCHITECTURES native` is available in CMake since 3.24
 
 if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
@@ -94,8 +94,6 @@ add_executable(${PROJ_NAME}
         src/pbrt/integrators/bdpt.cu
         src/pbrt/integrators/megakernel_path.cu
         src/pbrt/integrators/mlt_path.cu
-        src/pbrt/integrators/random_walk.cu
-        src/pbrt/integrators/simple_path.cu
         src/pbrt/integrators/surface_normal.cu
         src/pbrt/integrators/wavefront_path.cu
 

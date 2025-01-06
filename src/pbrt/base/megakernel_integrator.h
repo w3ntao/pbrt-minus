@@ -13,17 +13,13 @@ class Sampler;
 
 class AmbientOcclusionIntegrator;
 class MegakernelPathIntegrator;
-class RandomWalkIntegrator;
 class SurfaceNormalIntegrator;
-class SimplePathIntegrator;
 
 class Integrator {
   public:
     enum class Type {
         ambient_occlusion,
-        path,
-        random_walk,
-        simple_path,
+        megakernel_path,
         surface_normal,
     };
 
@@ -38,16 +34,8 @@ class Integrator {
             return "ambientocclusion";
         }
 
-        case Type::path: {
-            return "path";
-        }
-
-        case Type::random_walk: {
-            return "radomwalk";
-        }
-
-        case Type::simple_path: {
-            return "simplepath";
+        case Type::megakernel_path: {
+            return "megakernelpath";
         }
 
         case Type::surface_normal: {
@@ -69,11 +57,7 @@ class Integrator {
 
     void init(const MegakernelPathIntegrator *megakernel_path_integrator);
 
-    void init(const RandomWalkIntegrator *random_walk_integrator);
-
     void init(const SurfaceNormalIntegrator *surface_normal_integrator);
-
-    void init(const SimplePathIntegrator *simple_path_integrator);
 
     Type type;
     const void *ptr;
