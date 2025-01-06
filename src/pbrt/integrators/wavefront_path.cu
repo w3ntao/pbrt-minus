@@ -398,7 +398,7 @@ PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *pat
     auto &ray = path_state->camera_rays[path_idx].ray;
     auto sampler = &path_state->samplers[path_idx];
 
-    if (path_state->mis_parameters[path_idx].any_non_specular_bounces) {
+    if (regularize && path_state->mis_parameters[path_idx].any_non_specular_bounces) {
         path_state->bsdf[path_idx].regularize();
     }
 
@@ -602,6 +602,8 @@ WavefrontPathIntegrator::create(const ParameterDictionary &parameters, const Int
     integrator->queues.init(gpu_dynamic_pointers);
 
     integrator->max_depth = parameters.get_integer("maxdepth", 5);
+
+    integrator->regularize = parameters.get_bool("regularize", false);
 
     return integrator;
 }

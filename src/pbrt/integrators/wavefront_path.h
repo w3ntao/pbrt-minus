@@ -100,6 +100,8 @@ class WavefrontPathIntegrator {
 
     uint max_depth;
 
+    bool regularize;
+
     uint samples_per_pixel;
 
     PBRT_GPU
