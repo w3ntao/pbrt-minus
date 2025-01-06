@@ -4,16 +4,17 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/base/material.h"
 #include "pbrt/base/sampler.h"
-#include "pbrt/integrators/path.h"
+#include "pbrt/integrators/megakernel_path.h"
 #include "pbrt/light_samplers/power_light_sampler.h"
 #include "pbrt/lights/image_infinite_light.h"
 #include "pbrt/scene/parameter_dictionary.h"
 
-const PathIntegrator *PathIntegrator::create(const ParameterDictionary &parameters,
-                                             const IntegratorBase *integrator_base,
-                                             std::vector<void *> &gpu_dynamic_pointers) {
-    PathIntegrator *path_integrator;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&path_integrator, sizeof(PathIntegrator)));
+const MegakernelPathIntegrator *
+MegakernelPathIntegrator::create(const ParameterDictionary &parameters,
+                                 const IntegratorBase *integrator_base,
+                                 std::vector<void *> &gpu_dynamic_pointers) {
+    MegakernelPathIntegrator *path_integrator;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&path_integrator, sizeof(MegakernelPathIntegrator)));
     gpu_dynamic_pointers.push_back(path_integrator);
 
     auto max_depth = parameters.get_integer("maxdepth", 5);
@@ -25,16 +26,18 @@ const PathIntegrator *PathIntegrator::create(const ParameterDictionary &paramete
     return path_integrator;
 }
 
-void PathIntegrator::init(const IntegratorBase *_base, uint _max_depth, bool _regularize) {
+void MegakernelPathIntegrator::init(const IntegratorBase *_base, uint _max_depth,
+                                    bool _regularize) {
     base = _base;
     max_depth = _max_depth;
     regularize = _regularize;
 }
 
 PBRT_GPU
-SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengths &lambda,
-                                        const IntegratorBase *base, Sampler *sampler,
-                                        uint max_depth, bool regularize) {
+SampledSpectrum MegakernelPathIntegrator::eval_li(const Ray &primary_ray,
+                                                  SampledWavelengths &lambda,
+                                                  const IntegratorBase *base, Sampler *sampler,
+                                                  uint max_depth, bool regularize) {
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
     bool specular_bounce = true;
@@ -151,15 +154,16 @@ SampledSpectrum PathIntegrator::eval_li(const Ray &primary_ray, SampledWavelengt
     return L;
 }
 
-PBRT_GPU SampledSpectrum PathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
-                                            Sampler *sampler) const {
+PBRT_GPU SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray,
+                                                      SampledWavelengths &lambda,
+                                                      Sampler *sampler) const {
     return eval_li(primary_ray, lambda, base, sampler, max_depth, regularize);
 }
 
 PBRT_GPU
-SampledSpectrum PathIntegrator::sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
-                                          SampledWavelengths &lambda, const IntegratorBase *base,
-                                          Sampler *sampler) {
+SampledSpectrum MegakernelPathIntegrator::sample_ld(const SurfaceInteraction &intr,
+                                                    const BSDF *bsdf, SampledWavelengths &lambda,
+                                                    const IntegratorBase *base, Sampler *sampler) {
     // Initialize _LightSampleContext_ for light sampling
     LightSampleContext ctx(intr);
     // Try to nudge the light sampling position to correct side of the surface

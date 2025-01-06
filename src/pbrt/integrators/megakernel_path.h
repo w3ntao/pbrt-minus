@@ -7,11 +7,11 @@ class Sampler;
 class ParameterDictionary;
 struct IntegratorBase;
 
-class PathIntegrator {
+class MegakernelPathIntegrator {
   public:
-    static const PathIntegrator *create(const ParameterDictionary &parameters,
-                                        const IntegratorBase *integrator_base,
-                                        std::vector<void *> &gpu_dynamic_pointers);
+    static const MegakernelPathIntegrator *create(const ParameterDictionary &parameters,
+                                                  const IntegratorBase *integrator_base,
+                                                  std::vector<void *> &gpu_dynamic_pointers);
 
     void init(const IntegratorBase *_base, uint _max_depth, bool _regularize);
 

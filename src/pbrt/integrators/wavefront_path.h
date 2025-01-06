@@ -97,11 +97,8 @@ class WavefrontPathIntegrator {
     Queues queues;
 
     const IntegratorBase *base;
-
     uint max_depth;
-
     bool regularize;
-
     uint samples_per_pixel;
 
     PBRT_GPU

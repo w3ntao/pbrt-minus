@@ -92,8 +92,8 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/integrators/ambient_occlusion.cu
         src/pbrt/integrators/bdpt.cu
+        src/pbrt/integrators/megakernel_path.cu
         src/pbrt/integrators/mlt_path.cu
-        src/pbrt/integrators/path.cu
         src/pbrt/integrators/random_walk.cu
         src/pbrt/integrators/simple_path.cu
         src/pbrt/integrators/surface_normal.cu

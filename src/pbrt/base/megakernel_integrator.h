@@ -12,7 +12,7 @@ class SampledWavelengths;
 class Sampler;
 
 class AmbientOcclusionIntegrator;
-class PathIntegrator;
+class MegakernelPathIntegrator;
 class RandomWalkIntegrator;
 class SurfaceNormalIntegrator;
 class SimplePathIntegrator;
@@ -67,7 +67,7 @@ class Integrator {
   private:
     void init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator);
 
-    void init(const PathIntegrator *path_integrator);
+    void init(const MegakernelPathIntegrator *megakernel_path_integrator);
 
     void init(const RandomWalkIntegrator *random_walk_integrator);
 

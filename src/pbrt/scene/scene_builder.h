@@ -63,7 +63,7 @@ class SceneBuilder {
     bool preview = false;
 
     const Integrator *megakernel_integrator = nullptr;
-    WavefrontPathIntegrator *wavefront_integrator = nullptr;
+    WavefrontPathIntegrator *wavefront_path_integrator = nullptr;
     BDPTIntegrator *bdpt_integrator = nullptr;
     MLTPathIntegrator *mlt_integrator = nullptr;
 

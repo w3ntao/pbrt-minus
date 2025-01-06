@@ -295,7 +295,7 @@ void SceneBuilder::build_integrator() {
     }
 
     if (integrator_name == "volpath") {
-        integrator_name = "wavefrontpath";
+        integrator_name = "path";
     }
 
     if (integrator_name == "bdpt") {
@@ -312,8 +312,8 @@ void SceneBuilder::build_integrator() {
 
     printf("sampler: %s\n", sampler_type.c_str());
 
-    if (integrator_name == "wavefrontpath") {
-        wavefront_integrator =
+    if (integrator_name == "path") {
+        wavefront_path_integrator =
             WavefrontPathIntegrator::create(parameters, integrator_base, sampler_type,
                                             samples_per_pixel.value(), gpu_dynamic_pointers);
         return;
@@ -852,7 +852,7 @@ void SceneBuilder::preprocess() {
         printf("Integrator: (wavefront) bdpt\n");
     } else if (mlt_integrator != nullptr) {
         printf("Integrator: (wavefront) mlt\n");
-    } else if (wavefront_integrator != nullptr) {
+    } else if (wavefront_path_integrator != nullptr) {
         printf("Integrator: (wavefront) path\n");
     } else if (megakernel_integrator != nullptr) {
         printf("Integrator: (megakernel) %s\n", megakernel_integrator->get_name().c_str());
@@ -925,12 +925,12 @@ void SceneBuilder::render() const {
 
         heatmap.write_to_png("heatmap-" + output_filename);
 
-    } else if (wavefront_integrator != nullptr) {
+    } else if (wavefront_path_integrator != nullptr) {
         std::cout << " (samples per pixel: " << samples_per_pixel.value() << ")"
                   << " with wavefront integrator.\n"
                   << std::flush;
 
-        wavefront_integrator->render(film, preview);
+        wavefront_path_integrator->render(film, preview);
 
         film->write_to_png(output_filename, splat_scale);
 

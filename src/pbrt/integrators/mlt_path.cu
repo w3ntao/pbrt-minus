@@ -4,8 +4,8 @@
 #include "pbrt/base/sampler.h"
 #include "pbrt/films/grey_scale_film.h"
 #include "pbrt/gui/gl_object.h"
+#include "pbrt/integrators/megakernel_path.h"
 #include "pbrt/integrators/mlt_path.h"
-#include "pbrt/integrators/path.h"
 #include "pbrt/samplers/mlt.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/global_spectra.h"
@@ -185,8 +185,8 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
 
     auto ray = base->camera->generate_ray(camera_sample, sampler);
 
-    auto radiance =
-        ray.weight * PathIntegrator::eval_li(ray.ray, lambda, base, sampler, max_depth, regularize);
+    auto radiance = ray.weight * MegakernelPathIntegrator::eval_li(ray.ray, lambda, base, sampler,
+                                                                   max_depth, regularize);
 
     return PathSample(p_film, radiance, lambda);
 }

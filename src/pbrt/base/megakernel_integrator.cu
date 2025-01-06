@@ -3,7 +3,7 @@
 #include "pbrt/base/ray.h"
 #include "pbrt/base/sampler.h"
 #include "pbrt/integrators/ambient_occlusion.h"
-#include "pbrt/integrators/path.h"
+#include "pbrt/integrators/megakernel_path.h"
 #include "pbrt/integrators/random_walk.h"
 #include "pbrt/integrators/simple_path.h"
 #include "pbrt/integrators/surface_normal.h"
@@ -72,9 +72,9 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
         return integrator;
     }
 
-    if (integrator_name == "path") {
+    if (integrator_name == "megakernelpath") {
         auto path_integrator =
-            PathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
+            MegakernelPathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
         integrator->init(path_integrator);
 
         return integrator;
@@ -106,9 +106,9 @@ void Integrator::init(const AmbientOcclusionIntegrator *ambient_occlusion_integr
     ptr = ambient_occlusion_integrator;
 }
 
-void Integrator::init(const PathIntegrator *path_integrator) {
+void Integrator::init(const MegakernelPathIntegrator *megakernel_path_integrator) {
     type = Type::path;
-    ptr = path_integrator;
+    ptr = megakernel_path_integrator;
 }
 
 void Integrator::init(const RandomWalkIntegrator *random_walk_integrator) {
@@ -134,7 +134,7 @@ SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampl
     }
 
     case Type::path: {
-        return static_cast<const PathIntegrator *>(ptr)->li(ray, lambda, sampler);
+        return static_cast<const MegakernelPathIntegrator *>(ptr)->li(ray, lambda, sampler);
     }
 
     case Type::random_walk: {
