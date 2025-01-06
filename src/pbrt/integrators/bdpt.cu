@@ -13,24 +13,58 @@
 #include "pbrt/scene/parameter_dictionary.h"
 
 const size_t NUM_SAMPLERS = 64 * 1024;
-// TODO: investigate the optimal NUM_SAMPLERS?
-
-const size_t NUM_FILM_SAMPLES = 5;
-// TODO: BDPT rewrite NUM_FILM_SAMPLES to accumulate in one global array
-
-struct FilmSample {
-    size_t num;
-    Point2f p_film;
-    SampledSpectrum l_path;
-};
 
 struct BDPTSample {
     Point2i p_pixel;
     FloatType weight;
-    SampledSpectrum radiance;
+    SampledSpectrum l_path;
     SampledWavelengths lambda;
+};
 
-    FilmSample film_samples[NUM_FILM_SAMPLES];
+struct FilmSample {
+    Point2f p_film;
+    SampledSpectrum l_path;
+    SampledWavelengths lambda;
+};
+
+struct FSComparator {
+    bool operator()(FilmSample const &left, FilmSample const &right) const {
+        if (left.p_film.x < right.p_film.x) {
+            return true;
+        }
+
+        if (left.p_film.x > right.p_film.x) {
+            return false;
+        }
+
+        if (left.p_film.y < right.p_film.y) {
+            return true;
+        }
+
+        if (left.p_film.y > right.p_film.y) {
+            return false;
+        }
+
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
+            if (left.l_path[idx] < right.l_path[idx]) {
+                return true;
+            }
+
+            if (left.l_path[idx] > right.l_path[idx]) {
+                return false;
+            }
+
+            if (left.lambda[idx] < right.lambda[idx]) {
+                return true;
+            }
+
+            if (left.lambda[idx] > right.lambda[idx]) {
+                return false;
+            }
+        }
+
+        return false;
+    }
 };
 
 static __global__ void gpu_init_stratified_samplers(Sampler *samplers,
@@ -59,15 +93,14 @@ static __global__ void gpu_init_independent_samplers(Sampler *samplers,
 
 enum class VertexType { Camera, Light, Surface };
 
-// ScopedAssignment Definition
 template <typename Type>
 class ScopedAssignment {
   public:
     PBRT_CPU_GPU
-    explicit ScopedAssignment(Type *target = nullptr, Type value = Type()) : target(target) {
-        if (target) {
-            backup = *target;
-            *target = value;
+    explicit ScopedAssignment(Type *_target = nullptr, Type value = Type()) : target(_target) {
+        if (_target) {
+            backup = *_target;
+            *_target = value;
         }
     }
 
@@ -76,10 +109,6 @@ class ScopedAssignment {
         if (target)
             *target = backup;
     }
-
-    ScopedAssignment(const ScopedAssignment &) = delete;
-
-    ScopedAssignment &operator=(const ScopedAssignment &) = delete;
 
     PBRT_CPU_GPU
     ScopedAssignment &operator=(ScopedAssignment &&other) {
@@ -90,7 +119,8 @@ class ScopedAssignment {
     }
 
   private:
-    Type *target, backup;
+    Type *target;
+    Type backup;
 };
 
 struct EndpointInteraction : Interaction {
@@ -619,8 +649,6 @@ int RandomWalk(const IntegratorBase *integrator_base, SampledWavelengths &lambda
         Vertex &prev = path[bounces - 1];
         auto si = integrator_base->intersect(ray, Infinity);
 
-        // TODO: if (ray.medium) {}
-
         if (terminated) {
             return bounces;
         }
@@ -931,7 +959,8 @@ BDPTIntegrator *BDPTIntegrator::create(const ParameterDictionary &parameters,
     return bdpt_integrator;
 }
 
-__global__ void wavefront_render(BDPTSample *bdpt_samples, Vertex *global_camera_vertices,
+__global__ void wavefront_render(BDPTSample *bdpt_samples, FilmSample *film_samples,
+                                 int *film_sample_counter, Vertex *global_camera_vertices,
                                  Vertex *global_light_vertices, uint pass, uint samples_per_pixel,
                                  const Point2i film_resolution, BDPTIntegrator *bdpt_integrator) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -944,9 +973,9 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, Vertex *global_camera
 
     auto global_idx = (long long)(pass)*NUM_SAMPLERS + worker_idx;
 
-    auto pixel_idx = global_idx % (width * height);
-    auto sample_idx = global_idx / (width * height);
-    if (pixel_idx >= width * height || sample_idx >= samples_per_pixel) {
+    const auto pixel_idx = global_idx % (width * height);
+    const auto sample_idx = global_idx / (width * height);
+    if (sample_idx >= samples_per_pixel) {
         return;
     }
 
@@ -969,13 +998,13 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, Vertex *global_camera
 
     auto rendered_sample = &bdpt_samples[worker_idx];
 
-    auto radiance_l = ray.weight * bdpt_integrator->li(rendered_sample->film_samples, ray.ray,
+    auto radiance_l = ray.weight * bdpt_integrator->li(film_samples, film_sample_counter, ray.ray,
                                                        lambda, local_sampler, local_camera_vertices,
                                                        local_light_vertices);
 
     rendered_sample->p_pixel = p_pixel;
     rendered_sample->weight = camera_sample.filter_weight;
-    rendered_sample->radiance = radiance_l;
+    rendered_sample->l_path = radiance_l;
     rendered_sample->lambda = lambda;
 }
 
@@ -996,6 +1025,14 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
     CHECK_CUDA_ERROR(cudaMallocManaged(&bdpt_samples, sizeof(BDPTSample) * NUM_SAMPLERS));
     gpu_dynamic_pointers.push_back(bdpt_samples);
 
+    FilmSample *film_samples;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&film_samples, sizeof(FilmSample) * NUM_SAMPLERS));
+    gpu_dynamic_pointers.push_back(film_samples);
+
+    int *film_sample_counter;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&film_sample_counter, sizeof(int)));
+    gpu_dynamic_pointers.push_back(film_sample_counter);
+
     Vertex *global_camera_vertices;
     Vertex *global_light_vertices;
     CHECK_CUDA_ERROR(cudaMallocManaged(&global_camera_vertices,
@@ -1013,26 +1050,32 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
     auto total_pass = divide_and_ceil<long long>(num_pixels * samples_per_pixel, NUM_SAMPLERS);
 
     for (uint pass = 0; pass < total_pass; ++pass) {
-        wavefront_render<<<blocks, threads>>>(bdpt_samples, global_camera_vertices,
-                                              global_light_vertices, pass, samples_per_pixel,
-                                              film->get_resolution(), this);
+        *film_sample_counter = 0;
+        wavefront_render<<<blocks, threads>>>(bdpt_samples, film_samples, film_sample_counter,
+                                              global_camera_vertices, global_light_vertices, pass,
+                                              samples_per_pixel, film->get_resolution(), this);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        for (uint bdpt_sample_idx = 0; bdpt_sample_idx < NUM_SAMPLERS; ++bdpt_sample_idx) {
-            auto global_idx = (long long)(NUM_SAMPLERS)*pass + bdpt_sample_idx;
-            if (global_idx / num_pixels >= samples_per_pixel) {
-                break;
+        for (uint idx = 0; idx < NUM_SAMPLERS; ++idx) {
+            const auto global_idx = (long long)(pass)*NUM_SAMPLERS + idx;
+            const auto sample_idx = global_idx / num_pixels;
+            if (sample_idx >= samples_per_pixel) {
+                return;
             }
 
-            const auto current_sample = &bdpt_samples[bdpt_sample_idx];
+            const auto sample = &bdpt_samples[idx];
+            film->add_sample(sample->p_pixel, sample->l_path, sample->lambda, sample->weight);
+        }
 
-            film->add_sample(current_sample->p_pixel, current_sample->radiance,
-                             current_sample->lambda, current_sample->weight);
+        if (*film_sample_counter > 0) {
+            // sort to make film writing deterministic
+            // std::sort(film_samples + 0, film_samples + (*film_sample_counter), FSComparator());
+            std::sort(film_samples + 0, film_samples + (*film_sample_counter) - 1, FSComparator());
+        }
 
-            auto film_samples = current_sample->film_samples;
-            for (uint film_sample_idx = 0; film_sample_idx < film_samples->num; ++film_sample_idx) {
-                film->add_splat(film_samples->p_film, film_samples->l_path, current_sample->lambda);
-            }
+        for (uint idx = 0; idx < *film_sample_counter; ++idx) {
+            const auto sample = &film_samples[idx];
+            film->add_splat(sample->p_film, sample->l_path, sample->lambda);
         }
 
         if (preview) {
@@ -1051,8 +1094,8 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
 }
 
 PBRT_GPU
-SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, const Ray &ray,
-                                   SampledWavelengths &lambda, Sampler *sampler,
+SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, int *film_sample_counter,
+                                   const Ray &ray, SampledWavelengths &lambda, Sampler *sampler,
                                    Vertex *camera_vertices, Vertex *light_vertices) const {
     // Trace the camera and light subpaths
     int nCamera = GenerateCameraSubpath(base, ray, lambda, sampler, max_depth + 2, camera_vertices,
@@ -1062,7 +1105,6 @@ SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, const Ray &ray,
 
     SampledSpectrum accumulated_l(0);
 
-    int film_sample_idx = 0;
     // Execute all BDPT connection strategies
     for (int t = 1; t <= nCamera; ++t) {
         for (int s = 0; s <= nLight; ++s) {
@@ -1084,18 +1126,13 @@ SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, const Ray &ray,
                     REPORT_FATAL_ERROR();
                 }
 
-                if (film_sample_idx >= NUM_FILM_SAMPLES) {
-                    REPORT_FATAL_ERROR();
-                }
-
+                auto film_sample_idx = atomicAdd(film_sample_counter, 1);
                 film_samples[film_sample_idx].p_film = optional_p_film_new.value();
                 film_samples[film_sample_idx].l_path = l_path;
-                film_sample_idx += 1;
+                film_samples[film_sample_idx].lambda = lambda;
             }
         }
     }
-
-    film_samples->num = film_sample_idx;
 
     return accumulated_l;
 }

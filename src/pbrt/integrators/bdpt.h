@@ -25,8 +25,9 @@ class BDPTIntegrator {
     void render(Film *film, uint samples_per_pixel, bool preview);
 
     PBRT_GPU
-    SampledSpectrum li(FilmSample *film_samples, const Ray &ray, SampledWavelengths &lambda,
-                       Sampler *sampler, Vertex *camera_vertices, Vertex *light_vertices) const;
+    SampledSpectrum li(FilmSample *film_samples, int *film_sample_counter, const Ray &ray,
+                       SampledWavelengths &lambda, Sampler *sampler, Vertex *camera_vertices,
+                       Vertex *light_vertices) const;
 
     const IntegratorBase *base;
     Sampler *samplers;
