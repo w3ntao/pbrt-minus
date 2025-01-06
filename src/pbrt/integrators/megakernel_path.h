@@ -16,9 +16,9 @@ class MegakernelPathIntegrator {
     void init(const IntegratorBase *_base, uint _max_depth, bool _regularize);
 
     PBRT_GPU
-    static SampledSpectrum eval_li(const Ray &primary_ray, SampledWavelengths &lambda,
-                                   const IntegratorBase *base, Sampler *sampler, uint max_depth,
-                                   bool regularize);
+    static SampledSpectrum evaluate_li(const Ray &primary_ray, SampledWavelengths &lambda,
+                                       const IntegratorBase *base, Sampler *sampler, uint max_depth,
+                                       bool regularize);
 
     PBRT_GPU
     static inline SampledSpectrum sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,

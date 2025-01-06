@@ -193,37 +193,37 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator, PathSta
 
     switch (isect.material->get_material_type()) {
 
-    case (Material::Type::conductor): {
+    case Material::Type::conductor: {
         const uint queue_idx = atomicAdd(&queues->conductor_material_counter, 1);
         queues->conductor_material_queue[queue_idx] = path_idx;
         break;
     }
 
-    case (Material::Type::coated_conductor): {
+    case Material::Type::coated_conductor: {
         const uint queue_idx = atomicAdd(&queues->coated_conductor_material_counter, 1);
         queues->coated_conductor_material_queue[queue_idx] = path_idx;
         break;
     }
 
-    case (Material::Type::coated_diffuse): {
+    case Material::Type::coated_diffuse: {
         const uint queue_idx = atomicAdd(&queues->coated_diffuse_material_counter, 1);
         queues->coated_diffuse_material_queue[queue_idx] = path_idx;
         break;
     }
 
-    case (Material::Type::dielectric): {
+    case Material::Type::dielectric: {
         const uint queue_idx = atomicAdd(&queues->dielectric_material_counter, 1);
         queues->dielectric_material_queue[queue_idx] = path_idx;
         break;
     }
 
-    case (Material::Type::diffuse): {
+    case Material::Type::diffuse: {
         const uint queue_idx = atomicAdd(&queues->diffuse_material_counter, 1);
         queues->diffuse_material_queue[queue_idx] = path_idx;
         break;
     }
 
-    case (Material::Type::mix): {
+    case Material::Type::mix: {
         printf("\nyou should not see MixMaterial here\n\n");
         REPORT_FATAL_ERROR();
     }
@@ -649,7 +649,7 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
 
     // Return light's contribution to reflected radiance
     FloatType pdf_light = sampled_light->p * ls->pdf;
-    if (is_delta_light(light->get_light_type())) {
+    if (pbrt::is_delta_light(light->get_light_type())) {
         return ls->l * f / pdf_light;
     }
 
@@ -691,7 +691,6 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         base, &path_state, &queues);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-    uint pass = 0;
     while (queues.ray_counter > 0) {
         ray_cast<<<divide_and_ceil(queues.ray_counter, threads), threads>>>(this, &path_state,
                                                                             &queues);
@@ -749,8 +748,6 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         evaluate_material<Material::Type::dielectric>();
 
         evaluate_material<Material::Type::diffuse>();
-
-        pass += 1;
     }
 
     for (auto ptr : gpu_dynamic_pointers) {

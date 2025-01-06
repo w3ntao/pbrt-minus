@@ -34,10 +34,10 @@ void MegakernelPathIntegrator::init(const IntegratorBase *_base, uint _max_depth
 }
 
 PBRT_GPU
-SampledSpectrum MegakernelPathIntegrator::eval_li(const Ray &primary_ray,
-                                                  SampledWavelengths &lambda,
-                                                  const IntegratorBase *base, Sampler *sampler,
-                                                  uint max_depth, bool regularize) {
+SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
+                                                      SampledWavelengths &lambda,
+                                                      const IntegratorBase *base, Sampler *sampler,
+                                                      uint max_depth, bool regularize) {
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
     bool specular_bounce = true;
@@ -158,7 +158,7 @@ SampledSpectrum MegakernelPathIntegrator::eval_li(const Ray &primary_ray,
 PBRT_GPU
 SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
                                              Sampler *sampler) const {
-    return eval_li(primary_ray, lambda, base, sampler, max_depth, regularize);
+    return evaluate_li(primary_ray, lambda, base, sampler, max_depth, regularize);
 }
 
 PBRT_GPU
@@ -202,7 +202,7 @@ SampledSpectrum MegakernelPathIntegrator::sample_ld(const SurfaceInteraction &in
 
     // Return light's contribution to reflected radiance
     FloatType pdf_light = sampled_light->p * ls->pdf;
-    if (is_delta_light(light->get_light_type())) {
+    if (pbrt::is_delta_light(light->get_light_type())) {
         return ls->l * f / pdf_light;
     }
 

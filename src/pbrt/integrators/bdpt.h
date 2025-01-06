@@ -3,13 +3,11 @@
 #include "pbrt/util/macro.h"
 #include <vector>
 
-class BSDF;
 class ParameterDictionary;
 class Ray;
 class SampledSpectrum;
 class SampledWavelengths;
 class Sampler;
-class SurfaceInteraction;
 
 struct IntegratorBase;
 struct Vertex;

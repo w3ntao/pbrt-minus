@@ -27,10 +27,12 @@ enum class LightType {
     infinite,
 };
 
+namespace pbrt {
 // Light Inline Functions
 PBRT_CPU_GPU inline bool is_delta_light(LightType type) {
     return type == LightType::delta_position || type == LightType::delta_direction;
 }
+} // namespace pbrt
 
 struct LightBase {
     LightType light_type;
