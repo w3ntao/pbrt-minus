@@ -276,6 +276,12 @@ void SceneBuilder::build_gpu_lights() {
 void SceneBuilder::build_integrator() {
     build_gpu_lights();
 
+    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
+
+    if (!integrator_name.has_value()) {
+        integrator_name = parameters.get_one_string("Integrator", "path");
+    }
+
     if (!samples_per_pixel.has_value()) {
         samples_per_pixel = 4;
     }
@@ -283,15 +289,10 @@ void SceneBuilder::build_integrator() {
     const std::string sampler_type = "stratified";
     // const std::string sampler_type = "independent";
 
-    if (sampler_type == "stratified") {
-        auto sqrt_val = int(std::sqrt(samples_per_pixel.value()));
+    if (sampler_type == "stratified" && integrator_name->find("mlt") == std::string::npos) {
+        // MLT integrator ues it's own sampler
+        const auto sqrt_val = int(std::sqrt(samples_per_pixel.value()));
         samples_per_pixel = sqr(sqrt_val);
-    }
-
-    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
-
-    if (!integrator_name.has_value()) {
-        integrator_name = parameters.get_one_string("Integrator", "path");
     }
 
     if (integrator_name == "volpath") {
@@ -305,8 +306,8 @@ void SceneBuilder::build_integrator() {
     }
 
     if (integrator_name == "mlt" || integrator_name == "mltpath") {
-        mlt_integrator = MLTPathIntegrator::create(samples_per_pixel, parameters, integrator_base,
-                                                   gpu_dynamic_pointers);
+        mlt_integrator =
+            MLTPathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
         return;
     }
 
@@ -913,13 +914,13 @@ void SceneBuilder::render() const {
         film->write_to_png(output_filename, splat_scale);
 
     } else if (mlt_integrator != nullptr) {
-        std::cout << " (mutations per pixel: " << mlt_integrator->get_mutation_per_pixel() << ")"
+        std::cout << " (mutations per pixel: " << spp << ")"
                   << " with MLT integrator.\n"
                   << std::flush;
 
         GreyScaleFilm heatmap(film_resolution);
 
-        mlt_integrator->render(film, heatmap, preview);
+        mlt_integrator->render(film, heatmap, spp, preview);
 
         film->write_to_png(output_filename, splat_scale);
 

@@ -24,16 +24,11 @@ struct PathSample {
 
 class MLTPathIntegrator {
   public:
-    static MLTPathIntegrator *create(std::optional<int> samples_per_pixel,
-                                     const ParameterDictionary &parameters,
+    static MLTPathIntegrator *create(const ParameterDictionary &parameters,
                                      const IntegratorBase *base,
                                      std::vector<void *> &gpu_dynamic_pointers);
 
-    void render(Film *film, GreyScaleFilm &heat_map, bool preview);
-
-    uint get_mutation_per_pixel() const {
-        return mutation_per_pixel;
-    }
+    void render(Film *film, GreyScaleFilm &heat_map, uint mutations_per_pixel, bool preview);
 
     PBRT_CPU_GPU
     FloatType compute_luminance(const SampledSpectrum &radiance,
@@ -49,7 +44,6 @@ class MLTPathIntegrator {
 
     Sampler *samplers;
     MLTSampler *mlt_samplers;
-    uint mutation_per_pixel;
 
     uint max_depth;
     bool regularize;

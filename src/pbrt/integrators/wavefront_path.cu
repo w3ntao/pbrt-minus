@@ -527,7 +527,7 @@ void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
     uint blocks = divide_and_ceil<uint>(PATH_POOL_SIZE, threads);
 
     if (sampler_type == "stratified") {
-        const uint samples_per_dimension = std::sqrt(samples_per_pixel);
+        const auto samples_per_dimension = static_cast<int>(std::sqrt(samples_per_pixel));
         if (samples_per_dimension * samples_per_dimension != samples_per_pixel) {
             REPORT_FATAL_ERROR();
         }
@@ -586,23 +586,15 @@ WavefrontPathIntegrator::create(const ParameterDictionary &parameters, const Int
     CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(WavefrontPathIntegrator)));
     gpu_dynamic_pointers.push_back(integrator);
 
-    if (sampler_type == "stratified") {
-        auto old_spp = samples_per_pixel;
-        samples_per_pixel = sqr(int(std::sqrt(samples_per_pixel)));
-        if (old_spp != samples_per_pixel) {
-            printf("samples per pixel adjusted: %d -> %d\n", old_spp, samples_per_pixel);
-        }
-    }
-
     integrator->samples_per_pixel = samples_per_pixel;
 
     integrator->base = base;
     integrator->path_state.create(samples_per_pixel, base->camera->get_camerabase()->resolution,
                                   sampler_type, gpu_dynamic_pointers);
+
     integrator->queues.init(gpu_dynamic_pointers);
 
     integrator->max_depth = parameters.get_integer("maxdepth", 5);
-
     integrator->regularize = parameters.get_bool("regularize", false);
 
     return integrator;

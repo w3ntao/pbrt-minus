@@ -17,7 +17,7 @@ struct MLTSample {
     FloatType weight;
     FloatType sampling_density;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     MLTSample(const Point2f p_film, const SampledSpectrum &_radiance,
               const SampledWavelengths &_lambda, FloatType _weight, FloatType _sampling_density)
         : path_sample(PathSample(p_film, _radiance, _lambda)), weight(_weight),
@@ -80,10 +80,11 @@ __global__ void build_seed_path(PathSample *initial_paths, PathSample *seed_path
         seed_path_candidates[worker_idx * num_seed_paths_per_worker + selected_path_id];
 }
 
-__global__ void wavefront_render(MLTSample *mlt_samples, PathSample *path_samples,
-                                 MLTPathIntegrator *mlt_integrator, RNG *rngs, double brightness) {
+__global__ void wavefront_render(MLTSample *mlt_samples, uint num_mutations,
+                                 PathSample *path_samples, MLTPathIntegrator *mlt_integrator,
+                                 RNG *rngs, double brightness) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= NUM_MLT_SAMPLERS) {
+    if (worker_idx >= num_mutations) {
         return;
     }
 
@@ -95,8 +96,6 @@ __global__ void wavefront_render(MLTSample *mlt_samples, PathSample *path_sample
     auto mlt_sampler = &mlt_integrator->mlt_samplers[worker_idx];
 
     auto path = path_samples[worker_idx];
-
-    const auto offset = worker_idx * 2;
 
     mlt_sampler->init_sample_idx();
     mlt_sampler->large_step = rng->uniform<FloatType>() < p_large;
@@ -113,6 +112,8 @@ __global__ void wavefront_render(MLTSample *mlt_samples, PathSample *path_sample
                                       (new_path_luminance / brightness + p_large);
     const FloatType path_weight =
         (1.0 - accept_probability) / (path_luminance / brightness + p_large);
+
+    const auto offset = worker_idx * 2;
 
     mlt_samples[offset + 0] =
         MLTSample(path.p_film, path.radiance, path.lambda, path_weight, accept_probability);
@@ -135,19 +136,12 @@ __global__ void wavefront_render(MLTSample *mlt_samples, PathSample *path_sample
     path_samples[worker_idx] = path;
 }
 
-MLTPathIntegrator *MLTPathIntegrator::create(std::optional<int> samples_per_pixel,
-                                             const ParameterDictionary &parameters,
+MLTPathIntegrator *MLTPathIntegrator::create(const ParameterDictionary &parameters,
                                              const IntegratorBase *base,
                                              std::vector<void *> &gpu_dynamic_pointers) {
     MLTPathIntegrator *integrator;
     CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(MLTPathIntegrator)));
     gpu_dynamic_pointers.push_back(integrator);
-
-    if (samples_per_pixel.has_value()) {
-        integrator->mutation_per_pixel = samples_per_pixel.value();
-    } else {
-        integrator->mutation_per_pixel = parameters.get_integer("mutationsperpixel", 4);
-    }
 
     integrator->base = base;
 
@@ -185,25 +179,17 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
 
     auto ray = base->camera->generate_ray(camera_sample, sampler);
 
-    auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_li(ray.ray, lambda, base, sampler,
-                                                                   max_depth, regularize);
+    auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_li(
+                                     ray.ray, lambda, base, sampler, max_depth, regularize);
 
     return PathSample(p_film, radiance, lambda);
 }
 
-void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool preview) {
+void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const uint mutations_per_pixel,
+                               const bool preview) {
     const auto image_resolution = film->get_resolution();
     std::vector<void *> gpu_dynamic_pointers_second_stage;
     std::vector<void *> gpu_dynamic_pointers_first_stage;
-
-    uint8_t *gpu_frame_buffer = nullptr;
-    GLObject gl_object;
-    if (preview) {
-        gl_object.init("initializing", image_resolution);
-        CHECK_CUDA_ERROR(cudaMallocManaged(
-            &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
-        gpu_dynamic_pointers_second_stage.push_back(gpu_frame_buffer);
-    }
 
     const auto num_paths_per_worker = film_dimension.x * film_dimension.y / NUM_MLT_SAMPLERS;
     const auto num_seed_paths = num_paths_per_worker * NUM_MLT_SAMPLERS;
@@ -258,19 +244,34 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
     CHECK_CUDA_ERROR(cudaMallocManaged(&mlt_samples, sizeof(MLTSample) * 2 * NUM_MLT_SAMPLERS));
     gpu_dynamic_pointers_second_stage.push_back(mlt_samples);
 
-    auto total_pass =
-        (long long)(mutation_per_pixel)*film_dimension.x * film_dimension.y / NUM_MLT_SAMPLERS;
-
-    if (total_pass == 0) {
-        REPORT_FATAL_ERROR();
+    uint8_t *gpu_frame_buffer = nullptr;
+    GLObject gl_object;
+    if (preview) {
+        gl_object.init("initializing", image_resolution);
+        CHECK_CUDA_ERROR(cudaMallocManaged(
+            &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
+        gpu_dynamic_pointers_second_stage.push_back(gpu_frame_buffer);
     }
 
+    const long long total_mutations =
+        static_cast<long long>(mutations_per_pixel) * film_dimension.x * film_dimension.y;
+
+    const auto total_pass = divide_and_ceil<long long>(total_mutations, NUM_MLT_SAMPLERS);
+
+    long long accumulate_samples = 0; // this is for debugging
+
     for (uint pass = 0; pass < total_pass; ++pass) {
-        wavefront_render<<<blocks, threads>>>(mlt_samples, path_samples, this, rngs, brightness);
+        const uint num_mutations = pass == total_pass - 1
+                                       ? total_mutations - (total_pass - 1) * NUM_MLT_SAMPLERS
+                                       : NUM_MLT_SAMPLERS;
+
+        wavefront_render<<<blocks, threads>>>(mlt_samples, num_mutations, path_samples, this, rngs,
+                                              brightness);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        for (uint idx = 0; idx < 2 * NUM_MLT_SAMPLERS; ++idx) {
+        for (uint idx = 0; idx < num_mutations * 2; ++idx) {
+            accumulate_samples += 1;
             auto path_sample = &mlt_samples[idx].path_sample;
             auto p_film = path_sample->p_film;
             auto weight = mlt_samples[idx].weight;
@@ -286,12 +287,16 @@ void MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const bool p
         }
 
         if (preview) {
-            film->copy_to_frame_buffer(gpu_frame_buffer, 1.0 / mutation_per_pixel);
+            film->copy_to_frame_buffer(gpu_frame_buffer, 1.0 / mutations_per_pixel);
 
             gl_object.draw_frame(gpu_frame_buffer,
                                  GLObject::assemble_title(FloatType(pass + 1) / total_pass),
                                  image_resolution);
         }
+    }
+
+    if (accumulate_samples != total_mutations * 2) {
+        REPORT_FATAL_ERROR();
     }
 
     for (auto ptr : gpu_dynamic_pointers_second_stage) {
