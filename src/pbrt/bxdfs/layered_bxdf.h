@@ -32,17 +32,17 @@ class LayeredBxDF {
         BxDFFlags bottomFlags = bottom.flags();
 
         BxDFFlags flags = BxDFFlags::Reflection;
-        if (_is_specular(topFlags)) {
+        if (pbrt::is_specular(topFlags)) {
             flags = flags | BxDFFlags::Specular;
         }
 
-        if (_is_diffuse(topFlags) || _is_diffuse(bottomFlags) || albedo.is_positive()) {
+        if (pbrt::is_diffuse(topFlags) || pbrt::is_diffuse(bottomFlags) || albedo.is_positive()) {
             flags = flags | BxDFFlags::Diffuse;
-        } else if (_is_glossy(topFlags) || _is_glossy(bottomFlags)) {
+        } else if (pbrt::is_glossy(topFlags) || pbrt::is_glossy(bottomFlags)) {
             flags = flags | BxDFFlags::Glossy;
         }
 
-        if (_is_transmissive(topFlags) && _is_transmissive(bottomFlags)) {
+        if (pbrt::is_transmissive(topFlags) && pbrt::is_transmissive(bottomFlags)) {
             flags = flags | BxDFFlags::Transmission;
         }
 
@@ -149,7 +149,7 @@ class LayeredBxDF {
                         // Handle scattering event in layered BSDF medium
                         // Account for scattering through _exitInterface_ using _wis_
                         FloatType wt = 1;
-                        if (!_is_specular(exitInterface.flags())) {
+                        if (!pbrt::is_specular(exitInterface.flags())) {
                             wt = power_heuristic(1, wis->pdf, 1, phase.pdf(-w, -wis->wi));
                         }
 
@@ -169,7 +169,7 @@ class LayeredBxDF {
 
                         // Possibly account for scattering through _exitInterface_
                         if (((z < exitZ && w.z > 0) || (z > exitZ && w.z < 0)) &&
-                            !_is_specular(exitInterface.flags())) {
+                            !pbrt::is_specular(exitInterface.flags())) {
                             // Account for scattering through _exitInterface_
                             SampledSpectrum fExit = exitInterface.f(-w, wi, mode);
                             if (fExit.is_positive()) {
@@ -200,10 +200,10 @@ class LayeredBxDF {
 
                 } else {
                     // Account for scattering at _nonExitInterface_
-                    if (!_is_specular(nonExitInterface.flags())) {
+                    if (!pbrt::is_specular(nonExitInterface.flags())) {
                         // Add NEE contribution along presampled _wis_ direction
                         FloatType wt = 1;
-                        if (!_is_specular(exitInterface.flags())) {
+                        if (!pbrt::is_specular(exitInterface.flags())) {
                             wt = power_heuristic(1, wis->pdf, 1,
                                                  nonExitInterface.pdf(-w, -wis->wi, mode));
                         }
@@ -224,12 +224,12 @@ class LayeredBxDF {
                     beta *= bs->f * bs->wi.abs_cos_theta() / bs->pdf;
                     w = bs->wi;
 
-                    if (!_is_specular(exitInterface.flags())) {
+                    if (!pbrt::is_specular(exitInterface.flags())) {
                         // Add NEE contribution along direction from BSDF sample
                         SampledSpectrum fExit = exitInterface.f(-w, wi, mode);
                         if (fExit.is_positive()) {
                             FloatType wt = 1;
-                            if (!_is_specular(nonExitInterface.flags())) {
+                            if (!pbrt::is_specular(nonExitInterface.flags())) {
                                 FloatType exitPDF = exitInterface.pdf(
                                     -w, wi, mode, BxDFReflTransFlags::Transmission);
                                 wt = power_heuristic(1, bs->pdf, 1, exitPDF);
@@ -422,14 +422,14 @@ class LayeredBxDF {
                 // Update _pdfSum_ accounting for TRT scattering events
                 if (wos && wos->f.is_positive() && wos->pdf > 0 && wis && wis->f.is_positive() &&
                     wis->pdf > 0) {
-                    if (!_is_non_specular(tInterface.flags())) {
+                    if (!pbrt::is_non_specular(tInterface.flags())) {
                         pdfSum += rInterface.pdf(-wos->wi, -wis->wi, mode);
                     } else {
                         // Use multiple importance sampling to estimate pdf product
                         cuda::std::optional<BSDFSample> rs =
                             rInterface.sample_f(-wos->wi, r(), {r(), r()}, mode);
                         if (rs && rs->f.is_positive() && rs->pdf > 0) {
-                            if (!_is_non_specular(rInterface.flags()))
+                            if (!pbrt::is_non_specular(rInterface.flags()))
                                 pdfSum += tInterface.pdf(-rs->wi, wi, mode);
                             else {
                                 // Compute MIS-weighted estimate of Equation
@@ -473,9 +473,9 @@ class LayeredBxDF {
                     continue;
                 }
 
-                if (_is_specular(toInterface.flags())) {
+                if (pbrt::is_specular(toInterface.flags())) {
                     pdfSum += tiInterface.pdf(-wos->wi, wi, mode);
-                } else if (_is_specular(tiInterface.flags())) {
+                } else if (pbrt::is_specular(tiInterface.flags())) {
                     pdfSum += toInterface.pdf(wo, -wis->wi, mode);
                 } else {
                     pdfSum += (toInterface.pdf(wo, -wis->wi, mode) +

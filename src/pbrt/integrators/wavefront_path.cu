@@ -402,7 +402,7 @@ PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *pat
         path_state->bsdf[path_idx].regularize();
     }
 
-    if (_is_non_specular(path_state->bsdf[path_idx].flags())) {
+    if (pbrt::is_non_specular(path_state->bsdf[path_idx].flags())) {
         SampledSpectrum Ld = sample_ld(isect, &path_state->bsdf[path_idx], lambda, sampler);
         path_state->L[path_idx] += path_state->beta[path_idx] * Ld;
     }
@@ -616,9 +616,9 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
     LightSampleContext ctx(intr);
     // Try to nudge the light sampling position to correct side of the surface
     BxDFFlags flags = bsdf->flags();
-    if (_is_reflective(flags) && !_is_transmissive(flags)) {
+    if (pbrt::is_reflective(flags) && !pbrt::is_transmissive(flags)) {
         ctx.pi = intr.offset_ray_origin(intr.wo);
-    } else if (_is_transmissive(flags) && !_is_reflective(flags)) {
+    } else if (pbrt::is_transmissive(flags) && !pbrt::is_reflective(flags)) {
         ctx.pi = intr.offset_ray_origin(-intr.wo);
     }
 

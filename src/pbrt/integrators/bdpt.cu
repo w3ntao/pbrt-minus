@@ -251,7 +251,7 @@ struct Vertex {
             return true;
         }
         case VertexType::surface: {
-            return _is_non_specular(bsdf.flags());
+            return pbrt::is_non_specular(bsdf.flags());
         }
         }
 
@@ -855,9 +855,9 @@ SampledSpectrum connect_bdpt(const IntegratorBase *integrator_base, SampledWavel
                     // Try to nudge the light sampling position to correct side of the
                     // surface
                     BxDFFlags flags = pt.bsdf.flags();
-                    if (_is_reflective(flags) && !_is_transmissive(flags)) {
+                    if (pbrt::is_reflective(flags) && !pbrt::is_transmissive(flags)) {
                         ctx.pi = si.offset_ray_origin(si.wo);
-                    } else if (_is_transmissive(flags) && !_is_reflective(flags)) {
+                    } else if (pbrt::is_transmissive(flags) && !pbrt::is_reflective(flags)) {
                         ctx.pi = si.offset_ray_origin(-si.wo);
                     }
                 } else {

@@ -109,7 +109,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
 
         // Sample direct illumination from the light sources
 
-        if (_is_non_specular(bsdf.flags())) {
+        if (pbrt::is_non_specular(bsdf.flags())) {
             SampledSpectrum Ld = sample_ld(isect, &bsdf, lambda, base, sampler);
             L += beta * Ld;
         }
@@ -169,9 +169,9 @@ SampledSpectrum MegakernelPathIntegrator::sample_ld(const SurfaceInteraction &in
     LightSampleContext ctx(intr);
     // Try to nudge the light sampling position to correct side of the surface
     BxDFFlags flags = bsdf->flags();
-    if (_is_reflective(flags) && !_is_transmissive(flags)) {
+    if (pbrt::is_reflective(flags) && !pbrt::is_transmissive(flags)) {
         ctx.pi = intr.offset_ray_origin(intr.wo);
-    } else if (_is_transmissive(flags) && !_is_reflective(flags)) {
+    } else if (pbrt::is_transmissive(flags) && !pbrt::is_reflective(flags)) {
         ctx.pi = intr.offset_ray_origin(-intr.wo);
     }
 

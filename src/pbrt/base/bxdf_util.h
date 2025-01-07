@@ -20,28 +20,28 @@ enum BxDFFlags {
     All = Diffuse | Glossy | Specular | Reflection | Transmission
 };
 
-namespace {
+namespace pbrt {
 // BxDFFlags Inline Functions
-PBRT_CPU_GPU inline bool _is_reflective(BxDFFlags f) {
+PBRT_CPU_GPU inline bool is_reflective(BxDFFlags f) {
     return f & BxDFFlags::Reflection;
 }
-PBRT_CPU_GPU inline bool _is_transmissive(BxDFFlags f) {
+PBRT_CPU_GPU inline bool is_transmissive(BxDFFlags f) {
     return f & BxDFFlags::Transmission;
 }
-PBRT_CPU_GPU inline bool _is_diffuse(BxDFFlags f) {
+PBRT_CPU_GPU inline bool is_diffuse(BxDFFlags f) {
     return f & BxDFFlags::Diffuse;
 }
-PBRT_CPU_GPU inline bool _is_glossy(BxDFFlags f) {
+PBRT_CPU_GPU inline bool is_glossy(BxDFFlags f) {
     return f & BxDFFlags::Glossy;
 }
-PBRT_CPU_GPU inline bool _is_specular(BxDFFlags f) {
+PBRT_CPU_GPU inline bool is_specular(BxDFFlags f) {
     return f & BxDFFlags::Specular;
 }
-PBRT_CPU_GPU inline bool _is_non_specular(BxDFFlags f) {
+PBRT_CPU_GPU inline bool is_non_specular(BxDFFlags f) {
     return f & (BxDFFlags::Diffuse | BxDFFlags::Glossy);
 }
 
-} // namespace
+} // namespace pbrt
 
 enum class BxDFReflTransFlags {
     Unset = 0,
@@ -57,12 +57,12 @@ inline BxDFFlags operator|(BxDFFlags a, BxDFFlags b) {
 
 PBRT_CPU_GPU
 inline int operator&(BxDFFlags a, BxDFFlags b) {
-    return ((int)a & (int)b);
+    return (int)a & (int)b;
 }
 
 PBRT_CPU_GPU
 inline int operator&(BxDFFlags a, BxDFReflTransFlags b) {
-    return ((int)a & (int)b);
+    return (int)a & (int)b;
 }
 
 PBRT_CPU_GPU
@@ -78,7 +78,7 @@ inline BxDFReflTransFlags operator|(BxDFReflTransFlags a, BxDFReflTransFlags b) 
 
 PBRT_CPU_GPU
 inline int operator&(BxDFReflTransFlags a, BxDFReflTransFlags b) {
-    return ((int)a & (int)b);
+    return (int)a & (int)b;
 }
 
 PBRT_CPU_GPU
@@ -113,23 +113,23 @@ struct BSDFSample {
 
     PBRT_CPU_GPU
     bool is_reflection() const {
-        return ::_is_reflective(flags);
+        return pbrt::is_reflective(flags);
     }
     PBRT_CPU_GPU
     bool is_transmission() const {
-        return ::_is_transmissive(flags);
+        return pbrt::is_transmissive(flags);
     }
     PBRT_CPU_GPU
     bool is_diffuse() const {
-        return ::_is_diffuse(flags);
+        return pbrt::is_diffuse(flags);
     }
     PBRT_CPU_GPU
     bool is_glossy() const {
-        return ::_is_glossy(flags);
+        return pbrt::is_glossy(flags);
     }
     PBRT_CPU_GPU
     bool is_specular() const {
-        return ::_is_specular(flags);
+        return pbrt::is_specular(flags);
     }
 
     SampledSpectrum f;

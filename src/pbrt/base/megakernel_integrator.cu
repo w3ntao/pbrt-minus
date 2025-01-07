@@ -41,7 +41,7 @@ static void evaluate_pixel_sample(Film *film, const Point2i p_pixel, const uint 
     }
 }
 
-__global__ static void megakernel_render(Film *film, uint8_t *gpu_frame_buffer, bool *status_map,
+__global__ static void megakernel_render(Film *film, uint8_t *gpu_frame_buffer, int *counter,
                                          const uint samples_per_pixel, Sampler *samplers,
                                          const Integrator *integrator,
                                          const IntegratorBase *integrator_base) {
@@ -57,9 +57,11 @@ __global__ static void megakernel_render(Film *film, uint8_t *gpu_frame_buffer, 
     evaluate_pixel_sample(film, Point2i(x, y), samples_per_pixel, samplers, integrator,
                           integrator_base);
 
-    if (gpu_frame_buffer == nullptr || status_map == nullptr) {
+    if (gpu_frame_buffer == nullptr || counter == nullptr) {
         return;
     }
+
+    atomicAdd(counter, 1);
 
     const auto pixel_idx = y * resolution.x + x;
 
@@ -77,8 +79,6 @@ __global__ static void megakernel_render(Film *film, uint8_t *gpu_frame_buffer, 
     gpu_frame_buffer[pixel_idx * 3 + 0] = srgb_encoding.from_linear(rgb.r);
     gpu_frame_buffer[pixel_idx * 3 + 1] = srgb_encoding.from_linear(rgb.g);
     gpu_frame_buffer[pixel_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
-
-    status_map[pixel_idx] = true;
 }
 
 const Integrator *Integrator::create(const ParameterDictionary &parameters,
@@ -171,17 +171,18 @@ void Integrator::render(Film *film, const std::string &sampler_type, const uint 
 
     GLObject gl_object;
     uint8_t *gpu_frame_buffer = nullptr;
-    bool *status_map = nullptr;
+    int *counter = nullptr;
     if (preview) {
         gl_object.init("initializing", film_resolution);
-        CHECK_CUDA_ERROR(cudaMallocManaged(&status_map, sizeof(bool) * num_pixels));
+        CHECK_CUDA_ERROR(cudaMallocManaged(&counter, sizeof(int) * num_pixels));
         CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_frame_buffer, sizeof(uint8_t) * 3 * num_pixels));
 
-        gpu_dynamic_pointers.push_back(status_map);
+        gpu_dynamic_pointers.push_back(counter);
         gpu_dynamic_pointers.push_back(gpu_frame_buffer);
 
+        *counter = 0;
+
         for (uint idx = 0; idx < num_pixels; ++idx) {
-            status_map[idx] = false;
             gpu_frame_buffer[idx * 3 + 0] = 0;
             gpu_frame_buffer[idx * 3 + 1] = 0;
             gpu_frame_buffer[idx * 3 + 2] = 0;
@@ -191,18 +192,16 @@ void Integrator::render(Film *film, const std::string &sampler_type, const uint 
     dim3 blocks(divide_and_ceil(uint(film_resolution.x), thread_width),
                 divide_and_ceil(uint(film_resolution.y), thread_height), 1);
     dim3 threads(thread_width, thread_height, 1);
-    megakernel_render<<<blocks, threads>>>(film, gpu_frame_buffer, status_map, samples_per_pixel,
+    megakernel_render<<<blocks, threads>>>(film, gpu_frame_buffer, counter, samples_per_pixel,
                                            samplers, this, integrator_base);
 
     if (preview) {
         while (true) {
-            const int finished_pixels = std::accumulate(status_map, status_map + num_pixels, 0);
-
             gl_object.draw_frame(gpu_frame_buffer,
-                                 GLObject::assemble_title(double(finished_pixels) / num_pixels),
+                                 GLObject::assemble_title(double(*counter) / num_pixels),
                                  film_resolution);
 
-            if (finished_pixels >= num_pixels) {
+            if (*counter >= num_pixels) {
                 break;
             }
 
