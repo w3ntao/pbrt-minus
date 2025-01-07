@@ -307,9 +307,9 @@ __global__ void generate_new_path(const IntegratorBase *base, PathState *path_st
     queues->ray_queue[ray_queue_idx] = path_idx;
 }
 
-template <Material::Type material_type>
-__global__ void gpu_evaluate_material(const WavefrontPathIntegrator *integrator,
-                                      PathState *path_state, Queues *queues) {
+__global__ void gpu_evaluate_material(PathState *path_state, Queues *queues,
+                                      const Material::Type material_type,
+                                      const WavefrontPathIntegrator *integrator) {
     uint material_counter = 0;
     uint *material_queue = nullptr;
 
@@ -432,8 +432,7 @@ PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *pat
     path_state->camera_rays[path_idx].ray = isect.spawn_ray(bs->wi);
 }
 
-template <Material::Type material_type>
-void WavefrontPathIntegrator::evaluate_material() {
+void WavefrontPathIntegrator::evaluate_material(const Material::Type material_type) {
     uint material_counter = 0;
     switch (material_type) {
     case Material::Type::coated_conductor: {
@@ -473,7 +472,7 @@ void WavefrontPathIntegrator::evaluate_material() {
     const uint threads = 256;
     const auto blocks = divide_and_ceil(material_counter, threads);
 
-    gpu_evaluate_material<material_type><<<blocks, threads>>>(this, &path_state, &queues);
+    gpu_evaluate_material<<<blocks, threads>>>(&path_state, &queues, material_type, this);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
@@ -731,15 +730,15 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
-        evaluate_material<Material::Type::coated_conductor>();
-
-        evaluate_material<Material::Type::coated_diffuse>();
-
-        evaluate_material<Material::Type::conductor>();
-
-        evaluate_material<Material::Type::dielectric>();
-
-        evaluate_material<Material::Type::diffuse>();
+        for (const auto material_type : {
+                 Material::Type::coated_conductor,
+                 Material::Type::coated_diffuse,
+                 Material::Type::conductor,
+                 Material::Type::dielectric,
+                 Material::Type::diffuse,
+             }) {
+            evaluate_material(material_type);
+        }
     }
 
     for (auto ptr : gpu_dynamic_pointers) {

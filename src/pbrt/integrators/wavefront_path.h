@@ -108,6 +108,5 @@ class WavefrontPathIntegrator {
     PBRT_GPU
     void sample_bsdf(uint path_idx, PathState *path_state) const;
 
-    template <Material::Type material_type>
-    void evaluate_material();
+    void evaluate_material(const Material::Type material_type);
 };
