@@ -3,6 +3,31 @@
 #include "pbrt/util/thread_pool.h"
 #include <chrono>
 
+constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
+const uint BIT_LENGTH_OF_TREELET_MASK = 21;
+const uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_OF_TREELET_MASK;
+
+constexpr uint MAX_TREELET_NUM = 1 << BIT_LENGTH_OF_TREELET_MASK;
+/*
+ total treelets:        ->    splits for each dimension:
+ 2 ^ 12 = 4096                2 ^ 4  = 16
+ 2 ^ 15 = 32768               2 ^ 5  = 32
+ 2 ^ 18 = 262144              2 ^ 6  = 64
+ 2 ^ 21 = 2097152             2 ^ 7  = 128
+ 2 ^ 24 = 16777216            2 ^ 8  = 256
+ 2 ^ 27 = 134217728           2 ^ 9  = 512
+ 2 ^ 30 = 1073741824          2 ^ 10 = 1024
+*/
+
+constexpr uint32_t TREELET_MASK = (MAX_TREELET_NUM - 1) << MASK_OFFSET_BIT;
+
+constexpr uint MAX_PRIMITIVES_NUM_IN_LEAF = 1;
+
+[[maybe_unused]] static void _validate_treelet_num() {
+    static_assert(BIT_LENGTH_OF_TREELET_MASK > 0 && BIT_LENGTH_OF_TREELET_MASK < 32);
+    static_assert(BIT_LENGTH_OF_TREELET_MASK % 3 == 0);
+}
+
 constexpr int MORTON_SCALE = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
 
 constexpr uint NUM_BUCKETS = 24;
@@ -25,9 +50,9 @@ __global__ void init_array(T *array, const T val, const uint length) {
     array[worker_idx] = val;
 }
 
-__global__ void sort_morton_primitives(MortonPrimitive *out, const MortonPrimitive *in,
-                                       uint *counter, const uint *offset,
-                                       const uint num_primitives) {
+__global__ void sort_morton_primitives(HLBVH::MortonPrimitive *out,
+                                       const HLBVH::MortonPrimitive *in, uint *counter,
+                                       const uint *offset, const uint num_primitives) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_primitives) {
         return;
@@ -41,7 +66,7 @@ __global__ void sort_morton_primitives(MortonPrimitive *out, const MortonPrimiti
 }
 
 __global__ void count_primitives_for_treelets(uint *counter,
-                                              const MortonPrimitive *morton_primitives,
+                                              const HLBVH::MortonPrimitive *morton_primitives,
                                               const uint num_primitives) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_primitives) {
@@ -53,8 +78,8 @@ __global__ void count_primitives_for_treelets(uint *counter,
     atomicAdd(&counter[treelet_idx], 1);
 }
 
-__global__ void compute_treelet_bounds(Treelet *treelets,
-                                       const MortonPrimitive *morton_primitives) {
+__global__ void compute_treelet_bounds(HLBVH::Treelet *treelets,
+                                       const HLBVH::MortonPrimitive *morton_primitives) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= MAX_TREELET_NUM) {
         return;
@@ -72,7 +97,7 @@ __global__ void compute_treelet_bounds(Treelet *treelets,
     treelets[worker_idx].bounds = bounds;
 }
 
-__global__ void hlbvh_init_morton_primitives(MortonPrimitive *morton_primitives,
+__global__ void hlbvh_init_morton_primitives(HLBVH::MortonPrimitive *morton_primitives,
                                              const Primitive **primitives, uint num_primitives) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_primitives) {
@@ -87,7 +112,7 @@ __global__ void hlbvh_init_morton_primitives(MortonPrimitive *morton_primitives,
     morton_primitives[worker_idx].centroid = _bounds.centroid();
 }
 
-__global__ void hlbvh_init_treelets(Treelet *treelets) {
+__global__ void hlbvh_init_treelets(HLBVH::Treelet *treelets) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (worker_idx >= MAX_TREELET_NUM) {
@@ -98,7 +123,7 @@ __global__ void hlbvh_init_treelets(Treelet *treelets) {
     treelets[worker_idx].n_primitives = 0;
 }
 
-__global__ void hlbvh_compute_morton_code(MortonPrimitive *morton_primitives,
+__global__ void hlbvh_compute_morton_code(HLBVH::MortonPrimitive *morton_primitives,
                                           uint num_total_primitives,
                                           const Bounds3f bounds_of_centroids) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -114,13 +139,14 @@ __global__ void hlbvh_compute_morton_code(MortonPrimitive *morton_primitives,
         uint32_t(scaled_offset.x), uint32_t(scaled_offset.y), uint32_t(scaled_offset.z));
 }
 
-__global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const BottomBVHArgs *bvh_args_array,
+__global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const HLBVH::BottomBVHArgs *bvh_args_array,
                                        uint array_length) {
     bvh->build_bottom_bvh(bvh_args_array, array_length);
 }
 
-__global__ void init_bvh_args(BottomBVHArgs *bvh_args_array, const BVHBuildNode *bvh_build_nodes,
-                              uint *shared_offset, const uint start, const uint end) {
+__global__ void init_bvh_args(HLBVH::BottomBVHArgs *bvh_args_array,
+                              const HLBVH::BVHBuildNode *bvh_build_nodes, uint *shared_offset,
+                              const uint start, const uint end) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     const uint total_jobs = end - start;
     if (worker_idx >= total_jobs) {
