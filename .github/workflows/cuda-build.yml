@@ -46,4 +46,5 @@ jobs:
         mkdir build;
         cd build;
         cmake ..;
-        make -j;
+        make -j2;
+        # `make -j` could crash CI instances because of limited memory

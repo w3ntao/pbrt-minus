@@ -1,6 +1,6 @@
 # pbrt-minus
 
-[![cuda-build](https://github.com/w3ntao/pbrt-minus/actions/workflows/cuda-build.yml/badge.svg)](https://github.com/w3ntao/pbrt-minus/actions/workflows/cuda-build.yml)
+[![cuda build](https://github.com/w3ntao/pbrt-minus/actions/workflows/cuda-build.yml/badge.svg)](https://github.com/w3ntao/pbrt-minus/actions/workflows/cuda-build.yml)
 
 A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT-v4.
 
@@ -51,45 +51,16 @@ $ ./pbrt-minus ../example/cornell-box-specular.pbrt --spp 4
 
 More scenes at https://github.com/w3ntao/pbrt-minus-scenes.
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/book-path-4096.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/caustic-glass-v4-bdpt-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/chopper-titan-v4-path-4096.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/book-wavefrontpath-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/crown-path-4096.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame300-wavefrontpath-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/ganesha-path-4096.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame675-wavefrontpath-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/ganesha-coated-gold-path-4096.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/bmw-m6-wavefrontpath-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-rough-glass-path-4096.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/veach-mis-colorized-wavefrontpath-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-silver-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/veach-mis-colorized-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame25-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame35-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame52-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame85-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame120-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame180-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame210-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame300-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame542-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame675-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame812-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame888-path-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame1266-path-4096.png)
-
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-rough-glass-wavefrontpath-4096.png)
