@@ -2,6 +2,7 @@
 
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/util/macro.h"
+#include <cuda/std/tuple>
 #include <vector>
 
 class Distribution1D;
@@ -15,7 +16,7 @@ class Distribution2D {
                std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
-    std::pair<Point2f, FloatType> sample(const Point2f &uv) const;
+    cuda::std::pair<Point2f, FloatType> sample(const Point2f &uv) const;
 
     PBRT_CPU_GPU
     FloatType get_pdf(const Point2f &u) const;

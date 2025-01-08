@@ -74,7 +74,7 @@ void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
 }
 
 PBRT_CPU_GPU
-std::pair<Point2f, FloatType> Distribution2D::sample(const Point2f &uv) const {
+cuda::std::pair<Point2f, FloatType> Distribution2D::sample(const Point2f &uv) const {
     auto first_dim_idx = search_cdf(uv.x, cdf, dimension.x);
 
     auto first_pdf = pmf[first_dim_idx];

@@ -6,6 +6,7 @@
 #include "pbrt/euclidean_space/vector3.h"
 #include "pbrt/spectrum_util/spectrum_constants_cie.h"
 #include "pbrt/util/basic_math.h"
+#include <cuda/std/tuple>
 
 PBRT_CPU_GPU
 inline FloatType cosine_hemisphere_pdf(FloatType cos_theta) {
@@ -271,7 +272,7 @@ inline FloatType SmoothStepPDF(FloatType x, FloatType a, FloatType b) {
 
 PBRT_CPU_GPU
 inline FloatType SampleSmoothStep(FloatType u, FloatType a, FloatType b) {
-    auto cdfMinusU = [=](FloatType x) -> std::pair<FloatType, FloatType> {
+    auto cdfMinusU = [=](FloatType x) -> cuda::std::pair<FloatType, FloatType> {
         FloatType t = (x - a) / (b - a);
         FloatType P = 2 * pbrt::pow<3>(t) - pbrt::pow<4>(t);
         FloatType PDeriv = SmoothStepPDF(x, a, b);

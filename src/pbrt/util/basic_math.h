@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
+#include <cuda/std/tuple>
 #include <limits>
 
 #define _DoubleOneMinusEpsilon 0x1.fffffffffffffp-1
@@ -197,7 +198,7 @@ PBRT_CPU_GPU inline FloatType NewtonBisection(FloatType x0, FloatType x1, Func f
         }
 
         // Evaluate function and narrow bracket range _[x0, x1]_
-        std::pair<FloatType, FloatType> fxMid = f(xMid);
+        cuda::std::pair<FloatType, FloatType> fxMid = f(xMid);
         if (startIsNegative == (fxMid.first < 0)) {
             x0 = xMid;
         } else {
