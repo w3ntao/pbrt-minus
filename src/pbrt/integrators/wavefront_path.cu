@@ -79,7 +79,7 @@ static __global__ void gpu_init_stratified_samplers(Sampler *samplers,
     samplers[worker_idx].init(&stratified_samplers[worker_idx]);
 }
 
-static __global__ void gpu_init_path_state(PathState *path_state) {
+static __global__ void gpu_init_path_state(WavefrontPathIntegrator::PathState *path_state) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= PATH_POOL_SIZE) {
         return;
@@ -88,15 +88,16 @@ static __global__ void gpu_init_path_state(PathState *path_state) {
     path_state->init_new_path(worker_idx);
 }
 
-__global__ void control_logic(const WavefrontPathIntegrator *integrator, PathState *path_state,
-                              Queues *queues) {
+__global__ void control_logic(const WavefrontPathIntegrator *integrator,
+                              WavefrontPathIntegrator::PathState *path_state,
+                              WavefrontPathIntegrator::Queues *queues) {
     const uint path_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (path_idx >= PATH_POOL_SIZE || path_state->finished[path_idx]) {
         return;
     }
 
     // otherwise beta is larger than 0.0
-    auto &isect = path_state->shape_intersections[path_idx].interaction;
+    auto &isect = path_state->shape_intersections[path_idx]->interaction;
     const auto ray = path_state->camera_rays[path_idx].ray;
     auto &lambda = path_state->lambdas[path_idx];
 
@@ -105,14 +106,12 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator, PathSta
     auto &beta = path_state->beta[path_idx];
     auto &L = path_state->L[path_idx];
 
-    const auto intersected = path_state->intersected[path_idx];
-
     const auto prev_interaction_light_sample_ctx =
         path_state->mis_parameters[path_idx].prev_interaction_light_sample_ctx;
     const auto pdf_bsdf = path_state->mis_parameters[path_idx].pdf_bsdf;
 
-    bool should_terminate_path =
-        !intersected || path_length > integrator->max_depth || !beta.is_positive();
+    bool should_terminate_path = !path_state->shape_intersections[path_idx].has_value() ||
+                                 path_length > integrator->max_depth || !beta.is_positive();
 
     if (!should_terminate_path && path_length > 8) {
         // possibly terminate the path with Russian roulette
@@ -233,7 +232,7 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator, PathSta
     }
 }
 
-__global__ void write_frame_buffer(Film *film, Queues *queues) {
+__global__ void write_frame_buffer(Film *film, WavefrontPathIntegrator::Queues *queues) {
     const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= queues->frame_buffer_counter) {
         return;
@@ -254,7 +253,7 @@ __global__ void write_frame_buffer(Film *film, Queues *queues) {
     }
 }
 
-__global__ void fill_new_path_queue(Queues *queues) {
+__global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= PATH_POOL_SIZE) {
         return;
@@ -262,8 +261,9 @@ __global__ void fill_new_path_queue(Queues *queues) {
     queues->new_path_queue[worker_idx] = worker_idx;
 }
 
-__global__ void generate_new_path(const IntegratorBase *base, PathState *path_state,
-                                  Queues *queues) {
+__global__ void generate_new_path(const IntegratorBase *base,
+                                  WavefrontPathIntegrator::PathState *path_state,
+                                  WavefrontPathIntegrator::Queues *queues) {
     const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= queues->new_path_counter) {
         return;
@@ -306,7 +306,8 @@ __global__ void generate_new_path(const IntegratorBase *base, PathState *path_st
     queues->ray_queue[ray_queue_idx] = path_idx;
 }
 
-__global__ void gpu_evaluate_material(PathState *path_state, Queues *queues,
+__global__ void gpu_evaluate_material(WavefrontPathIntegrator::PathState *path_state,
+                                      WavefrontPathIntegrator::Queues *queues,
                                       const Material::Type material_type,
                                       const WavefrontPathIntegrator *integrator) {
     uint material_counter = 0;
@@ -359,7 +360,7 @@ __global__ void gpu_evaluate_material(PathState *path_state, Queues *queues,
 
     auto sampler = &path_state->samplers[path_idx];
 
-    auto &isect = path_state->shape_intersections[path_idx].interaction;
+    auto &isect = path_state->shape_intersections[path_idx]->interaction;
 
     path_state->bsdf[path_idx] =
         isect.get_bsdf(lambda, integrator->base->camera, sampler->get_samples_per_pixel());
@@ -370,8 +371,9 @@ __global__ void gpu_evaluate_material(PathState *path_state, Queues *queues,
     queues->ray_queue[ray_queue_idx] = path_idx;
 }
 
-__global__ void ray_cast(const WavefrontPathIntegrator *integrator, PathState *path_state,
-                         Queues *queues) {
+__global__ void ray_cast(const WavefrontPathIntegrator *integrator,
+                         WavefrontPathIntegrator::PathState *path_state,
+                         WavefrontPathIntegrator::Queues *queues) {
     const uint ray_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (ray_queue_idx >= queues->ray_counter) {
         return;
@@ -381,17 +383,14 @@ __global__ void ray_cast(const WavefrontPathIntegrator *integrator, PathState *p
 
     const auto camera_ray = path_state->camera_rays[path_idx];
 
-    auto intersection = integrator->base->intersect(camera_ray.ray, Infinity);
-
-    path_state->intersected[path_idx] = intersection.has_value();
-
-    if (intersection.has_value()) {
-        path_state->shape_intersections[path_idx] = intersection.value();
-    }
+    path_state->shape_intersections[path_idx] =
+        integrator->base->intersect(camera_ray.ray, Infinity);
 }
 
-PBRT_GPU void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *path_state) const {
-    auto &isect = path_state->shape_intersections[path_idx].interaction;
+PBRT_GPU void
+WavefrontPathIntegrator::sample_bsdf(uint path_idx,
+                                     WavefrontPathIntegrator::PathState *path_state) const {
+    auto &isect = path_state->shape_intersections[path_idx]->interaction;
     auto &lambda = path_state->lambdas[path_idx];
 
     auto &ray = path_state->camera_rays[path_idx].ray;
@@ -476,9 +475,9 @@ void WavefrontPathIntegrator::evaluate_material(const Material::Type material_ty
 }
 
 PBRT_CPU_GPU
-void PathState::init_new_path(uint path_idx) {
-    intersected[path_idx] = false;
+void WavefrontPathIntegrator::PathState::init_new_path(uint path_idx) {
     finished[path_idx] = false;
+    shape_intersections[path_idx].reset();
 
     L[path_idx] = SampledSpectrum(0.0);
     beta[path_idx] = SampledSpectrum(1.0);
@@ -487,8 +486,9 @@ void PathState::init_new_path(uint path_idx) {
     mis_parameters[path_idx].init();
 }
 
-void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
-                       const std::string &sampler_type, std::vector<void *> &gpu_dynamic_pointers) {
+void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Point2i &_resolution,
+                                                const std::string &sampler_type,
+                                                std::vector<void *> &gpu_dynamic_pointers) {
     image_resolution = _resolution;
     global_path_counter = 0;
     total_path_num = samples_per_pixel * image_resolution.x * image_resolution.y;
@@ -499,11 +499,10 @@ void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
 
     CHECK_CUDA_ERROR(cudaMallocManaged(&L, sizeof(SampledSpectrum) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&beta, sizeof(SampledSpectrum) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&shape_intersections, sizeof(ShapeIntersection) * PATH_POOL_SIZE));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&shape_intersections,
+                                       sizeof(pbrt::optional<ShapeIntersection>) * PATH_POOL_SIZE));
 
     CHECK_CUDA_ERROR(cudaMallocManaged(&path_length, sizeof(uint) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&intersected, sizeof(bool) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&finished, sizeof(bool) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&pixel_indices, sizeof(uint) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&sample_indices, sizeof(uint) * PATH_POOL_SIZE));
@@ -514,10 +513,9 @@ void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
 
     CHECK_CUDA_ERROR(cudaMallocManaged(&samplers, sizeof(Sampler) * PATH_POOL_SIZE));
 
-    for (auto ptr :
-         std::vector<void *>({camera_samples, camera_rays, lambdas, L, beta, shape_intersections,
-                              path_length, intersected, finished, pixel_indices, sample_indices,
-                              bsdf, mis_parameters, samplers})) {
+    for (auto ptr : std::vector<void *>({camera_samples, camera_rays, lambdas, L, beta,
+                                         shape_intersections, path_length, finished, pixel_indices,
+                                         sample_indices, bsdf, mis_parameters, samplers})) {
         gpu_dynamic_pointers.push_back(ptr);
     }
 
@@ -555,7 +553,7 @@ void PathState::create(uint samples_per_pixel, const Point2i &_resolution,
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-void Queues::init(std::vector<void *> &gpu_dynamic_pointers) {
+void WavefrontPathIntegrator::Queues::init(std::vector<void *> &gpu_dynamic_pointers) {
     CHECK_CUDA_ERROR(cudaMallocManaged(&new_path_queue, sizeof(uint) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&ray_queue, sizeof(uint) * PATH_POOL_SIZE));
     CHECK_CUDA_ERROR(cudaMallocManaged(&frame_buffer_queue, sizeof(FrameBuffer) * PATH_POOL_SIZE));

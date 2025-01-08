@@ -21,70 +21,69 @@ struct MISParameter;
 struct IntegratorBase;
 struct ShapeIntersection;
 
-struct PathState {
-    CameraSample *camera_samples;
-    CameraRay *camera_rays;
-    SampledWavelengths *lambdas;
-
-    SampledSpectrum *L;
-    SampledSpectrum *beta;
-    Sampler *samplers;
-
-    ShapeIntersection *shape_intersections;
-
-    uint *path_length;
-    bool *intersected;
-    bool *finished;
-
-    BSDF *bsdf;
-
-    MISParameter *mis_parameters;
-
-    uint *pixel_indices;
-    uint *sample_indices;
-
-    Point2i image_resolution;
-
-    unsigned long long int global_path_counter;
-    unsigned long long int total_path_num;
-
-    void create(uint samples_per_pixel, const Point2i &_resolution, const std::string &sampler_type,
-                std::vector<void *> &gpu_dynamic_pointers);
-
-    PBRT_CPU_GPU
-    void init_new_path(uint path_idx);
-};
-
-struct Queues {
-    uint *new_path_queue;
-    uint new_path_counter;
-
-    uint frame_buffer_counter;
-    FrameBuffer *frame_buffer_queue;
-
-    uint *ray_queue;
-    uint ray_counter;
-
-    uint *conductor_material_queue;
-    uint conductor_material_counter;
-
-    uint *coated_conductor_material_queue;
-    uint coated_conductor_material_counter;
-
-    uint *coated_diffuse_material_queue;
-    uint coated_diffuse_material_counter;
-
-    uint *dielectric_material_queue;
-    uint dielectric_material_counter;
-
-    uint *diffuse_material_queue;
-    uint diffuse_material_counter;
-
-    void init(std::vector<void *> &gpu_dynamic_pointers);
-};
-
 class WavefrontPathIntegrator {
   public:
+    struct PathState {
+        CameraSample *camera_samples;
+        CameraRay *camera_rays;
+        SampledWavelengths *lambdas;
+
+        SampledSpectrum *L;
+        SampledSpectrum *beta;
+        Sampler *samplers;
+
+        pbrt::optional<ShapeIntersection> *shape_intersections;
+
+        uint *path_length;
+        bool *finished;
+
+        BSDF *bsdf;
+
+        MISParameter *mis_parameters;
+
+        uint *pixel_indices;
+        uint *sample_indices;
+
+        Point2i image_resolution;
+
+        unsigned long long int global_path_counter;
+        unsigned long long int total_path_num;
+
+        void create(uint samples_per_pixel, const Point2i &_resolution,
+                    const std::string &sampler_type, std::vector<void *> &gpu_dynamic_pointers);
+
+        PBRT_CPU_GPU
+        void init_new_path(uint path_idx);
+    };
+
+    struct Queues {
+        uint *new_path_queue;
+        uint new_path_counter;
+
+        uint frame_buffer_counter;
+        FrameBuffer *frame_buffer_queue;
+
+        uint *ray_queue;
+        uint ray_counter;
+
+        uint *conductor_material_queue;
+        uint conductor_material_counter;
+
+        uint *coated_conductor_material_queue;
+        uint coated_conductor_material_counter;
+
+        uint *coated_diffuse_material_queue;
+        uint coated_diffuse_material_counter;
+
+        uint *dielectric_material_queue;
+        uint dielectric_material_counter;
+
+        uint *diffuse_material_queue;
+        uint diffuse_material_counter;
+
+        void init(std::vector<void *> &gpu_dynamic_pointers);
+    };
+
     static WavefrontPathIntegrator *create(const ParameterDictionary &parameters,
                                            const IntegratorBase *base,
                                            const std::string &sampler_type, uint samples_per_pixel,
