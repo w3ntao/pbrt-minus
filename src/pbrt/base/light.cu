@@ -189,7 +189,7 @@ SampledSpectrum Light::le(const Ray &ray, const SampledWavelengths &lambda) cons
 
 PBRT_CPU_GPU
 pbrt::optional<LightLiSample> Light::sample_li(const LightSampleContext &ctx, const Point2f &u,
-                                                    SampledWavelengths &lambda) const {
+                                               SampledWavelengths &lambda) const {
     switch (type) {
     case Type::diffuse_area_light: {
         return static_cast<const DiffuseAreaLight *>(ptr)->sample_li(ctx, u, lambda);
@@ -218,10 +218,14 @@ pbrt::optional<LightLiSample> Light::sample_li(const LightSampleContext &ctx, co
 
 PBRT_CPU_GPU
 pbrt::optional<LightLeSample> Light::sample_le(const Point2f u1, const Point2f u2,
-                                                    SampledWavelengths &lambda) const {
+                                               SampledWavelengths &lambda) const {
     switch (type) {
     case Type::spot_light: {
         return static_cast<const SpotLight *>(ptr)->sample_le(u1, u2, lambda);
+    }
+
+    case Type::uniform_infinite_light: {
+        return static_cast<const UniformInfiniteLight *>(ptr)->sample_le(u1, u2, lambda);
     }
     }
 

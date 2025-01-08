@@ -55,9 +55,9 @@ SampledSpectrum UniformInfiniteLight::phi(const SampledWavelengths &lambda) cons
 }
 
 PBRT_CPU_GPU
-pbrt::optional<LightLiSample>
-UniformInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
-                                SampledWavelengths &lambda) const {
+pbrt::optional<LightLiSample> UniformInfiniteLight::sample_li(const LightSampleContext &ctx,
+                                                              const Point2f &u,
+                                                              SampledWavelengths &lambda) const {
     Vector3f wi = sample_uniform_sphere(u);
     auto pdf = uniform_sphere_pdf();
 
@@ -78,4 +78,24 @@ FloatType UniformInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vect
 PBRT_CPU_GPU
 SampledSpectrum UniformInfiniteLight::le(const Ray &ray, const SampledWavelengths &lambda) const {
     return scale * Lemit->sample(lambda);
+}
+
+PBRT_CPU_GPU
+pbrt::optional<LightLeSample> UniformInfiniteLight::sample_le(const Point2f &u1, const Point2f &u2,
+                                                              SampledWavelengths &lambda) const {
+    // Sample direction for uniform infinite light ray
+    Vector3f w = sample_uniform_sphere(u1);
+
+    // Compute infinite light sample ray
+    Frame wFrame = Frame::from_z(-w);
+
+    Point2f cd = sample_uniform_disk_concentric(u2);
+    Point3f pDisk = sceneCenter + sceneRadius * wFrame.from_local(Vector3f(cd.x, cd.y, 0));
+    Ray ray(pDisk + sceneRadius * -w, w);
+
+    // Compute probabilities for uniform infinite light
+    auto pdfPos = 1.0 / (compute_pi() * sqr(sceneRadius));
+    auto pdfDir = uniform_sphere_pdf();
+
+    return LightLeSample(scale * Lemit->sample(lambda), ray, pdfPos, pdfDir);
 }
