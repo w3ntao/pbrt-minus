@@ -2,7 +2,7 @@
 
 #include "pbrt/util/macro.h"
 
-namespace pstd {
+namespace pbrt {
 
 template <typename T>
 PBRT_CPU_GPU inline void swap(T &a, T &b) {
@@ -46,4 +46,4 @@ PBRT_CPU_GPU constexpr float pow<0>(float v) {
     return 1;
 }
 
-} // namespace pstd
+} // namespace pbrt

@@ -54,15 +54,15 @@ inline FloatType HenyeyGreenstein(FloatType cosTheta, FloatType g) {
     return 1.0 / (4.0 * compute_pi()) * (1 - sqr(g)) / (denom * safe_sqrt(denom));
 }
 
-PBRT_CPU_GPU inline FloatType FrComplex(FloatType cosTheta_i, pstd::complex<FloatType> eta) {
-    using Complex = pstd::complex<FloatType>;
+PBRT_CPU_GPU inline FloatType FrComplex(FloatType cosTheta_i, pbrt::complex<FloatType> eta) {
+    using Complex = pbrt::complex<FloatType>;
     cosTheta_i = clamp<FloatType>(cosTheta_i, 0, 1);
 
     // Compute complex $\cos\,\theta_\roman{t}$ for Fresnel equations using Snell's law
     FloatType sin2Theta_i = 1 - sqr(cosTheta_i);
     Complex sin2Theta_t = sin2Theta_i / (eta * eta);
 
-    // Complex cosTheta_t = pstd::sqrt(1 - sin2Theta_t);
+    // Complex cosTheta_t = pbrt::sqrt(1 - sin2Theta_t);
     Complex cosTheta_t = (1 - sin2Theta_t).sqrt();
 
     Complex r_parl = (eta * cosTheta_i - cosTheta_t) / (eta * cosTheta_i + cosTheta_t);
@@ -75,7 +75,7 @@ PBRT_CPU_GPU inline SampledSpectrum FrComplex(FloatType cosTheta_i, SampledSpect
                                               SampledSpectrum k) {
     SampledSpectrum result;
     for (int i = 0; i < NSpectrumSamples; ++i) {
-        result[i] = FrComplex(cosTheta_i, pstd::complex<FloatType>(eta[i], k[i]));
+        result[i] = FrComplex(cosTheta_i, pbrt::complex<FloatType>(eta[i], k[i]));
     }
 
     return result;
@@ -109,7 +109,7 @@ class TrowbridgeReitzDistribution {
   public:
     // TrowbridgeReitzDistribution Public Methods
     PBRT_CPU_GPU
-    TrowbridgeReitzDistribution() : alpha_x(NAN), alpha_y(NAN) {};
+    TrowbridgeReitzDistribution() : alpha_x(NAN), alpha_y(NAN){};
 
     PBRT_CPU_GPU
     TrowbridgeReitzDistribution(FloatType ax, FloatType ay) : alpha_x(ax), alpha_y(ay) {
@@ -197,7 +197,7 @@ class TrowbridgeReitzDistribution {
 
         // Warp hemispherical projection for visible normal sampling
         FloatType h = std::sqrt(1 - sqr(p.x));
-        p.y = lerp((1 + wh.z) / 2, h, p.y);
+        p.y = pbrt::lerp((1 + wh.z) / 2, h, p.y);
 
         // Reproject to hemisphere and transform normal to ellipsoid configuration
         FloatType pz = std::sqrt(std::max<FloatType>(0, 1 - p.to_vector2f().length_squared()));

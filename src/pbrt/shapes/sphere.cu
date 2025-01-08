@@ -86,7 +86,7 @@ cuda::std::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r,
     t1 = c / q;
     // Swap quadratic $t$ values so that _t0_ is the lesser
     if (t0.low > t1.low) {
-        pstd::swap(t0, t1);
+        pbrt::swap(t0, t1);
     }
 
     // Check quadric shape _t0_ and _t1_ for nearest intersection

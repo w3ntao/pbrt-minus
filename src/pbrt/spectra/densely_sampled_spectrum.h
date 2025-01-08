@@ -42,7 +42,7 @@ class DenselySampledSpectrum {
             return 0.0;
         }
 
-        return lerp(lambda - floor, values[floor - LAMBDA_MIN], values[ceil - LAMBDA_MIN]);
+        return pbrt::lerp(lambda - floor, values[floor - LAMBDA_MIN], values[ceil - LAMBDA_MIN]);
     }
 
     PBRT_CPU_GPU
@@ -55,8 +55,8 @@ class DenselySampledSpectrum {
             if (floor < LAMBDA_MIN || ceil > LAMBDA_MAX) {
                 sampled_values[i] = 0;
             } else {
-                sampled_values[i] =
-                    lerp(lambda[i] - floor, values[floor - LAMBDA_MIN], values[ceil - LAMBDA_MIN]);
+                sampled_values[i] = pbrt::lerp(lambda[i] - floor, values[floor - LAMBDA_MIN],
+                                               values[ceil - LAMBDA_MIN]);
             }
         }
 

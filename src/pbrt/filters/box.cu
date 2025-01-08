@@ -10,7 +10,7 @@ const BoxFilter *BoxFilter::create(const ParameterDictionary &parameters,
     CHECK_CUDA_ERROR(cudaMallocManaged(&box_filter, sizeof(BoxFilter)));
     gpu_dynamic_pointers.push_back(box_filter);
 
-    box_filter->init(Vector2f(xw, yw));
+    box_filter->radius = Vector2f(xw, yw);
 
     return box_filter;
 }

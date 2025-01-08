@@ -145,7 +145,7 @@ inline Interval sqr(const Interval &i) {
     FloatType abs_low = std::abs(i.low);
     FloatType abs_high = std::abs(i.high);
     if (abs_low > abs_high) {
-        pstd::swap(abs_low, abs_high);
+        pbrt::swap(abs_low, abs_high);
     }
 
     if (i.cover(0)) {

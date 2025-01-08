@@ -108,7 +108,7 @@ void PerspectiveCamera::pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdf
     // Compute lens area  and return perspective camera probabilities
     FloatType lensArea = lens_radius != 0 ? (compute_pi() * sqr(lens_radius)) : 1;
     *pdfPos = 1 / lensArea;
-    *pdfDir = 1 / (A * pstd::pow<3>(cosTheta));
+    *pdfDir = 1 / (A * pbrt::pow<3>(cosTheta));
 }
 
 PBRT_CPU_GPU
@@ -140,7 +140,7 @@ SampledSpectrum PerspectiveCamera::we(const Ray &ray, SampledWavelengths &lambda
     auto lensArea = lens_radius != 0 ? (compute_pi() * sqr(lens_radius)) : 1;
 
     // Return importance for point on image plane
-    return SampledSpectrum(1.0 / (A * lensArea * pstd::pow<4>(cosTheta)));
+    return SampledSpectrum(1.0 / (A * lensArea * pbrt::pow<4>(cosTheta)));
 }
 
 PBRT_GPU

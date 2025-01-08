@@ -85,7 +85,7 @@ class LayeredBxDF {
             f = nSamples * enterInterface.f(wo, wi, mode);
         }
 
-        RNG rng(pstd::hash(wo), pstd::hash(wi));
+        RNG rng(pbrt::hash(wo), pbrt::hash(wi));
         auto r = [&rng]() {
             return std::min<FloatType>(rng.uniform<FloatType>(), OneMinusEpsilon);
         };
@@ -274,7 +274,7 @@ class LayeredBxDF {
         Vector3f w = bs->wi;
         bool specularPath = bs->is_specular();
 
-        RNG rng(pstd::hash(wo), pstd::hash(uc, u));
+        RNG rng(pbrt::hash(wo), pbrt::hash(uc, u));
         auto r = [&rng]() {
             return std::min<FloatType>(rng.uniform<FloatType>(), OneMinusEpsilon);
         };
@@ -387,7 +387,7 @@ class LayeredBxDF {
         }
 
         // Declare _RNG_ for layered PDF evaluation
-        RNG rng(pstd::hash(wi), pstd::hash(wo));
+        RNG rng(pbrt::hash(wi), pbrt::hash(wo));
         auto r = [&rng]() {
             return std::min<FloatType>(rng.uniform<FloatType>(), OneMinusEpsilon);
         };
@@ -485,7 +485,7 @@ class LayeredBxDF {
             }
         }
         // Return mixture of pdf estimate and constant pdf
-        return lerp(0.9f, 1 / (4 * compute_pi()), pdfSum / nSamples);
+        return pbrt::lerp(0.9f, 1 / (4 * compute_pi()), pdfSum / nSamples);
     }
 
   private:

@@ -17,7 +17,7 @@ inline FloatType sample_linear(FloatType u, FloatType a, FloatType b) {
     if (u == 0 && a == 0) {
         return 0;
     }
-    FloatType x = u * (a + b) / (a + std::sqrt(lerp(u, sqr(a), sqr(b))));
+    FloatType x = u * (a + b) / (a + std::sqrt(pbrt::lerp(u, sqr(a), sqr(b))));
     return std::min(x, OneMinusEpsilon);
 }
 
@@ -28,7 +28,7 @@ inline Point2f sample_bilinear(Point2f u, const FloatType w[4]) {
     p.y = sample_linear(u[1], w[0] + w[1], w[2] + w[3]);
 
     // Sample $x$ for bilinear conditional distribution
-    p.x = sample_linear(u[0], lerp(p.y, w[0], w[2]), lerp(p.y, w[1], w[3]));
+    p.x = sample_linear(u[0], pbrt::lerp(p.y, w[0], w[2]), pbrt::lerp(p.y, w[1], w[3]));
 
     return p;
 }
@@ -135,7 +135,7 @@ static void sample_spherical_triangle(FloatType out[3], FloatType *pdf, const Po
 
     // Uniformly sample triangle area $A$ to compute $A'$
     FloatType A_pi = alpha + beta + gamma;
-    FloatType Ap_pi = lerp(u[0], PI, A_pi);
+    FloatType Ap_pi = pbrt::lerp(u[0], PI, A_pi);
     if (pdf) {
         FloatType A = A_pi - PI;
         *pdf = (A <= 0) ? 0 : 1 / A;
@@ -273,7 +273,7 @@ PBRT_CPU_GPU
 inline FloatType SampleSmoothStep(FloatType u, FloatType a, FloatType b) {
     auto cdfMinusU = [=](FloatType x) -> std::pair<FloatType, FloatType> {
         FloatType t = (x - a) / (b - a);
-        FloatType P = 2 * pstd::pow<3>(t) - pstd::pow<4>(t);
+        FloatType P = 2 * pbrt::pow<3>(t) - pbrt::pow<4>(t);
         FloatType PDeriv = SmoothStepPDF(x, a, b);
         return {P - u, PDeriv};
     };

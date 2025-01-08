@@ -66,7 +66,7 @@ PBRT_CPU_GPU inline void hashRecursiveCopy(char *buf, T v, Args... args) {
 
 } // namespace HIDDEN
 
-namespace pstd {
+namespace pbrt {
 
 template <typename... Args>
 PBRT_CPU_GPU inline uint64_t hash(Args... args) {
@@ -83,4 +83,4 @@ PBRT_CPU_GPU inline FloatType hash_float(Args... args) {
     return uint32_t(hash(args...)) * 0x1p-32f;
 }
 
-} // namespace pstd
+} // namespace pbrt

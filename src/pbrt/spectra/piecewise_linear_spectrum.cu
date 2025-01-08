@@ -102,7 +102,7 @@ FloatType PiecewiseLinearSpectrum::operator()(FloatType lambda) const {
     int o = find_interval(size, [&](int i) { return lambdas[i] <= lambda; });
 
     auto t = (lambda - lambdas[o]) / (lambdas[o + 1] - lambdas[o]);
-    return lerp(t, values[o], values[o + 1]);
+    return pbrt::lerp(t, values[o], values[o + 1]);
 }
 
 PBRT_CPU_GPU

@@ -138,14 +138,14 @@ Point2f EqualAreaSphereToSquare(Vector3f d) {
 
     if (d.z < 0) {
         // southern hemisphere -> mirror u,v
-        pstd::swap(u, v);
+        pbrt::swap(u, v);
         u = 1 - u;
         v = 1 - v;
     }
 
     // Move (u,v) to the correct quadrant based on the signs of (x,y)
-    u = pstd::copysign(u, d.x);
-    v = pstd::copysign(v, d.y);
+    u = pbrt::copysign(u, d.x);
+    v = pbrt::copysign(v, d.y);
 
     // Transform (u,v) from [-1,1] to [0,1]
     return Point2f(0.5f * (u + 1), 0.5f * (v + 1));
@@ -168,10 +168,10 @@ Vector3f EqualAreaSquareToSphere(Point2f p) {
     FloatType phi = (r == 0 ? 1 : (vp - up) / r + 1) * compute_pi() / 4;
 
     // Find $z$ coordinate for spherical direction
-    FloatType z = pstd::copysign(1 - sqr(r), signedDistance);
+    FloatType z = pbrt::copysign(1 - sqr(r), signedDistance);
 
     // Compute $\cos\phi$ and $\sin\phi$ for original quadrant and return vector
-    FloatType cosPhi = pstd::copysign(std::cos(phi), u);
-    FloatType sinPhi = pstd::copysign(std::sin(phi), v);
+    FloatType cosPhi = pbrt::copysign(std::cos(phi), u);
+    FloatType sinPhi = pbrt::copysign(std::sin(phi), v);
     return Vector3f(cosPhi * r * safe_sqrt(2 - sqr(r)), sinPhi * r * safe_sqrt(2 - sqr(r)), z);
 }

@@ -31,7 +31,7 @@ class Bounds2 {
 
     PBRT_CPU_GPU
     Point2<T> lerp(Point2f t) const {
-        return Point2<T>(::lerp(t.x, p_min.x, p_max.x), ::lerp(t.y, p_min.y, p_max.y));
+        return Point2<T>(pbrt::lerp(t.x, p_min.x, p_max.x), pbrt::lerp(t.y, p_min.y, p_max.y));
     }
 
     PBRT_CPU_GPU

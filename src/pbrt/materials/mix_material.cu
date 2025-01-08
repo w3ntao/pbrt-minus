@@ -23,6 +23,6 @@ const Material *MixMaterial::get_material(const SurfaceInteraction *si) const {
         }
     }
 
-    auto u = pstd::hash_float(si->pi, si->wo, materials[0], materials[1]);
+    auto u = pbrt::hash_float(si->pi, si->wo, materials[0], materials[1]);
     return u < amount ? materials[0] : materials[1];
 }

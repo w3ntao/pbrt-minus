@@ -13,7 +13,7 @@ class IndependentSampler {
 
     PBRT_CPU_GPU
     void start_pixel_sample(const uint pixel_idx, const uint sample_idx, const uint dimension) {
-        rng.set_sequence(pstd::hash(pixel_idx));
+        rng.set_sequence(pbrt::hash(pixel_idx));
         rng.advance(sample_idx * 65536ull + dimension);
     }
 

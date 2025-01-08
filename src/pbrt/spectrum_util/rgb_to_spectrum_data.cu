@@ -389,9 +389,11 @@ RGBSigmoidPolynomial RGBtoSpectrumTable::operator()(const RGB &rgb) const {
             return coefficients[max_component][zi + _dz][yi + _dy][xi + _dx][i];
         };
 
-        c[i] = lerp(
-            dz, lerp(dy, lerp(dx, co(0, 0, 0), co(1, 0, 0)), lerp(dx, co(0, 1, 0), co(1, 1, 0))),
-            lerp(dy, lerp(dx, co(0, 0, 1), co(1, 0, 1)), lerp(dx, co(0, 1, 1), co(1, 1, 1))));
+        c[i] = pbrt::lerp(dz,
+                          pbrt::lerp(dy, pbrt::lerp(dx, co(0, 0, 0), co(1, 0, 0)),
+                                     pbrt::lerp(dx, co(0, 1, 0), co(1, 1, 0))),
+                          pbrt::lerp(dy, pbrt::lerp(dx, co(0, 0, 1), co(1, 0, 1)),
+                                     pbrt::lerp(dx, co(0, 1, 1), co(1, 1, 1))));
     }
 
     return RGBSigmoidPolynomial(c[0], c[1], c[2]);

@@ -2,7 +2,7 @@
 
 #include "pbrt/util/macro.h"
 
-namespace pstd {
+namespace pbrt {
 
 template <typename T>
 struct complex {
@@ -29,7 +29,7 @@ struct complex {
         if (re >= 0) {
             return {t1, t2};
         } else {
-            return {std::abs(t2), pstd::copysign(t1, im)};
+            return {std::abs(t2), pbrt::copysign(t1, im)};
         }
     }
 
@@ -73,4 +73,4 @@ struct complex {
     T re, im;
 };
 
-} // namespace pstd
+} // namespace pbrt

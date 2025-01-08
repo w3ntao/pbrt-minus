@@ -13,7 +13,7 @@ class BoxFilter {
 
     PBRT_CPU_GPU
     FloatType get_integral() const {
-        return 2 * radius.x * 2 * radius.y;
+        return 4 * radius.x * radius.y;
     }
 
     PBRT_CPU_GPU
@@ -23,7 +23,7 @@ class BoxFilter {
 
     PBRT_CPU_GPU
     FilterSample sample(const Point2f u) const {
-        Point2f p(lerp(u[0], -radius.x, radius.x), lerp(u[1], -radius.y, radius.y));
+        Point2f p(pbrt::lerp(u[0], -radius.x, radius.x), pbrt::lerp(u[1], -radius.y, radius.y));
         return FilterSample(p, 1.0);
     }
 
@@ -34,8 +34,4 @@ class BoxFilter {
 
   private:
     Vector2f radius;
-
-    void init(const Vector2f &_radius) {
-        radius = _radius;
-    }
 };

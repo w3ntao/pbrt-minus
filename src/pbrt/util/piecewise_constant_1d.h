@@ -86,7 +86,7 @@ class PiecewiseConstant1D {
         }
 
         // Return $x$ corresponding to sample
-        return lerp((o + du) / size(), min, max);
+        return pbrt::lerp((o + du) / size(), min, max);
     }
 
   private:

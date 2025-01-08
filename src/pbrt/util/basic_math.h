@@ -19,6 +19,13 @@ constexpr FloatType MachineEpsilon = std::numeric_limits<FloatType>::epsilon() *
 // Mathematical Constants
 constexpr FloatType ShadowEpsilon = 0.0001;
 
+namespace pbrt {
+PBRT_CPU_GPU
+constexpr FloatType lerp(FloatType x, FloatType a, FloatType b) {
+    return (1 - x) * a + x * b;
+}
+} // namespace pbrt
+
 PBRT_CPU_GPU
 constexpr FloatType gamma(int n) {
     return (FloatType(n) * MachineEpsilon) / (FloatType(1.0) - FloatType(n) * MachineEpsilon);
@@ -85,11 +92,6 @@ PBRT_CPU_GPU size_t find_interval(size_t sz, const Predicate &pred) {
         size = predResult ? size - (half + 1) : half;
     }
     return clamp<size_t>((ssize_t)first - 1, 0, sz - 2);
-}
-
-PBRT_CPU_GPU
-constexpr FloatType lerp(FloatType x, FloatType a, FloatType b) {
-    return (1 - x) * a + x * b;
 }
 
 PBRT_CPU_GPU
