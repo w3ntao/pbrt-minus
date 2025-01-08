@@ -18,7 +18,7 @@ bool TransformedPrimitive::fast_intersect(const Ray &ray, FloatType t_max) const
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeIntersection> TransformedPrimitive::intersect(const Ray &ray,
+pbrt::optional<ShapeIntersection> TransformedPrimitive::intersect(const Ray &ray,
                                                                        FloatType t_max) const {
     // Transform ray to primitive-space and intersect with primitive
     auto inverse_ray = render_from_pritimive.apply_inverse(ray, &t_max);

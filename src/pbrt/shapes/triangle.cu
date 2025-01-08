@@ -3,7 +3,7 @@
 #include "pbrt/shapes/triangle.h"
 
 PBRT_GPU
-cuda::std::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, FloatType t_max) const {
+pbrt::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, FloatType t_max) const {
     Point3f points[3];
     get_points(points);
 
@@ -76,7 +76,7 @@ FloatType Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeSample> Triangle::sample(Point2f u) const {
+pbrt::optional<ShapeSample> Triangle::sample(Point2f u) const {
     const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
     const Point3f p0 = mesh->p[v[0]];
     const Point3f p1 = mesh->p[v[1]];
@@ -124,7 +124,7 @@ cuda::std::optional<ShapeSample> Triangle::sample(Point2f u) const {
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Point2f u) const {
+pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Point2f u) const {
     Point3f points[3];
     get_points(points);
     const auto p0 = points[0];
@@ -215,7 +215,7 @@ cuda::std::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx,
 }
 
 PBRT_GPU
-cuda::std::optional<Triangle::TriangleIntersection>
+pbrt::optional<Triangle::TriangleIntersection>
 Triangle::intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0, const Point3f &p1,
                              const Point3f &p2) const {
     // Return no intersection if triangle is degenerate

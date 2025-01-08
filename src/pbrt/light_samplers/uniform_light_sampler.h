@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pbrt/base/light.h"
-#include <cuda/std/optional>
 
 class UniformLightSampler {
   public:
@@ -18,7 +17,7 @@ class UniformLightSampler {
     }
 
     PBRT_CPU_GPU
-    cuda::std::optional<SampledLight> sample(FloatType u) const {
+    pbrt::optional<SampledLight> sample(FloatType u) const {
         if (light_num == 0) {
             return {};
         }
@@ -29,7 +28,7 @@ class UniformLightSampler {
     }
 
     PBRT_CPU_GPU
-    cuda::std::optional<SampledLight> sample(const LightSampleContext &ctx, FloatType u) const {
+    pbrt::optional<SampledLight> sample(const LightSampleContext &ctx, FloatType u) const {
         return sample(u);
     }
 

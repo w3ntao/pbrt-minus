@@ -144,7 +144,7 @@ SampledSpectrum PerspectiveCamera::we(const Ray &ray, SampledWavelengths &lambda
 }
 
 PBRT_GPU
-cuda::std::optional<CameraWiSample> PerspectiveCamera::sample_wi(const Interaction &ref,
+pbrt::optional<CameraWiSample> PerspectiveCamera::sample_wi(const Interaction &ref,
                                                                  const Point2f u,
                                                                  SampledWavelengths &lambda) const {
     // Uniformly sample a lens interaction _lensIntr_

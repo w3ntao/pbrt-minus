@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
-#include <cuda/std/optional>
 
 class Camera;
 class Filter;
@@ -64,7 +63,7 @@ struct IntegratorBase {
     bool unoccluded(const Interaction &p0, const Interaction &p1) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
     SampledSpectrum tr(const Interaction &p0, const Interaction &p1) const;

@@ -48,7 +48,7 @@ Bounds3f Sphere::bounds() const {
 }
 
 PBRT_GPU
-cuda::std::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r,
+pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r,
                                                                  FloatType tMax) const {
     FloatType phi;
     Point3f pHit;
@@ -154,7 +154,7 @@ cuda::std::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r,
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
+pbrt::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
     Point3f pObj = Point3f(0, 0, 0) + radius * sample_uniform_sphere(u);
 
     // Reproject _pObj_ to sphere surface and compute _pObjError_
@@ -185,7 +185,7 @@ cuda::std::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx,
+pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx,
                                                 const Point2f &u) const {
     // Sample uniformly on sphere if $\pt{}$ is inside it
     Point3f pCenter = render_from_object(Point3f(0, 0, 0));

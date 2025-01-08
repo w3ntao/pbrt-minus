@@ -47,7 +47,7 @@ FloatType Disk::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeSample> Disk::sample(const Point2f &u) const {
+pbrt::optional<ShapeSample> Disk::sample(const Point2f &u) const {
     Point2f pd = sample_uniform_disk_concentric(u);
     Point3f pObj(pd.x * radius, pd.y * radius, height);
 
@@ -72,7 +72,7 @@ cuda::std::optional<ShapeSample> Disk::sample(const Point2f &u) const {
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeSample> Disk::sample(const ShapeSampleContext &ctx,
+pbrt::optional<ShapeSample> Disk::sample(const ShapeSampleContext &ctx,
                                               const Point2f &u) const {
     // Sample shape by area and compute incident direction _wi_
     auto ss = this->sample(u);
@@ -95,7 +95,7 @@ cuda::std::optional<ShapeSample> Disk::sample(const ShapeSampleContext &ctx,
 }
 
 PBRT_CPU_GPU
-cuda::std::optional<QuadricIntersection> Disk::basic_intersect(const Ray &r, FloatType tMax) const {
+pbrt::optional<QuadricIntersection> Disk::basic_intersect(const Ray &r, FloatType tMax) const {
     // Transform _Ray_ origin and direction to object space
     Point3fi oi = object_from_render(Point3fi(r.o));
     Vector3fi di = object_from_render(Vector3fi(r.d));

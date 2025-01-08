@@ -188,7 +188,7 @@ SampledSpectrum Light::le(const Ray &ray, const SampledWavelengths &lambda) cons
 }
 
 PBRT_GPU
-cuda::std::optional<LightLiSample> Light::sample_li(const LightSampleContext &ctx, const Point2f &u,
+pbrt::optional<LightLiSample> Light::sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                     SampledWavelengths &lambda) const {
     switch (type) {
     case Type::diffuse_area_light: {
@@ -217,7 +217,7 @@ cuda::std::optional<LightLiSample> Light::sample_li(const LightSampleContext &ct
 }
 
 PBRT_GPU
-cuda::std::optional<LightLeSample> Light::sample_le(const Point2f u1, const Point2f u2,
+pbrt::optional<LightLeSample> Light::sample_le(const Point2f u1, const Point2f u2,
                                                     SampledWavelengths &lambda) const {
     switch (type) {
     case Type::spot_light: {

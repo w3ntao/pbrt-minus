@@ -4,7 +4,6 @@
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/util/macro.h"
-#include <cuda/std/optional>
 #include <vector>
 
 class Shape;
@@ -54,7 +53,7 @@ class Primitive {
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
   private:
     Type type;

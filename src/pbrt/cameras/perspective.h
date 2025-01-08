@@ -24,7 +24,7 @@ class PerspectiveCamera {
     SampledSpectrum we(const Ray &ray, SampledWavelengths &lambda, Point2f *pRasterOut) const;
 
     PBRT_GPU
-    cuda::std::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,
+    pbrt::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,
                                                   SampledWavelengths &lambda) const;
 
   private:

@@ -3,7 +3,6 @@
 #include "pbrt/base/interaction.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/util/macro.h"
-#include <cuda/std/optional>
 
 class Light;
 class Material;
@@ -24,7 +23,7 @@ class GeometricPrimitive {
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
   private:
     const Shape *shape_ptr;

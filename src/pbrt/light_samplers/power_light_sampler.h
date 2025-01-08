@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
-#include <cuda/std/optional>
 #include <vector>
 
 class Distribution1D;
@@ -21,10 +20,10 @@ class PowerLightSampler {
     }
 
     PBRT_GPU
-    cuda::std::optional<SampledLight> sample(FloatType u) const;
+    pbrt::optional<SampledLight> sample(FloatType u) const;
 
     PBRT_GPU
-    cuda::std::optional<SampledLight> sample(const LightSampleContext &ctx, FloatType u) const;
+    pbrt::optional<SampledLight> sample(const LightSampleContext &ctx, FloatType u) const;
 
     PBRT_CPU_GPU
     FloatType pmf(const Light *light) const;

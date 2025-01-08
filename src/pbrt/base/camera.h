@@ -5,7 +5,6 @@
 #include "pbrt/euclidean_space/point2.h"
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
-#include <cuda/std/optional>
 #include <vector>
 
 class Film;
@@ -175,7 +174,7 @@ class Camera {
     void pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
 
     PBRT_GPU
-    cuda::std::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,
+    pbrt::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,
                                                   SampledWavelengths &lambda) const;
 
   private:

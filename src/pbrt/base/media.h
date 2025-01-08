@@ -1,8 +1,8 @@
 #pragma once
 
 #include "pbrt/base/spectrum.h"
+#include "pbrt/util/optional.h"
 #include "pbrt/util/scattering.h"
-#include <cuda/std/optional>
 
 struct PhaseFunctionSample {
     FloatType p;
@@ -24,7 +24,7 @@ class HGPhaseFunction {
     }
 
     PBRT_GPU
-    cuda::std::optional<PhaseFunctionSample> sample_p(Vector3f wo, Point2f u) const {
+    pbrt::optional<PhaseFunctionSample> sample_p(Vector3f wo, Point2f u) const {
         FloatType pdf;
         Vector3f wi = SampleHenyeyGreenstein(wo, g, u, &pdf);
         return PhaseFunctionSample{pdf, wi, pdf};

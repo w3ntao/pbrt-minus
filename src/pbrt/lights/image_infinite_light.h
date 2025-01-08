@@ -29,7 +29,7 @@ class ImageInfiniteLight : public LightBase {
     SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
 
     PBRT_GPU
-    cuda::std::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
+    pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU

@@ -2,7 +2,7 @@
 #include "pbrt/euclidean_space/normal3f.h"
 
 PBRT_CPU_GPU
-cuda::std::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
+pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
                                                          TransportMode mode,
                                                          BxDFReflTransFlags sample_flags) const {
     if (eta == 1 || mfDistrib.effectively_smooth()) {

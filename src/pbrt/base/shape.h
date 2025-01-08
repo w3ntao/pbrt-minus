@@ -4,7 +4,6 @@
 #include "pbrt/base/ray.h"
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/util/macro.h"
-#include <cuda/std/optional>
 #include <vector>
 
 class Disk;
@@ -103,11 +102,11 @@ class Shape {
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray,
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray,
                                                      FloatType t_max = Infinity) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
+    pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
 
     PBRT_GPU
     FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;

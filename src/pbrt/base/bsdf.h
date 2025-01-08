@@ -3,7 +3,6 @@
 #include "pbrt/base/bxdf.h"
 #include "pbrt/euclidean_space/frame.h"
 #include "pbrt/euclidean_space/normal3f.h"
-#include <cuda/std/optional>
 
 class Material;
 class MaterialEvalContext;
@@ -31,7 +30,7 @@ class BSDF {
                       TransportMode mode = TransportMode::Radiance) const;
 
     PBRT_GPU
-    cuda::std::optional<BSDFSample>
+    pbrt::optional<BSDFSample>
     sample_f(const Vector3f &wo_render, FloatType u, const Point2f &u2,
              TransportMode mode = TransportMode::Radiance,
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;

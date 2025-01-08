@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
-#include <cuda/std/optional>
 
 template <typename TopBxDF, typename BottomBxDF>
 class TopOrBottomBxDF {
@@ -28,7 +27,7 @@ class TopOrBottomBxDF {
     }
 
     PBRT_CPU_GPU
-    cuda::std::optional<BSDFSample>
+    pbrt::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         return top ? top->sample_f(wo, uc, u, mode, sampleFlags)

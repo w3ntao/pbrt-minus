@@ -46,7 +46,7 @@ SampledSpectrum DiffuseAreaLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f 
 }
 
 PBRT_GPU
-cuda::std::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleContext &ctx,
+pbrt::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleContext &ctx,
                                                                const Point2f &u,
                                                                SampledWavelengths &lambda) const {
     // Sample point on shape for _DiffuseAreaLight_

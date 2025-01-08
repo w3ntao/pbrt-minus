@@ -22,7 +22,7 @@ class TransformedPrimitive {
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
   private:
     Transform render_from_pritimive;

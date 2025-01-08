@@ -2,8 +2,8 @@
 
 #include "pbrt/base/bxdf_util.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
+#include "pbrt/util/optional.h"
 #include "pbrt/util/scattering.h"
-#include <cuda/std/optional>
 
 class ConductorBxDF {
   public:
@@ -23,7 +23,7 @@ class ConductorBxDF {
     }
 
     PBRT_CPU_GPU
-    cuda::std::optional<BSDFSample>
+    pbrt::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
 

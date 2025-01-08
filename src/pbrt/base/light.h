@@ -4,7 +4,6 @@
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include <cuda/std/optional>
 #include <vector>
 
 template <typename T>
@@ -108,7 +107,7 @@ struct LightLeSample {
 
     SampledSpectrum L;
     Ray ray;
-    cuda::std::optional<Interaction> intr;
+    pbrt::optional<Interaction> intr;
     FloatType pdfPos;
     FloatType pdfDir;
 };
@@ -158,11 +157,11 @@ class Light {
     SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
 
     PBRT_GPU
-    cuda::std::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
+    pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 
     PBRT_GPU
-    cuda::std::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
+    pbrt::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
                                                  SampledWavelengths &lambda) const;
 
     PBRT_GPU

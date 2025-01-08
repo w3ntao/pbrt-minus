@@ -48,7 +48,7 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
 }
 
 PBRT_GPU
-cuda::std::optional<SampledLight> PowerLightSampler::sample(const FloatType u) const {
+pbrt::optional<SampledLight> PowerLightSampler::sample(const FloatType u) const {
     if (light_num == 0) {
         return {};
     }
@@ -65,7 +65,7 @@ cuda::std::optional<SampledLight> PowerLightSampler::sample(const FloatType u) c
 }
 
 PBRT_GPU
-cuda::std::optional<SampledLight> PowerLightSampler::sample(const LightSampleContext &ctx,
+pbrt::optional<SampledLight> PowerLightSampler::sample(const LightSampleContext &ctx,
                                                             FloatType u) const {
     return sample(u);
 }

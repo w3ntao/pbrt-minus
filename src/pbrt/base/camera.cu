@@ -62,7 +62,7 @@ void Camera::pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const 
 }
 
 PBRT_GPU
-cuda::std::optional<CameraWiSample> Camera::sample_wi(const Interaction &ref, const Point2f u,
+pbrt::optional<CameraWiSample> Camera::sample_wi(const Interaction &ref, const Point2f u,
                                                       SampledWavelengths &lambda) const {
     switch (type) {
     case Type::perspective: {

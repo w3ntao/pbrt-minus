@@ -2,7 +2,6 @@
 
 #include "pbrt/spectrum_util/sampled_spectrum.h"
 #include "pbrt/util/sampling.h"
-#include <cuda/std/optional>
 
 class DiffuseBxDF {
   public:
@@ -43,7 +42,7 @@ class DiffuseBxDF {
     }
 
     PBRT_CPU_GPU
-    cuda::std::optional<BSDFSample>
+    pbrt::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode = TransportMode::Radiance,
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const {
         if (!(sample_flags & BxDFReflTransFlags::Reflection)) {

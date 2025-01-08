@@ -5,7 +5,6 @@
 #include "pbrt/euclidean_space/bounds3.h"
 #include "pbrt/shapes/triangle_mesh.h"
 #include "pbrt/util/sampling.h"
-#include <cuda/std/optional>
 
 class ShapeSampleContext;
 class ShapeSample;
@@ -58,16 +57,16 @@ class Triangle {
     }
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU
     FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeSample> sample(Point2f u) const;
+    pbrt::optional<ShapeSample> sample(Point2f u) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, Point2f u) const;
+    pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, Point2f u) const;
 
   private:
     int triangle_idx;
@@ -94,7 +93,7 @@ class Triangle {
     }
 
     PBRT_GPU
-    cuda::std::optional<Triangle::TriangleIntersection>
+    pbrt::optional<Triangle::TriangleIntersection>
     intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0, const Point3f &p1,
                        const Point3f &p2) const;
 

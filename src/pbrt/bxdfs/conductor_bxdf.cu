@@ -1,7 +1,7 @@
 #include "pbrt/bxdfs/conductor_bxdf.h"
 
 PBRT_CPU_GPU
-cuda::std::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
+pbrt::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
                                                         TransportMode mode,
                                                         BxDFReflTransFlags sample_flags) const {
     if (!(sample_flags & BxDFReflTransFlags::Reflection)) {

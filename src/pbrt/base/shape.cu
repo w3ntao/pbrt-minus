@@ -165,7 +165,7 @@ bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
+pbrt::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
     switch (type) {
     case (Type::disk): {
         return static_cast<const Disk *>(ptr)->intersect(ray, t_max);
@@ -185,7 +185,7 @@ cuda::std::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatTyp
 }
 
 PBRT_GPU
-cuda::std::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
+pbrt::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
                                                const Point2f &u) const {
     switch (type) {
     case (Type::disk): {

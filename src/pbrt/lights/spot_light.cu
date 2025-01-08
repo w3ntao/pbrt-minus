@@ -63,7 +63,7 @@ SampledSpectrum SpotLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
 }
 
 PBRT_GPU
-cuda::std::optional<LightLiSample> SpotLight::sample_li(const LightSampleContext &ctx,
+pbrt::optional<LightLiSample> SpotLight::sample_li(const LightSampleContext &ctx,
                                                         const Point2f &u,
                                                         SampledWavelengths &lambda) const {
     Point3f p = render_from_light(Point3f(0, 0, 0));
@@ -82,7 +82,7 @@ cuda::std::optional<LightLiSample> SpotLight::sample_li(const LightSampleContext
 }
 
 PBRT_GPU
-cuda::std::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point2f u2,
+pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point2f u2,
                                                         SampledWavelengths &lambda) const {
     // Choose whether to sample spotlight center cone or falloff region
     FloatType p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};

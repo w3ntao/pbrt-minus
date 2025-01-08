@@ -35,7 +35,7 @@ class Sphere {
     }
 
     PBRT_GPU
-    cuda::std::optional<ShapeIntersection> intersect(const Ray &ray,
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray,
                                                      FloatType t_max = Infinity) const {
         auto isect = basic_intersect(ray, t_max);
         if (!isect) {
@@ -47,10 +47,10 @@ class Sphere {
     }
 
     PBRT_GPU
-    cuda::std::optional<ShapeSample> sample(const Point2f &u) const;
+    pbrt::optional<ShapeSample> sample(const Point2f &u) const;
 
     PBRT_GPU
-    cuda::std::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
+    pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
 
     PBRT_GPU
     FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
@@ -71,7 +71,7 @@ class Sphere {
     bool transform_swaps_handedness;
 
     PBRT_GPU
-    cuda::std::optional<QuadricIntersection> basic_intersect(const Ray &r, FloatType tMax) const;
+    pbrt::optional<QuadricIntersection> basic_intersect(const Ray &r, FloatType tMax) const;
 
     PBRT_CPU_GPU
     SurfaceInteraction interaction_from_intersection(const QuadricIntersection &isect,

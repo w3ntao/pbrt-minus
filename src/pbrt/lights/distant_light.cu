@@ -52,7 +52,7 @@ DistantLight *DistantLight::create(const Transform &renderFromLight,
 }
 
 PBRT_GPU
-cuda::std::optional<LightLiSample> DistantLight::sample_li(const LightSampleContext &ctx,
+pbrt::optional<LightLiSample> DistantLight::sample_li(const LightSampleContext &ctx,
                                                            const Point2f &u,
                                                            SampledWavelengths &lambda) const {
     Vector3f wi = render_from_light(Vector3f(0, 0, 1)).normalize();

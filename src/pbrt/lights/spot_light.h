@@ -24,11 +24,11 @@ class SpotLight : public LightBase {
                       const SampledWavelengths &lambda) const;
 
     PBRT_GPU
-    cuda::std::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
+    pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 
     PBRT_GPU
-    cuda::std::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
+    pbrt::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
                                                  SampledWavelengths &lambda) const;
 
     PBRT_GPU

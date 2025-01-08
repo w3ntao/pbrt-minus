@@ -798,7 +798,7 @@ int generate_light_subpath(const IntegratorBase *integrator_base, SampledWavelen
 PBRT_GPU
 SampledSpectrum connect_bdpt(const IntegratorBase *integrator_base, SampledWavelengths &lambda,
                              Vertex *lightVertices, Vertex *cameraVertices, int s, int t,
-                             Sampler *sampler, cuda::std::optional<Point2f> *pRaster,
+                             Sampler *sampler, pbrt::optional<Point2f> *pRaster,
                              FloatType *misWeightPtr = nullptr) {
     SampledSpectrum L(0.f);
     // Ignore invalid connections related to infinite area lights
@@ -1072,7 +1072,8 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
         if (*film_sample_counter > 0) {
             // sort to make film writing deterministic
             // std::sort(film_samples + 0, film_samples + (*film_sample_counter), FSComparator());
-            std::sort(film_samples + 0, film_samples + (*film_sample_counter) - 1, FSComparator());
+            std::sort(film_samples + 0, film_samples + (*film_sample_counter) - 1,
+                      FSComparator());
         }
 
         for (uint idx = 0; idx < *film_sample_counter; ++idx) {
@@ -1116,7 +1117,7 @@ SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, int *film_sample_co
             }
 
             // Execute the $(s, t)$ connection strategy and update _L_
-            cuda::std::optional<Point2f> optional_p_film_new;
+            pbrt::optional<Point2f> optional_p_film_new;
             FloatType misWeight = 0;
             SampledSpectrum l_path = connect_bdpt(base, lambda, light_vertices, camera_vertices, s,
                                                   t, sampler, &optional_p_film_new, &misWeight);

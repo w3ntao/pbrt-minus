@@ -55,7 +55,7 @@ SampledSpectrum UniformInfiniteLight::phi(const SampledWavelengths &lambda) cons
 }
 
 PBRT_GPU
-cuda::std::optional<LightLiSample>
+pbrt::optional<LightLiSample>
 UniformInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
                                 SampledWavelengths &lambda) const {
     Vector3f wi = sample_uniform_sphere(u);

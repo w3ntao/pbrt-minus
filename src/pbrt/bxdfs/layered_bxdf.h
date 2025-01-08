@@ -158,7 +158,7 @@ class LayeredBxDF {
 
                         // Sample phase function and update layered path state
                         Point2f u{r(), r()};
-                        cuda::std::optional<PhaseFunctionSample> ps = phase.sample_p(-w, u);
+                        pbrt::optional<PhaseFunctionSample> ps = phase.sample_p(-w, u);
                         if (!ps || ps->pdf == 0 || ps->wi.z == 0) {
                             continue;
                         }
@@ -189,7 +189,7 @@ class LayeredBxDF {
                 if (z == exitZ) {
                     // Account for reflection at _exitInterface_
                     FloatType uc = r();
-                    cuda::std::optional<BSDFSample> bs = exitInterface.sample_f(
+                    pbrt::optional<BSDFSample> bs = exitInterface.sample_f(
                         -w, uc, Point2f(r(), r()), mode, BxDFReflTransFlags::Reflection);
                     if (!bs || !bs->f.is_positive() || bs->pdf == 0 || bs->wi.z == 0) {
                         break;
@@ -215,7 +215,7 @@ class LayeredBxDF {
                     // Sample new direction using BSDF at _nonExitInterface_
                     FloatType uc = r();
                     Point2f u(r(), r());
-                    cuda::std::optional<BSDFSample> bs =
+                    pbrt::optional<BSDFSample> bs =
                         nonExitInterface.sample_f(-w, uc, u, mode, BxDFReflTransFlags::Reflection);
                     if (!bs || !bs->f.is_positive() || bs->pdf == 0 || bs->wi.z == 0) {
                         break;
@@ -245,7 +245,7 @@ class LayeredBxDF {
     }
 
     PBRT_GPU
-    cuda::std::optional<BSDFSample>
+    pbrt::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         // Set _wo_ for layered BSDF sampling
@@ -257,7 +257,7 @@ class LayeredBxDF {
 
         // Sample BSDF at entrance interface to get initial direction _w_
         bool enteredTop = twoSided || wo.z > 0;
-        cuda::std::optional<BSDFSample> bs =
+        pbrt::optional<BSDFSample> bs =
             enteredTop ? top.sample_f(wo, uc, u, mode) : bottom.sample_f(wo, uc, u, mode);
         if (!bs || !bs->f.is_positive() || bs->pdf == 0 || bs->wi.z == 0) {
             return {};
@@ -312,7 +312,7 @@ class LayeredBxDF {
 
                 if (0 < zp && zp < thickness) {
                     // Update path state for valid scattering event between interfaces
-                    cuda::std::optional<PhaseFunctionSample> ps =
+                    pbrt::optional<PhaseFunctionSample> ps =
                         phase.sample_p(-w, Point2f(r(), r()));
                     if (!ps || ps->pdf == 0 || ps->wi.z == 0) {
                         return {};
@@ -348,7 +348,7 @@ class LayeredBxDF {
             // Sample interface BSDF to determine new path direction
             FloatType uc = r();
             Point2f u(r(), r());
-            cuda::std::optional<BSDFSample> bs = interface.sample_f(-w, uc, u, mode);
+            pbrt::optional<BSDFSample> bs = interface.sample_f(-w, uc, u, mode);
             if (!bs || !bs->f.is_positive() || bs->pdf == 0 || bs->wi.z == 0) {
                 return {};
             }
@@ -415,7 +415,7 @@ class LayeredBxDF {
                 }
                 // Sample _tInterface_ to get direction into the layers
                 auto trans = BxDFReflTransFlags::Transmission;
-                cuda::std::optional<BSDFSample> wos, wis;
+                pbrt::optional<BSDFSample> wos, wis;
                 wos = tInterface.sample_f(wo, r(), {r(), r()}, mode, trans);
                 wis = tInterface.sample_f(wi, r(), {r(), r()}, !mode, trans);
 
@@ -426,7 +426,7 @@ class LayeredBxDF {
                         pdfSum += rInterface.pdf(-wos->wi, -wis->wi, mode);
                     } else {
                         // Use multiple importance sampling to estimate pdf product
-                        cuda::std::optional<BSDFSample> rs =
+                        pbrt::optional<BSDFSample> rs =
                             rInterface.sample_f(-wos->wi, r(), {r(), r()}, mode);
                         if (rs && rs->f.is_positive() && rs->pdf > 0) {
                             if (!pbrt::is_non_specular(rInterface.flags()))
@@ -459,7 +459,7 @@ class LayeredBxDF {
 
                 FloatType uc = r();
                 Point2f u(r(), r());
-                cuda::std::optional<BSDFSample> wos = toInterface.sample_f(wo, uc, u, mode);
+                pbrt::optional<BSDFSample> wos = toInterface.sample_f(wo, uc, u, mode);
                 if (!wos || !wos->f.is_positive() || wos->pdf == 0 || wos->wi.z == 0 ||
                     wos->is_reflection()) {
                     continue;
@@ -467,7 +467,7 @@ class LayeredBxDF {
 
                 uc = r();
                 u = Point2f(r(), r());
-                cuda::std::optional<BSDFSample> wis = tiInterface.sample_f(wi, uc, u, !mode);
+                pbrt::optional<BSDFSample> wis = tiInterface.sample_f(wi, uc, u, !mode);
                 if (!wis || !wis->f.is_positive() || wis->pdf == 0 || wis->wi.z == 0 ||
                     wis->is_reflection()) {
                     continue;

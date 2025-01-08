@@ -100,7 +100,7 @@ SampledSpectrum ImageInfiniteLight::le(const Ray &ray, const SampledWavelengths 
 }
 
 PBRT_GPU
-cuda::std::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleContext &ctx,
+pbrt::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleContext &ctx,
                                                                  const Point2f &u,
                                                                  SampledWavelengths &lambda) const {
     const auto le_sample = image_le_distribution->sample(u);

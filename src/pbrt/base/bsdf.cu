@@ -57,7 +57,7 @@ SampledSpectrum BSDF::f(const Vector3f &woRender, const Vector3f &wiRender,
 }
 
 PBRT_GPU
-cuda::std::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, FloatType u,
+pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, FloatType u,
                                                const Point2f &u2, TransportMode mode,
                                                BxDFReflTransFlags sample_flags) const {
     if (bxdf.has_type_null()) {
