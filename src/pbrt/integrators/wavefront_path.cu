@@ -22,19 +22,18 @@ struct FrameBuffer {
     SampledSpectrum radiance;
     SampledWavelengths lambda;
     FloatType weight;
-};
 
-struct FBComparator {
-    bool operator()(FrameBuffer const &left, FrameBuffer const &right) const {
-        if (left.pixel_idx < right.pixel_idx) {
+    // to help sorting
+    bool operator<(const FrameBuffer &right) const {
+        if (pixel_idx < right.pixel_idx) {
             return true;
         }
 
-        if (left.pixel_idx > right.pixel_idx) {
+        if (pixel_idx > right.pixel_idx) {
             return false;
         }
 
-        return left.sample_idx < right.sample_idx;
+        return sample_idx < right.sample_idx;
     }
 };
 
@@ -705,7 +704,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         if (queues.frame_buffer_counter > 0) {
             // sort to make film writing deterministic
             std::sort(queues.frame_buffer_queue + 0,
-                      queues.frame_buffer_queue + queues.frame_buffer_counter, FBComparator());
+                      queues.frame_buffer_queue + queues.frame_buffer_counter, std::less{});
 
             write_frame_buffer<<<divide_and_ceil(queues.frame_buffer_counter, threads), threads>>>(
                 film, &queues);

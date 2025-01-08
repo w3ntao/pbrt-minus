@@ -15,13 +15,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cuda: [ '12.5.0' ]
+        cuda: [ '12.5.0', '12.6.0' ]
+        # all available versions:
+        # https://github.com/Jimver/cuda-toolkit/blob/master/src/links/linux-links.ts
 
-    name: GPU build (CUDA ${{ matrix.cuda }})
+    name: cuda build (${{ matrix.cuda }})
 
     runs-on: ubuntu-latest
     steps:
-    - uses: jimver/cuda-toolkit@v0.2.17
+    - uses: jimver/cuda-toolkit@v0.2.19
       id: cuda-toolkit
       with:
         cuda: ${{ matrix.cuda }}

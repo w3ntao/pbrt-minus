@@ -29,9 +29,9 @@ include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 message(STATUS "nvcc path: ${CMAKE_CUDA_COMPILER}")
 message(STATUS "nvcc version = ${CMAKE_CUDA_COMPILER_VERSION}")
 
-if (${CMAKE_CUDA_COMPILER_VERSION} VERSION_LESS "12.3.0")
-    message(FATAL_ERROR "you need NVCC >= 12.3.0 to build this project (required by cuda::std::optional)")
-endif ()
+#if (${CMAKE_CUDA_COMPILER_VERSION} VERSION_LESS "11.0.1")
+#    message(FATAL_ERROR "NVCC < 11.0.1 was not test")
+#endif ()
 
 add_subdirectory("src/ext")
 

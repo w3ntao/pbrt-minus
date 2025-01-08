@@ -25,40 +25,39 @@ struct FilmSample {
     Point2f p_film;
     SampledSpectrum l_path;
     SampledWavelengths lambda;
-};
 
-struct FSComparator {
-    bool operator()(FilmSample const &left, FilmSample const &right) const {
-        if (left.p_film.x < right.p_film.x) {
+    // to help sorting
+    bool operator<(const FilmSample &right) const {
+        if (p_film.x < right.p_film.x) {
             return true;
         }
 
-        if (left.p_film.x > right.p_film.x) {
+        if (p_film.x > right.p_film.x) {
             return false;
         }
 
-        if (left.p_film.y < right.p_film.y) {
+        if (p_film.y < right.p_film.y) {
             return true;
         }
 
-        if (left.p_film.y > right.p_film.y) {
+        if (p_film.y > right.p_film.y) {
             return false;
         }
 
         for (int idx = 0; idx < NSpectrumSamples; ++idx) {
-            if (left.l_path[idx] < right.l_path[idx]) {
+            if (l_path[idx] < right.l_path[idx]) {
                 return true;
             }
 
-            if (left.l_path[idx] > right.l_path[idx]) {
+            if (l_path[idx] > right.l_path[idx]) {
                 return false;
             }
 
-            if (left.lambda[idx] < right.lambda[idx]) {
+            if (lambda[idx] < right.lambda[idx]) {
                 return true;
             }
 
-            if (left.lambda[idx] > right.lambda[idx]) {
+            if (lambda[idx] > right.lambda[idx]) {
                 return false;
             }
         }
@@ -1071,9 +1070,7 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
 
         if (*film_sample_counter > 0) {
             // sort to make film writing deterministic
-            // std::sort(film_samples + 0, film_samples + (*film_sample_counter), FSComparator());
-            std::sort(film_samples + 0, film_samples + (*film_sample_counter) - 1,
-                      FSComparator());
+            std::sort(film_samples + 0, film_samples + (*film_sample_counter) - 1, std::less{});
         }
 
         for (uint idx = 0; idx < *film_sample_counter; ++idx) {
