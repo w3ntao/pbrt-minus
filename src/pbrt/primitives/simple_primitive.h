@@ -21,12 +21,12 @@ class SimplePrimitive {
         return shape->bounds();
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     bool fast_intersect(const Ray &ray, FloatType t_max) const {
         return shape->fast_intersect(ray, t_max);
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const {
         auto si = shape->intersect(ray, t_max);
         if (!si.has_value()) {

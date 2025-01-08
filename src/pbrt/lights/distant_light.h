@@ -19,7 +19,7 @@ class DistantLight : public LightBase {
         scene_bounds.bounding_sphere(&scene_center, &scene_radius);
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 

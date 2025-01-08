@@ -25,17 +25,17 @@ class ImageInfiniteLight : public LightBase {
     void init(const Transform &_render_from_light, const ParameterDictionary &parameters,
               std::vector<void *> &gpu_dynamic_pointers);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &w,
                      bool allow_incomplete_pdf) const;
 
@@ -54,5 +54,5 @@ class ImageInfiniteLight : public LightBase {
     FloatType scene_radius;
     Point3f scene_center;
 
-    PBRT_GPU SampledSpectrum ImageLe(Point2f uv, const SampledWavelengths &lambda) const;
+    PBRT_CPU_GPU SampledSpectrum ImageLe(Point2f uv, const SampledWavelengths &lambda) const;
 };

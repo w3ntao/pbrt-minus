@@ -10,17 +10,17 @@
 template <typename TopBxDF, typename BottomBxDF, bool twoSided>
 class LayeredBxDF {
   public:
-    PBRT_GPU
+    PBRT_CPU_GPU
     LayeredBxDF(){};
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     LayeredBxDF(TopBxDF top, BottomBxDF bottom, FloatType thickness, const SampledSpectrum &albedo,
                 FloatType g, int maxDepth, int nSamples)
         : top(top), bottom(bottom),
           thickness(std::max(thickness, std::numeric_limits<FloatType>::min())), g(g),
           albedo(albedo), maxDepth(maxDepth), nSamples(nSamples) {}
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void regularize() {
         top.regularize();
         bottom.regularize();
@@ -49,7 +49,7 @@ class LayeredBxDF {
         return flags;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const {
         SampledSpectrum f(0.);
         // Estimate _LayeredBxDF_ value _f_ using random sampling
@@ -244,7 +244,7 @@ class LayeredBxDF {
         return f / nSamples;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
@@ -377,7 +377,7 @@ class LayeredBxDF {
         return {};
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         // Set _wo_ and _wi_ for layered BSDF evaluation
@@ -490,7 +490,7 @@ class LayeredBxDF {
 
   private:
     // LayeredBxDF Private Methods
-    PBRT_GPU
+    PBRT_CPU_GPU
     static FloatType Tr(FloatType dz, Vector3f w) {
         if (std::abs(dz) <= std::numeric_limits<FloatType>::min()) {
             return 1;

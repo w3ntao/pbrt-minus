@@ -34,7 +34,7 @@ void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_l
     shape = _shape;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum DiffuseAreaLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                                     const SampledWavelengths &lambda) const {
     // Check for zero emitted radiance from point on area light
@@ -45,7 +45,7 @@ SampledSpectrum DiffuseAreaLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f 
     return scale * l_emit->sample(lambda);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleContext &ctx,
                                                                const Point2f &u,
                                                                SampledWavelengths &lambda) const {
@@ -68,7 +68,7 @@ pbrt::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleConte
     return LightLiSample(Le, wi, ss->pdf, ss->interaction);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType DiffuseAreaLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                                    bool allow_incomplete_pdf) const {
     // allow_incomplete_pdf = false

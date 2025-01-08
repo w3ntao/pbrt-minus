@@ -22,7 +22,7 @@ AmbientOcclusionIntegrator::create(const ParameterDictionary &parameters,
     return ambient_occlusion_integrator;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum AmbientOcclusionIntegrator::li(const Ray &ray, SampledWavelengths &lambda,
                                                Sampler *sampler) const {
     const auto shape_intersection = base->intersect(ray, Infinity);

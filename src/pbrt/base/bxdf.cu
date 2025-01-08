@@ -58,7 +58,7 @@ BxDFFlags BxDF::flags() const {
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void BxDF::regularize() {
     switch (type) {
     case Type::coated_conductor: {
@@ -89,7 +89,7 @@ void BxDF::regularize() {
     REPORT_FATAL_ERROR();
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     switch (type) {
     case Type::coated_conductor: {
@@ -117,7 +117,7 @@ SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
                                                TransportMode mode,
                                                BxDFReflTransFlags sampleFlags) const {
@@ -147,7 +147,7 @@ pbrt::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType BxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                     BxDFReflTransFlags sampleFlags) const {
     switch (type) {

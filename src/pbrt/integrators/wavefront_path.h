@@ -100,11 +100,11 @@ class WavefrontPathIntegrator {
     bool regularize;
     uint samples_per_pixel;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
                               SampledWavelengths &lambda, Sampler *sampler) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void sample_bsdf(uint path_idx, PathState *path_state) const;
 
     void evaluate_material(const Material::Type material_type);

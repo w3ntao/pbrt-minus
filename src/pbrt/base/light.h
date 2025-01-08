@@ -149,29 +149,29 @@ class Light {
     PBRT_CPU_GPU
     LightType get_light_type() const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                       const SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
                                                  SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf = false) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos, FloatType *pdfDir) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
 
     PBRT_CPU_GPU

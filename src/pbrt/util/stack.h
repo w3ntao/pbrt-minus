@@ -5,7 +5,7 @@
 template <typename T, size_t Capacity>
 class Stack {
   public:
-    PBRT_GPU Stack() : size(0) {}
+    PBRT_CPU_GPU Stack() : size(0) {}
 
     PBRT_CPU_GPU size_t get_size() const {
         return size;

@@ -152,7 +152,8 @@ const HLBVH *HLBVH::create(const std::vector<const Primitive *> &gpu_primitives,
     return bvh;
 }
 
-PBRT_GPU bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
+PBRT_CPU_GPU
+bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
     if (build_nodes == nullptr) {
         return false;
     }
@@ -203,7 +204,7 @@ PBRT_GPU bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
     return false;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray, FloatType t_max) const {
     if (build_nodes == nullptr) {
         return {};

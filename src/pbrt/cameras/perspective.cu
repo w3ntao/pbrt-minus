@@ -143,7 +143,7 @@ SampledSpectrum PerspectiveCamera::we(const Ray &ray, SampledWavelengths &lambda
     return SampledSpectrum(1.0 / (A * lensArea * pbrt::pow<4>(cosTheta)));
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<CameraWiSample> PerspectiveCamera::sample_wi(const Interaction &ref,
                                                                  const Point2f u,
                                                                  SampledWavelengths &lambda) const {

@@ -55,14 +55,14 @@ void SpotLight::init(const Transform &renderFromLight, const Spectrum *Iemit, Fl
     this->cosFalloffStart = std::cos(degree_to_radian(falloffStart));
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum SpotLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                              const SampledWavelengths &lambda) const {
     REPORT_FATAL_ERROR();
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<LightLiSample> SpotLight::sample_li(const LightSampleContext &ctx,
                                                         const Point2f &u,
                                                         SampledWavelengths &lambda) const {
@@ -81,7 +81,7 @@ pbrt::optional<LightLiSample> SpotLight::sample_li(const LightSampleContext &ctx
     return LightLiSample(Li, wi, 1, Interaction(p));
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point2f u2,
                                                         SampledWavelengths &lambda) const {
     // Choose whether to sample spotlight center cone or falloff region
@@ -114,7 +114,7 @@ pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point
     return LightLeSample(I(wLight, lambda), ray, 1, pdfDir);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void SpotLight::pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const {
     FloatType p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};
     *pdfPos = 0;
@@ -128,7 +128,7 @@ void SpotLight::pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) con
     }
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType SpotLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                             bool allow_incomplete_pdf) const {
     return 0.0;
@@ -140,7 +140,7 @@ SampledSpectrum SpotLight::phi(const SampledWavelengths &lambda) const {
            ((1 - cosFalloffStart) + (cosFalloffStart - cosFalloffEnd) / 2);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum SpotLight::I(const Vector3f &w, const SampledWavelengths &lambda) const {
     return smooth_step(w.cos_theta(), cosFalloffEnd, cosFalloffStart) * scale *
            i_emit->sample(lambda);

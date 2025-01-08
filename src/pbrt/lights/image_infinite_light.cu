@@ -92,14 +92,14 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
     image_le_distribution = Distribution2D::create(image_luminance_array, gpu_dynamic_pointers);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum ImageInfiniteLight::le(const Ray &ray, const SampledWavelengths &lambda) const {
     Vector3f wLight = (render_from_light.apply_inverse(ray.d)).normalize();
     auto uv = EqualAreaSphereToSquare(wLight);
     return ImageLe(uv, lambda);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleContext &ctx,
                                                                  const Point2f &u,
                                                                  SampledWavelengths &lambda) const {
@@ -140,7 +140,7 @@ PBRT_CPU_GPU SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &l
     return 4 * pi * pi * sqr(scene_radius) * scale * sumL / (width * height);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &w,
                                      bool allow_incomplete_pdf) const {
     Vector3f wLight = render_from_light.apply_inverse(w);
@@ -154,7 +154,7 @@ void ImageInfiniteLight::preprocess(const Bounds3f &scene_bounds) {
     scene_bounds.bounding_sphere(&scene_center, &scene_radius);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum ImageInfiniteLight::ImageLe(Point2f uv, const SampledWavelengths &lambda) const {
     const auto rgb = image_ptr->bilerp(uv, WrapMode::OctahedralSphere).clamp(0, Infinity);
 

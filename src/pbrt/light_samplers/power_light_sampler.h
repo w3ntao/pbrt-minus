@@ -14,15 +14,15 @@ class PowerLightSampler {
     static const PowerLightSampler *create(const Light **lights, const uint light_num,
                                            std::vector<void *> &gpu_dynamic_pointers);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     const Light *get_light_by_idx(int idx) const {
         return lights[idx];
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<SampledLight> sample(FloatType u) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<SampledLight> sample(const LightSampleContext &ctx, FloatType u) const;
 
     PBRT_CPU_GPU

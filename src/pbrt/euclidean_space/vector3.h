@@ -132,7 +132,7 @@ class Vector3 {
         return *this / length();
     }
 
-    PBRT_GPU Vector3 softmax() const {
+    PBRT_CPU_GPU Vector3 softmax() const {
         auto v = Vector3(exp10f(x), exp10f(y), exp10f(z));
         return v / (v.x + v.y + v.z);
     }

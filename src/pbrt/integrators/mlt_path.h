@@ -36,7 +36,7 @@ class MLTPathIntegrator {
         return radiance.y(lambda, cie_y);
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     PathSample generate_path_sample(Sampler *sampler) const;
 
     const IntegratorBase *base;

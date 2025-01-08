@@ -58,7 +58,7 @@ class Interaction {
         return Ray::offset_ray_origin(pi, n, w);
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     Ray spawn_ray(const Vector3f &d) const {
         return Ray(offset_ray_origin(d), d);
     }
@@ -119,10 +119,10 @@ class SurfaceInteraction : public Interaction {
         }
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void compute_differentials(const Camera *camera, uint samples_per_pixel);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void set_intersection_properties(const Material *_material, const Light *_area_light);
 
     PBRT_CPU_GPU
@@ -130,10 +130,10 @@ class SurfaceInteraction : public Interaction {
                               const Normal3f &dndus, const Normal3f &dndvs,
                               bool orientationIsAuthoritative);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     BSDF get_bsdf(SampledWavelengths &lambda, const Camera *camera, uint samples_per_pixel);
 };
 

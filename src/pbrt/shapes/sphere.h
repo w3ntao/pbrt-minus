@@ -29,12 +29,12 @@ class Sphere {
         return phi_max * radius * (z_max - z_min);
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     bool fast_intersect(const Ray &r, FloatType t_max) const {
         return basic_intersect(r, t_max).has_value();
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray,
                                                      FloatType t_max = Infinity) const {
         auto isect = basic_intersect(ray, t_max);
@@ -46,13 +46,13 @@ class Sphere {
         return ShapeIntersection{intr, isect->t_hit};
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(const Point2f &u) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
   private:
@@ -70,7 +70,7 @@ class Sphere {
     bool reverse_orientation;
     bool transform_swaps_handedness;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<QuadricIntersection> basic_intersect(const Ray &r, FloatType tMax) const;
 
     PBRT_CPU_GPU

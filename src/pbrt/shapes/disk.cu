@@ -25,7 +25,7 @@ const Disk *Disk::create(const Transform &render_from_object, const Transform &o
     return disk;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType Disk::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     // Intersect sample ray with shape geometry
     Ray ray = ctx.spawn_ray(wi);
@@ -46,7 +46,7 @@ FloatType Disk::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     return pdf;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeSample> Disk::sample(const Point2f &u) const {
     Point2f pd = sample_uniform_disk_concentric(u);
     Point3f pObj(pd.x * radius, pd.y * radius, height);
@@ -71,9 +71,8 @@ pbrt::optional<ShapeSample> Disk::sample(const Point2f &u) const {
     return ShapeSample{Interaction(pi, n, uv), FloatType(1.0 / this->area())};
 }
 
-PBRT_GPU
-pbrt::optional<ShapeSample> Disk::sample(const ShapeSampleContext &ctx,
-                                              const Point2f &u) const {
+PBRT_CPU_GPU
+pbrt::optional<ShapeSample> Disk::sample(const ShapeSampleContext &ctx, const Point2f &u) const {
     // Sample shape by area and compute incident direction _wi_
     auto ss = this->sample(u);
     Vector3f wi = ss->interaction.p() - ctx.p();

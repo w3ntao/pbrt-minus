@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
-#include <cuda/std/tuple>
 #include <functional>
 #include <numeric>
 #include <vector>
@@ -74,8 +73,8 @@ class Distribution1D {
         pdf = _pmf;
     }
 
-    PBRT_GPU
-    cuda::std::pair<uint, FloatType> sample(FloatType u) const {
+    PBRT_CPU_GPU
+    std::pair<uint, FloatType> sample(FloatType u) const {
         auto target_idx = search_cdf(u, cdf, num);
         return {target_idx, pdf[target_idx]};
     }

@@ -33,7 +33,7 @@ void MegakernelPathIntegrator::init(const IntegratorBase *_base, uint _max_depth
     regularize = _regularize;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
                                                       SampledWavelengths &lambda,
                                                       const IntegratorBase *base, Sampler *sampler,
@@ -155,13 +155,13 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
     return L;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
                                              Sampler *sampler) const {
     return evaluate_li(primary_ray, lambda, base, sampler, max_depth, regularize);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::sample_ld(const SurfaceInteraction &intr,
                                                     const BSDF *bsdf, SampledWavelengths &lambda,
                                                     const IntegratorBase *base, Sampler *sampler) {

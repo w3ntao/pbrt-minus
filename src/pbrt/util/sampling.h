@@ -287,7 +287,7 @@ PBRT_CPU_GPU
 // Via Jim Arvo's SphTri.C
 Point2f InvertSphericalTriangleSample(const Point3f v[3], const Point3f &p, const Vector3f &w);
 
-PBRT_GPU
+PBRT_CPU_GPU
 Point2f EqualAreaSphereToSquare(Vector3f v);
 
 PBRT_CPU_GPU

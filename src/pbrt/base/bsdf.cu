@@ -43,7 +43,7 @@ void BSDF::init_bxdf(const Material *material, SampledWavelengths &lambda,
     REPORT_FATAL_ERROR();
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum BSDF::f(const Vector3f &woRender, const Vector3f &wiRender,
                         const TransportMode mode) const {
     Vector3f wi = render_to_local(wiRender);
@@ -56,7 +56,7 @@ SampledSpectrum BSDF::f(const Vector3f &woRender, const Vector3f &wiRender,
     return bxdf.f(wo, wi, mode);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, FloatType u,
                                                const Point2f &u2, TransportMode mode,
                                                BxDFReflTransFlags sample_flags) const {
@@ -79,7 +79,7 @@ pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, FloatType u
     return bs;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType BSDF::pdf(const Vector3f &woRender, const Vector3f &wiRender, TransportMode mode,
                     BxDFReflTransFlags sampleFlags) const {
     Vector3f wo = render_to_local(woRender);

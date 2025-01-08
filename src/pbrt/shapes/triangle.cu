@@ -2,7 +2,7 @@
 #include "pbrt/base/shape.h"
 #include "pbrt/shapes/triangle.h"
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, FloatType t_max) const {
     Point3f points[3];
     get_points(points);
@@ -17,7 +17,7 @@ pbrt::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, FloatType 
     return ShapeIntersection(si, tri_intersection->t);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     FloatType solidAngle = solid_angle(ctx.p());
     // Return PDF based on uniform area sampling for challenging triangles
@@ -75,7 +75,7 @@ FloatType Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const
     return pdf;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeSample> Triangle::sample(Point2f u) const {
     const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
     const Point3f p0 = mesh->p[v[0]];
@@ -123,7 +123,7 @@ pbrt::optional<ShapeSample> Triangle::sample(Point2f u) const {
     };
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Point2f u) const {
     Point3f points[3];
     get_points(points);
@@ -214,7 +214,7 @@ pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Poin
     };
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<Triangle::TriangleIntersection>
 Triangle::intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0, const Point3f &p1,
                              const Point3f &p2) const {
@@ -327,7 +327,7 @@ Triangle::intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0,
     return TriangleIntersection(b0, b1, b2, t);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SurfaceInteraction Triangle::interaction_from_intersection(const TriangleIntersection &ti,
                                                            const Vector3f &wo) const {
     const int *v = &(mesh->vertex_indices[3 * triangle_idx]);

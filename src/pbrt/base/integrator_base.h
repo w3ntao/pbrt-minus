@@ -56,15 +56,15 @@ struct IntegratorBase {
         return true;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     bool unoccluded(const Interaction &p0, const Interaction &p1) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum tr(const Interaction &p0, const Interaction &p1) const;
 };

@@ -47,7 +47,7 @@ Bounds3f Sphere::bounds() const {
         Bounds3f(Point3f(-radius, -radius, z_min), Point3f(radius, radius, z_max)));
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r,
                                                                  FloatType tMax) const {
     FloatType phi;
@@ -153,7 +153,7 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r,
     return QuadricIntersection{FloatType(tShapeHit), pHit, phi};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
     Point3f pObj = Point3f(0, 0, 0) + radius * sample_uniform_sphere(u);
 
@@ -184,7 +184,7 @@ pbrt::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
     return ShapeSample{.interaction = Interaction(pi, n, uv), .pdf = FloatType(1) / area()};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx,
                                                 const Point2f &u) const {
     // Sample uniformly on sphere if $\pt{}$ is inside it
@@ -267,7 +267,7 @@ pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx,
                        .pdf = 1 / (2 * compute_pi() * oneMinusCosThetaMax)};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType Sphere::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     Point3f pCenter = render_from_object(Point3f(0, 0, 0));
     Point3f pOrigin = ctx.offset_ray_origin(pCenter);

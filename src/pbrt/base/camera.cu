@@ -61,7 +61,7 @@ void Camera::pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const 
     REPORT_FATAL_ERROR();
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<CameraWiSample> Camera::sample_wi(const Interaction &ref, const Point2f u,
                                                       SampledWavelengths &lambda) const {
     switch (type) {

@@ -22,15 +22,15 @@ class UniformInfiniteLight : public LightBase {
     PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
 
   private:

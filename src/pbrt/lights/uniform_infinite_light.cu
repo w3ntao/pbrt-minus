@@ -54,7 +54,7 @@ SampledSpectrum UniformInfiniteLight::phi(const SampledWavelengths &lambda) cons
     return 4 * PI * PI * sqr(sceneRadius) * scale * Lemit->sample(lambda);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<LightLiSample>
 UniformInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
                                 SampledWavelengths &lambda) const {
@@ -65,7 +65,7 @@ UniformInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
                          Interaction(ctx.p() + wi * (2 * sceneRadius)));
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType UniformInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                                        bool allow_incomplete_pdf) const {
     if (allow_incomplete_pdf) {
@@ -75,7 +75,7 @@ FloatType UniformInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vect
     return uniform_sphere_pdf();
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum UniformInfiniteLight::le(const Ray &ray, const SampledWavelengths &lambda) const {
     return scale * Lemit->sample(lambda);
 }

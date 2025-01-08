@@ -20,12 +20,12 @@ Bounds3f GeometricPrimitive::bounds() const {
     return shape_ptr->bounds();
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 bool GeometricPrimitive::fast_intersect(const Ray &ray, FloatType t_max) const {
     return shape_ptr->fast_intersect(ray, t_max);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> GeometricPrimitive::intersect(const Ray &ray,
                                                                      FloatType t_max) const {
     auto si = shape_ptr->intersect(ray, t_max);

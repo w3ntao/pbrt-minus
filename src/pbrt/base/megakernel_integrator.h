@@ -47,7 +47,8 @@ class Integrator {
         return "";
     }
 
-    PBRT_GPU SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
+    PBRT_GPU
+    SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
     void render(Film *film, const std::string &sampler_type, uint samples_per_pixel,
                 const IntegratorBase *integrator_base, bool preview) const;

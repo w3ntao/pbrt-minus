@@ -102,7 +102,7 @@ Point2f InvertSphericalTriangleSample(const Point3f v[3], const Point3f &p, cons
     return Point2f(clamp<FloatType>(u0, 0, 1), clamp<FloatType>(u1, 0, 1));
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 Point2f EqualAreaSphereToSquare(Vector3f d) {
     FloatType x = std::abs(d.x);
     FloatType y = std::abs(d.y);

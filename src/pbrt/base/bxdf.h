@@ -41,18 +41,18 @@ class BxDF {
     PBRT_CPU_GPU
     BxDFFlags flags() const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void regularize();
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
     sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode = TransportMode::Radiance,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 

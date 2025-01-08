@@ -158,7 +158,7 @@ LightType Light::get_light_type() const {
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum Light::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                          const SampledWavelengths &lambda) const {
     switch (type) {
@@ -171,7 +171,7 @@ SampledSpectrum Light::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum Light::le(const Ray &ray, const SampledWavelengths &lambda) const {
     switch (type) {
     case Type::image_infinite_light: {
@@ -187,7 +187,7 @@ SampledSpectrum Light::le(const Ray &ray, const SampledWavelengths &lambda) cons
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<LightLiSample> Light::sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                     SampledWavelengths &lambda) const {
     switch (type) {
@@ -216,7 +216,7 @@ pbrt::optional<LightLiSample> Light::sample_li(const LightSampleContext &ctx, co
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<LightLeSample> Light::sample_le(const Point2f u1, const Point2f u2,
                                                     SampledWavelengths &lambda) const {
     switch (type) {
@@ -229,7 +229,7 @@ pbrt::optional<LightLeSample> Light::sample_le(const Point2f u1, const Point2f u
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                         bool allow_incomplete_pdf) const {
     switch (type) {
@@ -255,7 +255,7 @@ FloatType Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
     return NAN;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void Light::pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos,
                    FloatType *pdfDir) const {
     switch (type) {
@@ -268,7 +268,7 @@ void Light::pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos,
     REPORT_FATAL_ERROR();
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void Light::pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const {
     switch (type) {
     case Type::spot_light: {

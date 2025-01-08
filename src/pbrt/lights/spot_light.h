@@ -19,22 +19,22 @@ class SpotLight : public LightBase {
         REPORT_FATAL_ERROR();
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
                       const SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
                                                  SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
                                                  SampledWavelengths &lambda) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf = false) const;
     PBRT_CPU_GPU
@@ -49,6 +49,6 @@ class SpotLight : public LightBase {
     void init(const Transform &renderFromLight, const Spectrum *Iemit, FloatType _scale,
               FloatType totalWidth, FloatType falloffStart);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum I(const Vector3f &w, const SampledWavelengths &lambda) const;
 };

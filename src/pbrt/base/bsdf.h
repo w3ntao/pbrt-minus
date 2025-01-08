@@ -20,22 +20,22 @@ class BSDF {
     void init_bxdf(const Material *material, SampledWavelengths &lambda,
                    const MaterialEvalContext &material_eval_context);
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     void regularize() {
         bxdf.regularize();
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum f(const Vector3f &woRender, const Vector3f &wiRender,
                       TransportMode mode = TransportMode::Radiance) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
     sample_f(const Vector3f &wo_render, FloatType u, const Point2f &u2,
              TransportMode mode = TransportMode::Radiance,
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf(const Vector3f &woRender, const Vector3f &wiRender,
                   TransportMode mode = TransportMode::Radiance,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;

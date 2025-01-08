@@ -112,10 +112,10 @@ class HLBVH {
         return build_nodes[0].bounds;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_GPU

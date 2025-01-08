@@ -387,9 +387,8 @@ __global__ void ray_cast(const WavefrontPathIntegrator *integrator,
         integrator->base->intersect(camera_ray.ray, Infinity);
 }
 
-PBRT_GPU void
-WavefrontPathIntegrator::sample_bsdf(uint path_idx,
-                                     WavefrontPathIntegrator::PathState *path_state) const {
+PBRT_CPU_GPU
+void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *path_state) const {
     auto &isect = path_state->shape_intersections[path_idx]->interaction;
     auto &lambda = path_state->lambdas[path_idx];
 
@@ -596,7 +595,7 @@ WavefrontPathIntegrator::create(const ParameterDictionary &parameters, const Int
     return integrator;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
                                                    SampledWavelengths &lambda,
                                                    Sampler *sampler) const {

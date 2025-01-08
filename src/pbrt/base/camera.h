@@ -173,7 +173,7 @@ class Camera {
     PBRT_CPU_GPU
     void pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,
                                                   SampledWavelengths &lambda) const;
 

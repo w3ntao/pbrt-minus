@@ -16,7 +16,7 @@ SurfaceNormalIntegrator::create(const ParameterDictionary &parameters,
     return surface_normal_integrator;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum SurfaceNormalIntegrator::li(const Ray &ray, SampledWavelengths &lambda) const {
     const auto shape_intersection = base->intersect(ray, Infinity);
     if (!shape_intersection) {

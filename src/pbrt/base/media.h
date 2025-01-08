@@ -12,25 +12,25 @@ struct PhaseFunctionSample {
 
 class HGPhaseFunction {
   public:
-    PBRT_GPU
+    PBRT_CPU_GPU
     HGPhaseFunction() {}
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     HGPhaseFunction(FloatType g) : g(g) {}
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType p(const Vector3f wo, const Vector3f wi) const {
         return HenyeyGreenstein(wo.dot(wi), g);
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<PhaseFunctionSample> sample_p(Vector3f wo, Point2f u) const {
         FloatType pdf;
         Vector3f wi = SampleHenyeyGreenstein(wo, g, u, &pdf);
         return PhaseFunctionSample{pdf, wi, pdf};
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf(Vector3f wo, Vector3f wi) const {
         return p(wo, wi);
     }

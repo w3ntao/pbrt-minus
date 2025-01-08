@@ -51,7 +51,7 @@ DistantLight *DistantLight::create(const Transform &renderFromLight,
     return distant_light;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<LightLiSample> DistantLight::sample_li(const LightSampleContext &ctx,
                                                            const Point2f &u,
                                                            SampledWavelengths &lambda) const {

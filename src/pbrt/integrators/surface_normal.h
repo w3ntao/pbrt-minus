@@ -22,7 +22,7 @@ class SurfaceNormalIntegrator {
         rgb_spectra[2].init(RGB(0, 0, scale), rgb_color_space);
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda) const;
 
   private:

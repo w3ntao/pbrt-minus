@@ -3,7 +3,7 @@
 #include "pbrt/base/light.h"
 #include "pbrt/base/material.h"
 
-PBRT_GPU
+PBRT_CPU_GPU
 void SurfaceInteraction::compute_differentials(const Camera *camera, uint samples_per_pixel) {
     // different with PBRT-v4: ignore the DifferentialRay
     camera->approximate_dp_dxy(p(), n, samples_per_pixel, &dpdx, &dpdy);
@@ -36,7 +36,7 @@ void SurfaceInteraction::compute_differentials(const Camera *camera, uint sample
     dvdy = std::isfinite(dvdy) ? clamp<FloatType>(dvdy, -1e8f, 1e8f) : 0.0;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 void SurfaceInteraction::set_intersection_properties(const Material *_material,
                                                      const Light *_area_light) {
     if (_material->get_material_type() == Material::Type::mix) {
@@ -74,7 +74,7 @@ void SurfaceInteraction::set_shading_geometry(const Normal3f &ns, const Vector3f
     }
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 BSDF SurfaceInteraction::get_bsdf(SampledWavelengths &lambda, const Camera *camera,
                                   uint samples_per_pixel) {
     compute_differentials(camera, samples_per_pixel);
@@ -88,7 +88,7 @@ BSDF SurfaceInteraction::get_bsdf(SampledWavelengths &lambda, const Camera *came
     return bsdf;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum SurfaceInteraction::le(const Vector3f w, const SampledWavelengths &lambda) const {
     if (area_light == nullptr) {
         return SampledSpectrum(0.0);

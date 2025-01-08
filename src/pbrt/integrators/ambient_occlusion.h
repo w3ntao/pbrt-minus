@@ -21,7 +21,7 @@ class AmbientOcclusionIntegrator {
         illuminant_scale = _illuminant_scale;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
   private:

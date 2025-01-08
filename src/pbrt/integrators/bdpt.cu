@@ -150,7 +150,7 @@ struct EndpointInteraction : Interaction {
         : Interaction(ray.at(1), Normal3f(-ray.d)), camera(nullptr), light(nullptr) {}
 };
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType infinite_light_density(const Light **infinite_lights, int num_infinite_lights,
                                  const PowerLightSampler *lightSampler, const Vector3f w) {
     FloatType pdf = 0;
@@ -307,7 +307,7 @@ struct Vertex {
         return get_interaction().is_surface_interaction();
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum f(const Vertex &next, TransportMode mode) const {
         Vector3f wi = next.p() - p();
 
@@ -352,7 +352,7 @@ struct Vertex {
         return pdf * invDist2;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf_light(const IntegratorBase *integrator_base, const Vertex &v) const {
         Vector3f w = v.p() - p();
         auto invDist2 = 1.0 / w.squared_length();
@@ -399,7 +399,7 @@ struct Vertex {
         return pdf;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf(const IntegratorBase *integrator_base, const Vertex *prev,
                   const Vertex &next) const {
         if (type == VertexType::light) {
@@ -448,7 +448,7 @@ struct Vertex {
         return convert_density(pdf, next);
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum Le(const Light **infinite_lights, int num_infinite_lights, const Vertex &v,
                        const SampledWavelengths &lambda) const {
         if (!is_light()) {
@@ -480,7 +480,7 @@ struct Vertex {
         return SampledSpectrum(0.f);
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf_light_origin(const Light **infinite_lights, int num_infinite_lights,
                                const Vertex &v, const PowerLightSampler *lightSampler) {
         Vector3f w = v.p() - p();
@@ -511,7 +511,7 @@ struct Vertex {
     }
 };
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum G(const IntegratorBase *integrator_base, const Vertex &v0, const Vertex &v1,
                   const SampledWavelengths &lambda) {
     Vector3f d = v0.p() - v1.p();
@@ -528,7 +528,7 @@ SampledSpectrum G(const IntegratorBase *integrator_base, const Vertex &v0, const
     return g * integrator_base->tr(v0.get_interaction(), v1.get_interaction());
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType mis_weight(const IntegratorBase *integrator_base, Vertex *lightVertices,
                      Vertex *cameraVertices, Vertex &sampled, int s, int t) {
     if (s + t == 2) {
@@ -622,7 +622,7 @@ FloatType mis_weight(const IntegratorBase *integrator_base, Vertex *lightVertice
     return 1.0 / (1.0 + sumRi);
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 int random_walk(const IntegratorBase *integrator_base, SampledWavelengths &lambda, Ray ray,
                 Sampler *sampler, SampledSpectrum beta, FloatType pdf, int maxDepth,
                 TransportMode mode, Vertex *path, bool regularize) {
@@ -713,7 +713,7 @@ int random_walk(const IntegratorBase *integrator_base, SampledWavelengths &lambd
     return bounces;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 int generate_camera_subpath(const IntegratorBase *integrator_base, const Ray &ray,
                             SampledWavelengths &lambda, Sampler *sampler, int maxDepth,
                             Vertex *path, bool regularize) {
@@ -736,7 +736,7 @@ int generate_camera_subpath(const IntegratorBase *integrator_base, const Ray &ra
            1;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 int generate_light_subpath(const IntegratorBase *integrator_base, SampledWavelengths &lambda,
                            Sampler *sampler, int maxDepth, Vertex *path, bool regularize) {
     // Generate light subpath and initialize _path_ vertices
@@ -794,7 +794,7 @@ int generate_light_subpath(const IntegratorBase *integrator_base, SampledWavelen
     return nVertices + 1;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum connect_bdpt(const IntegratorBase *integrator_base, SampledWavelengths &lambda,
                              Vertex *lightVertices, Vertex *cameraVertices, int s, int t,
                              Sampler *sampler, pbrt::optional<Point2f> *pRaster,

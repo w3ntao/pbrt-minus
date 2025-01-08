@@ -19,10 +19,10 @@ class GeometricPrimitive {
     PBRT_CPU_GPU
     Bounds3f bounds() const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
   private:

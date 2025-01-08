@@ -23,7 +23,7 @@ class PerspectiveCamera {
     PBRT_CPU_GPU
     SampledSpectrum we(const Ray &ray, SampledWavelengths &lambda, Point2f *pRasterOut) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,
                                                   SampledWavelengths &lambda) const;
 

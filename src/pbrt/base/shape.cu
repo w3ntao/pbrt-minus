@@ -144,7 +144,7 @@ FloatType Shape::area() const {
     return NAN;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
     switch (type) {
     case (Type::disk): {
@@ -164,7 +164,7 @@ bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
     return false;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
     switch (type) {
     case (Type::disk): {
@@ -184,7 +184,7 @@ pbrt::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_m
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
                                                const Point2f &u) const {
     switch (type) {
@@ -205,7 +205,7 @@ pbrt::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 FloatType Shape::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     switch (type) {
     case (Type::disk): {

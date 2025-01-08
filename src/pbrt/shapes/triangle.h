@@ -48,7 +48,7 @@ class Triangle {
         return (p[1] - p[0]).cross((p[2] - p[0])).length() * 0.5;
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     bool fast_intersect(const Ray &ray, FloatType t_max) const {
         Point3f points[3];
         get_points(points);
@@ -56,16 +56,16 @@ class Triangle {
         return intersect_triangle(ray, t_max, points[0], points[1], points[2]).has_value();
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(Point2f u) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, Point2f u) const;
 
   private:
@@ -82,7 +82,7 @@ class Triangle {
         }
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     FloatType solid_angle(const Point3f p) const {
         // Get triangle vertices in _p0_, _p1_, and _p2_
         Point3f points[3];
@@ -92,12 +92,12 @@ class Triangle {
                                        (points[2] - p).normalize());
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     pbrt::optional<Triangle::TriangleIntersection>
     intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0, const Point3f &p1,
                        const Point3f &p2) const;
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SurfaceInteraction interaction_from_intersection(const TriangleIntersection &ti,
                                                      const Vector3f &wo) const;
 };

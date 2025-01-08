@@ -147,15 +147,15 @@ void Primitive::init(const TransformedPrimitive *transformed_primitive) {
 PBRT_CPU_GPU
 const Material *Primitive::get_material() const {
     switch (type) {
-    case (Type::geometric): {
+    case Type::geometric: {
         return ((GeometricPrimitive *)ptr)->get_material();
     }
 
-    case (Type::simple): {
+    case Type::simple: {
         return ((SimplePrimitive *)ptr)->get_material();
     }
 
-    case (Type::transformed): {
+    case Type::transformed: {
         return ((TransformedPrimitive *)ptr)->get_material();
     }
     }
@@ -167,15 +167,15 @@ const Material *Primitive::get_material() const {
 PBRT_CPU_GPU
 Bounds3f Primitive::bounds() const {
     switch (type) {
-    case (Type::geometric): {
+    case Type::geometric: {
         return ((GeometricPrimitive *)ptr)->bounds();
     }
 
-    case (Type::simple): {
+    case Type::simple: {
         return ((SimplePrimitive *)ptr)->bounds();
     }
 
-    case (Type::transformed): {
+    case Type::transformed: {
         return ((TransformedPrimitive *)ptr)->bounds();
     }
     }
@@ -184,18 +184,18 @@ Bounds3f Primitive::bounds() const {
     return {};
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 bool Primitive::fast_intersect(const Ray &ray, FloatType t_max) const {
     switch (type) {
-    case (Type::geometric): {
+    case Type::geometric: {
         return ((GeometricPrimitive *)ptr)->fast_intersect(ray, t_max);
     }
 
-    case (Type::simple): {
+    case Type::simple: {
         return ((SimplePrimitive *)ptr)->fast_intersect(ray, t_max);
     }
 
-    case (Type::transformed): {
+    case Type::transformed: {
         return ((TransformedPrimitive *)ptr)->fast_intersect(ray, t_max);
     }
     }
@@ -204,19 +204,19 @@ bool Primitive::fast_intersect(const Ray &ray, FloatType t_max) const {
     return false;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> Primitive::intersect(const Ray &ray, FloatType t_max) const {
     switch (type) {
 
-    case (Type::geometric): {
+    case Type::geometric: {
         return ((GeometricPrimitive *)ptr)->intersect(ray, t_max);
     }
 
-    case (Type::simple): {
+    case Type::simple: {
         return ((SimplePrimitive *)ptr)->intersect(ray, t_max);
     }
 
-    case (Type::transformed): {
+    case Type::transformed: {
         return ((TransformedPrimitive *)ptr)->intersect(ray, t_max);
     }
     }

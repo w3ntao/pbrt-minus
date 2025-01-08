@@ -143,8 +143,9 @@ class Bounds3 {
         *radius = inside(*center, *this) ? (*center - p_max).length() : 0.0;
     }
 
-    PBRT_GPU bool fast_intersect(const Ray &ray, FloatType ray_t_max, const Vector3f &inv_dir,
-                                 const int dir_is_neg[3]) const {
+    PBRT_CPU_GPU
+    bool fast_intersect(const Ray &ray, FloatType ray_t_max, const Vector3f &inv_dir,
+                        const int dir_is_neg[3]) const {
         // Check for ray intersection against $x$ and $y$ slabs
 
         auto o = ray.o;

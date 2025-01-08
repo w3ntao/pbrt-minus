@@ -166,7 +166,7 @@ MLTPathIntegrator *MLTPathIntegrator::create(const ParameterDictionary &paramete
     return integrator;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
     auto u = sampler->get_2d();
 
