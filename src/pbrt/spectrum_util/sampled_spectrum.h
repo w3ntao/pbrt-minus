@@ -25,7 +25,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     bool has_nan() const {
         for (uint i = 0; i < NSpectrumSamples; ++i) {
-            if (isnan(values[i])) {
+            if (isnan(values[i]) || isinf(values[i])) {
                 return true;
             }
         }

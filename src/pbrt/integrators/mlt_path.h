@@ -18,7 +18,8 @@ struct PathSample {
     SampledWavelengths lambda;
 
     PBRT_CPU_GPU
-    PathSample(const Point2f _p_film, SampledSpectrum _radiance, SampledWavelengths _lambda)
+    PathSample(const Point2f &_p_film, const SampledSpectrum &_radiance,
+               const SampledWavelengths &_lambda)
         : p_film(_p_film), radiance(_radiance), lambda(_lambda) {}
 };
 
@@ -28,7 +29,7 @@ class MLTPathIntegrator {
                                      const IntegratorBase *base,
                                      std::vector<void *> &gpu_dynamic_pointers);
 
-    void render(Film *film, GreyScaleFilm &heat_map, uint mutations_per_pixel, bool preview);
+    double render(Film *film, GreyScaleFilm &heat_map, uint mutations_per_pixel, bool preview);
 
     PBRT_CPU_GPU
     FloatType compute_luminance(const SampledSpectrum &radiance,

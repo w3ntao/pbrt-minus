@@ -26,8 +26,9 @@ class RGB {
         return RGB(::clamp(r, low, high), ::clamp(g, low, high), ::clamp(b, low, high));
     }
 
-    PBRT_CPU_GPU bool has_nan() const {
-        return isnan(r) || isnan(g) || isnan(b);
+    PBRT_CPU_GPU
+    bool has_nan() const {
+        return isnan(r) || isnan(g) || isnan(b) || isinf(r) || isinf(g) || isinf(b);
     }
 
     PBRT_CPU_GPU FloatType max_component() const {

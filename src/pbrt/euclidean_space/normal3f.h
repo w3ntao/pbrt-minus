@@ -39,7 +39,7 @@ class Normal3f {
 
     PBRT_CPU_GPU
     bool has_nan() const {
-        return std::isnan(x) || std::isnan(y) || std::isnan(z);
+        return isnan(x) || isnan(y) || isnan(z) || isinf(x) || isinf(y) || isinf(z);
     }
 
     PBRT_CPU_GPU

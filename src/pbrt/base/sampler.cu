@@ -114,18 +114,19 @@ void Sampler::init(StratifiedSampler *stratified_sampler) {
 PBRT_CPU_GPU
 void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension) {
     switch (type) {
-    case (Type::independent): {
+    case Type::independent: {
         static_cast<IndependentSampler *>(ptr)->start_pixel_sample(pixel_idx, sample_idx,
                                                                    dimension);
         return;
     }
 
-    case (Type::mlt): {
-        static_cast<MLTSampler *>(ptr)->init_sample_idx();
+    case Type::mlt: {
+        static_cast<MLTSampler *>(ptr)->StartPixelSample(pixel_idx, sample_idx, dimension);
+
         return;
     }
 
-    case (Type::stratified): {
+    case Type::stratified: {
         static_cast<StratifiedSampler *>(ptr)->start_pixel_sample(pixel_idx, sample_idx, dimension);
         return;
     }
@@ -137,16 +138,16 @@ void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension
 PBRT_CPU_GPU
 uint Sampler::get_samples_per_pixel() const {
     switch (type) {
-    case (Type::independent): {
+    case Type::independent: {
         return static_cast<IndependentSampler *>(ptr)->get_samples_per_pixel();
     }
 
-    case (Type::mlt): {
+    case Type::mlt: {
         // TODO: implement get_samples_per_pixel() for MLTSampler?
         return 4;
     }
 
-    case (Type::stratified): {
+    case Type::stratified: {
         return static_cast<StratifiedSampler *>(ptr)->get_samples_per_pixel();
     }
     }
@@ -158,15 +159,15 @@ uint Sampler::get_samples_per_pixel() const {
 PBRT_CPU_GPU
 FloatType Sampler::get_1d() {
     switch (type) {
-    case (Type::independent): {
+    case Type::independent: {
         return static_cast<IndependentSampler *>(ptr)->get_1d();
     }
 
-    case (Type::mlt): {
-        return static_cast<MLTSampler *>(ptr)->next_sample();
+    case Type::mlt: {
+        return static_cast<MLTSampler *>(ptr)->Get1D();
     }
 
-    case (Type::stratified): {
+    case Type::stratified: {
         return static_cast<StratifiedSampler *>(ptr)->get_1d();
     }
     }
@@ -178,16 +179,15 @@ FloatType Sampler::get_1d() {
 PBRT_CPU_GPU
 Point2f Sampler::get_2d() {
     switch (type) {
-    case (Type::independent): {
+    case Type::independent: {
         return static_cast<IndependentSampler *>(ptr)->get_2d();
     }
 
-    case (Type::mlt): {
-        auto converted_ptr = static_cast<MLTSampler *>(ptr);
-        return Point2f(converted_ptr->next_sample(), converted_ptr->next_sample());
+    case Type::mlt: {
+        return static_cast<MLTSampler *>(ptr)->Get2D();
     }
 
-    case (Type::stratified): {
+    case Type::stratified: {
         return static_cast<StratifiedSampler *>(ptr)->get_2d();
     }
     }
@@ -199,11 +199,15 @@ Point2f Sampler::get_2d() {
 PBRT_CPU_GPU
 Point2f Sampler::get_pixel_2d() {
     switch (type) {
-    case (Type::independent): {
+    case Type::independent: {
         return static_cast<IndependentSampler *>(ptr)->get_pixel_2d();
     }
 
-    case (Type::stratified): {
+    case Type::mlt: {
+        return static_cast<MLTSampler *>(ptr)->GetPixel2D();
+    }
+
+    case Type::stratified: {
         return static_cast<StratifiedSampler *>(ptr)->get_pixel_2d();
     }
     }

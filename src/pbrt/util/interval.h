@@ -49,7 +49,7 @@ class Interval {
 
     PBRT_CPU_GPU
     bool has_nan() const {
-        return isnan(low) || isnan(high);
+        return isnan(low) || isnan(high) || isinf(low) || isinf(high);
     }
 
     PBRT_CPU_GPU

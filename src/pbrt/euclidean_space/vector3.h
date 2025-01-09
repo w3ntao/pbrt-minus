@@ -2,14 +2,13 @@
 
 #include "pbrt/util/basic_math.h"
 #include "pbrt/util/interval.h"
-#include <stdexcept>
 
 template <typename T>
 class Vector3 {
   public:
     T x, y, z;
 
-    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN) {};
+    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN){};
 
     PBRT_CPU_GPU Vector3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {}
 
@@ -49,7 +48,7 @@ class Vector3 {
 
     PBRT_CPU_GPU
     bool has_nan() const {
-        return isnan(x) || isnan(y) || isnan(z);
+        return isnan(x) || isnan(y) || isnan(z) || isinf(x) || isinf(y) || isinf(z);
     }
 
     PBRT_CPU_GPU bool operator==(const Vector3 &v) const {

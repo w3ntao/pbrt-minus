@@ -10,7 +10,7 @@ PBRT_CPU_GPU inline FloatType gaussian(FloatType x, FloatType mu = 0, FloatType 
 PBRT_CPU_GPU
 inline FloatType gaussian_integral(FloatType x0, FloatType x1, FloatType mu = 0,
                                    FloatType sigma = 1) {
-    FloatType sigmaRoot2 = sigma * FloatType(1.414213562373095);
+    FloatType sigmaRoot2 = sigma * FloatType(Sqrt2);
     return 0.5f * (std::erf((mu - x0) / sigmaRoot2) - std::erf((mu - x1) / sigmaRoot2));
 }
 

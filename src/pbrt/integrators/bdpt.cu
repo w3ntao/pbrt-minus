@@ -31,7 +31,6 @@ struct FilmSample {
         if (p_film.x < right.p_film.x) {
             return true;
         }
-
         if (p_film.x > right.p_film.x) {
             return false;
         }
@@ -39,7 +38,6 @@ struct FilmSample {
         if (p_film.y < right.p_film.y) {
             return true;
         }
-
         if (p_film.y > right.p_film.y) {
             return false;
         }
@@ -48,7 +46,6 @@ struct FilmSample {
             if (l_path[idx] < right.l_path[idx]) {
                 return true;
             }
-
             if (l_path[idx] > right.l_path[idx]) {
                 return false;
             }
@@ -56,7 +53,6 @@ struct FilmSample {
             if (lambda[idx] < right.lambda[idx]) {
                 return true;
             }
-
             if (lambda[idx] > right.lambda[idx]) {
                 return false;
             }

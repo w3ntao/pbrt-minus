@@ -13,6 +13,8 @@
 #define OneMinusEpsilon _FloatOneMinusEpsilon
 #endif
 
+constexpr FloatType Sqrt2 = 1.41421356237309504880;
+
 constexpr FloatType Infinity = std::numeric_limits<FloatType>::infinity();
 
 constexpr FloatType MachineEpsilon = std::numeric_limits<FloatType>::epsilon() * 0.5;
@@ -213,4 +215,51 @@ PBRT_CPU_GPU inline FloatType NewtonBisection(FloatType x0, FloatType x1, Func f
         // Perform a Newton step
         xMid -= fxMid.first / fxMid.second;
     }
+}
+
+PBRT_CPU_GPU
+inline FloatType erf_inv(FloatType a) {
+    /*
+    erfinv:
+         0 -> 0
+         1 -> + inf
+        -1 -> - inf
+        if (x < -1 or x > 1) -> NAN
+
+    for GPU code there is a non-zero probability it returns INF
+    */
+
+#if defined(__CUDA_ARCH__)
+    return erfinv(a);
+#else
+    // https://stackoverflow.com/a/49743348
+    FloatType p;
+    FloatType t =
+        std::log(std::max<FloatType>(std::fma(a, -a, 1), std::numeric_limits<FloatType>::min()));
+
+    if (std::abs(t) > 6.125f) {              // maximum ulp error = 2.35793
+        p = 3.03697567e-10f;                 //  0x1.4deb44p-32
+        p = std::fma(p, t, 2.93243101e-8f);  //  0x1.f7c9aep-26
+        p = std::fma(p, t, 1.22150334e-6f);  //  0x1.47e512p-20
+        p = std::fma(p, t, 2.84108955e-5f);  //  0x1.dca7dep-16
+        p = std::fma(p, t, 3.93552968e-4f);  //  0x1.9cab92p-12
+        p = std::fma(p, t, 3.02698812e-3f);  //  0x1.8cc0dep-9
+        p = std::fma(p, t, 4.83185798e-3f);  //  0x1.3ca920p-8
+        p = std::fma(p, t, -2.64646143e-1f); // -0x1.0eff66p-2
+        p = std::fma(p, t, 8.40016484e-1f);  //  0x1.ae16a4p-1
+    } else {                                 // maximum ulp error = 2.35456
+        p = 5.43877832e-9f;                  //  0x1.75c000p-28
+        p = std::fma(p, t, 1.43286059e-7f);  //  0x1.33b458p-23
+        p = std::fma(p, t, 1.22775396e-6f);  //  0x1.49929cp-20
+        p = std::fma(p, t, 1.12962631e-7f);  //  0x1.e52bbap-24
+        p = std::fma(p, t, -5.61531961e-5f); // -0x1.d70c12p-15
+        p = std::fma(p, t, -1.47697705e-4f); // -0x1.35be9ap-13
+        p = std::fma(p, t, 2.31468701e-3f);  //  0x1.2f6402p-9
+        p = std::fma(p, t, 1.15392562e-2f);  //  0x1.7a1e4cp-7
+        p = std::fma(p, t, -2.32015476e-1f); // -0x1.db2aeep-3
+        p = std::fma(p, t, 8.86226892e-1f);  //  0x1.c5bf88p-1
+    }
+
+    return a * p;
+#endif
 }

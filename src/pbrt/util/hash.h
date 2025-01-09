@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pbrt/util/macro.h"
+#include <cstring>
 
 namespace HIDDEN {
 

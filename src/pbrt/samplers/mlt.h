@@ -1,120 +1,109 @@
 #pragma once
 
+#include "pbrt/euclidean_space/point2.h"
+#include "pbrt/util/hash.h"
 #include "pbrt/util/rng.h"
-#include "pbrt/util/stack.h"
 #include <cmath>
 
+constexpr FloatType global_sigma = 0.01;
+constexpr FloatType global_largeStepProbability = 0.3;
+
 struct PrimarySample {
-    FloatType value;
-    int modify_time;
+    PBRT_CPU_GPU
+    PrimarySample() : value(0), valueBackup(0), modifyBackup(0), lastModificationIteration(0) {}
+
+    FloatType value = 0;
+    // PrimarySample Public Methods
+    PBRT_CPU_GPU
+    void Backup() {
+        valueBackup = value;
+        modifyBackup = lastModificationIteration;
+    }
 
     PBRT_CPU_GPU
-    PrimarySample(FloatType _value, int _modify_time) : value(_value), modify_time(_modify_time) {}
+    void Restore() {
+        value = valueBackup;
+        lastModificationIteration = modifyBackup;
+    }
+
+    // PrimarySample Public Members
+    int64_t lastModificationIteration = 0;
+    FloatType valueBackup = 0;
+    int64_t modifyBackup = 0;
 };
 
-const size_t PRIMARY_SAMPLE_SIZE = 64;
-
 class MLTSampler {
-  private:
-    RNG rng;
-    int sample_idx;
-
-    PrimarySample samples[PRIMARY_SAMPLE_SIZE];
-    Stack<PrimarySample, PRIMARY_SAMPLE_SIZE> backup_samples;
-
-    PBRT_CPU_GPU
-    inline FloatType mutate_small_step(const FloatType x) {
-        // taken from PSSMLT
-        // TODO: PBRT-v4's implements this mutation differently
-
-        constexpr FloatType s1 = 1.0 / 512.0;
-        constexpr FloatType s2 = 1.0 / 16.0;
-        const FloatType r = rng.uniform<FloatType>();
-        const FloatType dx = s1 / (s1 / s2 + std::abs(2.0 * r - 1.0)) - s1 / (s1 / s2 + 1.0);
-
-        FloatType mutated_val = NAN;
-        if (r < 0.5) {
-            const FloatType x1 = x + dx;
-            mutated_val = (x1 >= 1.0) ? x1 - 1.0 : x1;
-        } else {
-            const FloatType x1 = x - dx;
-            mutated_val = (x1 < 0.0) ? x1 + 1.0 : x1;
-        }
-
-        return clamp<FloatType>(mutated_val, 0, OneMinusEpsilon);
-    }
+    static const size_t LENGTH = 64;
 
   public:
-    int global_time;
-    int large_step;
-    int large_step_time;
+    RNG rng;
+
+    PrimarySample X[LENGTH];
+
+    // MLTSampler Private Members
+    int mutationsPerPixel;
+    FloatType sigma;
+    FloatType largeStepProbability;
+
+    int streamCount;
+    int64_t currentIteration = 0;
+    bool largeStep = true;
+    int64_t lastLargeStepIteration = 0;
+    int streamIndex;
+    int sampleIndex;
 
     PBRT_CPU_GPU
-    void init(int seed) {
-        global_time = 0;
-        large_step_time = 0;
-        sample_idx = 0;
-        large_step = 0;
-
-        rng.set_sequence(seed, 0);
-
-        for (uint idx = 0; idx < PRIMARY_SAMPLE_SIZE; ++idx) {
-            samples[idx] = PrimarySample(rng.uniform<FloatType>(), 0);
-        }
-    }
+    void EnsureReady(int index);
 
     PBRT_CPU_GPU
-    void init_sample_idx() {
-        sample_idx = 0;
-    }
+    void init(long rngSequenceIndex) {
+        rng.set_sequence(MixBits(rngSequenceIndex));
 
-    PBRT_CPU_GPU void clear_backup_samples() {
-        backup_samples.clear();
-    }
+        currentIteration = 0;
+        lastLargeStepIteration = 0;
+        largeStep = true;
 
-    PBRT_CPU_GPU
-    void recover_samples() {
-        for (int idx = sample_idx - 1; idx >= 0; --idx) {
-            if (backup_samples.empty()) {
-                return;
-            }
-
-            samples[idx] = backup_samples.pop();
-        }
+        mutationsPerPixel = 4;
+        sigma = global_sigma;
+        largeStepProbability = global_largeStepProbability;
+        streamCount = 1;
+        // TODO: change streamCount
     }
 
     PBRT_CPU_GPU
-    inline FloatType next_sample() {
-        if (sample_idx < 0 || sample_idx >= PRIMARY_SAMPLE_SIZE) {
-            REPORT_FATAL_ERROR();
-        }
+    void StartIteration();
 
-        if (samples[sample_idx].modify_time < global_time) {
-            if (large_step > 0) {
-                backup_samples.push(samples[sample_idx]);
-                samples[sample_idx].modify_time = global_time;
-                samples[sample_idx].value = rng.uniform<FloatType>();
-            } else {
-                // small step
+    PBRT_CPU_GPU
+    void Accept();
 
-                if (samples[sample_idx].modify_time < large_step_time) {
-                    samples[sample_idx].modify_time = large_step_time;
-                    samples[sample_idx].value = rng.uniform<FloatType>();
-                }
+    PBRT_CPU_GPU
+    void Reject();
 
-                for (int idx = 0; idx < global_time - 1 - samples[sample_idx].modify_time; ++idx) {
-                    samples[sample_idx].value = mutate_small_step(samples[sample_idx].value);
-                }
+    PBRT_CPU_GPU
+    void StartStream(int index);
 
-                backup_samples.push(samples[sample_idx]);
-                samples[sample_idx].value = mutate_small_step(samples[sample_idx].value);
-                samples[sample_idx].modify_time = global_time;
-            }
-        }
-
-        auto value = samples[sample_idx].value;
-        sample_idx += 1;
-
-        return value;
+    PBRT_CPU_GPU
+    int GetNextIndex() {
+        return streamIndex + streamCount * sampleIndex++;
     }
+
+    PBRT_CPU_GPU
+    int SamplesPerPixel() const {
+        return mutationsPerPixel;
+    }
+
+    PBRT_CPU_GPU
+    void StartPixelSample(uint pixel_idx, const int sampleIndex, const int dim) {
+        rng.set_sequence(pbrt::hash(pixel_idx));
+        rng.advance(sampleIndex * 65536 + dim * 8192);
+    }
+
+    PBRT_CPU_GPU
+    FloatType Get1D();
+
+    PBRT_CPU_GPU
+    Point2f Get2D();
+
+    PBRT_CPU_GPU
+    Point2f GetPixel2D();
 };

@@ -895,7 +895,7 @@ void SceneBuilder::render() const {
         REPORT_FATAL_ERROR();
     }
 
-    auto film_resolution = film->get_resolution();
+    const auto film_resolution = film->get_resolution();
 
     std::string sampler_type = "stratified";
     // TODO: configure sampler_type
@@ -906,9 +906,11 @@ void SceneBuilder::render() const {
               << "rendering a " << film_resolution.x << "x" << film_resolution.y << " image";
 
     const auto spp = samples_per_pixel.value();
-    auto splat_scale = 1.0 / spp;
 
     if (bdpt_integrator != nullptr) {
+
+        auto splat_scale = 1.0 / spp;
+
         bdpt_integrator->render(film, spp, preview);
 
         film->write_to_png(output_filename, splat_scale);
@@ -920,9 +922,9 @@ void SceneBuilder::render() const {
 
         GreyScaleFilm heatmap(film_resolution);
 
-        mlt_integrator->render(film, heatmap, spp, preview);
+        const auto brightness = mlt_integrator->render(film, heatmap, spp, preview);
 
-        film->write_to_png(output_filename, splat_scale);
+        film->write_to_png(output_filename, brightness / spp);
 
         heatmap.write_to_png("heatmap-" + output_filename);
 
@@ -933,13 +935,13 @@ void SceneBuilder::render() const {
 
         wavefront_path_integrator->render(film, preview);
 
-        film->write_to_png(output_filename, splat_scale);
+        film->write_to_png(output_filename);
 
     } else if (megakernel_integrator != nullptr) {
         megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(),
                                       integrator_base, preview);
 
-        film->write_to_png(output_filename, splat_scale);
+        film->write_to_png(output_filename);
 
     } else {
         REPORT_FATAL_ERROR();

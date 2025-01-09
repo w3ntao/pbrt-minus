@@ -23,6 +23,13 @@ inline FloatType sample_linear(FloatType u, FloatType a, FloatType b) {
 }
 
 PBRT_CPU_GPU
+inline FloatType sample_normal(FloatType u, FloatType mu = 0, FloatType sigma = 1) {
+    // for GPU code there is a non-zero probability it returns INF (from ErfInv())
+
+    return mu + Sqrt2 * sigma * erf_inv(2 * u - 1);
+}
+
+PBRT_CPU_GPU
 inline Point2f sample_bilinear(Point2f u, const FloatType w[4]) {
     Point2f p;
     // Sample $y$ for bilinear marginal distribution
