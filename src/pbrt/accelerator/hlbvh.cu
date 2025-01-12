@@ -168,12 +168,12 @@ __global__ void init_bvh_args(HLBVH::BottomBVHArgs *bvh_args_array,
 }
 
 const HLBVH *HLBVH::create(const std::vector<const Primitive *> &gpu_primitives,
-                           std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool) {
+                           std::vector<void *> &gpu_dynamic_pointers) {
     HLBVH *bvh;
     CHECK_CUDA_ERROR(cudaMallocManaged(&bvh, sizeof(HLBVH)));
     gpu_dynamic_pointers.push_back(bvh);
 
-    bvh->build_bvh(gpu_primitives, gpu_dynamic_pointers, thread_pool);
+    bvh->build_bvh(gpu_primitives, gpu_dynamic_pointers);
 
     return bvh;
 }
@@ -384,7 +384,7 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
 }
 
 void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
-                      std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool) {
+                      std::vector<void *> &gpu_dynamic_pointers) {
     auto start_sorting = std::chrono::system_clock::now();
 
     primitives = nullptr;
@@ -589,6 +589,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
 
     auto start_top_bvh = std::chrono::system_clock::now();
 
+    ThreadPool thread_pool;
     const uint top_bvh_node_num =
         build_top_bvh_for_treelets(dense_treelets, dense_treelet_indices.size(), thread_pool);
 
@@ -832,7 +833,7 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
     build_nodes[build_node_idx].init_interior(split_axis, left_build_node_idx,
                                               full_bounds_of_current_level);
 
-    const uint MIN_SIZE_TO_SPAWN = 32;
+    constexpr uint MIN_SIZE_TO_SPAWN = 64;
     // don't bother to send jobs into queue when the size is too small
 
     if (spawn && left_indices.size() >= MIN_SIZE_TO_SPAWN) {

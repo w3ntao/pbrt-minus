@@ -47,27 +47,27 @@ std::map<std::string, uint> count_light_type(const std::vector<Light *> &gpu_lig
     std::map<std::string, uint> counter;
     for (const auto light : gpu_lights) {
         switch (light->type) {
-        case (Light::Type::diffuse_area_light): {
+        case Light::Type::diffuse_area_light: {
             add_one_to_map("DiffuseAreaLight", counter);
             break;
         }
 
-        case (Light::Type::distant_light): {
+        case Light::Type::distant_light: {
             add_one_to_map("DistantLight", counter);
             break;
         }
 
-        case (Light::Type::image_infinite_light): {
+        case Light::Type::image_infinite_light: {
             add_one_to_map("ImageInfiniteLight", counter);
             break;
         }
 
-        case (Light::Type::spot_light): {
+        case Light::Type::spot_light: {
             add_one_to_map("SpotLight", counter);
             break;
         }
 
-        case (Light::Type::uniform_infinite_light): {
+        case Light::Type::uniform_infinite_light: {
             add_one_to_map("UniformInfiniteLight", counter);
             break;
         }
@@ -84,35 +84,34 @@ std::map<std::string, uint> count_light_type(const std::vector<Light *> &gpu_lig
 std::map<std::string, uint> count_material_type(const std::vector<const Primitive *> &primitives) {
     std::map<std::string, uint> counter;
     for (const auto primitive : primitives) {
-        auto material_type = primitive->get_material()->get_material_type();
 
-        switch (material_type) {
-        case (Material::Type::coated_conductor): {
+        switch (primitive->get_material()->get_material_type()) {
+        case Material::Type::coated_conductor: {
             add_one_to_map("CoatedConductor", counter);
             break;
         }
 
-        case (Material::Type::coated_diffuse): {
+        case Material::Type::coated_diffuse: {
             add_one_to_map("CoatedDiffuse", counter);
             break;
         }
 
-        case (Material::Type::conductor): {
+        case Material::Type::conductor: {
             add_one_to_map("Conductor", counter);
             break;
         }
 
-        case (Material::Type::diffuse): {
+        case Material::Type::diffuse: {
             add_one_to_map("Diffuse", counter);
             break;
         }
 
-        case (Material::Type::dielectric): {
+        case Material::Type::dielectric: {
             add_one_to_map("Dielectric", counter);
             break;
         }
 
-        case (Material::Type::mix): {
+        case Material::Type::mix: {
             add_one_to_map("Mix", counter);
             break;
         }
@@ -132,8 +131,7 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
       samples_per_pixel(command_line_option.samples_per_pixel),
       preview(command_line_option.preview) {
 
-    global_spectra =
-        GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, thread_pool, gpu_dynamic_pointers);
+    global_spectra = GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, gpu_dynamic_pointers);
 
     auto ag_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
         std::vector(std::begin(Ag_eta), std::end(Ag_eta)), false, nullptr, gpu_dynamic_pointers);
@@ -840,7 +838,7 @@ void SceneBuilder::parse_file(const std::string &_filename) {
 }
 
 void SceneBuilder::preprocess() {
-    integrator_base->bvh = HLBVH::create(gpu_primitives, gpu_dynamic_pointers, thread_pool);
+    integrator_base->bvh = HLBVH::create(gpu_primitives, gpu_dynamic_pointers);
 
     auto full_scene_bounds = integrator_base->bvh->bounds();
     for (auto light : gpu_lights) {

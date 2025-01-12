@@ -73,7 +73,7 @@ class HLBVH {
     };
 
     static const HLBVH *create(const std::vector<const Primitive *> &gpu_primitives,
-                               std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool);
+                               std::vector<void *> &gpu_dynamic_pointers);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const {
@@ -101,7 +101,7 @@ class HLBVH {
     }
 
     void build_bvh(const std::vector<const Primitive *> &gpu_primitives,
-                   std::vector<void *> &gpu_dynamic_pointers, ThreadPool &thread_pool);
+                   std::vector<void *> &gpu_dynamic_pointers);
 
     uint build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_treelets,
                                     ThreadPool &thread_pool);

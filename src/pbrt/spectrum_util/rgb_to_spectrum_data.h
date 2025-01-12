@@ -3,8 +3,6 @@
 #include "pbrt/spectrum_util/rgb.h"
 #include "pbrt/spectrum_util/rgb_sigmoid_polynomial.h"
 
-class ThreadPool;
-
 namespace RGBtoSpectrumData {
 
 constexpr int CIE_SAMPLES = 95;
@@ -34,7 +32,7 @@ struct RGBtoSpectrumTable {
     PBRT_CPU_GPU
     RGBSigmoidPolynomial operator()(const RGB &rgb) const;
 
-    void init(const std::string &str_gamut, ThreadPool &thread_pool);
+    void init(const std::string &str_gamut);
 };
 
 // clang-format off

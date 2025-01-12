@@ -1,6 +1,7 @@
 #include "pbrt/lights/uniform_infinite_light.h"
 #include "pbrt/scene/parameter_dictionary.h"
 #include "pbrt/spectrum_util/global_spectra.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
 
 UniformInfiniteLight *UniformInfiniteLight::create(const Transform &renderFromLight,
                                                    const ParameterDictionary &parameters,

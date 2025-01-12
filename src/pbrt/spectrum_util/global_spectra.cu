@@ -1,11 +1,11 @@
 #include "pbrt/base/spectrum.h"
 #include "pbrt/spectrum_util/global_spectra.h"
 #include "pbrt/spectrum_util/rgb_color_space.h"
-#include "pbrt/util/thread_pool.h"
+#include <chrono>
 
-const GlobalSpectra *GlobalSpectra::create(RGBtoSpectrumData::Gamut gamut, ThreadPool &thread_pool,
+const GlobalSpectra *GlobalSpectra::create(RGBtoSpectrumData::Gamut gamut,
                                            std::vector<void *> &gpu_dynamic_pointers) {
-    auto start = std::chrono::system_clock::now();
+    const auto start = std::chrono::system_clock::now();
 
     std::vector<FloatType> cpu_cie_lambdas(NUM_CIE_SAMPLES);
     std::vector<FloatType> cpu_cie_x_values(NUM_CIE_SAMPLES);
@@ -44,7 +44,7 @@ const GlobalSpectra *GlobalSpectra::create(RGBtoSpectrumData::Gamut gamut, Threa
         RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_table;
         CHECK_CUDA_ERROR(cudaMallocManaged(&rgb_to_spectrum_table,
                                            sizeof(RGBtoSpectrumData::RGBtoSpectrumTable)));
-        rgb_to_spectrum_table->init("sRGB", thread_pool);
+        rgb_to_spectrum_table->init("sRGB");
 
         RGBColorSpace *rgb_color_space;
         CHECK_CUDA_ERROR(cudaMallocManaged(&rgb_color_space, sizeof(RGBColorSpace)));

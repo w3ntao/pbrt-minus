@@ -399,7 +399,7 @@ RGBSigmoidPolynomial RGBtoSpectrumTable::operator()(const RGB &rgb) const {
     return RGBSigmoidPolynomial(c[0], c[1], c[2]);
 }
 
-void RGBtoSpectrumTable::init(const std::string &str_gamut, ThreadPool &thread_pool) {
+void RGBtoSpectrumTable::init(const std::string &str_gamut) {
     if (str_gamut != "sRGB") {
         throw std::runtime_error("compute_spectrum_table_data: only sRGB is implemented");
     }
@@ -416,6 +416,7 @@ void RGBtoSpectrumTable::init(const std::string &str_gamut, ThreadPool &thread_p
     auto coefficients_ptr = (double *)this->coefficients;
     auto z_nodes_ptr = this->z_nodes;
 
+    ThreadPool thread_pool;
     for (int l = 0; l < 3; ++l) {
         thread_pool.parallel_execute(
             0, RES, [coefficients_ptr, z_nodes_ptr, &rgb_to_spectrum_buffer, l](int j) {

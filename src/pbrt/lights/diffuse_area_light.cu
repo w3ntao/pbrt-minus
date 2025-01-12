@@ -2,8 +2,8 @@
 #include "pbrt/base/spectrum.h"
 #include "pbrt/lights/diffuse_area_light.h"
 #include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectrum_util/global_spectra.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
 
 void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_light,
                             const ParameterDictionary &parameters,
@@ -47,8 +47,8 @@ SampledSpectrum DiffuseAreaLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f 
 
 PBRT_CPU_GPU
 pbrt::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleContext &ctx,
-                                                               const Point2f &u,
-                                                               SampledWavelengths &lambda) const {
+                                                          const Point2f &u,
+                                                          SampledWavelengths &lambda) const {
     // Sample point on shape for _DiffuseAreaLight_
     auto shape_ctx = ShapeSampleContext(ctx.pi, ctx.n, ctx.ns);
 

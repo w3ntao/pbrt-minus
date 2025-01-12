@@ -2,8 +2,8 @@
 #include "pbrt/euclidean_space/transform.h"
 #include "pbrt/lights/distant_light.h"
 #include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectra/rgb_illuminant_spectrum.h"
 #include "pbrt/spectrum_util/global_spectra.h"
+#include "pbrt/spectrum_util/rgb_color_space.h"
 
 DistantLight *DistantLight::create(const Transform &renderFromLight,
                                    const ParameterDictionary &parameters,
@@ -53,8 +53,8 @@ DistantLight *DistantLight::create(const Transform &renderFromLight,
 
 PBRT_CPU_GPU
 pbrt::optional<LightLiSample> DistantLight::sample_li(const LightSampleContext &ctx,
-                                                           const Point2f &u,
-                                                           SampledWavelengths &lambda) const {
+                                                      const Point2f &u,
+                                                      SampledWavelengths &lambda) const {
     Vector3f wi = render_from_light(Vector3f(0, 0, 1)).normalize();
     Point3f pOutside = ctx.p() + wi * (2 * scene_radius);
 
