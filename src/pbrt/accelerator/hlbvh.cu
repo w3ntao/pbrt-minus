@@ -423,16 +423,15 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
 
     this->init(gpu_primitives_array, gpu_morton_primitives);
 
+    constexpr uint threads = 1024;
     {
-        uint threads = 1024;
-        uint blocks = divide_and_ceil(num_total_primitives, threads);
+        const uint blocks = divide_and_ceil(num_total_primitives, threads);
         hlbvh_init_morton_primitives<<<blocks, threads>>>(morton_primitives, primitives,
                                                           num_total_primitives);
     }
 
     {
-        uint threads = 1024;
-        uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
+        const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
         hlbvh_init_treelets<<<blocks, threads>>>(sparse_treelets);
     }
 
@@ -461,10 +460,9 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     // after adjusting bounds, all treelets grids are of the same size
 
     {
-        uint batch_size = 512;
-        uint blocks = divide_and_ceil(num_total_primitives, batch_size);
-        hlbvh_compute_morton_code<<<blocks, batch_size>>>(morton_primitives, num_total_primitives,
-                                                          bounds_of_primitives_centroids);
+        const uint blocks = divide_and_ceil(num_total_primitives, threads);
+        hlbvh_compute_morton_code<<<blocks, threads>>>(morton_primitives, num_total_primitives,
+                                                       bounds_of_primitives_centroids);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
@@ -475,7 +473,6 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     CHECK_CUDA_ERROR(cudaMallocManaged(&primitives_indices_offset, sizeof(uint) * MAX_TREELET_NUM));
 
     {
-        const uint threads = 1024;
         const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
 
         init_array<<<blocks, threads>>>(primitives_counter, uint(0), MAX_TREELET_NUM);
@@ -485,7 +482,6 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     }
 
     {
-        const uint threads = 1024;
         const uint blocks = divide_and_ceil(num_total_primitives, threads);
         count_primitives_for_treelets<<<blocks, threads>>>(primitives_counter, morton_primitives,
                                                            num_total_primitives);
@@ -499,7 +495,6 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     }
 
     {
-        const uint threads = 1024;
         const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
 
         init_array<<<blocks, threads>>>(primitives_counter, uint(0), MAX_TREELET_NUM);
@@ -512,7 +507,6 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
                                        sizeof(MortonPrimitive) * num_total_primitives));
 
     {
-        const uint threads = 1024;
         const uint blocks = divide_and_ceil(num_total_primitives, threads);
         sort_morton_primitives<<<blocks, threads>>>(buffer_morton_primitives, morton_primitives,
                                                     primitives_counter, primitives_indices_offset,
@@ -533,7 +527,6 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     }
     {
         // compute bounds
-        const uint threads = 1024;
         const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
         compute_treelet_bounds<<<blocks, threads>>>(sparse_treelets, morton_primitives);
         CHECK_CUDA_ERROR(cudaGetLastError());
@@ -545,8 +538,8 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     CHECK_CUDA_ERROR(cudaFree(buffer_morton_primitives));
 
     std::vector<uint> dense_treelet_indices;
-    uint max_primitive_num_in_a_treelet = 0;
     {
+        uint max_primitive_num_in_a_treelet = 0;
         uint verify_counter = 0;
         for (uint idx = 0; idx < MAX_TREELET_NUM; idx++) {
             uint current_treelet_primitives_num = sparse_treelets[idx].n_primitives;
@@ -612,7 +605,6 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         CHECK_CUDA_ERROR(cudaMallocManaged(&bvh_args_array, sizeof(BottomBVHArgs) * array_length));
 
         {
-            uint threads = 1024;
             uint blocks = divide_and_ceil(uint(end - start), threads);
             init_bvh_args<<<blocks, threads>>>(bvh_args_array, build_nodes, shared_offset, start,
                                                end);
@@ -629,7 +621,6 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         start = end;
         end = *shared_offset;
 
-        uint threads = 512;
         uint blocks = divide_and_ceil(array_length, threads);
 
         hlbvh_build_bottom_bvh<<<blocks, threads>>>(this, bvh_args_array, array_length);
@@ -657,7 +648,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
            duration_sorting.count(), duration_top_bvh.count(), duration_bottom_bvh.count());
 }
 
-uint HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_treelets,
+uint HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, const uint num_dense_treelets,
                                        ThreadPool &thread_pool) {
     std::vector<uint> treelet_indices;
     treelet_indices.reserve(num_dense_treelets);

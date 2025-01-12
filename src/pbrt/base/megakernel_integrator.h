@@ -15,7 +15,7 @@ class AmbientOcclusionIntegrator;
 class MegakernelPathIntegrator;
 class SurfaceNormalIntegrator;
 
-class Integrator {
+class MegakernelIntegrator {
   public:
     enum class Type {
         ambient_occlusion,
@@ -23,10 +23,10 @@ class Integrator {
         surface_normal,
     };
 
-    static const Integrator *create(const ParameterDictionary &parameters,
-                                    const std::string &integrator_name,
-                                    const IntegratorBase *integrator_base,
-                                    std::vector<void *> &gpu_dynamic_pointers);
+    static const MegakernelIntegrator *create(const ParameterDictionary &parameters,
+                                              const std::string &integrator_name,
+                                              const IntegratorBase *integrator_base,
+                                              std::vector<void *> &gpu_dynamic_pointers);
 
     std::string get_name() const {
         switch (type) {

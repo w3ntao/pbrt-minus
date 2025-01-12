@@ -318,7 +318,7 @@ void SceneBuilder::build_integrator() {
         return;
     }
 
-    megakernel_integrator = Integrator::create(parameters, integrator_name.value(), integrator_base,
+    megakernel_integrator = MegakernelIntegrator::create(parameters, integrator_name.value(), integrator_base,
                                                gpu_dynamic_pointers);
 }
 
@@ -906,6 +906,9 @@ void SceneBuilder::render() const {
     const auto spp = samples_per_pixel.value();
 
     if (bdpt_integrator != nullptr) {
+        std::cout << " (samples per pixel: " << spp << ")"
+                  << " with BDPT.\n"
+                  << std::flush;
 
         auto splat_scale = 1.0 / spp;
 
@@ -915,7 +918,7 @@ void SceneBuilder::render() const {
 
     } else if (mlt_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
-                  << " with MLT integrator.\n"
+                  << " with MLT-path.\n"
                   << std::flush;
 
         GreyScaleFilm heatmap(film_resolution);
@@ -927,8 +930,8 @@ void SceneBuilder::render() const {
         heatmap.write_to_png("heatmap-" + output_filename);
 
     } else if (wavefront_path_integrator != nullptr) {
-        std::cout << " (samples per pixel: " << samples_per_pixel.value() << ")"
-                  << " with wavefront integrator.\n"
+        std::cout << " (samples per pixel: " << spp << ")"
+                  << " with wavefront-path.\n"
                   << std::flush;
 
         wavefront_path_integrator->render(film, preview);
@@ -936,6 +939,9 @@ void SceneBuilder::render() const {
         film->write_to_png(output_filename);
 
     } else if (megakernel_integrator != nullptr) {
+        std::cout << " (samples per pixel: " << spp << ")"
+                  << " with " + megakernel_integrator->get_name() << std::flush;
+
         megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(),
                                       integrator_base, preview);
 

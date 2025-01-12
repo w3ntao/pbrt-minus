@@ -518,7 +518,7 @@ void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Po
         gpu_dynamic_pointers.push_back(ptr);
     }
 
-    const uint threads = 1024;
+    constexpr uint threads = 1024;
     uint blocks = divide_and_ceil<uint>(PATH_POOL_SIZE, threads);
 
     if (sampler_type == "stratified") {

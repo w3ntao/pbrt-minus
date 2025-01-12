@@ -28,8 +28,7 @@ struct MLTSample {
           sampling_density(_sampling_density) {}
 };
 
-__global__ void build_bootstrap_samples(const uint num_seed_paths_per_worker,
-                                        double *luminance_per_path,
+__global__ void build_bootstrap_samples(const uint num_paths_per_worker, double *luminance_per_path,
                                         const MLTPathIntegrator *mlt_integrator) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_SAMPLERS) {
@@ -39,8 +38,8 @@ __global__ void build_bootstrap_samples(const uint num_seed_paths_per_worker,
     auto sampler = &mlt_integrator->samplers[worker_idx];
     auto mlt_sampler = &mlt_integrator->mlt_samplers[worker_idx];
 
-    for (int idx = 0; idx < num_seed_paths_per_worker; idx++) {
-        const auto path_idx = worker_idx * num_seed_paths_per_worker + idx;
+    for (int idx = 0; idx < num_paths_per_worker; idx++) {
+        const auto path_idx = worker_idx * num_paths_per_worker + idx;
 
         mlt_sampler->init(path_idx);
         mlt_sampler->StartStream(0);
@@ -59,7 +58,7 @@ __global__ void select_initial_state(PathSample *path_samples,
     // this implementation is different from PBRT-v4:
     // in terms of selecting the 0th path samples (after bootstrap), PBRT-v4 did an importance
     // sampling from bootstrap (so multiple sampler might choose the same paths) but pbrt-minus
-    // initiated each sampler with different seed
+    // initiated each sampler with different bootstrap
 
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_SAMPLERS) {
@@ -200,7 +199,7 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
     const auto num_paths_per_worker =
         divide_and_ceil<int>(film_dimension.x * film_dimension.y, NUM_MLT_SAMPLERS);
 
-    const auto num_seed_paths = num_paths_per_worker * NUM_MLT_SAMPLERS;
+    const auto num_bootstrap_paths = num_paths_per_worker * NUM_MLT_SAMPLERS;
 
     if (num_paths_per_worker <= 0) {
         REPORT_FATAL_ERROR();
@@ -210,7 +209,7 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
     double *luminance_per_path;
 
     CHECK_CUDA_ERROR(cudaMallocManaged(&path_samples, sizeof(PathSample) * NUM_MLT_SAMPLERS));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&luminance_per_path, sizeof(double) * num_seed_paths));
+    CHECK_CUDA_ERROR(cudaMallocManaged(&luminance_per_path, sizeof(double) * num_bootstrap_paths));
 
     gpu_dynamic_pointers.push_back(path_samples);
     gpu_dynamic_pointers.push_back(luminance_per_path);
@@ -222,12 +221,19 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     const double sum_luminance =
-        std::accumulate(luminance_per_path + 0, luminance_per_path + num_seed_paths, 0.0);
+        std::accumulate(luminance_per_path + 0, luminance_per_path + num_bootstrap_paths, 0.0);
 
-    const double brightness = sum_luminance / num_seed_paths;
+    const double brightness = sum_luminance / num_bootstrap_paths;
 
-    printf("MLT-PATH: building seed:\n");
-    printf("    num_paths_per_worker: %d\n", num_paths_per_worker);
+    const long long total_mutations =
+        static_cast<long long>(mutations_per_pixel) * film_dimension.x * film_dimension.y;
+
+    const auto total_pass = divide_and_ceil<long long>(total_mutations, NUM_MLT_SAMPLERS);
+
+    printf("MLT-PATH:\n");
+    printf("    number of bootstrap paths: %lu\n", num_bootstrap_paths);
+    printf("    MLT samplers: %lu\n", NUM_MLT_SAMPLERS);
+    printf("    mutations per samplers: %.1f\n", double(total_mutations) / NUM_MLT_SAMPLERS);
     printf("    brightness: %.6f\n", brightness);
 
     if (brightness <= 0.0) {
@@ -246,11 +252,6 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
             &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
         gpu_dynamic_pointers.push_back(gpu_frame_buffer);
     }
-
-    const long long total_mutations =
-        static_cast<long long>(mutations_per_pixel) * film_dimension.x * film_dimension.y;
-
-    const auto total_pass = divide_and_ceil<long long>(total_mutations, NUM_MLT_SAMPLERS);
 
     RNG *rngs;
     CHECK_CUDA_ERROR(cudaMallocManaged(&rngs, sizeof(RNG) * NUM_MLT_SAMPLERS));

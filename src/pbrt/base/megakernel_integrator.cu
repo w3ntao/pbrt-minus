@@ -12,7 +12,7 @@
 
 PBRT_GPU
 static void evaluate_pixel_sample(Film *film, const Point2i p_pixel, const uint samples_per_pixel,
-                                  Sampler *samplers, const Integrator *integrator,
+                                  Sampler *samplers, const MegakernelIntegrator *integrator,
                                   const IntegratorBase *integrator_base) {
     auto resolution = film->get_resolution();
     int width = resolution.x;
@@ -43,7 +43,7 @@ static void evaluate_pixel_sample(Film *film, const Point2i p_pixel, const uint 
 
 __global__ static void megakernel_render(Film *film, uint8_t *gpu_frame_buffer, int *counter,
                                          const uint samples_per_pixel, Sampler *samplers,
-                                         const Integrator *integrator,
+                                         const MegakernelIntegrator *integrator,
                                          const IntegratorBase *integrator_base) {
     const auto resolution = film->get_resolution();
 
@@ -81,12 +81,11 @@ __global__ static void megakernel_render(Film *film, uint8_t *gpu_frame_buffer, 
     gpu_frame_buffer[pixel_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
 }
 
-const Integrator *Integrator::create(const ParameterDictionary &parameters,
-                                     const std::string &integrator_name,
-                                     const IntegratorBase *integrator_base,
-                                     std::vector<void *> &gpu_dynamic_pointers) {
-    Integrator *integrator;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(Integrator)));
+const MegakernelIntegrator *MegakernelIntegrator::create(
+    const ParameterDictionary &parameters, const std::string &integrator_name,
+    const IntegratorBase *integrator_base, std::vector<void *> &gpu_dynamic_pointers) {
+    MegakernelIntegrator *integrator;
+    CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(MegakernelIntegrator)));
     gpu_dynamic_pointers.push_back(integrator);
 
     if (integrator_name == "ambientocclusion") {
@@ -118,23 +117,24 @@ const Integrator *Integrator::create(const ParameterDictionary &parameters,
     return nullptr;
 }
 
-void Integrator::init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator) {
+void MegakernelIntegrator::init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator) {
     type = Type::ambient_occlusion;
     ptr = ambient_occlusion_integrator;
 }
 
-void Integrator::init(const MegakernelPathIntegrator *megakernel_path_integrator) {
+void MegakernelIntegrator::init(const MegakernelPathIntegrator *megakernel_path_integrator) {
     type = Type::megakernel_path;
     ptr = megakernel_path_integrator;
 }
 
-void Integrator::init(const SurfaceNormalIntegrator *surface_normal_integrator) {
+void MegakernelIntegrator::init(const SurfaceNormalIntegrator *surface_normal_integrator) {
     type = Type::surface_normal;
     ptr = surface_normal_integrator;
 }
 
 PBRT_GPU
-SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const {
+SampledSpectrum MegakernelIntegrator::li(const Ray &ray, SampledWavelengths &lambda,
+                                         Sampler *sampler) const {
     switch (type) {
     case Type::ambient_occlusion: {
         return static_cast<const AmbientOcclusionIntegrator *>(ptr)->li(ray, lambda, sampler);
@@ -153,8 +153,9 @@ SampledSpectrum Integrator::li(const Ray &ray, SampledWavelengths &lambda, Sampl
     return {};
 }
 
-void Integrator::render(Film *film, const std::string &sampler_type, const uint samples_per_pixel,
-                        const IntegratorBase *integrator_base, const bool preview) const {
+void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
+                                  const uint samples_per_pixel,
+                                  const IntegratorBase *integrator_base, const bool preview) const {
     const auto film_resolution = integrator_base->camera->get_camerabase()->resolution;
     const auto num_pixels = film_resolution.x * film_resolution.y;
 
@@ -162,12 +163,8 @@ void Integrator::render(Film *film, const std::string &sampler_type, const uint 
     auto samplers =
         Sampler::create(sampler_type, samples_per_pixel, num_pixels, gpu_dynamic_pointers);
 
-    const uint thread_width = 8;
-    const uint thread_height = 8;
-
-    std::cout << " (samples per pixel: " << samples_per_pixel << ") "
-              << "in " << thread_width << "x" << thread_height << " blocks.\n"
-              << std::flush;
+    constexpr uint thread_width = 16;
+    constexpr uint thread_height = 16;
 
     GLObject gl_object;
     uint8_t *gpu_frame_buffer = nullptr;

@@ -15,7 +15,7 @@ class ThreadPool {
                 while (true) {
                     std::function<void()> next_job;
                     {
-                        std::unique_lock<std::mutex> lock(mtx);
+                        std::unique_lock lock(mtx);
                         cv.wait(lock, [this] { return !job_queue.empty() || quit; });
 
                         if (job_queue.empty()) {
@@ -41,8 +41,6 @@ class ThreadPool {
                 }
             });
         }
-
-        printf("thread pool with %u threads initialized\n", num_threads);
     }
 
     ~ThreadPool() {
@@ -87,7 +85,7 @@ class ThreadPool {
 
     void sync() {
         while (true) {
-            std::unique_lock<std::mutex> lock(mtx);
+            std::unique_lock lock(mtx);
             cv.wait(lock, [this] { return num_active_jobs == 0; });
             break;
         }
