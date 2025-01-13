@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <stdint.h>
 
 #define PBRT_CPU_GPU __host__ __device__
 #define PBRT_GPU __device__

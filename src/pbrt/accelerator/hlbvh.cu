@@ -140,8 +140,8 @@ __global__ void hlbvh_compute_morton_code(HLBVH::MortonPrimitive *morton_primiti
         uint32_t(scaled_offset.x), uint32_t(scaled_offset.y), uint32_t(scaled_offset.z));
 }
 
-__global__ void hlbvh_build_bottom_bvh(HLBVH *bvh, const HLBVH::BottomBVHArgs *bvh_args_array,
-                                       uint array_length) {
+__global__ void hlbvh_build_bottom_bvh(const HLBVH::BottomBVHArgs *bvh_args_array,
+                                       uint array_length, HLBVH *bvh) {
     bvh->build_bottom_bvh(bvh_args_array, array_length);
 }
 
@@ -569,11 +569,19 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     *shared_offset = end;
 
     uint depth = 0;
+
+    uint last_allocated_size = (end - start) * 4;
+    auto bvh_args_array = local_allocator.allocate<BottomBVHArgs>(last_allocated_size);
+
     while (end > start) {
         const uint array_length = end - start;
 
-        auto bvh_args_array = local_allocator.allocate<BottomBVHArgs>(array_length);
-        // TODO: this part can be optimized to prevent allocating memory every loop
+        if (array_length > last_allocated_size) {
+            // to avoid unnecessarily repeated memory allocation
+            uint current_size = array_length * 2;
+            bvh_args_array = local_allocator.allocate<BottomBVHArgs>(current_size);
+            last_allocated_size = current_size;
+        }
 
         {
             uint blocks = divide_and_ceil(array_length, threads);
@@ -593,7 +601,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
 
         uint blocks = divide_and_ceil(array_length, threads);
 
-        hlbvh_build_bottom_bvh<<<blocks, threads>>>(this, bvh_args_array, array_length);
+        hlbvh_build_bottom_bvh<<<blocks, threads>>>(bvh_args_array, array_length, this);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
