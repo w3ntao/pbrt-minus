@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/scene/tokenizer.h"
+#include <pbrt/scene/tokenizer.h>
 #include <fstream>
 #include <iterator>
 #include <optional>

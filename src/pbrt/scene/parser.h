@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/scene/lexer.h"
+#include <pbrt/scene/lexer.h>
 #include <iostream>
 
 static std::vector<Token> parse_pbrt_into_token(const std::string &filename) {

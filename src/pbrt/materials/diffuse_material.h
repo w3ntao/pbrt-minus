@@ -1,23 +1,21 @@
 #pragma once
 
-#include "pbrt/base/bsdf.h"
-#include <map>
-#include <vector>
+#include <pbrt/base/bsdf.h>
 
-class MaterialEvalContext;
-class SpectrumTexture;
-class SampledWavelengths;
 class DiffuseBxDF;
+class GPUMemoryAllocator;
+class MaterialEvalContext;
 class ParameterDictionary;
 class RGBColorSpace;
+class SampledWavelengths;
 class SpectrumTexture;
 
 class DiffuseMaterial {
   public:
     static const DiffuseMaterial *create(const SpectrumTexture *_reflectance,
-                                         std::vector<void *> &gpu_dynamic_pointers);
+                                         GPUMemoryAllocator &allocator);
 
-    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
+    void init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;

@@ -1,11 +1,11 @@
-#include "pbrt/base/float_texture.h"
-#include "pbrt/base/spectrum.h"
-#include "pbrt/base/spectrum_texture.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/scene/tokenizer.h"
-#include "pbrt/spectra/black_body_spectrum.h"
-#include "pbrt/spectra/rgb_illuminant_spectrum.h"
-#include "pbrt/spectrum_util/global_spectra.h"
+#include <pbrt/base/float_texture.h>
+#include <pbrt/base/spectrum.h>
+#include <pbrt/base/spectrum_texture.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/scene/tokenizer.h>
+#include <pbrt/spectra/black_body_spectrum.h>
+#include <pbrt/spectra/rgb_illuminant_spectrum.h>
+#include <pbrt/spectrum_util/global_spectra.h>
 
 std::vector<FloatType> read_spectrum_file(const std::string &filename) {
     std::string token;
@@ -34,7 +34,7 @@ ParameterDictionary::ParameterDictionary(
     const std::map<std::string, const SpectrumTexture *> &_albedo_spectrum_textures,
     const std::map<std::string, const SpectrumTexture *> &_illuminant_spectrum_textures,
     const std::map<std::string, const SpectrumTexture *> &_unbounded_spectrum_textures,
-    std::vector<void *> &gpu_dynamic_pointers)
+    GPUMemoryAllocator &allocator)
     : root(_root), global_spectra(_global_spectra), spectra(_spectra), materials(_materials),
       float_textures(_float_textures), albedo_spectrum_textures(_albedo_spectrum_textures),
       illuminant_spectrum_textures(_illuminant_spectrum_textures),
@@ -145,7 +145,7 @@ ParameterDictionary::ParameterDictionary(
                     auto built_spectrum =
                         Spectrum::create_piecewise_linear_spectrum_from_interleaved(
                             std::vector(std::begin(spectrum_samples), std::end(spectrum_samples)),
-                            false, nullptr, gpu_dynamic_pointers);
+                            false, nullptr, allocator);
 
                     spectra[variable_name] = built_spectrum;
                     continue;
@@ -165,7 +165,7 @@ ParameterDictionary::ParameterDictionary(
             }
 
             auto spectrum = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-                floats, false, nullptr, gpu_dynamic_pointers);
+                floats, false, nullptr, allocator);
 
             spectra[variable_name] = spectrum;
             continue;
@@ -194,7 +194,7 @@ ParameterDictionary::ParameterDictionary(
 
 const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
                                                   SpectrumType spectrum_type,
-                                                  std::vector<void *> &gpu_dynamic_pointers) const {
+                                                  GPUMemoryAllocator &allocator) const {
     if (spectra.find(key) != spectra.end()) {
         return spectra.at(key);
     }
@@ -202,12 +202,12 @@ const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
     if (has_rgb(key)) {
         auto rgb_val = rgbs.at(key);
         return Spectrum::create_from_rgb(rgb_val, spectrum_type, global_spectra->rgb_color_space,
-                                         gpu_dynamic_pointers);
+                                         allocator);
     }
 
     if (blackbodies.find(key) != blackbodies.end()) {
         auto value = blackbodies.at(key);
-        return Spectrum::create_black_body(value, gpu_dynamic_pointers);
+        return Spectrum::create_black_body(value, allocator);
     }
 
     if (DEBUG_MODE) {
@@ -223,7 +223,7 @@ const Material *ParameterDictionary::get_material(const std::string &key) const 
 
 const FloatTexture *
 ParameterDictionary::get_float_texture_or_null(const std::string &key,
-                                               std::vector<void *> &gpu_dynamic_pointers) const {
+                                               GPUMemoryAllocator &allocator) const {
     if (textures_name.find(key) != textures_name.end()) {
         const auto tex_name = textures_name.at(key);
 
@@ -236,7 +236,7 @@ ParameterDictionary::get_float_texture_or_null(const std::string &key,
 
     if (has_floats(key)) {
         auto val = get_float(key);
-        return FloatTexture::create_constant_float_texture(val, gpu_dynamic_pointers);
+        return FloatTexture::create_constant_float_texture(val, allocator);
     }
 
     if (DEBUG_MODE) {
@@ -246,31 +246,30 @@ ParameterDictionary::get_float_texture_or_null(const std::string &key,
     return nullptr;
 }
 
-const FloatTexture *
-ParameterDictionary::get_float_texture(const std::string &key, FloatType default_val,
-                                       std::vector<void *> &gpu_dynamic_pointers) const {
-    auto texture = get_float_texture_or_null(key, gpu_dynamic_pointers);
+const FloatTexture *ParameterDictionary::get_float_texture(const std::string &key,
+                                                           FloatType default_val,
+                                                           GPUMemoryAllocator &allocator) const {
+    auto texture = get_float_texture_or_null(key, allocator);
     if (texture) {
         return texture;
     }
 
-    return FloatTexture::create_constant_float_texture(default_val, gpu_dynamic_pointers);
+    return FloatTexture::create_constant_float_texture(default_val, allocator);
 }
 
 const FloatTexture *ParameterDictionary::get_float_texture_with_default_val(
-    const std::string &key, FloatType default_val,
-    std::vector<void *> &gpu_dynamic_pointers) const {
-    auto texture = get_float_texture_or_null(key, gpu_dynamic_pointers);
+    const std::string &key, FloatType default_val, GPUMemoryAllocator &allocator) const {
+    auto texture = get_float_texture_or_null(key, allocator);
     if (texture) {
         return texture;
     }
 
-    return FloatTexture::create_constant_float_texture(default_val, gpu_dynamic_pointers);
+    return FloatTexture::create_constant_float_texture(default_val, allocator);
 }
 
 const SpectrumTexture *
 ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType spectrum_type,
-                                          std::vector<void *> &gpu_dynamic_pointers) const {
+                                          GPUMemoryAllocator &allocator) const {
     switch (spectrum_type) {
     case (SpectrumType::Albedo):
     case (SpectrumType::Illuminant):
@@ -302,9 +301,9 @@ ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType s
         return nullptr;
     }
 
-    auto spectrum = get_spectrum(key, spectrum_type, gpu_dynamic_pointers);
+    auto spectrum = get_spectrum(key, spectrum_type, allocator);
     if (spectrum) {
-        return SpectrumTexture::create_constant_texture(spectrum, gpu_dynamic_pointers);
+        return SpectrumTexture::create_constant_texture(spectrum, allocator);
     }
 
     if (DEBUG_MODE) {

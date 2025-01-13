@@ -1,5 +1,5 @@
-#include "pbrt/base/bsdf.h"
-#include "pbrt/base/material.h"
+#include <pbrt/base/bsdf.h>
+#include <pbrt/base/material.h>
 
 PBRT_CPU_GPU
 void BSDF::init_bxdf(const Material *material, SampledWavelengths &lambda,

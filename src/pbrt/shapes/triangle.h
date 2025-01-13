@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/base/interaction.h"
-#include "pbrt/base/ray.h"
-#include "pbrt/euclidean_space/bounds3.h"
-#include "pbrt/shapes/triangle_mesh.h"
-#include "pbrt/util/sampling.h"
+#include <pbrt/base/interaction.h>
+#include <pbrt/base/ray.h>
+#include <pbrt/euclidean_space/bounds3.h>
+#include <pbrt/shapes/triangle_mesh.h>
+#include <pbrt/util/sampling.h>
 
 class ShapeSampleContext;
 class ShapeSample;

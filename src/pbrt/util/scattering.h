@@ -1,11 +1,11 @@
 #pragma once
 
-#include "pbrt/euclidean_space/normal3f.h"
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/euclidean_space/vector3.h"
-#include "pbrt/util/complex.h"
-#include "pbrt/util/macro.h"
-#include "pbrt/util/sampling.h"
+#include <pbrt/euclidean_space/normal3f.h>
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/euclidean_space/vector3.h>
+#include <pbrt/util/complex.h>
+#include <pbrt/gpu/macro.h>
+#include <pbrt/util/sampling.h>
 
 PBRT_CPU_GPU
 inline Vector3f Reflect(const Vector3f wo, const Vector3f n) {

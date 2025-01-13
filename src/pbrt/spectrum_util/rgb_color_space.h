@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/base/spectrum.h"
-#include "pbrt/spectrum_util/rgb.h"
-#include "pbrt/spectrum_util/rgb_sigmoid_polynomial.h"
-#include "pbrt/spectrum_util/rgb_to_spectrum_data.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/base/spectrum.h>
+#include <pbrt/spectrum_util/rgb.h>
+#include <pbrt/spectrum_util/rgb_sigmoid_polynomial.h>
+#include <pbrt/spectrum_util/rgb_to_spectrum_data.h>
+#include <pbrt/gpu/macro.h>
 
 class RGBColorSpace {
   public:

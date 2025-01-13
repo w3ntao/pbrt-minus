@@ -1,5 +1,5 @@
-#include "pbrt/spectra/rgb_unbounded_spectrum.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
+#include <pbrt/spectra/rgb_unbounded_spectrum.h>
+#include <pbrt/spectrum_util/rgb_color_space.h>
 
 PBRT_CPU_GPU
 RGBUnboundedSpectrum::RGBUnboundedSpectrum(RGB rgb, const RGBColorSpace *cs) {

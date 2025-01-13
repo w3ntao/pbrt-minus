@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/spectrum_util/spectrum_constants_cie.h"
-#include "pbrt/util/basic_math.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/spectrum_util/spectrum_constants_cie.h>
+#include <pbrt/util/basic_math.h>
+#include <pbrt/gpu/macro.h>
 
 class Spectrum;
 class SampledWavelengths;

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/macro.h>
 
 class BSDF;
+class GPUMemoryAllocator;
 class Sampler;
 class ParameterDictionary;
 struct IntegratorBase;
@@ -11,7 +12,7 @@ class MegakernelPathIntegrator {
   public:
     static const MegakernelPathIntegrator *create(const ParameterDictionary &parameters,
                                                   const IntegratorBase *integrator_base,
-                                                  std::vector<void *> &gpu_dynamic_pointers);
+                                                  GPUMemoryAllocator &allocator);
 
     void init(const IntegratorBase *_base, uint _max_depth, bool _regularize);
 

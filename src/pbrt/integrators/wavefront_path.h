@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/base/material.h"
-#include "pbrt/euclidean_space/point2.h"
-#include <vector>
+#include <pbrt/base/material.h>
+#include <pbrt/euclidean_space/point2.h>
 
 class Film;
+class GPUMemoryAllocator;
 class ParameterDictionary;
 class Sampler;
 class SampledSpectrum;
@@ -50,7 +50,7 @@ class WavefrontPathIntegrator {
         unsigned long long int total_path_num;
 
         void create(uint samples_per_pixel, const Point2i &_resolution,
-                    const std::string &sampler_type, std::vector<void *> &gpu_dynamic_pointers);
+                    const std::string &sampler_type, GPUMemoryAllocator &allocator);
 
         PBRT_CPU_GPU
         void init_new_path(uint path_idx);
@@ -81,13 +81,13 @@ class WavefrontPathIntegrator {
         uint *diffuse_material_queue;
         uint diffuse_material_counter;
 
-        void init(std::vector<void *> &gpu_dynamic_pointers);
+        void init(GPUMemoryAllocator &allocator);
     };
 
     static WavefrontPathIntegrator *create(const ParameterDictionary &parameters,
                                            const IntegratorBase *base,
                                            const std::string &sampler_type, uint samples_per_pixel,
-                                           std::vector<void *> &gpu_dynamic_pointers);
+                                           GPUMemoryAllocator &allocator);
 
     void render(Film *film, bool preview);
 

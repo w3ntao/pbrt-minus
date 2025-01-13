@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iostream>
-#include <stdint.h>
 
 #define PBRT_CPU_GPU __host__ __device__
 #define PBRT_GPU __device__
@@ -33,7 +32,7 @@ static void _check_cuda_error(cudaError_t error_code, char const *const func,
 }
 
 PBRT_CPU_GPU
-static void _report_error(const char *file_name, const char *func_name, uint line_num) {
+static void _report_error(const char *file_name, const char *func_name, const uint line_num) {
     printf("\nERROR: %s: %s(): line %d: unreachable code\n\n", file_name, func_name, line_num);
 
 #if defined(__CUDA_ARCH__)

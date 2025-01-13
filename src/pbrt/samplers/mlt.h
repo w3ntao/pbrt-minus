@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/util/hash.h"
-#include "pbrt/util/rng.h"
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/util/hash.h>
+#include <pbrt/util/rng.h>
 #include <cmath>
 
 constexpr FloatType global_sigma = 0.01;

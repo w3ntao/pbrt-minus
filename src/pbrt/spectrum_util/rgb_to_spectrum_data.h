@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/spectrum_util/rgb.h"
-#include "pbrt/spectrum_util/rgb_sigmoid_polynomial.h"
+#include <pbrt/spectrum_util/rgb.h>
+#include <pbrt/spectrum_util/rgb_sigmoid_polynomial.h>
 
 namespace RGBtoSpectrumData {
 

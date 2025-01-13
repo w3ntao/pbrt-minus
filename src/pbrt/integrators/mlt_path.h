@@ -1,12 +1,11 @@
 #pragma once
 
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/util/macro.h"
-#include <optional>
-#include <vector>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/gpu/macro.h>
 
 class Film;
 class GreyScaleFilm;
+class GPUMemoryAllocator;
 class MLTSampler;
 class ParameterDictionary;
 class Spectrum;
@@ -26,8 +25,7 @@ struct PathSample {
 class MLTPathIntegrator {
   public:
     static MLTPathIntegrator *create(const ParameterDictionary &parameters,
-                                     const IntegratorBase *base,
-                                     std::vector<void *> &gpu_dynamic_pointers);
+                                     const IntegratorBase *base, GPUMemoryAllocator &allocator);
 
     double render(Film *film, GreyScaleFilm &heat_map, uint mutations_per_pixel, bool preview);
 

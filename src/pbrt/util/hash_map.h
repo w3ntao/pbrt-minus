@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/gpu/macro.h>
 
+class GPUMemoryAllocator;
 class HashMap {
   public:
     static const uint64_t EMPTY_KEY = 0xffffffff;
@@ -12,7 +12,7 @@ class HashMap {
         uint64_t value;
     };
 
-    static HashMap *create(uint capacity, std::vector<void *> &gpu_dynamic_pointers);
+    static HashMap *create(uint capacity, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     uint64_t lookup(uint64_t key) const;

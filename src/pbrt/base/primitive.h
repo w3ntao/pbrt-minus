@@ -1,11 +1,11 @@
 #pragma once
 
-#include "pbrt/base/interaction.h"
-#include "pbrt/euclidean_space/bounds3.h"
-#include "pbrt/euclidean_space/transform.h"
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/base/interaction.h>
+#include <pbrt/euclidean_space/bounds3.h>
+#include <pbrt/euclidean_space/transform.h>
+#include <pbrt/gpu/macro.h>
 
+class GPUMemoryAllocator;
 class Shape;
 class Material;
 
@@ -24,16 +24,14 @@ class Primitive {
     static const Primitive *create_geometric_primitives(const Shape *shapes,
                                                         const Material *material,
                                                         const Light *diffuse_area_light, uint num,
-                                                        std::vector<void *> &gpu_dynamic_pointers);
+                                                        GPUMemoryAllocator &allocator);
 
     static const Primitive *create_simple_primitives(const Shape *shapes, const Material *material,
-                                                     uint num,
-                                                     std::vector<void *> &gpu_dynamic_pointers);
+                                                     uint num, GPUMemoryAllocator &allocator);
 
-    static const Primitive *
-    create_transformed_primitives(const Primitive *base_primitives,
-                                  const Transform render_from_primitive, uint num,
-                                  std::vector<void *> &gpu_dynamic_pointers);
+    static const Primitive *create_transformed_primitives(const Primitive *base_primitives,
+                                                          const Transform &render_from_primitive,
+                                                          uint num, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU void init(const GeometricPrimitive *geometric_primitive);
 

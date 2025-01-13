@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/euclidean_space/vector3.h"
+#include <pbrt/euclidean_space/vector3.h>
 
 template <typename T>
 class Point3 {

@@ -1,5 +1,5 @@
-#include "pbrt/bxdfs/dielectric_bxdf.h"
-#include "pbrt/euclidean_space/normal3f.h"
+#include <pbrt/bxdfs/dielectric_bxdf.h>
+#include <pbrt/euclidean_space/normal3f.h>
 
 PBRT_CPU_GPU
 pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,

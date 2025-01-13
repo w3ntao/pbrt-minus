@@ -1,8 +1,9 @@
-#include "pbrt/base/float_texture.h"
-#include "pbrt/base/texture_eval_context.h"
-#include "pbrt/textures/float_constant_texture.h"
-#include "pbrt/textures/float_image_texture.h"
-#include "pbrt/textures/float_scaled_texture.h"
+#include <pbrt/base/float_texture.h>
+#include <pbrt/base/texture_eval_context.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/textures/float_constant_texture.h>
+#include <pbrt/textures/float_image_texture.h>
+#include <pbrt/textures/float_scaled_texture.h>
 
 void FloatTexture::init(const FloatConstantTexture *float_constant_texture) {
     type = Type::constant;
@@ -22,13 +23,11 @@ void FloatTexture::init(const FloatScaledTexture *float_scaled_texture) {
 const FloatTexture *FloatTexture::create(const std::string &texture_type,
                                          const Transform &render_from_object,
                                          const ParameterDictionary &parameters,
-                                         std::vector<void *> &gpu_dynamic_pointers) {
-    if (texture_type == "constant") {
-        auto constant_texture = FloatConstantTexture::create(parameters, gpu_dynamic_pointers);
+                                         GPUMemoryAllocator &allocator) {
+    auto float_texture = allocator.allocate<FloatTexture>();
 
-        FloatTexture *float_texture;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&float_texture, sizeof(FloatTexture)));
-        gpu_dynamic_pointers.push_back(float_texture);
+    if (texture_type == "constant") {
+        auto constant_texture = FloatConstantTexture::create(parameters, allocator);
 
         float_texture->init(constant_texture);
 
@@ -36,11 +35,7 @@ const FloatTexture *FloatTexture::create(const std::string &texture_type,
     }
 
     if (texture_type == "scale") {
-        auto float_scaled_texture = FloatScaledTexture::create(parameters, gpu_dynamic_pointers);
-
-        FloatTexture *float_texture;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&float_texture, sizeof(FloatTexture)));
-        gpu_dynamic_pointers.push_back(float_texture);
+        auto float_scaled_texture = FloatScaledTexture::create(parameters, allocator);
 
         float_texture->init(float_scaled_texture);
 
@@ -49,11 +44,7 @@ const FloatTexture *FloatTexture::create(const std::string &texture_type,
 
     if (texture_type == "imagemap") {
         auto float_image_texture =
-            FloatImageTexture::create(render_from_object, parameters, gpu_dynamic_pointers);
-
-        FloatTexture *float_texture;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&float_texture, sizeof(FloatTexture)));
-        gpu_dynamic_pointers.push_back(float_texture);
+            FloatImageTexture::create(render_from_object, parameters, allocator);
 
         float_texture->init(float_image_texture);
 
@@ -66,20 +57,13 @@ const FloatTexture *FloatTexture::create(const std::string &texture_type,
     return nullptr;
 }
 
-const FloatTexture *
-FloatTexture::create_constant_float_texture(FloatType val,
-                                            std::vector<void *> &gpu_dynamic_pointers) {
-    FloatConstantTexture *float_constant_texture;
-    FloatTexture *float_texture;
-
-    CHECK_CUDA_ERROR(cudaMallocManaged(&float_constant_texture, sizeof(FloatConstantTexture)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&float_texture, sizeof(FloatTexture)));
+const FloatTexture *FloatTexture::create_constant_float_texture(FloatType val,
+                                                                GPUMemoryAllocator &allocator) {
+    auto float_constant_texture = allocator.allocate<FloatConstantTexture>();
+    auto float_texture = allocator.allocate<FloatTexture>();
 
     float_constant_texture->init(val);
     float_texture->init(float_constant_texture);
-
-    gpu_dynamic_pointers.push_back(float_constant_texture);
-    gpu_dynamic_pointers.push_back(float_texture);
 
     return float_texture;
 }
@@ -87,15 +71,15 @@ FloatTexture::create_constant_float_texture(FloatType val,
 PBRT_CPU_GPU
 FloatType FloatTexture::evaluate(const TextureEvalContext &ctx) const {
     switch (type) {
-    case (Type::constant): {
+    case Type::constant: {
         return static_cast<const FloatConstantTexture *>(ptr)->evaluate(ctx);
     }
 
-    case (Type::image): {
+    case Type::image: {
         return static_cast<const FloatImageTexture *>(ptr)->evaluate(ctx);
     }
 
-    case (Type::scale): {
+    case Type::scale: {
         return static_cast<const FloatScaledTexture *>(ptr)->evaluate(ctx);
     }
     }

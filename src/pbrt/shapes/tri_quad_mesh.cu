@@ -1,4 +1,4 @@
-#include "pbrt/shapes/tri_quad_mesh.h"
+#include <pbrt/shapes/tri_quad_mesh.h>
 
 struct FaceCallbackContext {
     int face[4];

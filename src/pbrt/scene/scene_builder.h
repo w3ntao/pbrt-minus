@@ -1,13 +1,13 @@
 #pragma once
 
-#include "pbrt/base/light.h"
-#include "pbrt/euclidean_space/transform.h"
-#include "pbrt/scene/command_line_option.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/scene/parser.h"
+#include <pbrt/base/light.h>
+#include <pbrt/euclidean_space/transform.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/scene/command_line_option.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/scene/parser.h>
 #include <filesystem>
 #include <map>
-#include <set>
 #include <stack>
 
 class BDPTIntegrator;
@@ -70,7 +70,7 @@ class SceneBuilder {
 
     const GlobalSpectra *global_spectra = nullptr;
 
-    std::vector<void *> gpu_dynamic_pointers;
+    GPUMemoryAllocator allocator;
 
     std::map<std::string, const Material *> materials;
     std::map<std::string, const Spectrum *> spectra;
@@ -117,17 +117,10 @@ class SceneBuilder {
   public:
     explicit SceneBuilder(const CommandLineOption &command_line_option);
 
-    ~SceneBuilder() {
-        for (auto ptr : gpu_dynamic_pointers) {
-            CHECK_CUDA_ERROR(cudaFree(ptr));
-        }
-        CHECK_CUDA_ERROR(cudaGetLastError());
-    }
-
     ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
         return ParameterDictionary(tokens, root, global_spectra, spectra, materials, float_textures,
                                    albedo_spectrum_textures, illuminant_spectrum_textures,
-                                   unbounded_spectrum_textures, gpu_dynamic_pointers);
+                                   unbounded_spectrum_textures, allocator);
     }
 
     void build_camera();

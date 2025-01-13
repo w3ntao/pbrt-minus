@@ -1,12 +1,14 @@
-#include "ext/lodepng/lodepng.h"
-#include "pbrt/spectrum_util/color_encoding.h"
-#include "pbrt/spectrum_util/rgb.h"
-#include "pbrt/textures/gpu_image.h"
+#include <ext/lodepng/lodepng.h>
+#include <pbrt/spectrum_util/color_encoding.h>
+#include <pbrt/spectrum_util/rgb.h>
+#include <pbrt/textures/gpu_image.h>
 #include <filesystem>
 
 // clang-format off
 #define TINYEXR_IMPLEMENTATION
-#include "ext/tinyexr/tinyexr.h"
+#include <ext/tinyexr/tinyexr.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 // clang-format on
 
 PBRT_CPU_GPU
@@ -63,19 +65,17 @@ Point2i remap_pixel_coord(const Point2i p, const Point2i resolution, WrapMode2D 
 }
 
 const GPUImage *GPUImage::create_from_file(const std::string &filename,
-                                           std::vector<void *> &gpu_dynamic_pointers) {
-    GPUImage *image;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&image, sizeof(GPUImage)));
-    gpu_dynamic_pointers.push_back(image);
+                                           GPUMemoryAllocator &allocator) {
+    auto image = allocator.allocate<GPUImage>();
 
     auto path = std::filesystem::path(filename);
     if (path.extension() == ".png") {
-        image->init_png(filename, gpu_dynamic_pointers);
+        image->init_png(filename, allocator);
         return image;
     }
 
     if (path.extension() == ".exr") {
-        image->init_exr(filename, gpu_dynamic_pointers);
+        image->init_exr(filename, allocator);
         return image;
     }
 
@@ -83,7 +83,7 @@ const GPUImage *GPUImage::create_from_file(const std::string &filename,
     return nullptr;
 }
 
-void GPUImage::init_png(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers) {
+void GPUImage::init_png(const std::string &filename, GPUMemoryAllocator &allocator) {
     std::vector<unsigned char> rgba_pixels;
     uint width;
     uint height;
@@ -98,9 +98,7 @@ void GPUImage::init_png(const std::string &filename, std::vector<void *> &gpu_dy
 
     resolution = Point2i(width, height);
 
-    RGB *gpu_pixels;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_pixels, sizeof(RGB) * width * height));
-    gpu_dynamic_pointers.push_back(gpu_pixels);
+    auto gpu_pixels = allocator.allocate<RGB>(width * height);
 
     SRGBColorEncoding encoding;
     for (uint x = 0; x < width; ++x) {
@@ -122,7 +120,7 @@ void GPUImage::init_png(const std::string &filename, std::vector<void *> &gpu_dy
     pixel_format = PixelFormat::U256;
 }
 
-void GPUImage::init_exr(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers) {
+void GPUImage::init_exr(const std::string &filename, GPUMemoryAllocator &allocator) {
     float *out; // width * height * RGBA
     int width;
     int height;
@@ -136,9 +134,7 @@ void GPUImage::init_exr(const std::string &filename, std::vector<void *> &gpu_dy
     }
     resolution = Point2i(width, height);
 
-    RGB *gpu_pixels;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_pixels, sizeof(RGB) * width * height));
-    gpu_dynamic_pointers.push_back(gpu_pixels);
+    auto gpu_pixels = allocator.allocate<RGB>(width * height);
 
     for (uint idx = 0; idx < width * height; ++idx) {
         auto r = out[idx * 4 + 0];

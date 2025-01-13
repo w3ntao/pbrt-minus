@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/macro.h>
 
 template <typename T, size_t Capacity>
 class Stack {

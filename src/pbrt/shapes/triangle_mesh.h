@@ -1,8 +1,9 @@
 #pragma once
 
-#include "pbrt/euclidean_space/transform.h"
+#include <pbrt/euclidean_space/transform.h>
 #include <vector>
 
+class GPUMemoryAllocator;
 class Shape;
 
 class TriangleMesh {
@@ -23,7 +24,7 @@ class TriangleMesh {
     build_triangles(const Transform &render_from_object, bool reverse_orientation,
                     const std::vector<Point3f> &points, const std::vector<int> &indices,
                     const std::vector<Normal3f> &normals, const std::vector<Point2f> &uv,
-                    std::vector<void *> &gpu_dynamic_pointers);
+                    GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     void init(bool _reverse_orientation, const int *_vertex_indices, uint num_indices,

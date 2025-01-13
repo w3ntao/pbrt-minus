@@ -1,9 +1,10 @@
 #pragma once
 
-#include "pbrt/base/camera.h"
-#include "pbrt/euclidean_space/point2.h"
+#include <pbrt/base/camera.h>
+#include <pbrt/euclidean_space/point2.h>
 
 class Filter;
+class GPUMemoryAllocator;
 class IndependentSampler;
 class MLTSampler;
 class StratifiedSampler;
@@ -16,8 +17,9 @@ class Sampler {
         stratified,
     };
 
-    static Sampler *create(const std::string &sampler_type, uint samples_per_pixel,
-                           uint total_pixel_num, std::vector<void *> &gpu_dynamic_pointers);
+    static Sampler *create_samplers_for_each_pixels(const std::string &sampler_type,
+                                                    uint samples_per_pixel, uint total_pixel_num,
+                                                    GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     void init(IndependentSampler *independent_sampler);

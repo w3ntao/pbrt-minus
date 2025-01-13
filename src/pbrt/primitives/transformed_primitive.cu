@@ -1,5 +1,5 @@
-#include "pbrt/base/primitive.h"
-#include "pbrt/primitives/transformed_primitive.h"
+#include <pbrt/base/primitive.h>
+#include <pbrt/primitives/transformed_primitive.h>
 
 PBRT_CPU_GPU
 const Material *TransformedPrimitive::get_material() const {

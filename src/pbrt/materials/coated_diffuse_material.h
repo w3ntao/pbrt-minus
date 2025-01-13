@@ -1,9 +1,9 @@
 #pragma once
 
-#include "pbrt/bxdfs/coated_diffuse_bxdf.h"
-#include <vector>
+#include <pbrt/bxdfs/coated_diffuse_bxdf.h>
 
 class FloatTexture;
+class GPUMemoryAllocator;
 class MaterialEvalContext;
 class Spectrum;
 class SpectrumTexture;
@@ -11,7 +11,7 @@ class ParameterDictionary;
 
 class CoatedDiffuseMaterial {
   public:
-    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
+    void init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,

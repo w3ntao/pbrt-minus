@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/macro.h>
 #include <cuda_fp16.h>
 
 static const int HalfExponentMask = 0b0111110000000000;

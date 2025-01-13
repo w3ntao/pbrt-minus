@@ -1,15 +1,15 @@
 #pragma once
 
-#include "pbrt/base/interaction.h"
-#include "pbrt/base/ray.h"
-#include "pbrt/euclidean_space/bounds3.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/base/interaction.h>
+#include <pbrt/base/ray.h>
+#include <pbrt/euclidean_space/bounds3.h>
+#include <pbrt/gpu/macro.h>
 #include <vector>
 
 class Disk;
+class GPUMemoryAllocator;
 class Sphere;
 class Triangle;
-
 class Transform;
 class ParameterDictionary;
 
@@ -28,7 +28,7 @@ struct ShapeSampleContext {
     }
 
     PBRT_CPU_GPU
-    inline Point3f offset_ray_origin(const Vector3f &w) const {
+    Point3f offset_ray_origin(const Vector3f &w) const {
         // Find vector _offset_ to corner of error bounds and compute initial _po_
         FloatType d = n.abs().dot(pi.error());
 
@@ -53,12 +53,12 @@ struct ShapeSampleContext {
     }
 
     PBRT_CPU_GPU
-    inline Point3f offset_ray_origin(const Point3f &pt) const {
+    Point3f offset_ray_origin(const Point3f &pt) const {
         return this->offset_ray_origin(pt - p());
     }
 
     PBRT_CPU_GPU
-    inline Ray spawn_ray(const Vector3f &w) const {
+    Ray spawn_ray(const Vector3f &w) const {
         // Note: doesn't set medium, but that's fine, since this is only
         // used by shapes to see if ray would have intersected them
         return Ray(this->offset_ray_origin(w), w);
@@ -81,7 +81,7 @@ class Shape {
     static std::pair<const Shape *, uint>
     create(const std::string &type_of_shape, const Transform &render_from_object,
            const Transform &object_from_render, bool reverse_orientation,
-           const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
+           const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     void init(const Disk *disk);
@@ -102,8 +102,7 @@ class Shape {
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_CPU_GPU
-    pbrt::optional<ShapeIntersection> intersect(const Ray &ray,
-                                                     FloatType t_max = Infinity) const;
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max = Infinity) const;
 
     PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;

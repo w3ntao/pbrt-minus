@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/base/light.h"
-#include "pbrt/euclidean_space/bounds3.h"
-#include "pbrt/euclidean_space/point3.h"
-#include <vector>
+#include <pbrt/base/light.h>
+#include <pbrt/euclidean_space/bounds3.h>
+#include <pbrt/euclidean_space/point3.h>
 
+class GPUMemoryAllocator;
 class Spectrum;
 class Transform;
 class ParameterDictionary;
@@ -13,7 +13,7 @@ class UniformInfiniteLight : public LightBase {
   public:
     static UniformInfiniteLight *create(const Transform &renderFromLight,
                                         const ParameterDictionary &parameters,
-                                        std::vector<void *> &gpu_dynamic_pointers);
+                                        GPUMemoryAllocator &allocator);
 
     void preprocess(const Bounds3f &scene_bounds) {
         scene_bounds.bounding_sphere(&sceneCenter, &sceneRadius);

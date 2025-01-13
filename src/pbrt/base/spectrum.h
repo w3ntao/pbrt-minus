@@ -1,8 +1,7 @@
 #pragma once
 
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include "pbrt/spectrum_util/xyz.h"
-#include <vector>
+#include <pbrt/spectrum_util/sampled_wavelengths.h>
+#include <pbrt/spectrum_util/xyz.h>
 
 class RGB;
 class RGBColorSpace;
@@ -10,6 +9,7 @@ class RGBColorSpace;
 class BlackbodySpectrum;
 class ConstantSpectrum;
 class DenselySampledSpectrum;
+class GPUMemoryAllocator;
 class RGBAlbedoSpectrum;
 class RGBIlluminantSpectrum;
 class RGBUnboundedSpectrum;
@@ -33,28 +33,26 @@ class Spectrum {
         piecewise_linear,
     };
 
-    static const Spectrum *create_black_body(FloatType T, std::vector<void *> &gpu_dynamic_pointer);
+    static const Spectrum *create_black_body(FloatType temperature, GPUMemoryAllocator &allocator);
 
     static const Spectrum *create_cie_d(FloatType temperature, const FloatType *cie_s0,
                                         const FloatType *cie_s1, const FloatType *cie_s2,
-                                        const FloatType *cie_lambda,
-                                        std::vector<void *> &gpu_dynamic_pointer);
+                                        const FloatType *cie_lambda, GPUMemoryAllocator &allocator);
 
-    static const Spectrum *create_constant_spectrum(FloatType val,
-                                                    std::vector<void *> &gpu_dynamic_pointers);
+    static const Spectrum *create_constant_spectrum(FloatType val, GPUMemoryAllocator &allocator);
 
     static const Spectrum *create_from_rgb(const RGB &val, SpectrumType spectrum_type,
                                            const RGBColorSpace *color_space,
-                                           std::vector<void *> &gpu_dynamic_pointers);
+                                           GPUMemoryAllocator &allocator);
 
     static const Spectrum *create_piecewise_linear_spectrum_from_lambdas_and_values(
         const std::vector<FloatType> &cpu_lambdas, const std::vector<FloatType> &cpu_values,
-        std::vector<void *> &gpu_dynamic_pointers);
+        GPUMemoryAllocator &allocator);
 
     static const Spectrum *
     create_piecewise_linear_spectrum_from_interleaved(const std::vector<FloatType> &samples,
                                                       bool normalize, const Spectrum *cie_y,
-                                                      std::vector<void *> &gpu_dynamic_pointers);
+                                                      GPUMemoryAllocator &allocator);
     PBRT_CPU_GPU
     void init(const BlackbodySpectrum *black_body_spectrum);
 

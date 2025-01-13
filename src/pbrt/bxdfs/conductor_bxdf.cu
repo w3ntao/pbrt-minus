@@ -1,4 +1,4 @@
-#include "pbrt/bxdfs/conductor_bxdf.h"
+#include <pbrt/bxdfs/conductor_bxdf.h>
 
 PBRT_CPU_GPU
 pbrt::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,

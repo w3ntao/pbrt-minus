@@ -1,105 +1,69 @@
-#include "pbrt/base/interaction.h"
-#include "pbrt/base/material.h"
-#include "pbrt/bxdfs/coated_conductor_bxdf.h"
-#include "pbrt/bxdfs/conductor_bxdf.h"
-#include "pbrt/bxdfs/dielectric_bxdf.h"
-#include "pbrt/bxdfs/diffuse_bxdf.h"
-#include "pbrt/materials/coated_conductor_material.h"
-#include "pbrt/materials/coated_diffuse_material.h"
-#include "pbrt/materials/conductor_material.h"
-#include "pbrt/materials/dielectric_material.h"
-#include "pbrt/materials/diffuse_material.h"
-#include "pbrt/materials/mix_material.h"
+#include <pbrt/base/interaction.h>
+#include <pbrt/base/material.h>
+#include <pbrt/bxdfs/coated_conductor_bxdf.h>
+#include <pbrt/bxdfs/conductor_bxdf.h>
+#include <pbrt/bxdfs/dielectric_bxdf.h>
+#include <pbrt/bxdfs/diffuse_bxdf.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/materials/coated_conductor_material.h>
+#include <pbrt/materials/coated_diffuse_material.h>
+#include <pbrt/materials/conductor_material.h>
+#include <pbrt/materials/dielectric_material.h>
+#include <pbrt/materials/diffuse_material.h>
+#include <pbrt/materials/mix_material.h>
 
 const Material *Material::create(const std::string &type_of_material,
                                  const ParameterDictionary &parameters,
-                                 std::vector<void *> &gpu_dynamic_pointers) {
+                                 GPUMemoryAllocator &allocator) {
+    auto material = allocator.allocate<Material>();
+
     if (type_of_material == "coatedconductor") {
-        CoatedConductorMaterial *coated_conductor_material;
-        Material *material;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&coated_conductor_material, sizeof(CoatedConductorMaterial)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+        auto coated_conductor_material = allocator.allocate<CoatedConductorMaterial>();
 
-        gpu_dynamic_pointers.push_back(coated_conductor_material);
-        gpu_dynamic_pointers.push_back(material);
-
-        coated_conductor_material->init(parameters, gpu_dynamic_pointers);
+        coated_conductor_material->init(parameters, allocator);
         material->init(coated_conductor_material);
 
         return material;
     }
 
     if (type_of_material == "coateddiffuse") {
-        CoatedDiffuseMaterial *coated_diffuse_material;
-        Material *material;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&coated_diffuse_material, sizeof(CoatedDiffuseMaterial)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+        auto coated_diffuse_material = allocator.allocate<CoatedDiffuseMaterial>();
 
-        coated_diffuse_material->init(parameters, gpu_dynamic_pointers);
+        coated_diffuse_material->init(parameters, allocator);
         material->init(coated_diffuse_material);
-
-        gpu_dynamic_pointers.push_back(coated_diffuse_material);
-        gpu_dynamic_pointers.push_back(material);
 
         return material;
     }
 
     if (type_of_material == "conductor") {
-        ConductorMaterial *conductor_material;
-        Material *material;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&conductor_material, sizeof(ConductorMaterial)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+        auto conductor_material = allocator.allocate<ConductorMaterial>();
 
-        gpu_dynamic_pointers.push_back(conductor_material);
-        gpu_dynamic_pointers.push_back(material);
-
-        conductor_material->init(parameters, gpu_dynamic_pointers);
+        conductor_material->init(parameters, allocator);
         material->init(conductor_material);
 
         return material;
     }
 
     if (type_of_material == "dielectric") {
-        DielectricMaterial *dielectric_material;
-        Material *material;
+        auto dielectric_material = allocator.allocate<DielectricMaterial>();
 
-        CHECK_CUDA_ERROR(cudaMallocManaged(&dielectric_material, sizeof(DielectricMaterial)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
-
-        gpu_dynamic_pointers.push_back(dielectric_material);
-        gpu_dynamic_pointers.push_back(material);
-
-        dielectric_material->init(parameters, gpu_dynamic_pointers);
+        dielectric_material->init(parameters, allocator);
         material->init(dielectric_material);
 
         return material;
     }
 
     if (type_of_material == "diffuse") {
-        DiffuseMaterial *diffuse_material;
-        Material *material;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material, sizeof(DiffuseMaterial)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
+        auto diffuse_material = allocator.allocate<DiffuseMaterial>();
 
-        gpu_dynamic_pointers.push_back(diffuse_material);
-        gpu_dynamic_pointers.push_back(material);
-
-        diffuse_material->init(parameters, gpu_dynamic_pointers);
+        diffuse_material->init(parameters, allocator);
         material->init(diffuse_material);
 
         return material;
     }
 
     if (type_of_material == "mix") {
-        MixMaterial *mix_material;
-        Material *material;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&mix_material, sizeof(MixMaterial)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
-
-        gpu_dynamic_pointers.push_back(mix_material);
-        gpu_dynamic_pointers.push_back(material);
+        auto mix_material = allocator.allocate<MixMaterial>();
 
         mix_material->init(parameters);
         material->init(mix_material);
@@ -114,12 +78,10 @@ const Material *Material::create(const std::string &type_of_material,
 }
 
 const Material *Material::create_diffuse_material(const SpectrumTexture *texture,
-                                                  std::vector<void *> &gpu_dynamic_pointers) {
-    auto diffuse_material = DiffuseMaterial::create(texture, gpu_dynamic_pointers);
+                                                  GPUMemoryAllocator &allocator) {
+    auto diffuse_material = DiffuseMaterial::create(texture, allocator);
 
-    Material *material;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&material, sizeof(Material)));
-    gpu_dynamic_pointers.push_back(material);
+    auto material = allocator.allocate<Material>();
 
     material->init(diffuse_material);
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "pbrt/base/bsdf.h"
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/base/bsdf.h>
+#include <pbrt/gpu/macro.h>
 
 class DielectricBxDF;
 class FloatTexture;
+class GPUMemoryAllocator;
 class MaterialEvalContext;
 class ParameterDictionary;
 class SampledWavelengths;
@@ -14,7 +14,7 @@ class SpectrumTexture;
 
 class DielectricMaterial {
   public:
-    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
+    void init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,

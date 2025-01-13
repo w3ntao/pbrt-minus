@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point3.h"
+#include <pbrt/euclidean_space/point3.h>
 #include <vector>
 
 struct LoopSubdivide {

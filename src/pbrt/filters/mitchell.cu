@@ -1,13 +1,12 @@
-#include "pbrt/base/filter.h"
-#include "pbrt/filters/mitchell.h"
+#include <pbrt/base/filter.h>
+#include <pbrt/filters/mitchell.h>
 
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
 
 MitchellFilter *MitchellFilter::create(const ParameterDictionary &parameters,
-                                       std::vector<void *> &gpu_dynamic_pointers) {
-    MitchellFilter *mitchell_filter;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&mitchell_filter, sizeof(MitchellFilter)));
-    gpu_dynamic_pointers.push_back(mitchell_filter);
+                                       GPUMemoryAllocator &allocator) {
+    auto mitchell_filter = allocator.allocate<MitchellFilter>();
 
     auto xw = parameters.get_float("xradius", 2.f);
     auto yw = parameters.get_float("yradius", 2.f);
@@ -19,8 +18,8 @@ MitchellFilter *MitchellFilter::create(const ParameterDictionary &parameters,
     return mitchell_filter;
 }
 
-void MitchellFilter::init_sampler(const Filter *filter, std::vector<void *> &gpu_dynamic_pointers) {
-    sampler = FilterSampler::create(filter, gpu_dynamic_pointers);
+void MitchellFilter::init_sampler(const Filter *filter, GPUMemoryAllocator &allocator) {
+    sampler = FilterSampler::create(filter, allocator);
 }
 
 PBRT_CPU_GPU

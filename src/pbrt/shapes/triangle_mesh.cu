@@ -1,6 +1,7 @@
-#include "pbrt/base/shape.h"
-#include "pbrt/shapes/triangle.h"
-#include "pbrt/shapes/triangle_mesh.h"
+#include <pbrt/base/shape.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/shapes/triangle.h>
+#include <pbrt/shapes/triangle_mesh.h>
 
 template <typename T>
 static __global__ void gpu_transform(T *data, const Transform transform, bool reverse_orientation,
@@ -39,15 +40,12 @@ std::pair<const Shape *, uint>
 TriangleMesh::build_triangles(const Transform &render_from_object, bool reverse_orientation,
                               const std::vector<Point3f> &points, const std::vector<int> &indices,
                               const std::vector<Normal3f> &normals, const std::vector<Point2f> &uv,
-                              std::vector<void *> &gpu_dynamic_pointers) {
-    Point3f *gpu_points;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_points, sizeof(Point3f) * points.size()));
-    gpu_dynamic_pointers.push_back(gpu_points);
-
+                              GPUMemoryAllocator &allocator) {
+    auto gpu_points = allocator.allocate<Point3f>(points.size());
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
                                 cudaMemcpyHostToDevice));
 
-    const uint threads = 1024;
+    constexpr uint threads = 1024;
     {
         const uint blocks = divide_and_ceil<uint>(points.size(), threads);
         if (!render_from_object.is_identity()) {
@@ -58,18 +56,13 @@ TriangleMesh::build_triangles(const Transform &render_from_object, bool reverse_
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
-    int *gpu_indices;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_indices, sizeof(int) * indices.size()));
-    gpu_dynamic_pointers.push_back(gpu_indices);
-
+    auto gpu_indices = allocator.allocate<int>(indices.size());
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_indices, indices.data(), sizeof(int) * indices.size(),
                                 cudaMemcpyHostToDevice));
 
     Normal3f *gpu_normals = nullptr;
     if (!normals.empty()) {
-        CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_normals, sizeof(Normal3f) * normals.size()));
-        gpu_dynamic_pointers.push_back(gpu_normals);
-
+        gpu_normals = allocator.allocate<Normal3f>(normals.size());
         CHECK_CUDA_ERROR(cudaMemcpy(gpu_normals, normals.data(), sizeof(Normal3f) * normals.size(),
                                     cudaMemcpyHostToDevice));
 
@@ -84,26 +77,19 @@ TriangleMesh::build_triangles(const Transform &render_from_object, bool reverse_
 
     Point2f *gpu_uv = nullptr;
     if (!uv.empty()) {
-        CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_uv, sizeof(Point2f) * uv.size()));
-        gpu_dynamic_pointers.push_back(gpu_uv);
-
+        gpu_uv = allocator.allocate<Point2f>(uv.size());
         CHECK_CUDA_ERROR(
             cudaMemcpy(gpu_uv, uv.data(), sizeof(Point2f) * uv.size(), cudaMemcpyHostToDevice));
     }
 
-    TriangleMesh *mesh;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&mesh, sizeof(TriangleMesh)));
-    gpu_dynamic_pointers.push_back(mesh);
+    auto mesh = allocator.allocate<TriangleMesh>();
     mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, gpu_normals, gpu_uv);
 
     uint num_triangles = mesh->triangles_num;
-    Triangle *triangles;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&triangles, sizeof(Triangle) * num_triangles));
-    gpu_dynamic_pointers.push_back(triangles);
 
-    Shape *shapes;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&shapes, sizeof(Shape) * num_triangles));
-    gpu_dynamic_pointers.push_back(shapes);
+    auto triangles = allocator.allocate<Triangle>(num_triangles);
+
+    auto shapes = allocator.allocate<Shape>(num_triangles);
 
     {
         const uint blocks = divide_and_ceil(num_triangles, threads);

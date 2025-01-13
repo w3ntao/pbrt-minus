@@ -1,16 +1,18 @@
-#include "pbrt/accelerator/hlbvh.h"
-#include "pbrt/base/film.h"
-#include "pbrt/base/integrator_base.h"
-#include "pbrt/base/interaction.h"
-#include "pbrt/base/material.h"
-#include "pbrt/base/sampler.h"
-#include "pbrt/gui/gl_object.h"
-#include "pbrt/integrators/bdpt.h"
-#include "pbrt/light_samplers/power_light_sampler.h"
-#include "pbrt/lights/image_infinite_light.h"
-#include "pbrt/samplers/independent.h"
-#include "pbrt/samplers/stratified.h"
-#include "pbrt/scene/parameter_dictionary.h"
+#include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/film.h>
+#include <pbrt/base/integrator_base.h>
+#include <pbrt/base/interaction.h>
+#include <pbrt/base/material.h>
+#include <pbrt/base/sampler.h>
+#include <pbrt/gui/gl_object.h>
+#include <pbrt/integrators/bdpt.h>
+#include <pbrt/light_samplers/power_light_sampler.h>
+#include <pbrt/lights/image_infinite_light.h>
+#include <pbrt/samplers/independent.h>
+#include <pbrt/samplers/stratified.h>
+#include <pbrt/scene/parameter_dictionary.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 const size_t NUM_SAMPLERS = 64 * 1024;
 
@@ -911,14 +913,9 @@ SampledSpectrum connect_bdpt(const IntegratorBase *integrator_base, SampledWavel
 BDPTIntegrator *BDPTIntegrator::create(const ParameterDictionary &parameters,
                                        const IntegratorBase *integrator_base,
                                        const std::string &sampler_type, const int samples_per_pixel,
-                                       std::vector<void *> &gpu_dynamic_pointers) {
-    BDPTIntegrator *bdpt_integrator;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&bdpt_integrator, sizeof(BDPTIntegrator)));
-    gpu_dynamic_pointers.push_back(bdpt_integrator);
-
-    Sampler *samplers;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&samplers, sizeof(Sampler) * NUM_SAMPLERS));
-    gpu_dynamic_pointers.push_back(samplers);
+                                       GPUMemoryAllocator &allocator) {
+    auto bdpt_integrator = allocator.allocate<BDPTIntegrator>();
+    auto samplers = allocator.allocate<Sampler>(NUM_SAMPLERS);
 
     bdpt_integrator->samplers = samplers;
     bdpt_integrator->base = integrator_base;
@@ -929,10 +926,7 @@ BDPTIntegrator *BDPTIntegrator::create(const ParameterDictionary &parameters,
     uint blocks = divide_and_ceil<uint>(NUM_SAMPLERS, threads);
 
     if (sampler_type == "independent") {
-        IndependentSampler *independent_samplers;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&independent_samplers, sizeof(IndependentSampler) * NUM_SAMPLERS));
-        gpu_dynamic_pointers.push_back(independent_samplers);
+        auto independent_samplers = allocator.allocate<IndependentSampler>(NUM_SAMPLERS);
 
         gpu_init_independent_samplers<<<blocks, threads>>>(samplers, independent_samplers,
                                                            NUM_SAMPLERS);
@@ -942,10 +936,7 @@ BDPTIntegrator *BDPTIntegrator::create(const ParameterDictionary &parameters,
             REPORT_FATAL_ERROR();
         }
 
-        StratifiedSampler *stratified_samplers;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&stratified_samplers, sizeof(StratifiedSampler) * NUM_SAMPLERS));
-        gpu_dynamic_pointers.push_back(stratified_samplers);
+        auto stratified_samplers = allocator.allocate<StratifiedSampler>(NUM_SAMPLERS);
 
         gpu_init_stratified_samplers<<<blocks, threads>>>(samplers, stratified_samplers,
                                                           samples_per_dimension, NUM_SAMPLERS);
@@ -1007,37 +998,27 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, FilmSample *film_samp
 
 void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool preview) {
     const auto image_resolution = film->get_resolution();
-    std::vector<void *> gpu_dynamic_pointers;
+
+    GPUMemoryAllocator local_allocator;
 
     uint8_t *gpu_frame_buffer = nullptr;
+    // TODO: move gpu_frame_buffer into GLObject
     GLObject gl_object;
     if (preview) {
         gl_object.init("initializing", image_resolution);
-        CHECK_CUDA_ERROR(cudaMallocManaged(
-            &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
-        gpu_dynamic_pointers.push_back(gpu_frame_buffer);
+
+        gpu_frame_buffer =
+            local_allocator.allocate<uint8_t>(3 * image_resolution.x * image_resolution.y);
     }
 
-    BDPTSample *bdpt_samples;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&bdpt_samples, sizeof(BDPTSample) * NUM_SAMPLERS));
-    gpu_dynamic_pointers.push_back(bdpt_samples);
+    auto bdpt_samples = local_allocator.allocate<BDPTSample>(NUM_SAMPLERS);
 
-    FilmSample *film_samples;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&film_samples, sizeof(FilmSample) * NUM_SAMPLERS));
-    gpu_dynamic_pointers.push_back(film_samples);
+    auto film_samples = local_allocator.allocate<FilmSample>(NUM_SAMPLERS);
 
-    int *film_sample_counter;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&film_sample_counter, sizeof(int)));
-    gpu_dynamic_pointers.push_back(film_sample_counter);
+    auto film_sample_counter = local_allocator.allocate<int>();
 
-    Vertex *global_camera_vertices;
-    Vertex *global_light_vertices;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&global_camera_vertices,
-                                       sizeof(Vertex) * NUM_SAMPLERS * (max_depth + 2)));
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&global_light_vertices, sizeof(Vertex) * NUM_SAMPLERS * (max_depth + 1)));
-    gpu_dynamic_pointers.push_back(global_camera_vertices);
-    gpu_dynamic_pointers.push_back(global_light_vertices);
+    auto global_camera_vertices = local_allocator.allocate<Vertex>(NUM_SAMPLERS * (max_depth + 2));
+    auto global_light_vertices = local_allocator.allocate<Vertex>(NUM_SAMPLERS * (max_depth + 1));
 
     auto num_pixels = image_resolution.x * image_resolution.y;
 
@@ -1082,11 +1063,6 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
                                  image_resolution);
         }
     }
-
-    for (auto ptr : gpu_dynamic_pointers) {
-        CHECK_CUDA_ERROR(cudaFree(ptr));
-    }
-    CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 PBRT_GPU

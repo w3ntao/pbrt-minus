@@ -1,20 +1,20 @@
-#include "pbrt/spectrum_util/rgb.h"
-#include "pbrt/util/distribution_1d.h"
-#include "pbrt/util/distribution_2d.h"
+#include <pbrt/spectrum_util/rgb.h>
+#include <pbrt/util/distribution_1d.h>
+#include <pbrt/util/distribution_2d.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 const Distribution2D *Distribution2D::create(const std::vector<std::vector<FloatType>> &data,
-                                             std::vector<void *> &gpu_dynamic_pointers) {
-    Distribution2D *distribution;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&distribution, sizeof(Distribution2D)));
-    gpu_dynamic_pointers.push_back(distribution);
+                                             GPUMemoryAllocator &allocator) {
+    auto distribution = allocator.allocate<Distribution2D>();
 
-    distribution->build(data, gpu_dynamic_pointers);
+    distribution->build(data, allocator);
 
     return distribution;
 }
 
 void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
-                           std::vector<void *> &gpu_dynamic_pointers) {
+                           GPUMemoryAllocator &allocator) {
     if (data.empty()) {
         REPORT_FATAL_ERROR();
     }
@@ -25,9 +25,7 @@ void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
     cdf = nullptr;
     pmf = nullptr;
 
-    FloatType *_pmf;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&_pmf, sizeof(FloatType) * dimension.x));
-    gpu_dynamic_pointers.push_back(_pmf);
+    auto _pmf = allocator.allocate<FloatType>(dimension.x);
 
     double sum_pmf = 0.0;
     for (int x = 0; x < dimension.x; ++x) {
@@ -44,9 +42,7 @@ void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
         _pmf[idx] = _pmf[idx] / sum_pmf;
     }
 
-    FloatType *_cdf;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&_cdf, sizeof(FloatType) * dimension.x));
-    gpu_dynamic_pointers.push_back(_cdf);
+    auto _cdf = allocator.allocate<FloatType>(dimension.x);
 
     _cdf[0] = _pmf[0];
     for (uint idx = 1; idx < dimension.x; ++idx) {
@@ -56,10 +52,7 @@ void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
     pmf = _pmf;
     cdf = _cdf;
 
-    Distribution1D *_distribution_1d_list;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&_distribution_1d_list, sizeof(Distribution1D) * dimension.x));
-    gpu_dynamic_pointers.push_back(_distribution_1d_list);
+    auto _distribution_1d_list = allocator.allocate<Distribution1D>(dimension.x);
 
     for (int x = 0; x < dimension.x; ++x) {
         std::vector<FloatType> pdfs(dimension.y);
@@ -67,7 +60,7 @@ void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
             pdfs[y] = data[x][y];
         }
 
-        _distribution_1d_list[x].build(pdfs, gpu_dynamic_pointers);
+        _distribution_1d_list[x].build(pdfs, allocator);
     }
 
     distribution_1d_list = _distribution_1d_list;

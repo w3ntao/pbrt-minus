@@ -1,9 +1,9 @@
 #pragma once
 
-#include "pbrt/base/bxdf_util.h"
-#include "pbrt/util/macro.h"
-#include "pbrt/util/optional.h"
-#include "pbrt/util/scattering.h"
+#include <pbrt/base/bxdf_util.h>
+#include <pbrt/gpu/macro.h>
+#include <pbrt/util/optional.h>
+#include <pbrt/util/scattering.h>
 
 class DielectricBxDF {
   public:

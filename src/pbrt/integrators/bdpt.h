@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/gpu/macro.h>
 
+class GPUMemoryAllocator;
 class ParameterDictionary;
 class Ray;
 class SampledSpectrum;
@@ -18,7 +18,7 @@ class BDPTIntegrator {
     static BDPTIntegrator *create(const ParameterDictionary &parameters,
                                   const IntegratorBase *integrator_base,
                                   const std::string &sampler_type, int samples_per_pixel,
-                                  std::vector<void *> &gpu_dynamic_pointers);
+                                  GPUMemoryAllocator &allocator);
 
     void render(Film *film, uint samples_per_pixel, bool preview);
 

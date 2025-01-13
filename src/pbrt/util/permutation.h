@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/macro.h>
 
 PBRT_CPU_GPU
 inline int permutation_element(uint32_t i, uint32_t l, uint32_t p) {

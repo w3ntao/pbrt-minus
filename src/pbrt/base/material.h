@@ -1,15 +1,16 @@
 #pragma once
 
-#include "pbrt/base/bsdf.h"
-#include "pbrt/base/spectrum_texture.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/base/bsdf.h>
+#include <pbrt/base/spectrum_texture.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/gpu/macro.h>
 
 class CoatedConductorMaterial;
 class CoatedDiffuseMaterial;
 class ConductorMaterial;
 class DielectricMaterial;
 class DiffuseMaterial;
+class GPUMemoryAllocator;
 class MixMaterial;
 
 class ParameterDictionary;
@@ -27,10 +28,10 @@ class Material {
 
     static const Material *create(const std::string &type_of_material,
                                   const ParameterDictionary &parameters,
-                                  std::vector<void *> &gpu_dynamic_pointers);
+                                  GPUMemoryAllocator &allocator);
 
     static const Material *create_diffuse_material(const SpectrumTexture *texture,
-                                                   std::vector<void *> &gpu_dynamic_pointers);
+                                                   GPUMemoryAllocator &allocator);
 
     void init(const CoatedConductorMaterial *coated_conductor_material);
 

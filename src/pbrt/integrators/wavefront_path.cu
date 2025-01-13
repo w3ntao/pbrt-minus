@@ -1,20 +1,21 @@
-#include "pbrt/accelerator/hlbvh.h"
-#include "pbrt/base/film.h"
-#include "pbrt/base/integrator_base.h"
-#include "pbrt/base/light.h"
-#include "pbrt/base/material.h"
-#include "pbrt/base/sampler.h"
-#include "pbrt/gui/gl_object.h"
-#include "pbrt/integrators/wavefront_path.h"
-#include "pbrt/light_samplers/power_light_sampler.h"
-#include "pbrt/samplers/independent.h"
-#include "pbrt/samplers/stratified.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include "pbrt/util/basic_math.h"
+#include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/film.h>
+#include <pbrt/base/integrator_base.h>
+#include <pbrt/base/light.h>
+#include <pbrt/base/material.h>
+#include <pbrt/base/sampler.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/gui/gl_object.h>
+#include <pbrt/integrators/wavefront_path.h>
+#include <pbrt/light_samplers/power_light_sampler.h>
+#include <pbrt/samplers/independent.h>
+#include <pbrt/samplers/stratified.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/spectrum_util/sampled_wavelengths.h>
+#include <pbrt/util/basic_math.h>
 
-const uint PATH_POOL_SIZE = 2 * 1024 * 1024;
+constexpr uint PATH_POOL_SIZE = 2 * 1024 * 1024;
 
 struct FrameBuffer {
     uint pixel_idx;
@@ -487,36 +488,27 @@ void WavefrontPathIntegrator::PathState::init_new_path(uint path_idx) {
 
 void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Point2i &_resolution,
                                                 const std::string &sampler_type,
-                                                std::vector<void *> &gpu_dynamic_pointers) {
+                                                GPUMemoryAllocator &allocator) {
     image_resolution = _resolution;
     global_path_counter = 0;
     total_path_num = samples_per_pixel * image_resolution.x * image_resolution.y;
 
-    CHECK_CUDA_ERROR(cudaMallocManaged(&camera_samples, sizeof(CameraSample) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&camera_rays, sizeof(CameraRay) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&lambdas, sizeof(SampledWavelengths) * PATH_POOL_SIZE));
+    camera_samples = allocator.allocate<CameraSample>(PATH_POOL_SIZE);
+    camera_rays = allocator.allocate<CameraRay>(PATH_POOL_SIZE);
+    lambdas = allocator.allocate<SampledWavelengths>(PATH_POOL_SIZE);
 
-    CHECK_CUDA_ERROR(cudaMallocManaged(&L, sizeof(SampledSpectrum) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&beta, sizeof(SampledSpectrum) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&shape_intersections,
-                                       sizeof(pbrt::optional<ShapeIntersection>) * PATH_POOL_SIZE));
+    L = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
+    beta = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
+    shape_intersections = allocator.allocate<pbrt::optional<ShapeIntersection>>(PATH_POOL_SIZE);
 
-    CHECK_CUDA_ERROR(cudaMallocManaged(&path_length, sizeof(uint) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&finished, sizeof(bool) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&pixel_indices, sizeof(uint) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&sample_indices, sizeof(uint) * PATH_POOL_SIZE));
+    path_length = allocator.allocate<uint>(PATH_POOL_SIZE);
+    finished = allocator.allocate<bool>(PATH_POOL_SIZE);
+    pixel_indices = allocator.allocate<uint>(PATH_POOL_SIZE);
+    sample_indices = allocator.allocate<uint>(PATH_POOL_SIZE);
 
-    CHECK_CUDA_ERROR(cudaMallocManaged(&bsdf, sizeof(BSDF) * PATH_POOL_SIZE));
-
-    CHECK_CUDA_ERROR(cudaMallocManaged(&mis_parameters, sizeof(MISParameter) * PATH_POOL_SIZE));
-
-    CHECK_CUDA_ERROR(cudaMallocManaged(&samplers, sizeof(Sampler) * PATH_POOL_SIZE));
-
-    for (auto ptr : std::vector<void *>({camera_samples, camera_rays, lambdas, L, beta,
-                                         shape_intersections, path_length, finished, pixel_indices,
-                                         sample_indices, bsdf, mis_parameters, samplers})) {
-        gpu_dynamic_pointers.push_back(ptr);
-    }
+    bsdf = allocator.allocate<BSDF>(PATH_POOL_SIZE);
+    mis_parameters = allocator.allocate<MISParameter>(PATH_POOL_SIZE);
+    samplers = allocator.allocate<Sampler>(PATH_POOL_SIZE);
 
     constexpr uint threads = 1024;
     uint blocks = divide_and_ceil<uint>(PATH_POOL_SIZE, threads);
@@ -527,19 +519,13 @@ void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Po
             REPORT_FATAL_ERROR();
         }
 
-        StratifiedSampler *stratified_samplers;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&stratified_samplers, sizeof(StratifiedSampler) * PATH_POOL_SIZE));
-        gpu_dynamic_pointers.push_back(stratified_samplers);
+        auto stratified_samplers = allocator.allocate<StratifiedSampler>(PATH_POOL_SIZE);
 
         gpu_init_stratified_samplers<<<blocks, threads>>>(samplers, stratified_samplers,
                                                           samples_per_dimension, PATH_POOL_SIZE);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     } else if (sampler_type == "independent") {
-        IndependentSampler *independent_samplers;
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&independent_samplers, sizeof(IndependentSampler) * PATH_POOL_SIZE));
-        gpu_dynamic_pointers.push_back(independent_samplers);
+        auto independent_samplers = allocator.allocate<IndependentSampler>(PATH_POOL_SIZE);
 
         gpu_init_independent_samplers<<<blocks, threads>>>(samplers, independent_samplers,
                                                            PATH_POOL_SIZE);
@@ -552,42 +538,32 @@ void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Po
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-void WavefrontPathIntegrator::Queues::init(std::vector<void *> &gpu_dynamic_pointers) {
-    CHECK_CUDA_ERROR(cudaMallocManaged(&new_path_queue, sizeof(uint) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&ray_queue, sizeof(uint) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&frame_buffer_queue, sizeof(FrameBuffer) * PATH_POOL_SIZE));
+void WavefrontPathIntegrator::Queues::init(GPUMemoryAllocator &allocator) {
+    new_path_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
+    ray_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
+    frame_buffer_queue = allocator.allocate<FrameBuffer>(PATH_POOL_SIZE);
 
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&coated_conductor_material_queue, sizeof(uint) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&coated_diffuse_material_queue, sizeof(uint) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&conductor_material_queue, sizeof(uint) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&dielectric_material_queue, sizeof(uint) * PATH_POOL_SIZE));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_material_queue, sizeof(uint) * PATH_POOL_SIZE));
-
-    for (auto ptr : std::vector<void *>({new_path_queue, ray_queue, frame_buffer_queue,
-                                         coated_conductor_material_queue,
-                                         coated_diffuse_material_queue, conductor_material_queue,
-                                         dielectric_material_queue, diffuse_material_queue})) {
-        gpu_dynamic_pointers.push_back(ptr);
-    }
+    coated_conductor_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
+    coated_diffuse_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
+    conductor_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
+    dielectric_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
+    diffuse_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
 }
 
-WavefrontPathIntegrator *
-WavefrontPathIntegrator::create(const ParameterDictionary &parameters, const IntegratorBase *base,
-                                const std::string &sampler_type, uint samples_per_pixel,
-                                std::vector<void *> &gpu_dynamic_pointers) {
-    WavefrontPathIntegrator *integrator;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(WavefrontPathIntegrator)));
-    gpu_dynamic_pointers.push_back(integrator);
+WavefrontPathIntegrator *WavefrontPathIntegrator::create(const ParameterDictionary &parameters,
+                                                         const IntegratorBase *base,
+                                                         const std::string &sampler_type,
+                                                         uint samples_per_pixel,
+                                                         GPUMemoryAllocator &allocator) {
+    auto integrator = allocator.allocate<WavefrontPathIntegrator>();
 
     integrator->samples_per_pixel = samples_per_pixel;
 
     integrator->base = base;
     integrator->path_state.create(samples_per_pixel, base->camera->get_camerabase()->resolution,
-                                  sampler_type, gpu_dynamic_pointers);
+                                  sampler_type, allocator);
 
-    integrator->queues.init(gpu_dynamic_pointers);
+    integrator->queues.init(allocator);
 
     integrator->max_depth = parameters.get_integer("maxdepth", 5);
     integrator->regularize = parameters.get_bool("regularize", false);
@@ -654,15 +630,13 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
 
     const auto num_pixels = image_resolution.x * image_resolution.y;
 
-    std::vector<void *> gpu_dynamic_pointers;
+    GPUMemoryAllocator local_allocator;
+
     uint8_t *gpu_frame_buffer = nullptr;
     GLObject gl_object;
     if (preview) {
         gl_object.init("initializing", image_resolution);
-
-        CHECK_CUDA_ERROR(cudaMallocManaged(
-            &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
-        gpu_dynamic_pointers.push_back(gpu_frame_buffer);
+        gpu_frame_buffer = local_allocator.allocate<uint8_t>(3 * num_pixels);
     }
 
     constexpr uint threads = 256;
@@ -710,7 +684,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             if (preview) {
                 film->copy_to_frame_buffer(gpu_frame_buffer);
 
-                auto current_sample_idx =
+                const auto current_sample_idx =
                     std::min<uint>(path_state.global_path_counter / num_pixels, samples_per_pixel);
 
                 gl_object.draw_frame(
@@ -736,9 +710,4 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             evaluate_material(material_type);
         }
     }
-
-    for (auto ptr : gpu_dynamic_pointers) {
-        CHECK_CUDA_ERROR(cudaFree(ptr));
-    }
-    CHECK_CUDA_ERROR(cudaGetLastError());
 }

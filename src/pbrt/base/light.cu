@@ -1,12 +1,14 @@
-#include "pbrt/base/light.h"
-#include "pbrt/base/shape.h"
-#include "pbrt/lights/diffuse_area_light.h"
-#include "pbrt/lights/distant_light.h"
-#include "pbrt/lights/image_infinite_light.h"
-#include "pbrt/lights/spot_light.h"
-#include "pbrt/lights/uniform_infinite_light.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/global_spectra.h"
+#include <pbrt/base/light.h>
+#include <pbrt/base/shape.h>
+#include <pbrt/lights/diffuse_area_light.h>
+#include <pbrt/lights/distant_light.h>
+#include <pbrt/lights/image_infinite_light.h>
+#include <pbrt/lights/spot_light.h>
+#include <pbrt/lights/uniform_infinite_light.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 template <typename TypeOfLight>
 static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, uint num) {
@@ -19,49 +21,38 @@ static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, 
 }
 
 Light *Light::create(const std::string &type_of_light, const Transform &render_from_light,
-                     const ParameterDictionary &parameters,
-                     std::vector<void *> &gpu_dynamic_pointers) {
-    if (type_of_light == "distant") {
-        auto distant_light =
-            DistantLight::create(render_from_light, parameters, gpu_dynamic_pointers);
+                     const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
+    auto light = allocator.allocate<Light>();
 
-        Light *light;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
-        gpu_dynamic_pointers.push_back(light);
+    if (type_of_light == "distant") {
+        auto distant_light = DistantLight::create(render_from_light, parameters, allocator);
 
         light->init(distant_light);
+
         return light;
     }
 
     if (type_of_light == "infinite") {
         if (parameters.has_string("filename")) {
             auto image_infinite_light =
-                ImageInfiniteLight::create(render_from_light, parameters, gpu_dynamic_pointers);
-            Light *light;
-            CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
-            gpu_dynamic_pointers.push_back(light);
+                ImageInfiniteLight::create(render_from_light, parameters, allocator);
 
             light->init(image_infinite_light);
+
             return light;
         }
         // otherwise it's UniformInfiniteLight
 
         auto uniform_infinite_light =
-            UniformInfiniteLight::create(render_from_light, parameters, gpu_dynamic_pointers);
-        Light *light;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
-        gpu_dynamic_pointers.push_back(light);
+            UniformInfiniteLight::create(render_from_light, parameters, allocator);
 
         light->init(uniform_infinite_light);
+
         return light;
     }
 
     if (type_of_light == "spot") {
-        auto spot_light = SpotLight::create(render_from_light, parameters, gpu_dynamic_pointers);
-
-        Light *light;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&light, sizeof(Light)));
-        gpu_dynamic_pointers.push_back(light);
+        auto spot_light = SpotLight::create(render_from_light, parameters, allocator);
 
         light->init(spot_light);
         return light;
@@ -75,22 +66,15 @@ Light *Light::create(const std::string &type_of_light, const Transform &render_f
 Light *Light::create_diffuse_area_lights(const Shape *shapes, const uint num,
                                          const Transform &render_from_light,
                                          const ParameterDictionary &parameters,
-                                         std::vector<void *> &gpu_dynamic_pointers) {
-    const uint threads = 1024;
+                                         GPUMemoryAllocator &allocator) {
+    constexpr uint threads = 1024;
     const uint blocks = divide_and_ceil(num, threads);
 
-    // build DiffuseAreaLight
-    DiffuseAreaLight *diffuse_area_lights;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&diffuse_area_lights, sizeof(DiffuseAreaLight) * num));
-    Light *lights;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&lights, sizeof(Light) * num));
-
-    gpu_dynamic_pointers.push_back(diffuse_area_lights);
-    gpu_dynamic_pointers.push_back(lights);
+    auto diffuse_area_lights = allocator.allocate<DiffuseAreaLight>(num);
+    auto lights = allocator.allocate<Light>(num);
 
     for (uint idx = 0; idx < num; idx++) {
-        diffuse_area_lights[idx].init(&shapes[idx], render_from_light, parameters,
-                                      gpu_dynamic_pointers);
+        diffuse_area_lights[idx].init(&shapes[idx], render_from_light, parameters, allocator);
     }
 
     init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num);

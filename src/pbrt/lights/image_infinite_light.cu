@@ -1,31 +1,31 @@
-#include "pbrt/euclidean_space/bounds3.h"
-#include "pbrt/euclidean_space/vector3.h"
-#include "pbrt/lights/image_infinite_light.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectra/rgb_illuminant_spectrum.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/textures/gpu_image.h"
-#include "pbrt/util/distribution_2d.h"
-#include "pbrt/util/macro.h"
-#include "pbrt/util/sampling.h"
+#include <pbrt/euclidean_space/bounds3.h>
+#include <pbrt/euclidean_space/vector3.h>
+#include <pbrt/lights/image_infinite_light.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectra/rgb_illuminant_spectrum.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/spectrum_util/rgb_color_space.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/textures/gpu_image.h>
+#include <pbrt/util/distribution_2d.h>
+#include <pbrt/gpu/macro.h>
+#include <pbrt/util/sampling.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 ImageInfiniteLight *ImageInfiniteLight::create(const Transform &render_from_light,
                                                const ParameterDictionary &parameters,
-                                               std::vector<void *> &gpu_dynamic_pointers) {
-    ImageInfiniteLight *image_infinite_light;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&image_infinite_light, sizeof(ImageInfiniteLight)));
-    gpu_dynamic_pointers.push_back(image_infinite_light);
+                                               GPUMemoryAllocator &allocator) {
+    auto image_infinite_light = allocator.allocate<ImageInfiniteLight>();
 
-    image_infinite_light->init(render_from_light, parameters, gpu_dynamic_pointers);
+    image_infinite_light->init(render_from_light, parameters, allocator);
 
     return image_infinite_light;
 }
 
 void ImageInfiniteLight::init(const Transform &_render_from_light,
                               const ParameterDictionary &parameters,
-                              std::vector<void *> &gpu_dynamic_pointers) {
+                              GPUMemoryAllocator &allocator) {
     auto _scale = parameters.get_float("scale", 1.0);
 
     const auto cie_y = parameters.global_spectra->cie_y;
@@ -42,7 +42,7 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
     scene_center = Point3f(NAN, NAN, NAN);
 
     auto texture_file = parameters.root + "/" + parameters.get_one_string("filename");
-    image_ptr = GPUImage::create_from_file(texture_file, gpu_dynamic_pointers);
+    image_ptr = GPUImage::create_from_file(texture_file, allocator);
 
     image_resolution = image_ptr->get_resolution();
 
@@ -89,7 +89,7 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
     printf("ImageInfiniteLight::%s(): %d/%d (%.2f%) pixels ignored (ignored ratio: %f)\n", __func__,
            num_ignore, num_pixels, FloatType(num_ignore) / num_pixels * 100, ignore_ratio);
 
-    image_le_distribution = Distribution2D::create(image_luminance_array, gpu_dynamic_pointers);
+    image_le_distribution = Distribution2D::create(image_luminance_array, allocator);
 }
 
 PBRT_CPU_GPU
@@ -101,8 +101,8 @@ SampledSpectrum ImageInfiniteLight::le(const Ray &ray, const SampledWavelengths 
 
 PBRT_CPU_GPU
 pbrt::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleContext &ctx,
-                                                                 const Point2f &u,
-                                                                 SampledWavelengths &lambda) const {
+                                                            const Point2f &u,
+                                                            SampledWavelengths &lambda) const {
     const auto le_sample = image_le_distribution->sample(u);
 
     const auto uv = le_sample.first;

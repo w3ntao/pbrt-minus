@@ -1,14 +1,14 @@
 #pragma once
 
-#include "pbrt/base/light.h"
+#include <pbrt/base/light.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 class UniformLightSampler {
   public:
     static const UniformLightSampler *create(const Light **lights, const uint light_num,
-                                             std::vector<void *> &gpu_dynamic_pointers) {
-        UniformLightSampler *uniform_light_sampler;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&uniform_light_sampler, sizeof(UniformLightSampler)));
-        gpu_dynamic_pointers.push_back(uniform_light_sampler);
+                                             GPUMemoryAllocator &allocator) {
+
+        auto uniform_light_sampler = allocator.allocate<UniformLightSampler>();
 
         uniform_light_sampler->lights = lights;
         uniform_light_sampler->light_num = light_num;

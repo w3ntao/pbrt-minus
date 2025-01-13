@@ -1,19 +1,14 @@
-#include "pbrt/base/camera.h"
-#include "pbrt/cameras/perspective.h"
+#include <pbrt/base/camera.h>
+#include <pbrt/cameras/perspective.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 Camera *Camera::create_perspective_camera(const Point2i &resolution,
                                           const CameraTransform &camera_transform, const Film *film,
                                           const Filter *filter,
                                           const ParameterDictionary &parameters,
-                                          std::vector<void *> &gpu_dynamic_pointers) {
-    PerspectiveCamera *perspective_camera;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&perspective_camera, sizeof(PerspectiveCamera)));
-
-    Camera *camera;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&camera, sizeof(Camera)));
-
-    gpu_dynamic_pointers.push_back(perspective_camera);
-    gpu_dynamic_pointers.push_back(camera);
+                                          GPUMemoryAllocator &allocator) {
+    auto perspective_camera = allocator.allocate<PerspectiveCamera>();
+    auto camera = allocator.allocate<Camera>();
 
     perspective_camera->init(resolution, camera_transform, film, filter, parameters);
     camera->init(perspective_camera);
@@ -63,7 +58,7 @@ void Camera::pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const 
 
 PBRT_CPU_GPU
 pbrt::optional<CameraWiSample> Camera::sample_wi(const Interaction &ref, const Point2f u,
-                                                      SampledWavelengths &lambda) const {
+                                                 SampledWavelengths &lambda) const {
     switch (type) {
     case Type::perspective: {
         return static_cast<const PerspectiveCamera *>(ptr)->sample_wi(ref, u, lambda);

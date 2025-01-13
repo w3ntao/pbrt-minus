@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/euclidean_space/squared_matrix.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/euclidean_space/squared_matrix.h>
+#include <pbrt/gpu/macro.h>
 
 class XYZ {
   public:

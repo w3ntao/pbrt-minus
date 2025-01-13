@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/base/spectrum.h"
-#include "pbrt/euclidean_space/normal3f.h"
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/euclidean_space/point3.h"
-#include "pbrt/spectrum_util/rgb.h"
+#include <pbrt/base/spectrum.h>
+#include <pbrt/euclidean_space/normal3f.h>
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/euclidean_space/point3.h>
+#include <pbrt/spectrum_util/rgb.h>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -13,6 +13,7 @@
 
 class FloatTexture;
 class GlobalSpectra;
+class GPUMemoryAllocator;
 class Material;
 class Spectrum;
 class SpectrumTexture;
@@ -31,7 +32,7 @@ class ParameterDictionary {
         const std::map<std::string, const SpectrumTexture *> &_albedo_spectrum_textures,
         const std::map<std::string, const SpectrumTexture *> &_illuminant_spectrum_textures,
         const std::map<std::string, const SpectrumTexture *> &_unbounded_spectrum_textures,
-        std::vector<void *> &gpu_dynamic_pointers);
+        GPUMemoryAllocator &allocator);
 
     const GlobalSpectra *global_spectra = nullptr;
 
@@ -185,22 +186,22 @@ class ParameterDictionary {
     }
 
     const Spectrum *get_spectrum(const std::string &key, SpectrumType spectrum_type,
-                                 std::vector<void *> &gpu_dynamic_pointers) const;
+                                 GPUMemoryAllocator &allocator) const;
 
     const Material *get_material(const std::string &key) const;
 
     const FloatTexture *get_float_texture_or_null(const std::string &key,
-                                                  std::vector<void *> &gpu_dynamic_pointers) const;
+                                                  GPUMemoryAllocator &allocator) const;
 
     const FloatTexture *get_float_texture(const std::string &key, FloatType default_val,
-                                          std::vector<void *> &gpu_dynamic_pointers) const;
+                                          GPUMemoryAllocator &allocator) const;
 
-    const FloatTexture *
-    get_float_texture_with_default_val(const std::string &key, FloatType default_val,
-                                       std::vector<void *> &gpu_dynamic_pointers) const;
+    const FloatTexture *get_float_texture_with_default_val(const std::string &key,
+                                                           FloatType default_val,
+                                                           GPUMemoryAllocator &allocator) const;
 
     const SpectrumTexture *get_spectrum_texture(const std::string &key, SpectrumType spectrum_type,
-                                                std::vector<void *> &gpu_dynamic_pointers) const;
+                                                GPUMemoryAllocator &allocator) const;
 
     friend std::ostream &operator<<(std::ostream &stream, const ParameterDictionary &parameters) {
         if (!parameters.integers.empty()) {

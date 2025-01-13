@@ -1,22 +1,21 @@
-#include "pbrt/base/shape.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/shapes/disk.h"
-#include "pbrt/shapes/loop_subdivide.h"
-#include "pbrt/shapes/sphere.h"
-#include "pbrt/shapes/tri_quad_mesh.h"
-#include "pbrt/shapes/triangle.h"
+#include <pbrt/base/shape.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/shapes/disk.h>
+#include <pbrt/shapes/loop_subdivide.h>
+#include <pbrt/shapes/sphere.h>
+#include <pbrt/shapes/tri_quad_mesh.h>
+#include <pbrt/shapes/triangle.h>
 
 std::pair<const Shape *, uint>
 Shape::create(const std::string &type_of_shape, const Transform &render_from_object,
               const Transform &object_from_render, bool reverse_orientation,
-              const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers) {
+              const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
+    auto shape = allocator.allocate<Shape>();
+
     if (type_of_shape == "disk") {
         auto disk = Disk::create(render_from_object, object_from_render, reverse_orientation,
-                                 parameters, gpu_dynamic_pointers);
-
-        Shape *shape;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&shape, sizeof(Shape)));
-        gpu_dynamic_pointers.push_back(shape);
+                                 parameters, allocator);
 
         shape->init(disk);
         return {shape, 1};
@@ -24,11 +23,7 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
 
     if (type_of_shape == "sphere") {
         auto sphere = Sphere::create(render_from_object, object_from_render, reverse_orientation,
-                                     parameters, gpu_dynamic_pointers);
-
-        Shape *shape;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&shape, sizeof(Shape)));
-        gpu_dynamic_pointers.push_back(shape);
+                                     parameters, allocator);
 
         shape->init(sphere);
         return {shape, 1};
@@ -42,9 +37,9 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
         uint num_shapes = 0;
 
         if (!ply_mesh.triIndices.empty()) {
-            auto result = TriangleMesh::build_triangles(render_from_object, reverse_orientation,
-                                                        ply_mesh.p, ply_mesh.triIndices, ply_mesh.n,
-                                                        ply_mesh.uv, gpu_dynamic_pointers);
+            const auto result = TriangleMesh::build_triangles(
+                render_from_object, reverse_orientation, ply_mesh.p, ply_mesh.triIndices,
+                ply_mesh.n, ply_mesh.uv, allocator);
             shapes = result.first;
             num_shapes = result.second;
         }
@@ -64,7 +59,7 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
         auto normals = parameters.get_normal_array("N");
 
         return TriangleMesh::build_triangles(render_from_object, reverse_orientation, points,
-                                             indices, normals, uv, gpu_dynamic_pointers);
+                                             indices, normals, uv, allocator);
     }
 
     if (type_of_shape == "loopsubdiv") {
@@ -74,10 +69,9 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
 
         const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);
 
-        return TriangleMesh::build_triangles(render_from_object, reverse_orientation,
-                                             loop_subdivide_data.p_limit,
-                                             loop_subdivide_data.vertex_indices,
-                                             loop_subdivide_data.normals, {}, gpu_dynamic_pointers);
+        return TriangleMesh::build_triangles(
+            render_from_object, reverse_orientation, loop_subdivide_data.p_limit,
+            loop_subdivide_data.vertex_indices, loop_subdivide_data.normals, {}, allocator);
     }
 
     printf("\nShape `%s` not implemented\n", type_of_shape.c_str());
@@ -107,15 +101,15 @@ void Shape::init(const Sphere *sphere) {
 PBRT_CPU_GPU
 Bounds3f Shape::bounds() const {
     switch (type) {
-    case (Type::disk): {
+    case Type::disk: {
         return static_cast<const Disk *>(ptr)->bounds();
     }
 
-    case (Type::sphere): {
+    case Type::sphere: {
         return static_cast<const Sphere *>(ptr)->bounds();
     }
 
-    case (Type::triangle): {
+    case Type::triangle: {
         return static_cast<const Triangle *>(ptr)->bounds();
     }
     }
@@ -127,15 +121,15 @@ Bounds3f Shape::bounds() const {
 PBRT_CPU_GPU
 FloatType Shape::area() const {
     switch (type) {
-    case (Type::disk): {
+    case Type::disk: {
         return static_cast<const Disk *>(ptr)->area();
     }
 
-    case (Type::sphere): {
+    case Type::sphere: {
         return static_cast<const Sphere *>(ptr)->area();
     }
 
-    case (Type::triangle): {
+    case Type::triangle: {
         return static_cast<const Triangle *>(ptr)->area();
     }
     }
@@ -147,15 +141,15 @@ FloatType Shape::area() const {
 PBRT_CPU_GPU
 bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
     switch (type) {
-    case (Type::disk): {
+    case Type::disk: {
         return static_cast<const Disk *>(ptr)->fast_intersect(ray, t_max);
     }
 
-    case (Type::triangle): {
+    case Type::triangle: {
         return static_cast<const Triangle *>(ptr)->fast_intersect(ray, t_max);
     }
 
-    case (Type::sphere): {
+    case Type::sphere: {
         return static_cast<const Sphere *>(ptr)->fast_intersect(ray, t_max);
     }
     }
@@ -167,15 +161,15 @@ bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
 PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
     switch (type) {
-    case (Type::disk): {
+    case Type::disk: {
         return static_cast<const Disk *>(ptr)->intersect(ray, t_max);
     }
 
-    case (Type::triangle): {
+    case Type::triangle: {
         return static_cast<const Triangle *>(ptr)->intersect(ray, t_max);
     }
 
-    case (Type::sphere): {
+    case Type::sphere: {
         return static_cast<const Sphere *>(ptr)->intersect(ray, t_max);
     }
     }
@@ -185,18 +179,17 @@ pbrt::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_m
 }
 
 PBRT_CPU_GPU
-pbrt::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
-                                               const Point2f &u) const {
+pbrt::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx, const Point2f &u) const {
     switch (type) {
-    case (Type::disk): {
+    case Type::disk: {
         return static_cast<const Disk *>(ptr)->sample(ctx, u);
     }
 
-    case (Type::sphere): {
+    case Type::sphere: {
         return static_cast<const Sphere *>(ptr)->sample(ctx, u);
     }
 
-    case (Type::triangle): {
+    case Type::triangle: {
         return static_cast<const Triangle *>(ptr)->sample(ctx, u);
     }
     }
@@ -208,15 +201,15 @@ pbrt::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx,
 PBRT_CPU_GPU
 FloatType Shape::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     switch (type) {
-    case (Type::disk): {
+    case Type::disk: {
         return static_cast<const Disk *>(ptr)->pdf(ctx, wi);
     }
 
-    case (Type::sphere): {
+    case Type::sphere: {
         return static_cast<const Sphere *>(ptr)->pdf(ctx, wi);
     }
 
-    case (Type::triangle): {
+    case Type::triangle: {
         return static_cast<const Triangle *>(ptr)->pdf(ctx, wi);
     }
     }

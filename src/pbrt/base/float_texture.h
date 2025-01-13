@@ -1,17 +1,16 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
-#include <string>
-#include <vector>
-
-class Transform;
+#include <pbrt/gpu/macro.h>
 
 class FloatConstantTexture;
 class FloatImageTexture;
 class FloatScaledTexture;
 
+class GPUMemoryAllocator;
+
 class ParameterDictionary;
 class TextureEvalContext;
+class Transform;
 
 class FloatTexture {
   public:
@@ -24,10 +23,10 @@ class FloatTexture {
     static const FloatTexture *create(const std::string &texture_type,
                                       const Transform &render_from_object,
                                       const ParameterDictionary &parameters,
-                                      std::vector<void *> &gpu_dynamic_pointers);
+                                      GPUMemoryAllocator &allocator);
 
-    static const FloatTexture *
-    create_constant_float_texture(FloatType val, std::vector<void *> &gpu_dynamic_pointers);
+    static const FloatTexture *create_constant_float_texture(FloatType val,
+                                                             GPUMemoryAllocator &allocator);
 
     void init(const FloatConstantTexture *float_constant_texture);
 

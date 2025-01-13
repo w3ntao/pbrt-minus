@@ -1,8 +1,8 @@
-#include "pbrt/base/filter.h"
-#include "pbrt/base/sampler.h"
-#include "pbrt/samplers/independent.h"
-#include "pbrt/samplers/mlt.h"
-#include "pbrt/samplers/stratified.h"
+#include <pbrt/base/filter.h>
+#include <pbrt/base/sampler.h>
+#include <pbrt/samplers/independent.h>
+#include <pbrt/samplers/mlt.h>
+#include <pbrt/samplers/stratified.h>
 
 static __global__ void init_independent_samplers(IndependentSampler *samplers,
                                                  uint samples_per_pixel, uint num) {
@@ -34,20 +34,17 @@ static __global__ void init_samplers(Sampler *samplers, T *_samplers, uint lengt
     samplers[idx].init(&_samplers[idx]);
 }
 
-Sampler *Sampler::create(const std::string &sampler_type, const uint samples_per_pixel,
-                         const uint total_pixel_num, std::vector<void *> &gpu_dynamic_pointers) {
+Sampler *Sampler::create_samplers_for_each_pixels(const std::string &sampler_type,
+                                                  const uint samples_per_pixel,
+                                                  const uint total_pixel_num,
+                                                  GPUMemoryAllocator &allocator) {
     uint threads = 1024;
     uint blocks = divide_and_ceil(total_pixel_num, threads);
 
-    if (sampler_type == "independent") {
-        Sampler *samplers;
-        IndependentSampler *independent_samplers;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&samplers, sizeof(Sampler) * total_pixel_num));
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&independent_samplers, sizeof(IndependentSampler) * total_pixel_num));
+    auto samplers = allocator.allocate<Sampler>(total_pixel_num);
 
-        gpu_dynamic_pointers.push_back(samplers);
-        gpu_dynamic_pointers.push_back(independent_samplers);
+    if (sampler_type == "independent") {
+        auto independent_samplers = allocator.allocate<IndependentSampler>(total_pixel_num);
 
         init_independent_samplers<<<blocks, threads>>>(independent_samplers, samples_per_pixel,
                                                        total_pixel_num);
@@ -69,13 +66,7 @@ Sampler *Sampler::create(const std::string &sampler_type, const uint samples_per
         auto samples_per_dimension = uint(std::sqrt(samples_per_pixel));
         // samples_per_pixel = samples_per_dimension * samples_per_dimension;
 
-        Sampler *samplers;
-        StratifiedSampler *stratified_samplers;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&samplers, sizeof(Sampler) * total_pixel_num));
-        CHECK_CUDA_ERROR(
-            cudaMallocManaged(&stratified_samplers, sizeof(StratifiedSampler) * total_pixel_num));
-        gpu_dynamic_pointers.push_back(samplers);
-        gpu_dynamic_pointers.push_back(stratified_samplers);
+        auto stratified_samplers = allocator.allocate<StratifiedSampler>(total_pixel_num);
 
         init_stratified_samplers<<<blocks, threads>>>(stratified_samplers, samples_per_dimension,
                                                       total_pixel_num);

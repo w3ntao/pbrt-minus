@@ -1,5 +1,5 @@
-#include "pbrt/spectrum_util/rgb_to_spectrum_data.h"
-#include "pbrt/util/thread_pool.h"
+#include <pbrt/spectrum_util/rgb_to_spectrum_data.h>
+#include <pbrt/util/thread_pool.h>
 
 constexpr double RGB2SPEC_EPSILON = 1e-4;
 

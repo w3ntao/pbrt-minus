@@ -1,19 +1,18 @@
-#include "pbrt/base/spectrum.h"
-#include "pbrt/euclidean_space/transform.h"
-#include "pbrt/lights/distant_light.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
+#include <pbrt/base/spectrum.h>
+#include <pbrt/euclidean_space/transform.h>
+#include <pbrt/lights/distant_light.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/spectrum_util/rgb_color_space.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 DistantLight *DistantLight::create(const Transform &renderFromLight,
                                    const ParameterDictionary &parameters,
-                                   std::vector<void *> &gpu_dynamic_pointers) {
+                                   GPUMemoryAllocator &allocator) {
+    auto distant_light = allocator.allocate<DistantLight>();
 
-    DistantLight *distant_light;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&distant_light, sizeof(DistantLight)));
-    gpu_dynamic_pointers.push_back(distant_light);
-
-    auto lemit = parameters.get_spectrum("L", SpectrumType::Illuminant, gpu_dynamic_pointers);
+    auto lemit = parameters.get_spectrum("L", SpectrumType::Illuminant, allocator);
     if (lemit == nullptr) {
         lemit = parameters.global_spectra->rgb_color_space->illuminant;
     }

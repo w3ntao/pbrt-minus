@@ -1,14 +1,15 @@
-#include "pbrt/base/camera.h"
-#include "pbrt/base/film.h"
-#include "pbrt/base/integrator_base.h"
-#include "pbrt/base/sampler.h"
-#include "pbrt/films/grey_scale_film.h"
-#include "pbrt/gui/gl_object.h"
-#include "pbrt/integrators/megakernel_path.h"
-#include "pbrt/integrators/mlt_path.h"
-#include "pbrt/samplers/mlt.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/global_spectra.h"
+#include <pbrt/base/camera.h>
+#include <pbrt/base/film.h>
+#include <pbrt/base/integrator_base.h>
+#include <pbrt/base/sampler.h>
+#include <pbrt/films/grey_scale_film.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/gui/gl_object.h>
+#include <pbrt/integrators/megakernel_path.h>
+#include <pbrt/integrators/mlt_path.h>
+#include <pbrt/samplers/mlt.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/global_spectra.h>
 #include <numeric>
 
 constexpr size_t NUM_MLT_SAMPLERS = 64 * 1024;
@@ -144,20 +145,14 @@ __global__ void wavefront_render(MLTSample *mlt_samples, uint num_mutations,
 
 MLTPathIntegrator *MLTPathIntegrator::create(const ParameterDictionary &parameters,
                                              const IntegratorBase *base,
-                                             std::vector<void *> &gpu_dynamic_pointers) {
-    MLTPathIntegrator *integrator;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(MLTPathIntegrator)));
-    gpu_dynamic_pointers.push_back(integrator);
+                                             GPUMemoryAllocator &allocator) {
+    auto integrator = allocator.allocate<MLTPathIntegrator>();
 
     integrator->base = base;
 
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&(integrator->mlt_samplers), NUM_MLT_SAMPLERS * sizeof(MLTSampler)));
-    gpu_dynamic_pointers.push_back(integrator->mlt_samplers);
+    integrator->mlt_samplers = allocator.allocate<MLTSampler>(NUM_MLT_SAMPLERS);
 
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&(integrator->samplers), NUM_MLT_SAMPLERS * sizeof(Sampler)));
-    gpu_dynamic_pointers.push_back(integrator->samplers);
+    integrator->samplers = allocator.allocate<Sampler>(NUM_MLT_SAMPLERS);
 
     for (uint idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
         integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
@@ -194,7 +189,7 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
 double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
                                  const uint mutations_per_pixel, const bool preview) {
     const auto image_resolution = film->get_resolution();
-    std::vector<void *> gpu_dynamic_pointers;
+    GPUMemoryAllocator local_allocator;
 
     const auto num_paths_per_worker =
         divide_and_ceil<int>(film_dimension.x * film_dimension.y, NUM_MLT_SAMPLERS);
@@ -205,14 +200,8 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
         REPORT_FATAL_ERROR();
     }
 
-    PathSample *path_samples;
-    double *luminance_per_path;
-
-    CHECK_CUDA_ERROR(cudaMallocManaged(&path_samples, sizeof(PathSample) * NUM_MLT_SAMPLERS));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&luminance_per_path, sizeof(double) * num_bootstrap_paths));
-
-    gpu_dynamic_pointers.push_back(path_samples);
-    gpu_dynamic_pointers.push_back(luminance_per_path);
+    auto path_samples = local_allocator.allocate<PathSample>(NUM_MLT_SAMPLERS);
+    auto luminance_per_path = local_allocator.allocate<double>(num_bootstrap_paths);
 
     constexpr uint threads = 64;
     const uint blocks = divide_and_ceil<uint>(NUM_MLT_SAMPLERS, threads);
@@ -240,22 +229,18 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
         REPORT_FATAL_ERROR();
     }
 
-    MLTSample *mlt_samples;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&mlt_samples, sizeof(MLTSample) * 2 * NUM_MLT_SAMPLERS));
-    gpu_dynamic_pointers.push_back(mlt_samples);
+    auto mlt_samples = local_allocator.allocate<MLTSample>(2 * NUM_MLT_SAMPLERS);
 
     uint8_t *gpu_frame_buffer = nullptr;
     GLObject gl_object;
     if (preview) {
         gl_object.init("initializing", image_resolution);
-        CHECK_CUDA_ERROR(cudaMallocManaged(
-            &gpu_frame_buffer, sizeof(uint8_t) * 3 * image_resolution.x * image_resolution.y));
-        gpu_dynamic_pointers.push_back(gpu_frame_buffer);
+        gpu_frame_buffer =
+            local_allocator.allocate<uint8_t>(3 * image_resolution.x * image_resolution.y);
     }
 
-    RNG *rngs;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&rngs, sizeof(RNG) * NUM_MLT_SAMPLERS));
-    gpu_dynamic_pointers.push_back(rngs);
+    auto rngs = local_allocator.allocate<RNG>(NUM_MLT_SAMPLERS);
+
     for (uint idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
         rngs[idx].set_sequence(idx + NUM_MLT_SAMPLERS);
     }
@@ -303,10 +288,6 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
 
     if (accumulate_samples != total_mutations * 2) {
         REPORT_FATAL_ERROR();
-    }
-
-    for (auto ptr : gpu_dynamic_pointers) {
-        CHECK_CUDA_ERROR(cudaFree(ptr));
     }
 
     return brightness;

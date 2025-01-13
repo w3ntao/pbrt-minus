@@ -1,22 +1,20 @@
-#include "pbrt/base/shape.h"
-#include "pbrt/euclidean_space/transform.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/shapes/sphere.h"
-#include "pbrt/util/sampling.h"
-#include "pbrt/util/util.h"
+#include <pbrt/base/shape.h>
+#include <pbrt/euclidean_space/transform.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/shapes/sphere.h>
+#include <pbrt/util/sampling.h>
+#include <pbrt/util/util.h>
 
 const Sphere *Sphere::create(const Transform &render_from_object,
                              const Transform &object_from_render, bool reverse_orientation,
-                             const ParameterDictionary &parameters,
-                             std::vector<void *> &gpu_dynamic_pointers) {
+                             const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
     auto radius = parameters.get_float("radius", 1.0);
     auto z_min = parameters.get_float("zmin", -radius);
     auto z_max = parameters.get_float("zmax", radius);
     auto phi_max = parameters.get_float("phimax", 360.0);
 
-    Sphere *sphere;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&sphere, sizeof(Sphere)));
-    gpu_dynamic_pointers.push_back(sphere);
+    auto sphere = allocator.allocate<Sphere>();
 
     sphere->init(render_from_object, object_from_render, reverse_orientation, radius, z_min, z_max,
                  phi_max);
@@ -48,8 +46,7 @@ Bounds3f Sphere::bounds() const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r,
-                                                                 FloatType tMax) const {
+pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, FloatType tMax) const {
     FloatType phi;
     Point3f pHit;
     // Transform _Ray_ origin and direction to object space
@@ -185,8 +182,7 @@ pbrt::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx,
-                                                const Point2f &u) const {
+pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, const Point2f &u) const {
     // Sample uniformly on sphere if $\pt{}$ is inside it
     Point3f pCenter = render_from_object(Point3f(0, 0, 0));
     Point3f pOrigin = ctx.offset_ray_origin(pCenter);

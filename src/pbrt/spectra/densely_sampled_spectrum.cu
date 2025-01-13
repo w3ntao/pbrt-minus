@@ -1,5 +1,5 @@
-#include "pbrt/base/spectrum.h"
-#include "pbrt/spectra/densely_sampled_spectrum.h"
+#include <pbrt/base/spectrum.h>
+#include <pbrt/spectra/densely_sampled_spectrum.h>
 
 PBRT_CPU_GPU
 FloatType DenselySampledSpectrum::inner_product(const Spectrum *spectrum) const {

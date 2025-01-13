@@ -1,9 +1,9 @@
 #pragma once
 
-#include "pbrt/euclidean_space/normal3f.h"
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/euclidean_space/point3.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/euclidean_space/normal3f.h>
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/euclidean_space/point3.h>
+#include <pbrt/gpu/macro.h>
 
 class Interaction;
 class SurfaceInteraction;

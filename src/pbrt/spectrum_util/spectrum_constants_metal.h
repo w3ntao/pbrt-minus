@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/macro.h>
 
 // clang-format off
 const FloatType Ag_eta[] = {

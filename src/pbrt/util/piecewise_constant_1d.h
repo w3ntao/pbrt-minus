@@ -1,24 +1,21 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/macro.h>
 #include <vector>
 
 class PiecewiseConstant1D {
   public:
     static const PiecewiseConstant1D *create(const std::vector<FloatType> &f, FloatType min,
-                                             FloatType max,
-                                             std::vector<void *> &gpu_dynamic_pointers) {
-        PiecewiseConstant1D *piecewise_constant_1D;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&piecewise_constant_1D, sizeof(PiecewiseConstant1D)));
-        gpu_dynamic_pointers.push_back(piecewise_constant_1D);
+                                             FloatType max, GPUMemoryAllocator &allocator) {
+        auto piecewise_constant_1D = allocator.allocate<PiecewiseConstant1D>();
 
-        piecewise_constant_1D->init(f.data(), f.size(), min, max, gpu_dynamic_pointers);
+        piecewise_constant_1D->init(f.data(), f.size(), min, max, allocator);
 
         return piecewise_constant_1D;
     }
 
     void init(const FloatType *f, uint f_size, FloatType _min, FloatType _max,
-              std::vector<void *> &gpu_dynamic_pointers) {
+              GPUMemoryAllocator &allocator) {
         cdf = nullptr;
         func = nullptr;
 
@@ -26,15 +23,13 @@ class PiecewiseConstant1D {
         max = _max;
         _size = f_size;
 
-        CHECK_CUDA_ERROR(cudaMallocManaged(&func, sizeof(FloatType) * f_size));
-        gpu_dynamic_pointers.push_back(func);
+        func = allocator.allocate<FloatType>(f_size);
 
         for (uint idx = 0; idx < f_size; ++idx) {
             func[idx] = std::abs(f[idx]);
         }
 
-        CHECK_CUDA_ERROR(cudaMallocManaged(&cdf, sizeof(FloatType) * (f_size + 1)));
-        gpu_dynamic_pointers.push_back(cdf);
+        cdf = allocator.allocate<FloatType>(f_size + 1);
 
         cdf[0] = 0;
         size_t n = f_size;

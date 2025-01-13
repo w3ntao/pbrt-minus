@@ -1,16 +1,16 @@
-#include "pbrt/base/filter.h"
-#include "pbrt/filters/box.h"
-#include "pbrt/filters/gaussian.h"
-#include "pbrt/filters/mitchell.h"
+#include <pbrt/base/filter.h>
+#include <pbrt/cameras/perspective.h>
+#include <pbrt/filters/box.h>
+#include <pbrt/filters/gaussian.h>
+#include <pbrt/filters/mitchell.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 const Filter *Filter::create(const std::string &filter_type, const ParameterDictionary &parameters,
-                             std::vector<void *> &gpu_dynamic_pointers) {
-    Filter *filter;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&filter, sizeof(Filter)));
-    gpu_dynamic_pointers.push_back(filter);
+                             GPUMemoryAllocator &allocator) {
+    auto filter = allocator.allocate<Filter>();
 
     if (filter_type == "box") {
-        auto box_filter = BoxFilter::create(parameters, gpu_dynamic_pointers);
+        auto box_filter = BoxFilter::create(parameters, allocator);
 
         filter->init(box_filter);
 
@@ -18,19 +18,19 @@ const Filter *Filter::create(const std::string &filter_type, const ParameterDict
     }
 
     if (filter_type == "gaussian") {
-        auto gaussian_filter = GaussianFilter::create(parameters, gpu_dynamic_pointers);
+        auto gaussian_filter = GaussianFilter::create(parameters, allocator);
 
         filter->init(gaussian_filter);
-        gaussian_filter->init_sampler(filter, gpu_dynamic_pointers);
+        gaussian_filter->init_sampler(filter, allocator);
 
         return filter;
     }
 
     if (filter_type == "mitchell") {
-        auto mitchell_filter = MitchellFilter::create(parameters, gpu_dynamic_pointers);
+        auto mitchell_filter = MitchellFilter::create(parameters, allocator);
 
         filter->init(mitchell_filter);
-        mitchell_filter->init_sampler(filter, gpu_dynamic_pointers);
+        mitchell_filter->init_sampler(filter, allocator);
 
         return filter;
     }
@@ -135,22 +135,19 @@ FilterSample Filter::sample(const Point2f u) const {
     return {};
 }
 
-const FilterSampler *FilterSampler::create(const Filter *filter,
-                                           std::vector<void *> &gpu_dynamic_pointers) {
-    FilterSampler *filter_sampler;
-    cudaMallocManaged(&filter_sampler, sizeof(FilterSampler));
-    gpu_dynamic_pointers.push_back(filter_sampler);
+const FilterSampler *FilterSampler::create(const Filter *filter, GPUMemoryAllocator &allocator) {
+    auto filter_sampler = allocator.allocate<FilterSampler>();
 
-    filter_sampler->init(filter, gpu_dynamic_pointers);
+    filter_sampler->init(filter, allocator);
 
     return filter_sampler;
 }
 
-void FilterSampler::init(const Filter *filter, std::vector<void *> &gpu_dynamic_pointers) {
+void FilterSampler::init(const Filter *filter, GPUMemoryAllocator &allocator) {
     const auto filter_radius = filter->get_radius();
 
     domain = Bounds2f(Point2f(-filter_radius), Point2f(filter_radius));
-    f.init(int(32 * filter_radius.x), int(32 * filter_radius.y), gpu_dynamic_pointers);
+    f.init(int(32 * filter_radius.x), int(32 * filter_radius.y), allocator);
 
     // Tabularize unnormalized filter function in _f_
     for (int y = 0; y < f.y_size(); ++y) {
@@ -160,5 +157,5 @@ void FilterSampler::init(const Filter *filter, std::vector<void *> &gpu_dynamic_
         }
     }
 
-    distrib.init(&f, domain, gpu_dynamic_pointers);
+    distrib.init(&f, domain, allocator);
 }

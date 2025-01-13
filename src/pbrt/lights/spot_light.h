@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/base/light.h"
-#include "pbrt/euclidean_space/point3.h"
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/base/light.h>
+#include <pbrt/euclidean_space/point3.h>
+#include <pbrt/gpu/macro.h>
 
+class GPUMemoryAllocator;
 class ParameterDictionary;
 class Spectrum;
 class Transform;
@@ -12,8 +12,7 @@ class Transform;
 class SpotLight : public LightBase {
   public:
     static SpotLight *create(const Transform &renderFromLight,
-                             const ParameterDictionary &parameters,
-                             std::vector<void *> &gpu_dynamic_pointers);
+                             const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     void preprocess(const Bounds3f &scene_bounds) {
         REPORT_FATAL_ERROR();
@@ -25,11 +24,11 @@ class SpotLight : public LightBase {
 
     PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
-                                                 SampledWavelengths &lambda) const;
+                                            SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     pbrt::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
-                                                 SampledWavelengths &lambda) const;
+                                            SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     void pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;

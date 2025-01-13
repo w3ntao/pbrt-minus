@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/base/spectrum.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/base/spectrum.h>
+#include <pbrt/gpu/macro.h>
 
 enum BxDFFlags {
     Unset = 0,

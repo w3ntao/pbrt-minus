@@ -1,18 +1,16 @@
-#include "pbrt/base/float_texture.h"
-#include "pbrt/base/material.h"
-#include "pbrt/base/spectrum.h"
-#include "pbrt/bxdfs/conductor_bxdf.h"
-#include "pbrt/materials/conductor_material.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
+#include <pbrt/base/float_texture.h>
+#include <pbrt/base/material.h>
+#include <pbrt/base/spectrum.h>
+#include <pbrt/bxdfs/conductor_bxdf.h>
+#include <pbrt/materials/conductor_material.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
 
-void ConductorMaterial::init(const ParameterDictionary &parameters,
-                             std::vector<void *> &gpu_dynamic_pointers) {
-    eta = parameters.get_spectrum_texture("eta", SpectrumType::Unbounded, gpu_dynamic_pointers);
-    k = parameters.get_spectrum_texture("k", SpectrumType::Unbounded, gpu_dynamic_pointers);
-    reflectance =
-        parameters.get_spectrum_texture("reflectance", SpectrumType::Albedo, gpu_dynamic_pointers);
+void ConductorMaterial::init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
+    eta = parameters.get_spectrum_texture("eta", SpectrumType::Unbounded, allocator);
+    k = parameters.get_spectrum_texture("k", SpectrumType::Unbounded, allocator);
+    reflectance = parameters.get_spectrum_texture("reflectance", SpectrumType::Albedo, allocator);
 
     if (reflectance && (eta || k)) {
         printf("ERROR: for ConductorMaterial, both `reflectance` and (`eta` and `k`) can't be "
@@ -22,26 +20,26 @@ void ConductorMaterial::init(const ParameterDictionary &parameters,
 
     if (!reflectance) {
         if (!eta) {
-            auto spectrum_cu_eta = parameters.get_spectrum("metal-Cu-eta", SpectrumType::Unbounded,
-                                                           gpu_dynamic_pointers);
-            eta = SpectrumTexture::create_constant_texture(spectrum_cu_eta, gpu_dynamic_pointers);
+            auto spectrum_cu_eta =
+                parameters.get_spectrum("metal-Cu-eta", SpectrumType::Unbounded, allocator);
+            eta = SpectrumTexture::create_constant_texture(spectrum_cu_eta, allocator);
         }
 
         if (!k) {
-            auto spectrum_cu_k = parameters.get_spectrum("metal-Cu-k", SpectrumType::Unbounded,
-                                                         gpu_dynamic_pointers);
-            k = SpectrumTexture::create_constant_texture(spectrum_cu_k, gpu_dynamic_pointers);
+            auto spectrum_cu_k =
+                parameters.get_spectrum("metal-Cu-k", SpectrumType::Unbounded, allocator);
+            k = SpectrumTexture::create_constant_texture(spectrum_cu_k, allocator);
         }
     }
 
-    u_roughness = parameters.get_float_texture_or_null("uroughness", gpu_dynamic_pointers);
+    u_roughness = parameters.get_float_texture_or_null("uroughness", allocator);
     if (!u_roughness) {
-        u_roughness = parameters.get_float_texture("roughness", 0.0, gpu_dynamic_pointers);
+        u_roughness = parameters.get_float_texture("roughness", 0.0, allocator);
     }
 
-    v_roughness = parameters.get_float_texture_or_null("vroughness", gpu_dynamic_pointers);
+    v_roughness = parameters.get_float_texture_or_null("vroughness", allocator);
     if (!v_roughness) {
-        v_roughness = parameters.get_float_texture("roughness", 0.0, gpu_dynamic_pointers);
+        v_roughness = parameters.get_float_texture("roughness", 0.0, allocator);
     }
 
     remap_roughness = parameters.get_bool("remaproughness", true);

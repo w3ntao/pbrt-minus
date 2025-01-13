@@ -1,16 +1,16 @@
-#include "pbrt/base/spectrum.h"
-#include "pbrt/spectra/piecewise_linear_spectrum.h"
-#include "pbrt/spectrum_util/spectrum_constants_cie.h"
+#include <pbrt/base/spectrum.h>
+#include <pbrt/spectra/piecewise_linear_spectrum.h>
+#include <pbrt/spectrum_util/spectrum_constants_cie.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 const PiecewiseLinearSpectrum *
 PiecewiseLinearSpectrum::create_from_lambdas_values(const std::vector<FloatType> &cpu_lambdas,
                                                     const std::vector<FloatType> &cpu_values,
-                                                    std::vector<void *> &gpu_dynamic_pointers) {
-    PiecewiseLinearSpectrum *spectrum;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(PiecewiseLinearSpectrum)));
-    gpu_dynamic_pointers.push_back(spectrum);
+                                                    GPUMemoryAllocator &allocator) {
+    auto spectrum = allocator.allocate<PiecewiseLinearSpectrum>();
 
-    spectrum->init_from_lambdas_values(cpu_lambdas, cpu_values, gpu_dynamic_pointers);
+    spectrum->init_from_lambdas_values(cpu_lambdas, cpu_values, allocator);
 
     return spectrum;
 }
@@ -18,28 +18,24 @@ PiecewiseLinearSpectrum::create_from_lambdas_values(const std::vector<FloatType>
 const PiecewiseLinearSpectrum *
 PiecewiseLinearSpectrum::create_from_interleaved(const std::vector<FloatType> &samples,
                                                  bool normalize, const Spectrum *cie_y,
-                                                 std::vector<void *> &gpu_dynamic_pointers) {
-    PiecewiseLinearSpectrum *spectrum;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&spectrum, sizeof(PiecewiseLinearSpectrum)));
-    gpu_dynamic_pointers.push_back(spectrum);
+                                                 GPUMemoryAllocator &allocator) {
+    auto piecewise_linear_spectrum = allocator.allocate<PiecewiseLinearSpectrum>();
 
-    spectrum->init_from_interleaved(samples, normalize, cie_y, gpu_dynamic_pointers);
+    piecewise_linear_spectrum->init_from_interleaved(samples, normalize, cie_y, allocator);
 
-    return spectrum;
+    return piecewise_linear_spectrum;
 }
 
 void PiecewiseLinearSpectrum::init_from_lambdas_values(const std::vector<FloatType> &cpu_lambdas,
                                                        const std::vector<FloatType> &cpu_values,
-                                                       std::vector<void *> &gpu_dynamic_pointers) {
+                                                       GPUMemoryAllocator &allocator) {
     if (cpu_lambdas.size() != cpu_values.size()) {
         REPORT_FATAL_ERROR();
     }
     size = cpu_lambdas.size();
 
-    cudaMallocManaged(&lambdas, sizeof(FloatType) * size);
-    cudaMallocManaged(&values, sizeof(FloatType) * size);
-    gpu_dynamic_pointers.push_back(lambdas);
-    gpu_dynamic_pointers.push_back(values);
+    lambdas = allocator.allocate<FloatType>(size);
+    values = allocator.allocate<FloatType>(size);
 
     CHECK_CUDA_ERROR(
         cudaMemcpy(lambdas, cpu_lambdas.data(), sizeof(FloatType) * size, cudaMemcpyHostToDevice));
@@ -49,7 +45,7 @@ void PiecewiseLinearSpectrum::init_from_lambdas_values(const std::vector<FloatTy
 
 void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<FloatType> &samples,
                                                     bool normalize, const Spectrum *cie_y,
-                                                    std::vector<void *> &gpu_dynamic_pointers) {
+                                                    GPUMemoryAllocator &allocator) {
     if (samples.size() % 2 != 0) {
         REPORT_FATAL_ERROR();
     }
@@ -75,7 +71,7 @@ void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<FloatType>
         REPORT_FATAL_ERROR();
     }
 
-    this->init_from_lambdas_values(cpu_lambdas, cpu_values, gpu_dynamic_pointers);
+    this->init_from_lambdas_values(cpu_lambdas, cpu_values, allocator);
 
     if (normalize) {
         this->scale(CIE_Y_integral / inner_product(cie_y));

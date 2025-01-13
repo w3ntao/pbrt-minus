@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/base/bxdf.h"
-#include "pbrt/euclidean_space/frame.h"
-#include "pbrt/euclidean_space/normal3f.h"
+#include <pbrt/base/bxdf.h>
+#include <pbrt/euclidean_space/frame.h>
+#include <pbrt/euclidean_space/normal3f.h>
 
 class Material;
 class MaterialEvalContext;

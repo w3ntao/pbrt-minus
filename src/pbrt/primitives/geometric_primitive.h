@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/base/interaction.h"
-#include "pbrt/euclidean_space/bounds3.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/base/interaction.h>
+#include <pbrt/euclidean_space/bounds3.h>
+#include <pbrt/gpu/macro.h>
 
 class Light;
 class Material;

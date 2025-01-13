@@ -1,12 +1,12 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/util/array_2d.h"
-#include "pbrt/util/piecewise_constant_2d.h"
-#include <vector>
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/util/array_2d.h>
+#include <pbrt/util/piecewise_constant_2d.h>
 
 class BoxFilter;
 class GaussianFilter;
+class GPUMemoryAllocator;
 class MitchellFilter;
 class ParameterDictionary;
 
@@ -32,7 +32,7 @@ class Filter {
 
     static const Filter *create(const std::string &filter_type,
                                 const ParameterDictionary &parameters,
-                                std::vector<void *> &gpu_dynamic_pointers);
+                                GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Vector2f get_radius() const;
@@ -59,10 +59,9 @@ class Filter {
 
 class FilterSampler {
   public:
-    static const FilterSampler *create(const Filter *filter,
-                                       std::vector<void *> &gpu_dynamic_pointers);
+    static const FilterSampler *create(const Filter *filter, GPUMemoryAllocator &allocator);
 
-    void init(const Filter *filter, std::vector<void *> &gpu_dynamic_pointers);
+    void init(const Filter *filter, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     FilterSample sample(Point2f u) const {

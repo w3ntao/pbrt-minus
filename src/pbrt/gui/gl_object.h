@@ -1,6 +1,6 @@
 #pragma once
 
-#include "shader.h"
+#include <pbrt/gui/shader.h>
 
 class GLObject {
     uint VBO = 0;

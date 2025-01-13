@@ -1,4 +1,4 @@
-#include "pbrt/textures/texture_mapping_2d.h"
+#include <pbrt/textures/texture_mapping_2d.h>
 
 void TextureMapping2D::init(const UVMapping *uv_mapping) {
     type = Type::uv;

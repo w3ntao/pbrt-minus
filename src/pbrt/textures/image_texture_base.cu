@@ -1,11 +1,13 @@
-#include "pbrt/euclidean_space/transform.h"
-#include "pbrt/textures/image_texture_base.h"
-#include "pbrt/textures/mipmap.h"
+#include <pbrt/euclidean_space/transform.h>
+#include <pbrt/textures/image_texture_base.h>
+#include <pbrt/textures/mipmap.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 void ImageTextureBase::init_image_texture_base(const Transform &render_from_object,
                                                const ParameterDictionary &parameters,
-                                               std::vector<void *> &gpu_dynamic_pointers) {
-    mipmap = MIPMap::create(parameters, gpu_dynamic_pointers);
+                                               GPUMemoryAllocator &allocator) {
+    mipmap = MIPMap::create(parameters, allocator);
 
     scale = parameters.get_float("scale", 1.0);
     invert = parameters.get_bool("invert", false);
@@ -15,14 +17,8 @@ void ImageTextureBase::init_image_texture_base(const Transform &render_from_obje
     const std::string mapping = parameters.get_one_string("mapping", "uv");
 
     if (mapping == "uv") {
-        TextureMapping2D *_texture_mapping;
-        UVMapping *uv_mapping;
-
-        CHECK_CUDA_ERROR(cudaMallocManaged(&_texture_mapping, sizeof(TextureMapping2D)));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&uv_mapping, sizeof(UVMapping)));
-
-        gpu_dynamic_pointers.push_back(uv_mapping);
-        gpu_dynamic_pointers.push_back(_texture_mapping);
+        auto _texture_mapping = allocator.allocate<TextureMapping2D>();
+        auto uv_mapping = allocator.allocate<UVMapping>();
 
         uv_mapping->init(parameters);
         _texture_mapping->init(uv_mapping);

@@ -1,24 +1,23 @@
 #pragma once
 
-#include "pbrt/euclidean_space/bounds2.h"
-#include "pbrt/util/piecewise_constant_1d.h"
+#include <pbrt/euclidean_space/bounds2.h>
+#include <pbrt/util/piecewise_constant_1d.h>
 
 class PiecewiseConstant2D {
   public:
     void init(const Array2D<FloatType> *func, const Bounds2f &_domain,
-              std::vector<void *> &gpu_dynamic_pointers) {
+              GPUMemoryAllocator &allocator) {
         const int nu = func->x_size();
         const int nv = func->y_size();
 
         domain = _domain;
 
-        CHECK_CUDA_ERROR(cudaMallocManaged(&pConditionalV, sizeof(PiecewiseConstant1D) * nv));
-        gpu_dynamic_pointers.push_back(pConditionalV);
+        pConditionalV = allocator.allocate<PiecewiseConstant1D>(nv);
 
         for (uint v = 0; v < nv; ++v) {
             // Compute conditional sampling distribution for $\tilde{v}$
             pConditionalV[v].init(func->get_values_ptr() + v * nu, nu, domain.p_min[0],
-                                  domain.p_max[0], gpu_dynamic_pointers);
+                                  domain.p_max[0], allocator);
         }
 
         std::vector<FloatType> marginalFunc;
@@ -27,7 +26,7 @@ class PiecewiseConstant2D {
         }
 
         pMarginal.init(marginalFunc.data(), marginalFunc.size(), domain.p_min[1], domain.p_max[1],
-                       gpu_dynamic_pointers);
+                       allocator);
     }
 
     PBRT_CPU_GPU

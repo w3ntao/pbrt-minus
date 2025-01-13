@@ -1,21 +1,18 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/gpu/macro.h>
 
 class ConductorBxDF;
-
+class FloatTexture;
+class GPUMemoryAllocator;
 class MaterialEvalContext;
 class SampledWavelengths;
-
-class FloatTexture;
 class SpectrumTexture;
-
 class ParameterDictionary;
 
 class ConductorMaterial {
   public:
-    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
+    void init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,

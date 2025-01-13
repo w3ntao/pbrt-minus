@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/euclidean_space/squared_matrix.h"
-#include "pbrt/util/basic_math.h"
+#include <pbrt/euclidean_space/squared_matrix.h>
+#include <pbrt/util/basic_math.h>
 
 class RGB {
   public:

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/base/spectrum.h"
-#include "pbrt/base/texture_eval_context.h"
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/base/spectrum.h>
+#include <pbrt/base/texture_eval_context.h>
+#include <pbrt/gpu/macro.h>
 
+class GPUMemoryAllocator;
 class Transform;
 class ParameterDictionary;
 class RGBColorSpace;
@@ -27,13 +27,13 @@ class SpectrumTexture {
     static const SpectrumTexture *
     create(const std::string &texture_type, SpectrumType spectrum_type,
            const Transform &render_from_object, const RGBColorSpace *color_space,
-           const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
+           const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
-    static const SpectrumTexture *
-    create_constant_float_val_texture(FloatType val, std::vector<void *> &gpu_dynamic_pointers);
+    static const SpectrumTexture *create_constant_float_val_texture(FloatType val,
+                                                                    GPUMemoryAllocator &allocator);
 
-    static const SpectrumTexture *
-    create_constant_texture(const Spectrum *spectrum, std::vector<void *> &gpu_dynamic_pointers);
+    static const SpectrumTexture *create_constant_texture(const Spectrum *spectrum,
+                                                          GPUMemoryAllocator &allocator);
 
     void init(const SpectrumConstantTexture *constant_texture);
 

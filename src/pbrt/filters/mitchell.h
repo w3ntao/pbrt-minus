@@ -1,16 +1,16 @@
 #pragma once
 
-#include "pbrt/base/filter.h"
-#include <vector>
+#include <pbrt/base/filter.h>
 
+class GPUMemoryAllocator;
 class ParameterDictionary;
 
 class MitchellFilter {
   public:
     static MitchellFilter *create(const ParameterDictionary &parameters,
-                                  std::vector<void *> &gpu_dynamic_pointers);
+                                  GPUMemoryAllocator &allocator);
 
-    void init_sampler(const Filter *filter, std::vector<void *> &gpu_dynamic_pointers);
+    void init_sampler(const Filter *filter, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Vector2f get_radius() const {

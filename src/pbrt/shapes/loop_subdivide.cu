@@ -1,5 +1,5 @@
-#include "pbrt/euclidean_space/normal3f.h"
-#include "pbrt/shapes/loop_subdivide.h"
+#include <pbrt/euclidean_space/normal3f.h>
+#include <pbrt/shapes/loop_subdivide.h>
 #include <map>
 #include <memory>
 #include <set>

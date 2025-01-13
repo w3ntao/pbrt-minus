@@ -1,13 +1,13 @@
-#include "pbrt/base/shape.h"
-#include "pbrt/base/spectrum.h"
-#include "pbrt/lights/diffuse_area_light.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
+#include <pbrt/base/shape.h>
+#include <pbrt/base/spectrum.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/lights/diffuse_area_light.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/spectrum_util/rgb_color_space.h>
 
 void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_light,
-                            const ParameterDictionary &parameters,
-                            std::vector<void *> &gpu_dynamic_pointers) {
+                            const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
     if (parameters.has_string("filename")) {
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
     }
@@ -15,7 +15,7 @@ void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_l
     scale = parameters.get_float("scale", 1.0);
     two_sided = parameters.get_bool("twosided", false);
 
-    l_emit = parameters.get_spectrum("L", SpectrumType::Illuminant, gpu_dynamic_pointers);
+    l_emit = parameters.get_spectrum("L", SpectrumType::Illuminant, allocator);
     if (l_emit == nullptr) {
         l_emit = parameters.global_spectra->rgb_color_space->illuminant;
     }

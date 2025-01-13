@@ -1,36 +1,35 @@
 #pragma once
 
-#include "pbrt/base/light.h"
-#include "pbrt/util/macro.h"
-#include <string>
-#include <vector>
+#include <pbrt/base/light.h>
+#include <pbrt/gpu/macro.h>
 
 template <typename T>
 class Bounds3;
 
 class Distribution2D;
+class GPUImage;
+class GPUMemoryAllocator;
 class Ray;
+class RGBColorSpace;
 class SampledWavelengths;
 class SampledSpectrum;
-class GPUImage;
 class ParameterDictionary;
-class RGBColorSpace;
 
 class ImageInfiniteLight : public LightBase {
   public:
     static ImageInfiniteLight *create(const Transform &render_from_light,
                                       const ParameterDictionary &parameters,
-                                      std::vector<void *> &gpu_dynamic_pointers);
+                                      GPUMemoryAllocator &allocator);
 
     void init(const Transform &_render_from_light, const ParameterDictionary &parameters,
-              std::vector<void *> &gpu_dynamic_pointers);
+              GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
-                                                 SampledWavelengths &lambda) const;
+                                            SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;

@@ -1,14 +1,13 @@
-#include "pbrt/base/shape.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/shapes/disk.h"
-#include "pbrt/util/sampling.h"
+#include <pbrt/base/shape.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/shapes/disk.h>
+#include <pbrt/util/sampling.h>
 
 const Disk *Disk::create(const Transform &render_from_object, const Transform &object_from_render,
                          bool reverse_orientation, const ParameterDictionary &parameters,
-                         std::vector<void *> &gpu_dynamic_pointers) {
-    Disk *disk;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&disk, sizeof(Disk)));
-    gpu_dynamic_pointers.push_back(disk);
+                         GPUMemoryAllocator &allocator) {
+    auto disk = allocator.allocate<Disk>();
 
     disk->render_from_object = render_from_object;
     disk->object_from_render = object_from_render;

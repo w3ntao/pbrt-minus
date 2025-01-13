@@ -1,21 +1,22 @@
 #pragma once
 
-#include "pbrt/base/interaction.h"
-#include "pbrt/euclidean_space/bounds3.h"
-#include "pbrt/euclidean_space/transform.h"
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/base/interaction.h>
+#include <pbrt/euclidean_space/bounds3.h>
+#include <pbrt/euclidean_space/transform.h>
+#include <pbrt/gpu/macro.h>
 
-class ShapeSample;
-class ShapeSampleContext;
+class GPUMemoryAllocator;
 class ParameterDictionary;
+
+struct ShapeSample;
+struct ShapeSampleContext;
 
 class Sphere {
   public:
     static const Sphere *create(const Transform &render_from_object,
                                 const Transform &object_from_render, bool reverse_orientation,
                                 const ParameterDictionary &parameters,
-                                std::vector<void *> &gpu_dynamic_pointers);
+                                GPUMemoryAllocator &allocator);
 
     void init(const Transform &_render_from_object, const Transform &_object_from_render,
               bool _reverse_orientation, FloatType _radius, FloatType _z_min, FloatType _z_max,
@@ -35,8 +36,7 @@ class Sphere {
     }
 
     PBRT_CPU_GPU
-    pbrt::optional<ShapeIntersection> intersect(const Ray &ray,
-                                                     FloatType t_max = Infinity) const {
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max = Infinity) const {
         auto isect = basic_intersect(ray, t_max);
         if (!isect) {
             return {};

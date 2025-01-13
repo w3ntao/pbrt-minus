@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include "pbrt/spectrum_util/spectrum_constants_cie.h"
+#include <pbrt/spectrum_util/sampled_wavelengths.h>
+#include <pbrt/spectrum_util/spectrum_constants_cie.h>
 #include <vector>
 
 class Spectrum;

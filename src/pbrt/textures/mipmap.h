@@ -1,13 +1,13 @@
 #pragma once
 
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/rgb.h"
-#include "pbrt/textures/gpu_image.h"
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/rgb.h>
+#include <pbrt/textures/gpu_image.h>
+#include <pbrt/gpu/macro.h>
 
-class RGBColorSpace;
 class GPUImage;
+class RGBColorSpace;
 
 enum class FilterFunction {
     Point,
@@ -47,12 +47,10 @@ struct MIPMapFilterOptions {
 class MIPMap {
   public:
     static const MIPMap *create(const ParameterDictionary &parameters,
-                                std::vector<void *> &gpu_dynamic_pointers) {
-        MIPMap *mipmap;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&mipmap, sizeof(MIPMap)));
-        mipmap->init(parameters, gpu_dynamic_pointers);
+                                GPUMemoryAllocator &allocator) {
+        auto mipmap = allocator.allocate<MIPMap>();
+        mipmap->init(parameters, allocator);
 
-        gpu_dynamic_pointers.push_back(mipmap);
         return mipmap;
     }
 
@@ -66,7 +64,7 @@ class MIPMap {
     WrapMode wrap_mode;
     MIPMapFilterOptions options;
 
-    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers) {
+    void init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
         auto max_anisotropy = parameters.get_float("maxanisotropy", 8.0);
         auto filter_string = parameters.get_one_string("filter", "bilinear");
 
@@ -79,6 +77,6 @@ class MIPMap {
         wrap_mode = parse_wrap_mode(wrap_string);
 
         auto image_path = parameters.root + "/" + parameters.get_one_string("filename");
-        image = GPUImage::create_from_file(image_path, gpu_dynamic_pointers);
+        image = GPUImage::create_from_file(image_path, allocator);
     }
 };

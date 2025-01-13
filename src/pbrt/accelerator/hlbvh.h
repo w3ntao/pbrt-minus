@@ -1,11 +1,12 @@
 #pragma once
 
-#include "pbrt/base/primitive.h"
-#include "pbrt/base/shape.h"
-#include "pbrt/euclidean_space/bounds3.h"
+#include <pbrt/base/primitive.h>
+#include <pbrt/base/shape.h>
+#include <pbrt/euclidean_space/bounds3.h>
 #include <atomic>
 #include <vector>
 
+class GPUMemoryAllocator;
 class ThreadPool;
 
 class HLBVH {
@@ -73,7 +74,7 @@ class HLBVH {
     };
 
     static const HLBVH *create(const std::vector<const Primitive *> &gpu_primitives,
-                               std::vector<void *> &gpu_dynamic_pointers);
+                               GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const {
@@ -101,7 +102,7 @@ class HLBVH {
     }
 
     void build_bvh(const std::vector<const Primitive *> &gpu_primitives,
-                   std::vector<void *> &gpu_dynamic_pointers);
+                   GPUMemoryAllocator &allocator);
 
     uint build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_treelets,
                                     ThreadPool &thread_pool);

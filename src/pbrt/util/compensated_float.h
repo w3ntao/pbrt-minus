@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/macro.h>
 
 struct CompensatedFloat {
     // CompensatedFloat Public Methods

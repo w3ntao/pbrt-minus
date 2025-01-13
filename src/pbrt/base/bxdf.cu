@@ -1,4 +1,4 @@
-#include "pbrt/base/bxdf.h"
+#include <pbrt/base/bxdf.h>
 
 PBRT_CPU_GPU
 void BxDF::init(const CoatedConductorBxDF &_coated_conductor_bxdf) {

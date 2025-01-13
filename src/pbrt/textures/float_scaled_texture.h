@@ -1,16 +1,16 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/gpu/macro.h>
 
 class FloatTexture;
+class GPUMemoryAllocator;
 class ParameterDictionary;
 class TextureEvalContext;
 
 class FloatScaledTexture {
   public:
     static const FloatScaledTexture *create(const ParameterDictionary &parameters,
-                                            std::vector<void *> &gpu_dynamic_pointers);
+                                            GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     FloatType evaluate(const TextureEvalContext &ctx) const;

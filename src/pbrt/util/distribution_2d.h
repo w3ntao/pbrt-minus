@@ -1,19 +1,18 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/gpu/macro.h>
 #include <cuda/std/tuple>
-#include <vector>
 
 class Distribution1D;
+class GPUMemoryAllocator;
 
 class Distribution2D {
   public:
     static const Distribution2D *create(const std::vector<std::vector<FloatType>> &data,
-                                        std::vector<void *> &gpu_dynamic_pointers);
+                                        GPUMemoryAllocator &allocator);
 
-    void build(const std::vector<std::vector<FloatType>> &data,
-               std::vector<void *> &gpu_dynamic_pointers);
+    void build(const std::vector<std::vector<FloatType>> &data, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     cuda::std::pair<Point2f, FloatType> sample(const Point2f &uv) const;

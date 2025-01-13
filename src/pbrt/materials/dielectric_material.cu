@@ -1,40 +1,36 @@
-#include "pbrt/base/float_texture.h"
-#include "pbrt/base/material.h"
-#include "pbrt/base/spectrum.h"
-#include "pbrt/bxdfs/dielectric_bxdf.h"
-#include "pbrt/materials/dielectric_material.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectra/constant_spectrum.h"
-#include "pbrt/textures/float_constant_texture.h"
+#include <pbrt/base/float_texture.h>
+#include <pbrt/base/material.h>
+#include <pbrt/base/spectrum.h>
+#include <pbrt/bxdfs/dielectric_bxdf.h>
+#include <pbrt/materials/dielectric_material.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/textures/float_constant_texture.h>
 
 void DielectricMaterial::init(const ParameterDictionary &parameters,
-                              std::vector<void *> &gpu_dynamic_pointers) {
+                              GPUMemoryAllocator &allocator) {
     eta = nullptr;
 
     auto key_eta = "eta";
     if (parameters.has_floats(key_eta)) {
-        eta =
-            Spectrum::create_constant_spectrum(parameters.get_float(key_eta), gpu_dynamic_pointers);
+        eta = Spectrum::create_constant_spectrum(parameters.get_float(key_eta), allocator);
     } else {
-        eta = parameters.get_spectrum(key_eta, SpectrumType::Unbounded, gpu_dynamic_pointers);
+        eta = parameters.get_spectrum(key_eta, SpectrumType::Unbounded, allocator);
     }
 
     if (!eta) {
-        eta = Spectrum::create_constant_spectrum(1.5, gpu_dynamic_pointers);
+        eta = Spectrum::create_constant_spectrum(1.5, allocator);
     }
 
-    uRoughness = parameters.get_float_texture_or_null("uroughness", gpu_dynamic_pointers);
+    uRoughness = parameters.get_float_texture_or_null("uroughness", allocator);
     if (!uRoughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
-        uRoughness =
-            FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
+        uRoughness = FloatTexture::create_constant_float_texture(roughness_val, allocator);
     }
 
-    vRoughness = parameters.get_float_texture_or_null("vroughness", gpu_dynamic_pointers);
+    vRoughness = parameters.get_float_texture_or_null("vroughness", allocator);
     if (!vRoughness) {
         auto roughness_val = parameters.get_float("roughness", 0.0);
-        vRoughness =
-            FloatTexture::create_constant_float_texture(roughness_val, gpu_dynamic_pointers);
+        vRoughness = FloatTexture::create_constant_float_texture(roughness_val, allocator);
     }
 
     remapRoughness = parameters.get_bool("remaproughness", true);

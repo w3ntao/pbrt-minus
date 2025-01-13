@@ -1,9 +1,11 @@
-#include "pbrt/base/filter.h"
-#include "pbrt/films/pixel_sensor.h"
-#include "pbrt/films/rgb_film.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
+#include <pbrt/base/filter.h>
+#include <pbrt/films/pixel_sensor.h>
+#include <pbrt/films/rgb_film.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/spectrum_util/rgb_color_space.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -15,7 +17,7 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
 }
 
 RGBFilm *RGBFilm::create(const Filter *filter, const ParameterDictionary &parameters,
-                         std::vector<void *> &gpu_dynamic_pointers) {
+                         GPUMemoryAllocator &allocator) {
     auto resolution_x = parameters.get_integer("xresolution");
     auto resolution_y = parameters.get_integer("yresolution");
 
@@ -26,22 +28,16 @@ RGBFilm *RGBFilm::create(const Filter *filter, const ParameterDictionary &parame
     FloatType exposure_time = 1.0;
     FloatType imaging_ratio = exposure_time * iso / 100.0;
 
-    auto d_illum =
-        Spectrum::create_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val, CIE_S0,
-                               CIE_S1, CIE_S2, CIE_S_lambda, gpu_dynamic_pointers);
+    auto d_illum = Spectrum::create_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val,
+                                          CIE_S0, CIE_S1, CIE_S2, CIE_S_lambda, allocator);
 
-    PixelSensor *sensor;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&sensor, sizeof(PixelSensor)));
-    gpu_dynamic_pointers.push_back(sensor);
+    auto sensor = allocator.allocate<PixelSensor>();
 
     sensor->init_cie_1931(parameters.global_spectra->cie_xyz,
                           parameters.global_spectra->rgb_color_space,
                           white_balance_val == 0 ? nullptr : d_illum, imaging_ratio);
 
-    Pixel *gpu_pixels;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&gpu_pixels, sizeof(Pixel) * film_resolution.x * film_resolution.y));
-    gpu_dynamic_pointers.push_back(gpu_pixels);
+    auto gpu_pixels = allocator.allocate<Pixel>(film_resolution.x * film_resolution.y);
 
     {
         uint threads = 1024;
@@ -52,10 +48,7 @@ RGBFilm *RGBFilm::create(const Filter *filter, const ParameterDictionary &parame
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
-    RGBFilm *rgb_film;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&rgb_film, sizeof(RGBFilm)));
-    gpu_dynamic_pointers.push_back(rgb_film);
-
+    auto rgb_film = allocator.allocate<RGBFilm>();
     rgb_film->init(gpu_pixels, filter, sensor, film_resolution,
                    parameters.global_spectra->rgb_color_space);
 

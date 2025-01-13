@@ -1,17 +1,18 @@
-#include "pbrt/lights/uniform_infinite_light.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/lights/uniform_infinite_light.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/spectrum_util/rgb_color_space.h>
 
 UniformInfiniteLight *UniformInfiniteLight::create(const Transform &renderFromLight,
                                                    const ParameterDictionary &parameters,
-                                                   std::vector<void *> &gpu_dynamic_pointers) {
+                                                   GPUMemoryAllocator &allocator) {
     auto scale = parameters.get_float("scale", 1.0);
 
     auto color_space = parameters.global_spectra->rgb_color_space;
     auto cie_y = parameters.global_spectra->cie_y;
 
-    auto L = parameters.get_spectrum("L", SpectrumType::Illuminant, gpu_dynamic_pointers);
+    auto L = parameters.get_spectrum("L", SpectrumType::Illuminant, allocator);
     if (L == nullptr) {
         L = color_space->illuminant;
     }
@@ -27,9 +28,7 @@ UniformInfiniteLight *UniformInfiniteLight::create(const Transform &renderFromLi
         scale *= E_v / k_e;
     }
 
-    UniformInfiniteLight *uniform_infinite_light;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&uniform_infinite_light, sizeof(UniformInfiniteLight)));
-    gpu_dynamic_pointers.push_back(uniform_infinite_light);
+    auto uniform_infinite_light = allocator.allocate<UniformInfiniteLight>();
 
     uniform_infinite_light->init(renderFromLight, L, scale);
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/base/material.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/base/material.h>
+#include <pbrt/gpu/macro.h>
 #include <vector>
 
 class ParameterDictionary;

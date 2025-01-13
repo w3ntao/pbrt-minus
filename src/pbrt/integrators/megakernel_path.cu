@@ -1,21 +1,20 @@
-#include "pbrt/accelerator/hlbvh.h"
-#include "pbrt/base/bxdf.h"
-#include "pbrt/base/integrator_base.h"
-#include "pbrt/base/interaction.h"
-#include "pbrt/base/material.h"
-#include "pbrt/base/sampler.h"
-#include "pbrt/integrators/megakernel_path.h"
-#include "pbrt/light_samplers/power_light_sampler.h"
-#include "pbrt/lights/image_infinite_light.h"
-#include "pbrt/scene/parameter_dictionary.h"
+#include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/bxdf.h>
+#include <pbrt/base/integrator_base.h>
+#include <pbrt/base/interaction.h>
+#include <pbrt/base/material.h>
+#include <pbrt/base/sampler.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/integrators/megakernel_path.h>
+#include <pbrt/light_samplers/power_light_sampler.h>
+#include <pbrt/lights/image_infinite_light.h>
+#include <pbrt/scene/parameter_dictionary.h>
 
 const MegakernelPathIntegrator *
 MegakernelPathIntegrator::create(const ParameterDictionary &parameters,
                                  const IntegratorBase *integrator_base,
-                                 std::vector<void *> &gpu_dynamic_pointers) {
-    MegakernelPathIntegrator *path_integrator;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&path_integrator, sizeof(MegakernelPathIntegrator)));
-    gpu_dynamic_pointers.push_back(path_integrator);
+                                 GPUMemoryAllocator &allocator) {
+    auto path_integrator = allocator.allocate<MegakernelPathIntegrator>();
 
     auto max_depth = parameters.get_integer("maxdepth", 5);
 

@@ -1,6 +1,6 @@
-#include "pbrt/base/spectrum.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
+#include <pbrt/base/spectrum.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/spectrum_util/sampled_wavelengths.h>
 
 PBRT_CPU_GPU
 FloatType SampledSpectrum::y(const SampledWavelengths &lambda, const Spectrum *cie_y) const {

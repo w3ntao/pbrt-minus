@@ -1,7 +1,7 @@
-#include "pbrt/base/film.h"
-#include "pbrt/base/filter.h"
-#include "pbrt/base/sampler.h"
-#include "pbrt/cameras/perspective.h"
+#include <pbrt/base/film.h>
+#include <pbrt/base/filter.h>
+#include <pbrt/base/sampler.h>
+#include <pbrt/cameras/perspective.h>
 
 void PerspectiveCamera::init(const Point2i &resolution, const CameraTransform &camera_transform,
                              const Film *_film, const Filter *filter,

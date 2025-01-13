@@ -1,13 +1,15 @@
 #pragma once
 
-#include "pbrt/base/filter.h"
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/util/basic_math.h"
+#include <pbrt/base/filter.h>
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/util/basic_math.h>
+
+class GPUMemoryAllocator;
 
 class BoxFilter {
   public:
     static const BoxFilter *create(const ParameterDictionary &parameters,
-                                   std::vector<void *> &gpu_dynamic_pointers);
+                                   GPUMemoryAllocator &allocator);
 
     BoxFilter() : radius(Vector2f(0.5, 0.5)) {}
 

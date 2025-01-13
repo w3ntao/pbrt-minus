@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/macro.h>
 
 // https://refractiveindex.info, public domain CC0:
 // https://creativecommons.org/publicdomain/zero/1.0/

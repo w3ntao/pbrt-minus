@@ -1,10 +1,11 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/euclidean_space/squared_matrix.h"
-#include "pbrt/spectrum_util/rgb.h"
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/euclidean_space/squared_matrix.h>
+#include <pbrt/spectrum_util/rgb.h>
 
 class Filter;
+class GPUMemoryAllocator;
 class ParameterDictionary;
 class PixelSensor;
 class RGBColorSpace;
@@ -26,7 +27,7 @@ struct Pixel {
 class RGBFilm {
   public:
     static RGBFilm *create(const Filter *filter, const ParameterDictionary &parameters,
-                           std::vector<void *> &gpu_dynamic_pointers);
+                           GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Point2i get_resolution() const {

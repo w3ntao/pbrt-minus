@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/gpu/macro.h>
 #include <cuda/std/tuple>
 #include <functional>
 #include <numeric>
-#include <vector>
 
 PBRT_CPU_GPU
 static uint search_cdf(FloatType u, const FloatType *cdf, uint length) {
@@ -43,12 +43,10 @@ static uint search_cdf(FloatType u, const FloatType *cdf, uint length) {
 
 class Distribution1D {
   public:
-    void build(const std::vector<FloatType> &pdfs, std::vector<void *> &gpu_dynamic_pointers) {
+    void build(const std::vector<FloatType> &pdfs, GPUMemoryAllocator &allocator) {
         num = pdfs.size();
 
-        FloatType *_pmf;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&_pmf, sizeof(FloatType) * num));
-        gpu_dynamic_pointers.push_back(_pmf);
+        auto _pmf = allocator.allocate<FloatType>(num);
 
         const double sum_pdf = std::accumulate(pdfs.begin(), pdfs.end(), 0.0);
         if (sum_pdf == 0.0) {
@@ -61,9 +59,7 @@ class Distribution1D {
             }
         }
 
-        FloatType *_cdf;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&_cdf, sizeof(FloatType) * num));
-        gpu_dynamic_pointers.push_back(_cdf);
+        auto _cdf = allocator.allocate<FloatType>(num);
 
         _cdf[0] = _pmf[0];
         for (size_t idx = 1; idx < num; ++idx) {

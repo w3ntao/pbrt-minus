@@ -1,4 +1,4 @@
-#include "pbrt/euclidean_space/squared_matrix.h"
+#include <pbrt/euclidean_space/squared_matrix.h>
 
 PBRT_CPU_GPU
 static void print_warning_on_nan_result() {

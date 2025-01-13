@@ -1,6 +1,8 @@
-#include "pbrt/filters/gaussian.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/util/basic_math.h"
+#include <pbrt/filters/gaussian.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/util/basic_math.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 PBRT_CPU_GPU inline FloatType gaussian(FloatType x, FloatType mu = 0, FloatType sigma = 1) {
     return 1 / std::sqrt(2 * compute_pi() * sigma * sigma) *
@@ -15,22 +17,20 @@ inline FloatType gaussian_integral(FloatType x0, FloatType x1, FloatType mu = 0,
 }
 
 GaussianFilter *GaussianFilter::create(const ParameterDictionary &parameters,
-                                       std::vector<void *> &gpu_dynamic_pointers) {
+                                       GPUMemoryAllocator &allocator) {
     auto xw = parameters.get_float("xradius", 1.5f);
     auto yw = parameters.get_float("yradius", 1.5f);
     auto sigma = parameters.get_float("sigma", 0.5f);
 
-    GaussianFilter *gaussian_filter;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&gaussian_filter, sizeof(GaussianFilter)));
-    gpu_dynamic_pointers.push_back(gaussian_filter);
+    auto gaussian_filter = allocator.allocate<GaussianFilter>();
 
     gaussian_filter->init(Vector2f(xw, yw), sigma);
 
     return gaussian_filter;
 }
 
-void GaussianFilter::init_sampler(const Filter *filter, std::vector<void *> &gpu_dynamic_pointers) {
-    sampler = FilterSampler::create(filter, gpu_dynamic_pointers);
+void GaussianFilter::init_sampler(const Filter *filter, GPUMemoryAllocator &allocator) {
+    sampler = FilterSampler::create(filter, allocator);
 }
 
 void GaussianFilter::init(const Vector2f &_radius, FloatType _sigma) {

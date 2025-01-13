@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/textures/mipmap.h"
-#include "pbrt/textures/texture_mapping_2d.h"
-#include <string>
+#include <pbrt/textures/mipmap.h>
+#include <pbrt/textures/texture_mapping_2d.h>
 #include <vector>
 
+class GPUMemoryAllocator;
 class MIPMap;
 class Transform;
 
@@ -18,5 +18,5 @@ class ImageTextureBase {
 
     void init_image_texture_base(const Transform &render_from_object,
                                  const ParameterDictionary &parameters,
-                                 std::vector<void *> &gpu_dynamic_pointers);
+                                 GPUMemoryAllocator &allocator);
 };

@@ -1,7 +1,7 @@
-#include "pbrt/base/interaction.h"
-#include "pbrt/materials/mix_material.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/util/hash.h"
+#include <pbrt/base/interaction.h>
+#include <pbrt/materials/mix_material.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/util/hash.h>
 
 void MixMaterial::init(const ParameterDictionary &parameters) {
     amount = parameters.get_float("amount", 0.5);

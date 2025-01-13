@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/base/spectrum.h"
-#include "pbrt/base/spectrum_texture.h"
+#include <pbrt/base/spectrum.h>
+#include <pbrt/base/spectrum_texture.h>
 
 class SpectrumConstantTexture {
   public:

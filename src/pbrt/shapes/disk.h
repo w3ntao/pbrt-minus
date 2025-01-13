@@ -1,19 +1,19 @@
 #pragma once
 
-#include "pbrt/euclidean_space/transform.h"
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/euclidean_space/transform.h>
+#include <pbrt/gpu/macro.h>
 
-class ShapeSample;
-class ShapeSampleContext;
+class GPUMemoryAllocator;
 class ParameterDictionary;
+
+struct ShapeSample;
+struct ShapeSampleContext;
 
 class Disk {
   public:
     static const Disk *create(const Transform &render_from_object,
                               const Transform &object_from_render, bool reverse_orientation,
-                              const ParameterDictionary &parameters,
-                              std::vector<void *> &gpu_dynamic_pointers);
+                              const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     FloatType area() const {

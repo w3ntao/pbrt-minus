@@ -1,11 +1,12 @@
 #pragma once
 
-#include "pbrt/spectrum_util/rgb.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
+#include <pbrt/spectrum_util/rgb.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/spectrum_util/sampled_wavelengths.h>
 #include <vector>
 
 class Filter;
+class GPUMemoryAllocator;
 class ParameterDictionary;
 class RGBFilm;
 
@@ -16,7 +17,7 @@ class Film {
     };
 
     static Film *create_rgb_film(const Filter *filter, const ParameterDictionary &parameters,
-                                 std::vector<void *> &gpu_dynamic_pointers);
+                                 GPUMemoryAllocator &allocator);
 
     void init(RGBFilm *rgb_film);
 

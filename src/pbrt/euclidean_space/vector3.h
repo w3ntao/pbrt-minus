@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/util/basic_math.h"
-#include "pbrt/util/interval.h"
+#include <pbrt/util/basic_math.h>
+#include <pbrt/util/interval.h>
 
 template <typename T>
 class Vector3 {

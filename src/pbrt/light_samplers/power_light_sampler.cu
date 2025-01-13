@@ -1,13 +1,12 @@
-#include "pbrt/base/light.h"
-#include "pbrt/light_samplers/power_light_sampler.h"
-#include "pbrt/util/distribution_1d.h"
-#include "pbrt/util/hash_map.h"
+#include <pbrt/base/light.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/light_samplers/power_light_sampler.h>
+#include <pbrt/util/distribution_1d.h>
+#include <pbrt/util/hash_map.h>
 
 const PowerLightSampler *PowerLightSampler::create(const Light **lights, const uint light_num,
-                                                   std::vector<void *> &gpu_dynamic_pointers) {
-    PowerLightSampler *power_light_sampler;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&power_light_sampler, sizeof(PowerLightSampler)));
-    gpu_dynamic_pointers.push_back(power_light_sampler);
+                                                   GPUMemoryAllocator &allocator) {
+    auto power_light_sampler = allocator.allocate<PowerLightSampler>();
 
     power_light_sampler->lights = nullptr;
     power_light_sampler->lights_power_distribution = nullptr;
@@ -27,13 +26,11 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
         lights_pmf[idx] = phi.average();
     }
 
-    Distribution1D *lights_power_distribution;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&lights_power_distribution, sizeof(Distribution1D)));
-    gpu_dynamic_pointers.push_back(lights_power_distribution);
+    auto lights_power_distribution = allocator.allocate<Distribution1D>();
 
-    lights_power_distribution->build(lights_pmf, gpu_dynamic_pointers);
+    lights_power_distribution->build(lights_pmf, allocator);
 
-    auto light_to_idx = HashMap::create(light_num, gpu_dynamic_pointers);
+    auto light_to_idx = HashMap::create(light_num, allocator);
 
     for (auto idx = 0; idx < light_num; ++idx) {
         light_to_idx->insert((uintptr_t)lights[idx], idx);
@@ -66,7 +63,7 @@ pbrt::optional<SampledLight> PowerLightSampler::sample(const FloatType u) const 
 
 PBRT_CPU_GPU
 pbrt::optional<SampledLight> PowerLightSampler::sample(const LightSampleContext &ctx,
-                                                            FloatType u) const {
+                                                       FloatType u) const {
     return sample(u);
 }
 

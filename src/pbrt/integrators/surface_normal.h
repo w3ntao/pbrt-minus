@@ -1,17 +1,18 @@
 #pragma once
 
-#include "pbrt/base/integrator_base.h"
-#include "pbrt/base/spectrum.h"
-#include "pbrt/spectra/rgb_albedo_spectrum.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
+#include <pbrt/base/integrator_base.h>
+#include <pbrt/base/spectrum.h>
+#include <pbrt/spectra/rgb_albedo_spectrum.h>
+#include <pbrt/spectrum_util/rgb_color_space.h>
 
+class GPUMemoryAllocator;
 class ParameterDictionary;
 
 class SurfaceNormalIntegrator {
   public:
     static const SurfaceNormalIntegrator *create(const ParameterDictionary &parameters,
                                                  const IntegratorBase *integrator_base,
-                                                 std::vector<void *> &gpu_dynamic_pointers);
+                                                 GPUMemoryAllocator &allocator);
 
     void init(const IntegratorBase *_base, const RGBColorSpace *rgb_color_space) {
         base = _base;

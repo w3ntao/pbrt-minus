@@ -1,14 +1,13 @@
-#include "pbrt/base/float_texture.h"
-#include "pbrt/base/material.h"
-#include "pbrt/base/spectrum.h"
-#include "pbrt/materials/coated_diffuse_material.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectra/constant_spectrum.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/textures/spectrum_constant_texture.h"
+#include <pbrt/base/float_texture.h>
+#include <pbrt/base/material.h>
+#include <pbrt/base/spectrum.h>
+#include <pbrt/materials/coated_diffuse_material.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/textures/spectrum_constant_texture.h>
 
 void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
-                                 std::vector<void *> &gpu_dynamic_pointers) {
+                                 GPUMemoryAllocator &allocator) {
     reflectance = nullptr;
     albedo = nullptr;
 
@@ -19,33 +18,31 @@ void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
 
     eta = nullptr;
 
-    reflectance =
-        parameters.get_spectrum_texture("reflectance", SpectrumType::Albedo, gpu_dynamic_pointers);
+    reflectance = parameters.get_spectrum_texture("reflectance", SpectrumType::Albedo, allocator);
     if (!reflectance) {
-        reflectance = SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
+        reflectance = SpectrumTexture::create_constant_float_val_texture(0.5, allocator);
     }
 
-    u_roughness = parameters.get_float_texture_or_null("uroughness", gpu_dynamic_pointers);
+    u_roughness = parameters.get_float_texture_or_null("uroughness", allocator);
     if (!u_roughness) {
-        u_roughness = parameters.get_float_texture("roughness", 0.0, gpu_dynamic_pointers);
+        u_roughness = parameters.get_float_texture("roughness", 0.0, allocator);
     }
 
-    v_roughness = parameters.get_float_texture_or_null("vroughness", gpu_dynamic_pointers);
+    v_roughness = parameters.get_float_texture_or_null("vroughness", allocator);
     if (!v_roughness) {
-        v_roughness = parameters.get_float_texture("roughness", 0.0, gpu_dynamic_pointers);
+        v_roughness = parameters.get_float_texture("roughness", 0.0, allocator);
     }
 
-    thickness =
-        parameters.get_float_texture_with_default_val("thickness", 0.01, gpu_dynamic_pointers);
+    thickness = parameters.get_float_texture_with_default_val("thickness", 0.01, allocator);
 
     auto eta_val = parameters.get_float("eta", 1.5);
-    eta = Spectrum::create_constant_spectrum(eta_val, gpu_dynamic_pointers);
+    eta = Spectrum::create_constant_spectrum(eta_val, allocator);
 
     auto g_val = parameters.get_float("g", 0.0);
-    g = FloatTexture::create_constant_float_texture(g_val, gpu_dynamic_pointers);
+    g = FloatTexture::create_constant_float_texture(g_val, allocator);
 
     auto albedo_val = parameters.get_float("albedo", 0.0);
-    albedo = SpectrumTexture::create_constant_float_val_texture(albedo_val, gpu_dynamic_pointers);
+    albedo = SpectrumTexture::create_constant_float_val_texture(albedo_val, allocator);
 
     maxDepth = parameters.get_integer("maxdepth", 10);
     nSamples = parameters.get_integer("nsamples", 1);

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include <vector>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
 
 class Film;
+class GPUMemoryAllocator;
 class HLBVH;
 class IntegratorBase;
 class ParameterDictionary;
@@ -26,7 +26,7 @@ class MegakernelIntegrator {
     static const MegakernelIntegrator *create(const ParameterDictionary &parameters,
                                               const std::string &integrator_name,
                                               const IntegratorBase *integrator_base,
-                                              std::vector<void *> &gpu_dynamic_pointers);
+                                              GPUMemoryAllocator &allocator);
 
     std::string get_name() const {
         switch (type) {

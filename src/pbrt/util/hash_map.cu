@@ -1,4 +1,5 @@
-#include "pbrt/util/hash_map.h"
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/util/hash_map.h>
 
 // taken from
 // https://lemire.me/blog/2018/08/15/fast-strongly-universal-64-bit-hashing-everywhere/
@@ -13,13 +14,9 @@ uint64_t hash(uint64_t k) {
     return k;
 }
 
-HashMap *HashMap::create(uint capacity, std::vector<void *> &gpu_dynamic_pointers) {
-    HashMap *hash_map;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&hash_map, sizeof(HashMap)));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&(hash_map->items), sizeof(KeyValue) * capacity));
-
-    gpu_dynamic_pointers.push_back(hash_map);
-    gpu_dynamic_pointers.push_back(hash_map->items);
+HashMap *HashMap::create(uint capacity, GPUMemoryAllocator &allocator) {
+    auto hash_map = allocator.allocate<HashMap>();
+    hash_map->items = allocator.allocate<KeyValue>(capacity);
 
     hash_map->size = 0;
     hash_map->capacity = capacity;

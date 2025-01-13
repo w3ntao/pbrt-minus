@@ -1,10 +1,8 @@
 #pragma once
 
-#include "pbrt/base/interaction.h"
-#include "pbrt/euclidean_space/transform.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include <vector>
+#include <pbrt/base/interaction.h>
+#include <pbrt/euclidean_space/transform.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
 
 template <typename T>
 class Bounds3;
@@ -12,6 +10,7 @@ class Bounds3;
 class DiffuseAreaLight;
 class DistantLight;
 class GlobalSpectra;
+class GPUMemoryAllocator;
 class ImageInfiniteLight;
 class Light;
 class Shape;
@@ -123,13 +122,12 @@ class Light {
     };
 
     static Light *create(const std::string &type_of_light, const Transform &render_from_light,
-                         const ParameterDictionary &parameters,
-                         std::vector<void *> &gpu_dynamic_pointers);
+                         const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     static Light *create_diffuse_area_lights(const Shape *shapes, const uint num,
                                              const Transform &render_from_light,
                                              const ParameterDictionary &parameters,
-                                             std::vector<void *> &gpu_dynamic_pointers);
+                                             GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     void init(DistantLight *distant_light);
@@ -158,11 +156,11 @@ class Light {
 
     PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
-                                                 SampledWavelengths &lambda) const;
+                                            SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     pbrt::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
-                                                 SampledWavelengths &lambda) const;
+                                            SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,

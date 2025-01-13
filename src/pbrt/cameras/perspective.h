@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/base/camera.h"
-#include "pbrt/euclidean_space/bounds2.h"
-#include "pbrt/scene/parameter_dictionary.h"
+#include <pbrt/base/camera.h>
+#include <pbrt/euclidean_space/bounds2.h>
+#include <pbrt/scene/parameter_dictionary.h>
 
 class Film;
 class FIlter;

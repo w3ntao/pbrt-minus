@@ -1,12 +1,11 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/gpu/macro.h>
 
 class CoatedConductorBxDF;
-class MaterialEvalContext;
-
 class FloatTexture;
+class GPUMemoryAllocator;
+class MaterialEvalContext;
 class ParameterDictionary;
 class SampledWavelengths;
 class Spectrum;
@@ -14,7 +13,7 @@ class SpectrumTexture;
 
 class CoatedConductorMaterial {
   public:
-    void init(const ParameterDictionary &parameters, std::vector<void *> &gpu_dynamic_pointers);
+    void init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     CoatedConductorBxDF get_coated_conductor_bsdf(const MaterialEvalContext &ctx,

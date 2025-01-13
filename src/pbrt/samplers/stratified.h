@@ -1,9 +1,9 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/util/hash.h"
-#include "pbrt/util/permutation.h"
-#include "pbrt/util/rng.h"
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/util/hash.h>
+#include <pbrt/util/permutation.h>
+#include <pbrt/util/rng.h>
 #include <vector>
 
 class StratifiedSampler {

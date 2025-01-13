@@ -1,13 +1,14 @@
-#include "pbrt/base/light.h"
-#include "pbrt/lights/spot_light.h"
-#include "pbrt/scene/parameter_dictionary.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/rgb_color_space.h"
+#include <pbrt/base/light.h>
+#include <pbrt/lights/spot_light.h>
+#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/spectrum_util/rgb_color_space.h>
+
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 SpotLight *SpotLight::create(const Transform &renderFromLight,
-                             const ParameterDictionary &parameters,
-                             std::vector<void *> &gpu_dynamic_pointers) {
-    auto I = parameters.get_spectrum("I", SpectrumType::Illuminant, gpu_dynamic_pointers);
+                             const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
+    auto I = parameters.get_spectrum("I", SpectrumType::Illuminant, allocator);
     if (I == nullptr) {
         I = parameters.global_spectra->rgb_color_space->illuminant;
     }
@@ -34,9 +35,7 @@ SpotLight *SpotLight::create(const Transform &renderFromLight,
         sc *= phi_v / k_e;
     }
 
-    SpotLight *spot_light;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&spot_light, sizeof(SpotLight)));
-    gpu_dynamic_pointers.push_back(spot_light);
+    auto spot_light = allocator.allocate<SpotLight>();
 
     spot_light->init(finalRenderFromLight, I, sc, coneangle, coneangle - conedelta);
 
@@ -63,9 +62,8 @@ SampledSpectrum SpotLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
 }
 
 PBRT_CPU_GPU
-pbrt::optional<LightLiSample> SpotLight::sample_li(const LightSampleContext &ctx,
-                                                        const Point2f &u,
-                                                        SampledWavelengths &lambda) const {
+pbrt::optional<LightLiSample> SpotLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
+                                                   SampledWavelengths &lambda) const {
     Point3f p = render_from_light(Point3f(0, 0, 0));
     Vector3f wi = (p - ctx.p()).normalize();
     // Compute incident radiance _Li_ for _SpotLight_
@@ -83,7 +81,7 @@ pbrt::optional<LightLiSample> SpotLight::sample_li(const LightSampleContext &ctx
 
 PBRT_CPU_GPU
 pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point2f u2,
-                                                        SampledWavelengths &lambda) const {
+                                                   SampledWavelengths &lambda) const {
     // Choose whether to sample spotlight center cone or falloff region
     FloatType p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};
     FloatType sectionPDF;

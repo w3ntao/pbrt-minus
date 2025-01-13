@@ -1,16 +1,14 @@
 #pragma once
 
-#include "pbrt/base/spectrum.h"
-#include "pbrt/base/spectrum_texture.h"
-#include "pbrt/scene/parameter_dictionary.h"
+#include <pbrt/base/spectrum_texture.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/scene/parameter_dictionary.h>
 
 class FloatConstantTexture {
   public:
     static const FloatConstantTexture *create(const ParameterDictionary &parameters,
-                                              std::vector<void *> &gpu_dynamic_pointers) {
-        FloatConstantTexture *texture;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&texture, sizeof(FloatConstantTexture)));
-        gpu_dynamic_pointers.push_back(texture);
+                                              GPUMemoryAllocator &allocator) {
+        auto texture = allocator.allocate<FloatConstantTexture>();
 
         texture->init(parameters.get_float("value", 1.0));
 
@@ -26,6 +24,6 @@ class FloatConstantTexture {
         return value;
     }
 
-  public:
+  private:
     FloatType value;
 };

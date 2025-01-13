@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/base/spectrum.h"
-#include "pbrt/util/optional.h"
-#include "pbrt/util/scattering.h"
+#include <pbrt/base/spectrum.h>
+#include <pbrt/util/optional.h>
+#include <pbrt/util/scattering.h>
 
 struct PhaseFunctionSample {
     FloatType p;

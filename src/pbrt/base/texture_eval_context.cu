@@ -1,5 +1,5 @@
-#include "pbrt/base/interaction.h"
-#include "pbrt/base/texture_eval_context.h"
+#include <pbrt/base/interaction.h>
+#include <pbrt/base/texture_eval_context.h>
 
 PBRT_CPU_GPU
 TextureEvalContext::TextureEvalContext(const Interaction &intr) : p(intr.p()), uv(intr.uv) {}

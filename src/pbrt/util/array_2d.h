@@ -1,14 +1,13 @@
 #pragma once
 
-#include "pbrt/euclidean_space/bounds2.h"
-#include <vector>
+#include <pbrt/euclidean_space/bounds2.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 
 template <typename T>
 class Array2D {
   public:
-    void init(int nx, int ny, std::vector<void *> &gpu_dynamic_pointers) {
-        CHECK_CUDA_ERROR(cudaMallocManaged(&values, sizeof(T) * nx * ny));
-        gpu_dynamic_pointers.push_back(values);
+    void init(int nx, int ny, GPUMemoryAllocator &allocator) {
+        values = allocator.allocate<T>(nx * ny);
 
         extent.p_min = {0, 0};
         extent.p_max = {nx, ny};

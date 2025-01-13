@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/util/sampling.h"
+#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/util/sampling.h>
 
 class DiffuseBxDF {
   public:

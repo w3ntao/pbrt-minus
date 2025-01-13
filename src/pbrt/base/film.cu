@@ -1,16 +1,15 @@
-#include "ext/lodepng/lodepng.h"
-#include "pbrt/base/film.h"
-#include "pbrt/films/rgb_film.h"
-#include "pbrt/spectrum_util/color_encoding.h"
+#include <ext/lodepng/lodepng.h>
+#include <pbrt/base/film.h>
+#include <pbrt/films/rgb_film.h>
+#include <pbrt/spectrum_util/color_encoding.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <vector>
 
 Film *Film::create_rgb_film(const Filter *filter, const ParameterDictionary &parameters,
-                            std::vector<void *> &gpu_dynamic_pointers) {
-    Film *film;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&film, sizeof(Film)));
-    gpu_dynamic_pointers.push_back(film);
+                            GPUMemoryAllocator &allocator) {
+    auto rgb_film = RGBFilm::create(filter, parameters, allocator);
 
-    auto rgb_film = RGBFilm::create(filter, parameters, gpu_dynamic_pointers);
+    auto film = allocator.allocate<Film>();
     film->init(rgb_film);
 
     return film;

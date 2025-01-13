@@ -1,6 +1,6 @@
-#include "pbrt/accelerator/hlbvh.h"
-#include "pbrt/base/integrator_base.h"
-#include "pbrt/base/interaction.h"
+#include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/integrator_base.h>
+#include <pbrt/base/interaction.h>
 
 PBRT_CPU_GPU
 bool IntegratorBase::fast_intersect(const Ray &ray, FloatType t_max) const {

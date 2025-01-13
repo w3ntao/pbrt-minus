@@ -1,13 +1,14 @@
-#include "pbrt/base/film.h"
-#include "pbrt/base/megakernel_integrator.h"
-#include "pbrt/base/sampler.h"
-#include "pbrt/gui/gl_object.h"
-#include "pbrt/integrators/ambient_occlusion.h"
-#include "pbrt/integrators/megakernel_path.h"
-#include "pbrt/integrators/surface_normal.h"
-#include "pbrt/spectrum_util/color_encoding.h"
 #include <chrono>
 #include <numeric>
+#include <pbrt/base/film.h>
+#include <pbrt/base/megakernel_integrator.h>
+#include <pbrt/base/sampler.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/gui/gl_object.h>
+#include <pbrt/integrators/ambient_occlusion.h>
+#include <pbrt/integrators/megakernel_path.h>
+#include <pbrt/integrators/surface_normal.h>
+#include <pbrt/spectrum_util/color_encoding.h>
 #include <thread>
 
 PBRT_GPU
@@ -81,16 +82,15 @@ __global__ static void megakernel_render(Film *film, uint8_t *gpu_frame_buffer, 
     gpu_frame_buffer[pixel_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
 }
 
-const MegakernelIntegrator *MegakernelIntegrator::create(
-    const ParameterDictionary &parameters, const std::string &integrator_name,
-    const IntegratorBase *integrator_base, std::vector<void *> &gpu_dynamic_pointers) {
-    MegakernelIntegrator *integrator;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&integrator, sizeof(MegakernelIntegrator)));
-    gpu_dynamic_pointers.push_back(integrator);
+const MegakernelIntegrator *MegakernelIntegrator::create(const ParameterDictionary &parameters,
+                                                         const std::string &integrator_name,
+                                                         const IntegratorBase *integrator_base,
+                                                         GPUMemoryAllocator &allocator) {
+    auto integrator = allocator.allocate<MegakernelIntegrator>();
 
     if (integrator_name == "ambientocclusion") {
         auto ambient_occlusion_integrator =
-            AmbientOcclusionIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
+            AmbientOcclusionIntegrator::create(parameters, integrator_base, allocator);
         integrator->init(ambient_occlusion_integrator);
 
         return integrator;
@@ -98,7 +98,7 @@ const MegakernelIntegrator *MegakernelIntegrator::create(
 
     if (integrator_name == "megakernelpath") {
         auto path_integrator =
-            MegakernelPathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
+            MegakernelPathIntegrator::create(parameters, integrator_base, allocator);
         integrator->init(path_integrator);
 
         return integrator;
@@ -106,7 +106,7 @@ const MegakernelIntegrator *MegakernelIntegrator::create(
 
     if (integrator_name == "surfacenormal") {
         auto surface_normal_integrator =
-            SurfaceNormalIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
+            SurfaceNormalIntegrator::create(parameters, integrator_base, allocator);
         integrator->init(surface_normal_integrator);
 
         return integrator;
@@ -159,9 +159,10 @@ void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
     const auto film_resolution = integrator_base->camera->get_camerabase()->resolution;
     const auto num_pixels = film_resolution.x * film_resolution.y;
 
-    std::vector<void *> gpu_dynamic_pointers;
-    auto samplers =
-        Sampler::create(sampler_type, samples_per_pixel, num_pixels, gpu_dynamic_pointers);
+    GPUMemoryAllocator local_allocator;
+
+    auto samplers = Sampler::create_samplers_for_each_pixels(sampler_type, samples_per_pixel,
+                                                             num_pixels, local_allocator);
 
     constexpr uint thread_width = 16;
     constexpr uint thread_height = 16;
@@ -171,11 +172,9 @@ void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
     int *counter = nullptr;
     if (preview) {
         gl_object.init("initializing", film_resolution);
-        CHECK_CUDA_ERROR(cudaMallocManaged(&counter, sizeof(int) * num_pixels));
-        CHECK_CUDA_ERROR(cudaMallocManaged(&gpu_frame_buffer, sizeof(uint8_t) * 3 * num_pixels));
 
-        gpu_dynamic_pointers.push_back(counter);
-        gpu_dynamic_pointers.push_back(gpu_frame_buffer);
+        counter = local_allocator.allocate<int>();
+        gpu_frame_buffer = local_allocator.allocate<uint8_t>(3 * num_pixels);
 
         *counter = 0;
 
@@ -208,9 +207,4 @@ void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
 
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-    for (auto ptr : gpu_dynamic_pointers) {
-        CHECK_CUDA_ERROR(cudaFree(ptr));
-    }
-    CHECK_CUDA_ERROR(cudaGetLastError());
 }

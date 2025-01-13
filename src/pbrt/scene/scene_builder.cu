@@ -1,24 +1,25 @@
-#include "pbrt/accelerator/hlbvh.h"
-#include "pbrt/base/film.h"
-#include "pbrt/base/filter.h"
-#include "pbrt/base/float_texture.h"
-#include "pbrt/base/integrator_base.h"
-#include "pbrt/base/material.h"
-#include "pbrt/base/megakernel_integrator.h"
-#include "pbrt/base/primitive.h"
-#include "pbrt/base/sampler.h"
-#include "pbrt/base/shape.h"
-#include "pbrt/films/grey_scale_film.h"
-#include "pbrt/integrators/mlt_path.h"
-#include "pbrt/integrators/wavefront_path.h"
-#include "pbrt/light_samplers/power_light_sampler.h"
-#include "pbrt/scene/scene_builder.h"
-#include "pbrt/spectrum_util/global_spectra.h"
-#include "pbrt/spectrum_util/spectrum_constants_glass.h"
-#include "pbrt/spectrum_util/spectrum_constants_metal.h"
-#include "pbrt/textures/spectrum_constant_texture.h"
-#include "pbrt/util/std_container.h"
+#include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/film.h>
+#include <pbrt/base/filter.h>
+#include <pbrt/base/float_texture.h>
+#include <pbrt/base/integrator_base.h>
+#include <pbrt/base/material.h>
+#include <pbrt/base/megakernel_integrator.h>
+#include <pbrt/base/primitive.h>
+#include <pbrt/base/sampler.h>
+#include <pbrt/base/shape.h>
+#include <pbrt/films/grey_scale_film.h>
 #include <pbrt/integrators/bdpt.h>
+#include <pbrt/integrators/mlt_path.h>
+#include <pbrt/integrators/wavefront_path.h>
+#include <pbrt/light_samplers/power_light_sampler.h>
+#include <pbrt/light_samplers/uniform_light_sampler.h>
+#include <pbrt/scene/scene_builder.h>
+#include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/spectrum_util/spectrum_constants_glass.h>
+#include <pbrt/spectrum_util/spectrum_constants_metal.h>
+#include <pbrt/textures/spectrum_constant_texture.h>
+#include <pbrt/util/std_container.h>
 #include <set>
 
 uint next_keyword_position(const std::vector<Token> &tokens, uint start) {
@@ -131,35 +132,34 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
       samples_per_pixel(command_line_option.samples_per_pixel),
       preview(command_line_option.preview) {
 
-    global_spectra = GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, gpu_dynamic_pointers);
+    global_spectra = GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, allocator);
 
     auto ag_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Ag_eta), std::end(Ag_eta)), false, nullptr, gpu_dynamic_pointers);
+        std::vector(std::begin(Ag_eta), std::end(Ag_eta)), false, nullptr, allocator);
 
     auto ag_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Ag_k), std::end(Ag_k)), false, nullptr, gpu_dynamic_pointers);
+        std::vector(std::begin(Ag_k), std::end(Ag_k)), false, nullptr, allocator);
 
     auto al_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Al_eta), std::end(Al_eta)), false, nullptr, gpu_dynamic_pointers);
+        std::vector(std::begin(Al_eta), std::end(Al_eta)), false, nullptr, allocator);
 
     auto al_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Al_k), std::end(Al_k)), false, nullptr, gpu_dynamic_pointers);
+        std::vector(std::begin(Al_k), std::end(Al_k)), false, nullptr, allocator);
 
     auto au_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Au_eta), std::end(Au_eta)), false, nullptr, gpu_dynamic_pointers);
+        std::vector(std::begin(Au_eta), std::end(Au_eta)), false, nullptr, allocator);
 
     auto au_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Au_k), std::end(Au_k)), false, nullptr, gpu_dynamic_pointers);
+        std::vector(std::begin(Au_k), std::end(Au_k)), false, nullptr, allocator);
 
     auto cu_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Cu_eta), std::end(Cu_eta)), false, nullptr, gpu_dynamic_pointers);
+        std::vector(std::begin(Cu_eta), std::end(Cu_eta)), false, nullptr, allocator);
 
     auto cu_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Cu_k), std::end(Cu_k)), false, nullptr, gpu_dynamic_pointers);
+        std::vector(std::begin(Cu_k), std::end(Cu_k)), false, nullptr, allocator);
 
     auto glass_bk7_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(GlassBK7_eta), std::end(GlassBK7_eta)), false, nullptr,
-        gpu_dynamic_pointers);
+        std::vector(std::begin(GlassBK7_eta), std::end(GlassBK7_eta)), false, nullptr, allocator);
 
     spectra = {
         {"metal-Ag-eta", ag_eta}, {"metal-Ag-k", ag_k},     {"metal-Al-eta", al_eta},
@@ -167,12 +167,11 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
         {"metal-Cu-eta", cu_eta}, {"metal-Cu-k", cu_k},     {"glass-BK7", glass_bk7_eta},
     };
 
-    CHECK_CUDA_ERROR(cudaMallocManaged(&integrator_base, sizeof(IntegratorBase)));
-    gpu_dynamic_pointers.push_back(integrator_base);
+    integrator_base = allocator.allocate<IntegratorBase>();
     integrator_base->init();
 
-    auto texture = SpectrumTexture::create_constant_float_val_texture(0.5, gpu_dynamic_pointers);
-    graphics_state.material = Material::create_diffuse_material(texture, gpu_dynamic_pointers);
+    auto texture = SpectrumTexture::create_constant_float_val_texture(0.5, allocator);
+    graphics_state.material = Material::create_diffuse_material(texture, allocator);
 }
 
 void SceneBuilder::build_camera() {
@@ -198,9 +197,9 @@ void SceneBuilder::build_camera() {
             REPORT_FATAL_ERROR();
         }
 
-        integrator_base->camera = Camera::create_perspective_camera(
-            film->get_resolution(), camera_transform, this->film, integrator_base->filter,
-            parameters, gpu_dynamic_pointers);
+        integrator_base->camera =
+            Camera::create_perspective_camera(film->get_resolution(), camera_transform, this->film,
+                                              integrator_base->filter, parameters, allocator);
 
         return;
     }
@@ -217,7 +216,7 @@ void SceneBuilder::build_filter() {
         filter_type = pixel_filter_tokens[1].values[0];
     }
 
-    integrator_base->filter = Filter::create(filter_type, parameters, gpu_dynamic_pointers);
+    integrator_base->filter = Filter::create(filter_type, parameters, allocator);
 }
 
 void SceneBuilder::build_film() {
@@ -235,14 +234,11 @@ void SceneBuilder::build_film() {
     if (integrator_base->filter == nullptr) {
         REPORT_FATAL_ERROR();
     }
-    film = Film::create_rgb_film(integrator_base->filter, parameters, gpu_dynamic_pointers);
+    film = Film::create_rgb_film(integrator_base->filter, parameters, allocator);
 }
 
 void SceneBuilder::build_gpu_lights() {
-    const Light **light_array;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&light_array, sizeof(Light *) * gpu_lights.size()));
-    gpu_dynamic_pointers.push_back(light_array);
-
+    auto light_array = allocator.allocate<const Light *>(gpu_lights.size());
     CHECK_CUDA_ERROR(cudaMemcpy(light_array, gpu_lights.data(), sizeof(Light *) * gpu_lights.size(),
                                 cudaMemcpyHostToDevice));
 
@@ -250,7 +246,7 @@ void SceneBuilder::build_gpu_lights() {
     integrator_base->light_num = gpu_lights.size();
 
     integrator_base->light_sampler =
-        PowerLightSampler::create(light_array, gpu_lights.size(), gpu_dynamic_pointers);
+        PowerLightSampler::create(light_array, gpu_lights.size(), allocator);
 
     std::vector<const Light *> infinite_lights;
     for (auto light : gpu_lights) {
@@ -259,10 +255,7 @@ void SceneBuilder::build_gpu_lights() {
         }
     }
 
-    const Light **gpu_infinite_lights;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&gpu_infinite_lights, sizeof(Light *) * infinite_lights.size()));
-    gpu_dynamic_pointers.push_back(gpu_infinite_lights);
+    auto gpu_infinite_lights = allocator.allocate<const Light *>(infinite_lights.size());
 
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_infinite_lights, infinite_lights.data(),
                                 sizeof(Light *) * infinite_lights.size(), cudaMemcpyHostToDevice));
@@ -299,27 +292,25 @@ void SceneBuilder::build_integrator() {
 
     if (integrator_name == "bdpt") {
         bdpt_integrator = BDPTIntegrator::create(parameters, integrator_base, sampler_type,
-                                                 samples_per_pixel.value(), gpu_dynamic_pointers);
+                                                 samples_per_pixel.value(), allocator);
         return;
     }
 
     if (integrator_name == "mlt" || integrator_name == "mltpath") {
-        mlt_integrator =
-            MLTPathIntegrator::create(parameters, integrator_base, gpu_dynamic_pointers);
+        mlt_integrator = MLTPathIntegrator::create(parameters, integrator_base, allocator);
         return;
     }
 
     printf("sampler: %s\n", sampler_type.c_str());
 
     if (integrator_name == "path") {
-        wavefront_path_integrator =
-            WavefrontPathIntegrator::create(parameters, integrator_base, sampler_type,
-                                            samples_per_pixel.value(), gpu_dynamic_pointers);
+        wavefront_path_integrator = WavefrontPathIntegrator::create(
+            parameters, integrator_base, sampler_type, samples_per_pixel.value(), allocator);
         return;
     }
 
-    megakernel_integrator = MegakernelIntegrator::create(parameters, integrator_name.value(), integrator_base,
-                                               gpu_dynamic_pointers);
+    megakernel_integrator = MegakernelIntegrator::create(parameters, integrator_name.value(),
+                                                         integrator_base, allocator);
 }
 
 void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
@@ -499,8 +490,7 @@ void SceneBuilder::parse_light_source(const std::vector<Token> &tokens) {
 
     const auto light_source_type = tokens[1].values[0];
 
-    auto light = Light::create(light_source_type, get_render_from_object(), parameters,
-                               gpu_dynamic_pointers);
+    auto light = Light::create(light_source_type, get_render_from_object(), parameters, allocator);
     gpu_lights.push_back(light);
 }
 
@@ -532,7 +522,7 @@ void SceneBuilder::parse_make_named_material(const std::vector<Token> &tokens) {
 
     auto type_of_material = parameters.get_one_string("type");
 
-    materials[material_name] = Material::create(type_of_material, parameters, gpu_dynamic_pointers);
+    materials[material_name] = Material::create(type_of_material, parameters, allocator);
 }
 
 void SceneBuilder::parse_material(const std::vector<Token> &tokens) {
@@ -544,7 +534,7 @@ void SceneBuilder::parse_material(const std::vector<Token> &tokens) {
 
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
-    graphics_state.material = Material::create(type_of_material, parameters, gpu_dynamic_pointers);
+    graphics_state.material = Material::create(type_of_material, parameters, allocator);
 }
 
 void SceneBuilder::parse_named_material(const std::vector<Token> &tokens) {
@@ -606,15 +596,14 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     auto type_of_shape = tokens[1].values[0];
     const auto render_from_object = get_render_from_object();
 
-    auto result =
-        Shape::create(type_of_shape, render_from_object, render_from_object.inverse(),
-                      graphics_state.reverse_orientation, parameters, gpu_dynamic_pointers);
+    auto result = Shape::create(type_of_shape, render_from_object, render_from_object.inverse(),
+                                graphics_state.reverse_orientation, parameters, allocator);
     auto shapes = result.first;
     auto num_shapes = result.second;
 
     if (!graphics_state.area_light_entity) {
         auto simple_primitives = Primitive::create_simple_primitives(
-            shapes, graphics_state.material, num_shapes, gpu_dynamic_pointers);
+            shapes, graphics_state.material, num_shapes, allocator);
 
         if (active_instance_definition) {
             active_instance_definition->instantiated_primitives.push_back(
@@ -633,12 +622,12 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         REPORT_FATAL_ERROR();
     }
 
-    auto diffuse_area_lights = Light::create_diffuse_area_lights(
-        shapes, num_shapes, render_from_object, graphics_state.area_light_entity->parameters,
-        gpu_dynamic_pointers);
+    auto diffuse_area_lights =
+        Light::create_diffuse_area_lights(shapes, num_shapes, render_from_object,
+                                          graphics_state.area_light_entity->parameters, allocator);
 
     auto geometric_primitives = Primitive::create_geometric_primitives(
-        shapes, graphics_state.material, diffuse_area_lights, num_shapes, gpu_dynamic_pointers);
+        shapes, graphics_state.material, diffuse_area_lights, num_shapes, allocator);
 
     // otherwise: build AreaDiffuseLight
     for (uint idx = 0; idx < num_shapes; ++idx) {
@@ -657,25 +646,25 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 4));
 
     if (color_type == "float") {
-        auto float_texture = FloatTexture::create(texture_type, get_render_from_object(),
-                                                  parameters, gpu_dynamic_pointers);
+        auto float_texture =
+            FloatTexture::create(texture_type, get_render_from_object(), parameters, allocator);
         float_textures[texture_name] = float_texture;
 
         return;
     }
 
     if (color_type == "spectrum") {
-        albedo_spectrum_textures[texture_name] = SpectrumTexture::create(
-            texture_type, SpectrumType::Albedo, get_render_from_object(),
-            global_spectra->rgb_color_space, parameters, gpu_dynamic_pointers);
+        albedo_spectrum_textures[texture_name] =
+            SpectrumTexture::create(texture_type, SpectrumType::Albedo, get_render_from_object(),
+                                    global_spectra->rgb_color_space, parameters, allocator);
 
         illuminant_spectrum_textures[texture_name] = SpectrumTexture::create(
             texture_type, SpectrumType::Illuminant, get_render_from_object(),
-            global_spectra->rgb_color_space, parameters, gpu_dynamic_pointers);
+            global_spectra->rgb_color_space, parameters, allocator);
 
-        unbounded_spectrum_textures[texture_name] = SpectrumTexture::create(
-            texture_type, SpectrumType::Unbounded, get_render_from_object(),
-            global_spectra->rgb_color_space, parameters, gpu_dynamic_pointers);
+        unbounded_spectrum_textures[texture_name] =
+            SpectrumTexture::create(texture_type, SpectrumType::Unbounded, get_render_from_object(),
+                                    global_spectra->rgb_color_space, parameters, allocator);
 
         return;
     }
@@ -805,7 +794,7 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
                 for (auto &instanced_primitives : instance->instantiated_primitives) {
                     auto transformed_primitives = Primitive::create_transformed_primitives(
                         instanced_primitives.primitives, render_from_instance,
-                        instanced_primitives.num, gpu_dynamic_pointers);
+                        instanced_primitives.num, allocator);
 
                     for (uint p_idx = 0; p_idx < instanced_primitives.num; ++p_idx) {
                         gpu_primitives.push_back(&transformed_primitives[p_idx]);
@@ -838,7 +827,7 @@ void SceneBuilder::parse_file(const std::string &_filename) {
 }
 
 void SceneBuilder::preprocess() {
-    integrator_base->bvh = HLBVH::create(gpu_primitives, gpu_dynamic_pointers);
+    integrator_base->bvh = HLBVH::create(gpu_primitives, allocator);
 
     auto full_scene_bounds = integrator_base->bvh->bounds();
     for (auto light : gpu_lights) {

@@ -1,6 +1,7 @@
-#include "pbrt/accelerator/hlbvh.h"
-#include "pbrt/util/stack.h"
-#include "pbrt/util/thread_pool.h"
+#include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/util/stack.h>
+#include <pbrt/util/thread_pool.h>
 #include <chrono>
 
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
@@ -168,12 +169,9 @@ __global__ void init_bvh_args(HLBVH::BottomBVHArgs *bvh_args_array,
 }
 
 const HLBVH *HLBVH::create(const std::vector<const Primitive *> &gpu_primitives,
-                           std::vector<void *> &gpu_dynamic_pointers) {
-    HLBVH *bvh;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&bvh, sizeof(HLBVH)));
-    gpu_dynamic_pointers.push_back(bvh);
-
-    bvh->build_bvh(gpu_primitives, gpu_dynamic_pointers);
+                           GPUMemoryAllocator &allocator) {
+    auto bvh = allocator.allocate<HLBVH>();
+    bvh->build_bvh(gpu_primitives, allocator);
 
     return bvh;
 }
@@ -384,7 +382,7 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
 }
 
 void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
-                      std::vector<void *> &gpu_dynamic_pointers) {
+                      GPUMemoryAllocator &allocator) {
     auto start_sorting = std::chrono::system_clock::now();
 
     primitives = nullptr;
@@ -398,28 +396,16 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
 
     printf("\ntotal primitives: %u\n", num_total_primitives);
 
-    MortonPrimitive *gpu_morton_primitives;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&gpu_morton_primitives, sizeof(MortonPrimitive) * num_total_primitives));
+    GPUMemoryAllocator local_allocator;
 
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    auto sparse_treelets = local_allocator.allocate<Treelet>(MAX_TREELET_NUM);
 
-    const Primitive **gpu_primitives_array;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&gpu_primitives_array, sizeof(Primitive *) * num_total_primitives));
+    auto gpu_morton_primitives = allocator.allocate<MortonPrimitive>(num_total_primitives);
+    auto gpu_primitives_array = allocator.allocate<const Primitive *>(num_total_primitives);
+
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_primitives_array, gpu_primitives.data(),
                                 sizeof(Primitive *) * num_total_primitives,
                                 cudaMemcpyHostToDevice));
-
-    Treelet *sparse_treelets;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&sparse_treelets, sizeof(Treelet) * MAX_TREELET_NUM));
-
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-    gpu_dynamic_pointers.push_back(gpu_morton_primitives);
-    gpu_dynamic_pointers.push_back(gpu_primitives_array);
 
     this->init(gpu_primitives_array, gpu_morton_primitives);
 
@@ -428,15 +414,16 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         const uint blocks = divide_and_ceil(num_total_primitives, threads);
         hlbvh_init_morton_primitives<<<blocks, threads>>>(morton_primitives, primitives,
                                                           num_total_primitives);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     {
         const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
         hlbvh_init_treelets<<<blocks, threads>>>(sparse_treelets);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
-
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     Bounds3f bounds_of_primitives_centroids;
     for (uint idx = 0; idx < num_total_primitives; idx++) {
@@ -467,10 +454,8 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
-    uint *primitives_counter;
-    uint *primitives_indices_offset;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&primitives_counter, sizeof(uint) * MAX_TREELET_NUM));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&primitives_indices_offset, sizeof(uint) * MAX_TREELET_NUM));
+    auto primitives_counter = local_allocator.allocate<uint>(MAX_TREELET_NUM);
+    auto primitives_indices_offset = local_allocator.allocate<uint>(MAX_TREELET_NUM);
 
     {
         const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
@@ -502,10 +487,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
-    MortonPrimitive *buffer_morton_primitives;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&buffer_morton_primitives,
-                                       sizeof(MortonPrimitive) * num_total_primitives));
-
+    auto buffer_morton_primitives = local_allocator.allocate<MortonPrimitive>(num_total_primitives);
     {
         const uint blocks = divide_and_ceil(num_total_primitives, threads);
         sort_morton_primitives<<<blocks, threads>>>(buffer_morton_primitives, morton_primitives,
@@ -532,10 +514,6 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
-
-    CHECK_CUDA_ERROR(cudaFree(primitives_counter));
-    CHECK_CUDA_ERROR(cudaFree(primitives_indices_offset));
-    CHECK_CUDA_ERROR(cudaFree(buffer_morton_primitives));
 
     std::vector<uint> dense_treelet_indices;
     {
@@ -564,21 +542,17 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
                max_primitive_num_in_a_treelet);
     }
 
-    Treelet *dense_treelets;
-    CHECK_CUDA_ERROR(
-        cudaMallocManaged(&dense_treelets, sizeof(Treelet) * dense_treelet_indices.size()));
-
+    auto dense_treelets = local_allocator.allocate<Treelet>(dense_treelet_indices.size());
     for (uint idx = 0; idx < dense_treelet_indices.size(); idx++) {
         uint sparse_idx = dense_treelet_indices[idx];
         CHECK_CUDA_ERROR(cudaMemcpy(&dense_treelets[idx], &sparse_treelets[sparse_idx],
                                     sizeof(Treelet), cudaMemcpyDeviceToDevice));
     }
-    CHECK_CUDA_ERROR(cudaFree(sparse_treelets));
 
     uint max_build_node_length =
         (2 * dense_treelet_indices.size() + 1) + (2 * num_total_primitives + 1);
-    CHECK_CUDA_ERROR(cudaMallocManaged(&build_nodes, sizeof(BVHBuildNode) * max_build_node_length));
-    gpu_dynamic_pointers.push_back(build_nodes);
+
+    build_nodes = allocator.allocate<BVHBuildNode>(max_build_node_length);
 
     auto start_top_bvh = std::chrono::system_clock::now();
 
@@ -586,23 +560,20 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     const uint top_bvh_node_num =
         build_top_bvh_for_treelets(dense_treelets, dense_treelet_indices.size(), thread_pool);
 
-    CHECK_CUDA_ERROR(cudaFree(dense_treelets));
-
     auto start_bottom_bvh = std::chrono::system_clock::now();
 
     uint start = 0;
     uint end = top_bvh_node_num;
 
-    uint *shared_offset;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&shared_offset, sizeof(uint)));
+    auto shared_offset = local_allocator.allocate<uint>();
     *shared_offset = end;
 
     uint depth = 0;
     while (end > start) {
         const uint array_length = end - start;
 
-        BottomBVHArgs *bvh_args_array;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&bvh_args_array, sizeof(BottomBVHArgs) * array_length));
+        auto bvh_args_array = local_allocator.allocate<BottomBVHArgs>(array_length);
+        // TODO: this part can be optimized to prevent allocating memory every loop
 
         {
             uint blocks = divide_and_ceil(uint(end - start), threads);
@@ -626,10 +597,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         hlbvh_build_bottom_bvh<<<blocks, threads>>>(this, bvh_args_array, array_length);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-        CHECK_CUDA_ERROR(cudaFree(bvh_args_array));
     }
-    CHECK_CUDA_ERROR(cudaFree(shared_offset));
 
     printf("HLBVH: bottom BVH nodes: %u, max depth: %u, max primitives in a leaf: %u\n",
            end - top_bvh_node_num, depth, MAX_PRIMITIVES_NUM_IN_LEAF);

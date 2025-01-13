@@ -1,10 +1,10 @@
 #pragma once
 
-#include "pbrt/base/media.h"
-#include "pbrt/bxdfs/top_or_bottom_bxdf.h"
-#include "pbrt/util/hash.h"
-#include "pbrt/util/macro.h"
-#include "pbrt/util/rng.h"
+#include <pbrt/base/media.h>
+#include <pbrt/bxdfs/top_or_bottom_bxdf.h>
+#include <pbrt/util/hash.h>
+#include <pbrt/gpu/macro.h>
+#include <pbrt/util/rng.h>
 
 // LayeredBxDF Definition
 template <typename TopBxDF, typename BottomBxDF, bool twoSided>

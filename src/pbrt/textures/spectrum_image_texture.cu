@@ -1,29 +1,26 @@
-#include "pbrt/spectra/rgb_albedo_spectrum.h"
-#include "pbrt/textures/spectrum_image_texture.h"
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/spectra/rgb_albedo_spectrum.h>
+#include <pbrt/textures/spectrum_image_texture.h>
 
-const SpectrumImageTexture *
-SpectrumImageTexture::create(SpectrumType spectrum_type, const Transform &render_from_object,
-                             const RGBColorSpace *_color_space,
-                             const ParameterDictionary &parameters,
-                             std::vector<void *> &gpu_dynamic_pointers) {
-    SpectrumImageTexture *texture;
-    CHECK_CUDA_ERROR(cudaMallocManaged(&texture, sizeof(SpectrumImageTexture)));
-    texture->init(spectrum_type, render_from_object, parameters, gpu_dynamic_pointers,
-                  _color_space);
+const SpectrumImageTexture *SpectrumImageTexture::create(SpectrumType spectrum_type,
+                                                         const Transform &render_from_object,
+                                                         const RGBColorSpace *_color_space,
+                                                         const ParameterDictionary &parameters,
+                                                         GPUMemoryAllocator &allocator) {
+    auto texture = allocator.allocate<SpectrumImageTexture>();
 
-    gpu_dynamic_pointers.push_back(texture);
+    texture->init(spectrum_type, render_from_object, parameters, _color_space, allocator);
 
     return texture;
 }
 
 void SpectrumImageTexture::init(SpectrumType _spectrum_type, const Transform &render_from_object,
                                 const ParameterDictionary &parameters,
-                                std::vector<void *> &gpu_dynamic_pointers,
-                                const RGBColorSpace *_color_space) {
+                                const RGBColorSpace *_color_space, GPUMemoryAllocator &allocator) {
     spectrum_type = _spectrum_type;
     color_space = _color_space;
 
-    init_image_texture_base(render_from_object, parameters, gpu_dynamic_pointers);
+    init_image_texture_base(render_from_object, parameters, allocator);
 }
 
 PBRT_CPU_GPU

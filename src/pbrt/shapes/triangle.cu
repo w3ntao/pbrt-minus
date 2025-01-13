@@ -1,6 +1,6 @@
-#include "pbrt/base/interaction.h"
-#include "pbrt/base/shape.h"
-#include "pbrt/shapes/triangle.h"
+#include <pbrt/base/interaction.h>
+#include <pbrt/base/shape.h>
+#include <pbrt/shapes/triangle.h>
 
 PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, FloatType t_max) const {

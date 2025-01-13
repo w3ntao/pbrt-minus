@@ -1,9 +1,9 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
-#include <vector>
+#include <pbrt/gpu/macro.h>
 
 class Distribution1D;
+class GPUMemoryAllocator;
 class HashMap;
 class Light;
 class LightSampleContext;
@@ -12,7 +12,7 @@ class SampledLight;
 class PowerLightSampler {
   public:
     static const PowerLightSampler *create(const Light **lights, const uint light_num,
-                                           std::vector<void *> &gpu_dynamic_pointers);
+                                           GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     const Light *get_light_by_idx(int idx) const {

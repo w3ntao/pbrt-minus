@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pbrt/util/macro.h"
+#include <pbrt/gpu/macro.h>
 
 constexpr uint LAMBDA_MIN = 360;
 constexpr uint LAMBDA_MAX = 830;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include "pbrt/spectrum_util/sampled_wavelengths.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/spectrum_util/sampled_wavelengths.h>
+#include <pbrt/gpu/macro.h>
 
 PBRT_CPU_GPU inline FloatType Blackbody(FloatType lambda, FloatType T) {
     if (T <= 0) {

@@ -1,11 +1,10 @@
 #pragma once
 
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/util/float.h"
-#include "pbrt/util/macro.h"
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/gpu/macro.h>
 #include <string>
-#include <vector>
 
+class GPUMemoryAllocator;
 class RGB;
 
 enum class WrapMode {
@@ -76,7 +75,7 @@ inline bool Is32Bit(PixelFormat format) {
 class GPUImage {
   public:
     static const GPUImage *create_from_file(const std::string &filename,
-                                            std::vector<void *> &gpu_dynamic_pointers);
+                                            GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Point2i get_resolution() const {
@@ -94,7 +93,7 @@ class GPUImage {
 
     const RGB *pixels;
 
-    void init_png(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers);
+    void init_png(const std::string &filename, GPUMemoryAllocator &allocator);
 
-    void init_exr(const std::string &filename, std::vector<void *> &gpu_dynamic_pointers);
+    void init_exr(const std::string &filename, GPUMemoryAllocator &allocator);
 };

@@ -1,14 +1,14 @@
 #pragma once
 
-#include "pbrt/base/interaction.h"
-#include "pbrt/base/ray.h"
-#include "pbrt/euclidean_space/point2.h"
-#include "pbrt/euclidean_space/transform.h"
-#include "pbrt/spectrum_util/sampled_spectrum.h"
-#include <vector>
+#include <pbrt/base/interaction.h>
+#include <pbrt/base/ray.h>
+#include <pbrt/euclidean_space/point2.h>
+#include <pbrt/euclidean_space/transform.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
 
 class Film;
 class Filter;
+class GPUMemoryAllocator;
 class Sampler;
 class ParameterDictionary;
 class PerspectiveCamera;
@@ -154,7 +154,7 @@ class Camera {
                                              const CameraTransform &camera_transform,
                                              const Film *film, const Filter *filter,
                                              const ParameterDictionary &parameters,
-                                             std::vector<void *> &gpu_dynamic_pointers);
+                                             GPUMemoryAllocator &allocator);
 
     void init(const PerspectiveCamera *perspective_camera);
 
@@ -175,7 +175,7 @@ class Camera {
 
     PBRT_CPU_GPU
     pbrt::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,
-                                                  SampledWavelengths &lambda) const;
+                                             SampledWavelengths &lambda) const;
 
   private:
     Type type;
