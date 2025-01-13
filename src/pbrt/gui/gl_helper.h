@@ -1,8 +1,9 @@
 #pragma once
 
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gui/shader.h>
 
-class GLObject {
+class GLHelper {
     uint VBO = 0;
     uint VAO = 0;
     uint EBO = 0;
@@ -13,15 +14,33 @@ class GLObject {
 
     bool initialized = false;
 
+    Point2i window_dimension;
+    Point2i image_resolution;
+
+    GPUMemoryAllocator allocator;
+
   public:
-    ~GLObject() {
+    uint8_t *gpu_frame_buffer = nullptr;
+
+    ~GLHelper() {
         if (initialized) {
             this->release();
         }
     }
 
-    void init(const std::string &title, const Point2i &image_resolution) {
+    void init(const std::string &title, const Point2i &_image_resolution) {
         initialized = true;
+
+        image_resolution = _image_resolution;
+
+        const uint num_pixels = _image_resolution.x * _image_resolution.y;
+
+        gpu_frame_buffer = allocator.allocate<uint8_t>(3 * num_pixels);
+        for (uint idx = 0; idx < num_pixels; ++idx) {
+            gpu_frame_buffer[idx * 3 + 0] = 0;
+            gpu_frame_buffer[idx * 3 + 1] = 0;
+            gpu_frame_buffer[idx * 3 + 2] = 0;
+        }
 
         glfwInit();
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -33,13 +52,13 @@ class GLObject {
         const GLFWvidmode *gflw_vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
         const auto monitor_resolution = Point2i(gflw_vid_mode->width, gflw_vid_mode->height);
 
-        auto window_dimension = image_resolution;
+        window_dimension = _image_resolution;
 
-        auto scale_numerator = 40;
-        auto scale_denominator = 40;
+        auto scale_numerator = 20;
+        auto scale_denominator = 20;
         while (true) {
             // compute the maximal window size that can fit into the user screen
-            window_dimension = image_resolution * scale_numerator / scale_denominator;
+            window_dimension = _image_resolution * scale_numerator / scale_denominator;
 
             const auto window_ratio = 0.9;
             if (window_dimension.x <= monitor_resolution.x * window_ratio &&
@@ -95,10 +114,9 @@ class GLObject {
         return stream.str() + "%";
     }
 
-    void draw_frame(const uint8_t *frame_buffer, const std::string &title,
-                    const Point2i &image_resolution) {
+    void draw_frame(const std::string &title) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_resolution.x, image_resolution.y, 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, frame_buffer);
+                     GL_UNSIGNED_BYTE, this->gpu_frame_buffer);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, texture);
 

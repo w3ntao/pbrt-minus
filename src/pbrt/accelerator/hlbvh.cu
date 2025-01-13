@@ -1,12 +1,12 @@
+#include <chrono>
 #include <pbrt/accelerator/hlbvh.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/util/stack.h>
 #include <pbrt/util/thread_pool.h>
-#include <chrono>
 
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
-const uint BIT_LENGTH_OF_TREELET_MASK = 21;
-const uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_OF_TREELET_MASK;
+constexpr uint BIT_LENGTH_OF_TREELET_MASK = 21;
+constexpr uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_OF_TREELET_MASK;
 
 constexpr uint MAX_TREELET_NUM = 1 << BIT_LENGTH_OF_TREELET_MASK;
 /*
@@ -576,13 +576,12 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         // TODO: this part can be optimized to prevent allocating memory every loop
 
         {
-            uint blocks = divide_and_ceil(uint(end - start), threads);
+            uint blocks = divide_and_ceil(array_length, threads);
             init_bvh_args<<<blocks, threads>>>(bvh_args_array, build_nodes, shared_offset, start,
                                                end);
+            CHECK_CUDA_ERROR(cudaGetLastError());
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
-
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         if (DEBUG_MODE) {
             printf("HLBVH: building bottom BVH: depth %u, node number: %u\n", depth, array_length);

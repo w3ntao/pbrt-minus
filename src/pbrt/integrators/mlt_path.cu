@@ -1,16 +1,16 @@
+#include <numeric>
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/films/grey_scale_film.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
-#include <pbrt/gui/gl_object.h>
+#include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/mlt_path.h>
 #include <pbrt/samplers/mlt.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
-#include <numeric>
 
 constexpr size_t NUM_MLT_SAMPLERS = 64 * 1024;
 // large number of samplers: large number of shallow markov chains
@@ -231,12 +231,9 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
 
     auto mlt_samples = local_allocator.allocate<MLTSample>(2 * NUM_MLT_SAMPLERS);
 
-    uint8_t *gpu_frame_buffer = nullptr;
-    GLObject gl_object;
+    GLHelper gl_helper;
     if (preview) {
-        gl_object.init("initializing", image_resolution);
-        gpu_frame_buffer =
-            local_allocator.allocate<uint8_t>(3 * image_resolution.x * image_resolution.y);
+        gl_helper.init("initializing", image_resolution);
     }
 
     auto rngs = local_allocator.allocate<RNG>(NUM_MLT_SAMPLERS);
@@ -278,11 +275,9 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
         }
 
         if (preview) {
-            film->copy_to_frame_buffer(gpu_frame_buffer, brightness / mutations_per_pixel);
-
-            gl_object.draw_frame(gpu_frame_buffer,
-                                 GLObject::assemble_title(FloatType(pass + 1) / total_pass),
-                                 image_resolution);
+            film->copy_to_frame_buffer(gl_helper.gpu_frame_buffer,
+                                       brightness / mutations_per_pixel);
+            gl_helper.draw_frame(GLHelper::assemble_title(FloatType(pass + 1) / total_pass));
         }
     }
 

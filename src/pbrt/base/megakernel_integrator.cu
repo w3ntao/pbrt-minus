@@ -4,7 +4,7 @@
 #include <pbrt/base/megakernel_integrator.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
-#include <pbrt/gui/gl_object.h>
+#include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/ambient_occlusion.h>
 #include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/surface_normal.h>
@@ -163,39 +163,27 @@ void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
 
     auto samplers = Sampler::create_samplers_for_each_pixels(sampler_type, samples_per_pixel,
                                                              num_pixels, local_allocator);
-
     constexpr uint thread_width = 16;
     constexpr uint thread_height = 16;
 
-    GLObject gl_object;
-    uint8_t *gpu_frame_buffer = nullptr;
+    GLHelper gl_helper;
     int *counter = nullptr;
     if (preview) {
-        gl_object.init("initializing", film_resolution);
+        gl_helper.init("initializing", film_resolution);
 
         counter = local_allocator.allocate<int>();
-        gpu_frame_buffer = local_allocator.allocate<uint8_t>(3 * num_pixels);
-
         *counter = 0;
-
-        for (uint idx = 0; idx < num_pixels; ++idx) {
-            gpu_frame_buffer[idx * 3 + 0] = 0;
-            gpu_frame_buffer[idx * 3 + 1] = 0;
-            gpu_frame_buffer[idx * 3 + 2] = 0;
-        }
     }
 
     dim3 blocks(divide_and_ceil(uint(film_resolution.x), thread_width),
                 divide_and_ceil(uint(film_resolution.y), thread_height), 1);
     dim3 threads(thread_width, thread_height, 1);
-    megakernel_render<<<blocks, threads>>>(film, gpu_frame_buffer, counter, samples_per_pixel,
-                                           samplers, this, integrator_base);
+    megakernel_render<<<blocks, threads>>>(film, gl_helper.gpu_frame_buffer, counter,
+                                           samples_per_pixel, samplers, this, integrator_base);
 
     if (preview) {
         while (true) {
-            gl_object.draw_frame(gpu_frame_buffer,
-                                 GLObject::assemble_title(double(*counter) / num_pixels),
-                                 film_resolution);
+            gl_helper.draw_frame(GLHelper::assemble_title(double(*counter) / num_pixels));
 
             if (*counter >= num_pixels) {
                 break;

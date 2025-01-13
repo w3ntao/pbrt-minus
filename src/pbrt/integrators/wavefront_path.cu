@@ -5,7 +5,7 @@
 #include <pbrt/base/material.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
-#include <pbrt/gui/gl_object.h>
+#include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/samplers/independent.h>
@@ -630,13 +630,9 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
 
     const auto num_pixels = image_resolution.x * image_resolution.y;
 
-    GPUMemoryAllocator local_allocator;
-
-    uint8_t *gpu_frame_buffer = nullptr;
-    GLObject gl_object;
+    GLHelper gl_helper;
     if (preview) {
-        gl_object.init("initializing", image_resolution);
-        gpu_frame_buffer = local_allocator.allocate<uint8_t>(3 * num_pixels);
+        gl_helper.init("initializing", image_resolution);
     }
 
     constexpr uint threads = 256;
@@ -682,15 +678,13 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
             if (preview) {
-                film->copy_to_frame_buffer(gpu_frame_buffer);
+                film->copy_to_frame_buffer(gl_helper.gpu_frame_buffer);
 
                 const auto current_sample_idx =
                     std::min<uint>(path_state.global_path_counter / num_pixels, samples_per_pixel);
 
-                gl_object.draw_frame(
-                    gpu_frame_buffer,
-                    GLObject::assemble_title(FloatType(current_sample_idx) / samples_per_pixel),
-                    image_resolution);
+                gl_helper.draw_frame(
+                    GLHelper::assemble_title(FloatType(current_sample_idx) / samples_per_pixel));
             }
         }
 

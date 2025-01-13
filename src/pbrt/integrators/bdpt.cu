@@ -4,7 +4,7 @@
 #include <pbrt/base/interaction.h>
 #include <pbrt/base/material.h>
 #include <pbrt/base/sampler.h>
-#include <pbrt/gui/gl_object.h>
+#include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/lights/image_infinite_light.h>
@@ -1001,14 +1001,9 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
 
     GPUMemoryAllocator local_allocator;
 
-    uint8_t *gpu_frame_buffer = nullptr;
-    // TODO: move gpu_frame_buffer into GLObject
-    GLObject gl_object;
+    GLHelper gl_helper;
     if (preview) {
-        gl_object.init("initializing", image_resolution);
-
-        gpu_frame_buffer =
-            local_allocator.allocate<uint8_t>(3 * image_resolution.x * image_resolution.y);
+        gl_helper.init("initializing", image_resolution);
     }
 
     auto bdpt_samples = local_allocator.allocate<BDPTSample>(NUM_SAMPLERS);
@@ -1056,11 +1051,8 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
         }
 
         if (preview) {
-            film->copy_to_frame_buffer(gpu_frame_buffer, 1.0 / samples_per_pixel);
-
-            gl_object.draw_frame(gpu_frame_buffer,
-                                 GLObject::assemble_title(FloatType(pass + 1) / total_pass),
-                                 image_resolution);
+            film->copy_to_frame_buffer(gl_helper.gpu_frame_buffer, 1.0 / samples_per_pixel);
+            gl_helper.draw_frame(GLHelper::assemble_title(FloatType(pass + 1) / total_pass));
         }
     }
 }
