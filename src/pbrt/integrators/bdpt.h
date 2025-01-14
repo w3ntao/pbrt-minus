@@ -15,9 +15,9 @@ struct FilmSample;
 
 class BDPTIntegrator {
   public:
-    static BDPTIntegrator *create(const ParameterDictionary &parameters,
+    static BDPTIntegrator *create(int samples_per_pixel, const std::string &sampler_type,
+                                  const ParameterDictionary &parameters,
                                   const IntegratorBase *integrator_base,
-                                  const std::string &sampler_type, int samples_per_pixel,
                                   GPUMemoryAllocator &allocator);
 
     void render(Film *film, uint samples_per_pixel, bool preview);

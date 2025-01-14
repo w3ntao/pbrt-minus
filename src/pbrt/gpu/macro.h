@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <stdint.h>
+// don't delete `stdint.h` as some compilers need it for `uint8_t`
 
 #define PBRT_CPU_GPU __host__ __device__
 #define PBRT_GPU __device__

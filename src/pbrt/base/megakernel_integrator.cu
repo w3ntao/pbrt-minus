@@ -82,8 +82,8 @@ __global__ static void megakernel_render(Film *film, uint8_t *gpu_frame_buffer, 
     gpu_frame_buffer[pixel_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
 }
 
-const MegakernelIntegrator *MegakernelIntegrator::create(const ParameterDictionary &parameters,
-                                                         const std::string &integrator_name,
+const MegakernelIntegrator *MegakernelIntegrator::create(const std::string &integrator_name,
+                                                         const ParameterDictionary &parameters,
                                                          const IntegratorBase *integrator_base,
                                                          GPUMemoryAllocator &allocator) {
     auto integrator = allocator.allocate<MegakernelIntegrator>();

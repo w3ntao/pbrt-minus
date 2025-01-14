@@ -23,8 +23,8 @@ class MegakernelIntegrator {
         surface_normal,
     };
 
-    static const MegakernelIntegrator *create(const ParameterDictionary &parameters,
-                                              const std::string &integrator_name,
+    static const MegakernelIntegrator *create(const std::string &integrator_name,
+                                              const ParameterDictionary &parameters,
                                               const IntegratorBase *integrator_base,
                                               GPUMemoryAllocator &allocator);
 

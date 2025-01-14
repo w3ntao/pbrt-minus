@@ -84,9 +84,9 @@ class WavefrontPathIntegrator {
         void init(GPUMemoryAllocator &allocator);
     };
 
-    static WavefrontPathIntegrator *create(const ParameterDictionary &parameters,
+    static WavefrontPathIntegrator *create(uint samples_per_pixel, const std::string &sampler_type,
+                                           const ParameterDictionary &parameters,
                                            const IntegratorBase *base,
-                                           const std::string &sampler_type, uint samples_per_pixel,
                                            GPUMemoryAllocator &allocator);
 
     void render(Film *film, bool preview);

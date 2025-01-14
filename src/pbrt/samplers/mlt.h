@@ -3,107 +3,103 @@
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/util/hash.h>
 #include <pbrt/util/rng.h>
-#include <cmath>
-
-constexpr FloatType global_sigma = 0.01;
-constexpr FloatType global_largeStepProbability = 0.3;
 
 struct PrimarySample {
     PBRT_CPU_GPU
-    PrimarySample() : value(0), valueBackup(0), modifyBackup(0), lastModificationIteration(0) {}
+    PrimarySample() : value(0), value_backup(0), modify_backup(0), last_modification_iteration(0) {}
 
     FloatType value = 0;
     // PrimarySample Public Methods
     PBRT_CPU_GPU
-    void Backup() {
-        valueBackup = value;
-        modifyBackup = lastModificationIteration;
+    void backup() {
+        value_backup = value;
+        modify_backup = last_modification_iteration;
     }
 
     PBRT_CPU_GPU
-    void Restore() {
-        value = valueBackup;
-        lastModificationIteration = modifyBackup;
+    void restore() {
+        value = value_backup;
+        last_modification_iteration = modify_backup;
     }
 
     // PrimarySample Public Members
-    int64_t lastModificationIteration = 0;
-    FloatType valueBackup = 0;
-    int64_t modifyBackup = 0;
+    int64_t last_modification_iteration = 0;
+    FloatType value_backup = 0;
+    int64_t modify_backup = 0;
 };
 
 class MLTSampler {
     static const size_t LENGTH = 64;
 
-  public:
     RNG rng;
 
-    PrimarySample X[LENGTH];
+    PrimarySample samples[LENGTH];
 
     // MLTSampler Private Members
-    int mutationsPerPixel;
+    int mutations_per_pixel;
     FloatType sigma;
-    FloatType largeStepProbability;
+    FloatType large_step_probability;
 
-    int streamCount;
-    int64_t currentIteration = 0;
-    bool largeStep = true;
-    int64_t lastLargeStepIteration = 0;
-    int streamIndex;
-    int sampleIndex;
+    int stream_count;
+    int64_t current_iteration;
+    bool large_step;
+    int64_t last_large_step_iteration;
+    int stream_index;
+    int sample_index;
+
+  public:
+    PBRT_CPU_GPU
+    void ensure_ready(int index);
 
     PBRT_CPU_GPU
-    void EnsureReady(int index);
+    void setup_config(const uint _mutation_per_pixel, const FloatType _sigma,
+                      const FloatType _large_step_probability, const int _stream_count) {
+        mutations_per_pixel = _mutation_per_pixel;
+        sigma = _sigma;
+        large_step_probability = _large_step_probability;
 
-    PBRT_CPU_GPU
-    void init(long rngSequenceIndex) {
-        rng.set_sequence(MixBits(rngSequenceIndex));
-
-        currentIteration = 0;
-        lastLargeStepIteration = 0;
-        largeStep = true;
-
-        mutationsPerPixel = 4;
-        sigma = global_sigma;
-        largeStepProbability = global_largeStepProbability;
-        streamCount = 1;
-        // TODO: change streamCount
+        stream_count = _stream_count;
+        // for Path: stream_count = 1
+        // for BDPT: stream_count = 3
     }
 
     PBRT_CPU_GPU
-    void StartIteration();
+    void init(const long rng_sequence_index) {
+        rng.set_sequence(MixBits(rng_sequence_index));
 
-    PBRT_CPU_GPU
-    void Accept();
-
-    PBRT_CPU_GPU
-    void Reject();
-
-    PBRT_CPU_GPU
-    void StartStream(int index);
-
-    PBRT_CPU_GPU
-    int GetNextIndex() {
-        return streamIndex + streamCount * sampleIndex++;
+        current_iteration = 0;
+        last_large_step_iteration = 0;
+        large_step = true;
     }
 
     PBRT_CPU_GPU
-    int SamplesPerPixel() const {
-        return mutationsPerPixel;
+    void start_iteration();
+
+    PBRT_CPU_GPU
+    void accept();
+
+    PBRT_CPU_GPU
+    void reject();
+
+    PBRT_CPU_GPU
+    void start_stream(int index);
+
+    PBRT_CPU_GPU
+    int get_next_index() {
+        return stream_index + stream_count * sample_index++;
     }
 
     PBRT_CPU_GPU
-    void StartPixelSample(uint pixel_idx, const int sampleIndex, const int dim) {
-        rng.set_sequence(pbrt::hash(pixel_idx));
-        rng.advance(sampleIndex * 65536 + dim * 8192);
+    int get_samples_per_pixel() const {
+        return mutations_per_pixel;
     }
 
     PBRT_CPU_GPU
-    FloatType Get1D();
+    FloatType get_1d();
 
     PBRT_CPU_GPU
-    Point2f Get2D();
+    Point2f get_2d();
 
     PBRT_CPU_GPU
-    Point2f GetPixel2D();
+    Point2f get_pixel_2d();
 };

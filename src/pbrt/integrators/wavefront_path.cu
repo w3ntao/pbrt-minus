@@ -550,10 +550,10 @@ void WavefrontPathIntegrator::Queues::init(GPUMemoryAllocator &allocator) {
     diffuse_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
 }
 
-WavefrontPathIntegrator *WavefrontPathIntegrator::create(const ParameterDictionary &parameters,
-                                                         const IntegratorBase *base,
+WavefrontPathIntegrator *WavefrontPathIntegrator::create(uint samples_per_pixel,
                                                          const std::string &sampler_type,
-                                                         uint samples_per_pixel,
+                                                         const ParameterDictionary &parameters,
+                                                         const IntegratorBase *base,
                                                          GPUMemoryAllocator &allocator) {
     auto integrator = allocator.allocate<WavefrontPathIntegrator>();
 

@@ -291,13 +291,14 @@ void SceneBuilder::build_integrator() {
     }
 
     if (integrator_name == "bdpt") {
-        bdpt_integrator = BDPTIntegrator::create(parameters, integrator_base, sampler_type,
-                                                 samples_per_pixel.value(), allocator);
+        bdpt_integrator = BDPTIntegrator::create(samples_per_pixel.value(), sampler_type,
+                                                 parameters, integrator_base, allocator);
         return;
     }
 
     if (integrator_name == "mlt" || integrator_name == "mltpath") {
-        mlt_integrator = MLTPathIntegrator::create(parameters, integrator_base, allocator);
+        mlt_integrator = MLTPathIntegrator::create(samples_per_pixel.value(), parameters,
+                                                   integrator_base, allocator);
         return;
     }
 
@@ -305,11 +306,11 @@ void SceneBuilder::build_integrator() {
 
     if (integrator_name == "path") {
         wavefront_path_integrator = WavefrontPathIntegrator::create(
-            parameters, integrator_base, sampler_type, samples_per_pixel.value(), allocator);
+            samples_per_pixel.value(), sampler_type, parameters, integrator_base, allocator);
         return;
     }
 
-    megakernel_integrator = MegakernelIntegrator::create(parameters, integrator_name.value(),
+    megakernel_integrator = MegakernelIntegrator::create(integrator_name.value(), parameters,
                                                          integrator_base, allocator);
 }
 

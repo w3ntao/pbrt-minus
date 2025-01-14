@@ -4,7 +4,6 @@
 #include <pbrt/util/hash.h>
 #include <pbrt/util/permutation.h>
 #include <pbrt/util/rng.h>
-#include <vector>
 
 class StratifiedSampler {
   public:

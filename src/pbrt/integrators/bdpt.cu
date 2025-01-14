@@ -910,9 +910,9 @@ SampledSpectrum connect_bdpt(const IntegratorBase *integrator_base, SampledWavel
     return L;
 }
 
-BDPTIntegrator *BDPTIntegrator::create(const ParameterDictionary &parameters,
+BDPTIntegrator *BDPTIntegrator::create(int samples_per_pixel, const std::string &sampler_type,
+                                       const ParameterDictionary &parameters,
                                        const IntegratorBase *integrator_base,
-                                       const std::string &sampler_type, const int samples_per_pixel,
                                        GPUMemoryAllocator &allocator) {
     auto bdpt_integrator = allocator.allocate<BDPTIntegrator>();
     auto samplers = allocator.allocate<Sampler>(NUM_SAMPLERS);

@@ -1,5 +1,4 @@
 #include <pbrt/scene/scene_builder.h>
-#include <iostream>
 
 using namespace std;
 

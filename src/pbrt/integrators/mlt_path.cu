@@ -30,6 +30,7 @@ struct MLTSample {
 };
 
 __global__ void build_bootstrap_samples(const uint num_paths_per_worker, double *luminance_per_path,
+
                                         const MLTPathIntegrator *mlt_integrator) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_SAMPLERS) {
@@ -43,7 +44,7 @@ __global__ void build_bootstrap_samples(const uint num_paths_per_worker, double 
         const auto path_idx = worker_idx * num_paths_per_worker + idx;
 
         mlt_sampler->init(path_idx);
-        mlt_sampler->StartStream(0);
+        mlt_sampler->start_stream(0);
 
         const auto path_sample = mlt_integrator->generate_path_sample(sampler);
 
@@ -70,15 +71,14 @@ __global__ void select_initial_state(PathSample *path_samples,
     auto mlt_sampler = &mlt_integrator->mlt_samplers[worker_idx];
 
     mlt_sampler->init(worker_idx);
+    mlt_sampler->start_iteration();
+    mlt_sampler->start_stream(0);
 
-    mlt_sampler->StartIteration();
-
-    mlt_sampler->StartStream(0);
     path_samples[worker_idx] = mlt_integrator->generate_path_sample(sampler);
 }
 
 __global__ void wavefront_render(MLTSample *mlt_samples, uint num_mutations,
-                                 PathSample *path_samples, MLTPathIntegrator *mlt_integrator,
+                                 PathSample *path_samples, const MLTPathIntegrator *mlt_integrator,
                                  RNG *rngs) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_mutations) {
@@ -89,8 +89,8 @@ __global__ void wavefront_render(MLTSample *mlt_samples, uint num_mutations,
     auto mlt_sampler = &mlt_integrator->mlt_samplers[worker_idx];
     auto rng = &rngs[worker_idx];
 
-    mlt_sampler->StartIteration();
-    mlt_sampler->StartStream(0);
+    mlt_sampler->start_iteration();
+    mlt_sampler->start_stream(0);
 
     const auto proposed_path = mlt_integrator->generate_path_sample(sampler);
     const auto current_path = &path_samples[worker_idx];
@@ -136,25 +136,29 @@ __global__ void wavefront_render(MLTSample *mlt_samples, uint num_mutations,
 
     if (rng->uniform<FloatType>() < accept_prob) {
         *current_path = proposed_path;
-        mlt_sampler->Accept();
+        mlt_sampler->accept();
 
     } else {
-        mlt_sampler->Reject();
+        mlt_sampler->reject();
     }
 }
 
-MLTPathIntegrator *MLTPathIntegrator::create(const ParameterDictionary &parameters,
+MLTPathIntegrator *MLTPathIntegrator::create(const int mutations_per_pixel,
+                                             const ParameterDictionary &parameters,
                                              const IntegratorBase *base,
                                              GPUMemoryAllocator &allocator) {
     auto integrator = allocator.allocate<MLTPathIntegrator>();
 
     integrator->base = base;
-
     integrator->mlt_samplers = allocator.allocate<MLTSampler>(NUM_MLT_SAMPLERS);
-
     integrator->samplers = allocator.allocate<Sampler>(NUM_MLT_SAMPLERS);
 
+    const auto large_step_probability = parameters.get_float("largestepprobability", 0.3);
+    const auto sigma = parameters.get_float("sigma", 0.01);
+
     for (uint idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
+        integrator->mlt_samplers[idx].setup_config(mutations_per_pixel, sigma,
+                                                   large_step_probability, 1);
         integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
     }
 

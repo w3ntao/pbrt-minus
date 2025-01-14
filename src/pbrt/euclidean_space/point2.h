@@ -2,16 +2,15 @@
 
 #include <pbrt/euclidean_space/vector2.h>
 #include <pbrt/gpu/macro.h>
-#include <iostream>
 
 template <typename T>
 class Point2 {
   public:
     T x, y;
 
-    PBRT_CPU_GPU Point2(){};
+    PBRT_CPU_GPU Point2() {};
 
-    PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y){};
+    PBRT_CPU_GPU Point2(T _x, T _y) : x(_x), y(_y) {};
 
     PBRT_CPU_GPU
     explicit Point2(const Vector2<T> v) : x(v.x), y(v.y) {}

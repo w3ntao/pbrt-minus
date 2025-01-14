@@ -26,7 +26,7 @@ static __global__ void init_stratified_samplers(StratifiedSampler *samplers,
 
 template <typename T>
 static __global__ void init_samplers(Sampler *samplers, T *_samplers, uint length) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    const uint idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= length) {
         return;
     }
@@ -38,8 +38,8 @@ Sampler *Sampler::create_samplers_for_each_pixels(const std::string &sampler_typ
                                                   const uint samples_per_pixel,
                                                   const uint total_pixel_num,
                                                   GPUMemoryAllocator &allocator) {
-    uint threads = 1024;
-    uint blocks = divide_and_ceil(total_pixel_num, threads);
+    constexpr uint threads = 1024;
+    const uint blocks = divide_and_ceil(total_pixel_num, threads);
 
     auto samplers = allocator.allocate<Sampler>(total_pixel_num);
 
@@ -112,8 +112,8 @@ void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension
     }
 
     case Type::mlt: {
-        static_cast<MLTSampler *>(ptr)->StartPixelSample(pixel_idx, sample_idx, dimension);
-
+        printf("\nERROR: you should never invoke %s() for MLT sampler\n", __func__);
+        REPORT_FATAL_ERROR();
         return;
     }
 
@@ -130,16 +130,15 @@ PBRT_CPU_GPU
 uint Sampler::get_samples_per_pixel() const {
     switch (type) {
     case Type::independent: {
-        return static_cast<IndependentSampler *>(ptr)->get_samples_per_pixel();
+        return static_cast<const IndependentSampler *>(ptr)->get_samples_per_pixel();
     }
 
     case Type::mlt: {
-        // TODO: implement get_samples_per_pixel() for MLTSampler?
-        return 4;
+        return static_cast<const MLTSampler *>(ptr)->get_samples_per_pixel();
     }
 
     case Type::stratified: {
-        return static_cast<StratifiedSampler *>(ptr)->get_samples_per_pixel();
+        return static_cast<const StratifiedSampler *>(ptr)->get_samples_per_pixel();
     }
     }
 
@@ -155,7 +154,7 @@ FloatType Sampler::get_1d() {
     }
 
     case Type::mlt: {
-        return static_cast<MLTSampler *>(ptr)->Get1D();
+        return static_cast<MLTSampler *>(ptr)->get_1d();
     }
 
     case Type::stratified: {
@@ -175,7 +174,7 @@ Point2f Sampler::get_2d() {
     }
 
     case Type::mlt: {
-        return static_cast<MLTSampler *>(ptr)->Get2D();
+        return static_cast<MLTSampler *>(ptr)->get_2d();
     }
 
     case Type::stratified: {
@@ -195,7 +194,7 @@ Point2f Sampler::get_pixel_2d() {
     }
 
     case Type::mlt: {
-        return static_cast<MLTSampler *>(ptr)->GetPixel2D();
+        return static_cast<MLTSampler *>(ptr)->get_pixel_2d();
     }
 
     case Type::stratified: {
