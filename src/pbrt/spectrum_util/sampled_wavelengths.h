@@ -2,7 +2,7 @@
 
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/spectrum_util/spectrum_constants_cie.h>
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 #include <pbrt/util/sampling.h>
 
 class SampledWavelengths {

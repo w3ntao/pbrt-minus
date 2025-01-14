@@ -1,7 +1,7 @@
 #pragma once
 
 #include <pbrt/euclidean_space/vector3.h>
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 #include <pbrt/gpu/macro.h>
 
 class Normal3f {

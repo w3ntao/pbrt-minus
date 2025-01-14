@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 #include <pbrt/util/bit_arithmetic.h>
 #include <pbrt/util/util.h>
 #include <algorithm>

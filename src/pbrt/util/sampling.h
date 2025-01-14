@@ -5,7 +5,7 @@
 #include <pbrt/euclidean_space/point3.h>
 #include <pbrt/euclidean_space/vector3.h>
 #include <pbrt/spectrum_util/spectrum_constants_cie.h>
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 #include <cuda/std/tuple>
 
 PBRT_CPU_GPU

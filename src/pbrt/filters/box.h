@@ -2,7 +2,7 @@
 
 #include <pbrt/base/filter.h>
 #include <pbrt/euclidean_space/point2.h>
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 
 class GPUMemoryAllocator;
 

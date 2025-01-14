@@ -13,7 +13,7 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/spectrum_util/sampled_wavelengths.h>
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 
 constexpr uint PATH_POOL_SIZE = 2 * 1024 * 1024;
 

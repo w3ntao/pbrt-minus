@@ -1,6 +1,6 @@
 #include <pbrt/filters/gaussian.h>
 #include <pbrt/scene/parameter_dictionary.h>
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 
 #include <pbrt/gpu/gpu_memory_allocator.h>
 

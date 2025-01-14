@@ -3,7 +3,7 @@
 #include <pbrt/films/grey_scale_film.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <pbrt/spectrum_util/rgb.h>
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 #include <algorithm>
 
 const auto black = RGB(0, 0, 0);

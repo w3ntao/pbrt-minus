@@ -2,7 +2,7 @@
 
 #include <pbrt/base/ray.h>
 #include <pbrt/euclidean_space/point3.h>
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 
 template <typename T>
 class Bounds3 {

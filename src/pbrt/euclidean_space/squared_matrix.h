@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 #include <pbrt/util/compensated_float.h>
 #include <iomanip>
 

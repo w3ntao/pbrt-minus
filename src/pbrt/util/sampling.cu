@@ -1,6 +1,6 @@
 #include <pbrt/base/media.h>
 #include <pbrt/euclidean_space/frame.h>
-#include <pbrt/util/basic_math.h>
+#include <pbrt/util/math.h>
 #include <pbrt/util/sampling.h>
 #include <pbrt/util/util.h>
 

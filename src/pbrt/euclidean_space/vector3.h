@@ -1,14 +1,14 @@
 #pragma once
 
-#include <pbrt/util/basic_math.h>
-#include <pbrt/util/interval.h>
+#include <pbrt/euclidean_space/interval.h>
+#include <pbrt/util/math.h>
 
 template <typename T>
 class Vector3 {
   public:
     T x, y, z;
 
-    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN){};
+    PBRT_CPU_GPU Vector3() : x(NAN), y(NAN), z(NAN) {};
 
     PBRT_CPU_GPU Vector3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {}
 
