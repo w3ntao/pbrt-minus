@@ -1,14 +1,18 @@
 #include <ext/lodepng/lodepng.h>
+#include <filesystem>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <pbrt/spectrum_util/rgb.h>
 #include <pbrt/textures/gpu_image.h>
-#include <filesystem>
 
 // clang-format off
+#define STB_IMAGE_IMPLEMENTATION
+#include <ext/stb/stb_image.h>
+#undef STB_IMAGE_IMPLEMENTATION
+
 #define TINYEXR_IMPLEMENTATION
 #include <ext/tinyexr/tinyexr.h>
-
-#include <pbrt/gpu/gpu_memory_allocator.h>
+#undef TINYEXR_IMPLEMENTATION
 // clang-format on
 
 PBRT_CPU_GPU
@@ -67,20 +71,58 @@ Point2i remap_pixel_coord(const Point2i p, const Point2i resolution, WrapMode2D 
 const GPUImage *GPUImage::create_from_file(const std::string &filename,
                                            GPUMemoryAllocator &allocator) {
     auto image = allocator.allocate<GPUImage>();
+    image->pixels = nullptr;
+    image->resolution = Point2i(0, 0);
 
-    auto path = std::filesystem::path(filename);
-    if (path.extension() == ".png") {
-        image->init_png(filename, allocator);
-        return image;
-    }
+    const auto file_extension = std::filesystem::path(filename).extension();
 
-    if (path.extension() == ".exr") {
+    if (file_extension == ".exr") {
         image->init_exr(filename, allocator);
-        return image;
+
+    } else if (file_extension == ".png") {
+        image->init_png(filename, allocator);
+
+    } else if (file_extension == ".tga") {
+        image->init_tga(filename, allocator);
+
+    } else {
+        printf("\nERROR: image extension `%s` not implemented\n", file_extension.c_str());
+        REPORT_FATAL_ERROR();
     }
 
-    REPORT_FATAL_ERROR();
-    return nullptr;
+    if (image->pixels == nullptr || image->resolution == Point2i(0, 0)) {
+        REPORT_FATAL_ERROR();
+    }
+
+    return image;
+}
+
+void GPUImage::init_exr(const std::string &filename, GPUMemoryAllocator &allocator) {
+    float *out; // width * height * RGBA
+    int width;
+    int height;
+    const char *err = nullptr; // or nullptr in C++11
+    if (LoadEXR(&out, &width, &height, filename.c_str(), &err) != TINYEXR_SUCCESS) {
+        if (err) {
+            fprintf(stderr, "ERR : %s\n", err);
+            FreeEXRErrorMessage(err); // release memory of error message.
+        }
+        exit(1);
+    }
+
+    auto gpu_pixels = allocator.allocate<RGB>(width * height);
+
+    for (uint idx = 0; idx < width * height; ++idx) {
+        auto r = out[idx * 4 + 0];
+        auto g = out[idx * 4 + 1];
+        auto b = out[idx * 4 + 2];
+        // auto alpha = out[idx * 4 + 3];
+
+        gpu_pixels[idx] = RGB(r, g, b);
+    }
+
+    resolution = Point2i(width, height);
+    pixels = gpu_pixels;
 }
 
 void GPUImage::init_png(const std::string &filename, GPUMemoryAllocator &allocator) {
@@ -96,57 +138,59 @@ void GPUImage::init_png(const std::string &filename, GPUMemoryAllocator &allocat
     // the pixels are now in the vector "image", 4 bytes per pixel, ordered RGBARGBA..., use it as
     // texture,
 
-    resolution = Point2i(width, height);
-
     auto gpu_pixels = allocator.allocate<RGB>(width * height);
 
     SRGBColorEncoding encoding;
     for (uint x = 0; x < width; ++x) {
         for (uint y = 0; y < height; ++y) {
-            uint index = y * width + x;
+            uint idx = y * width + x;
 
-            // clang-format off
-            auto red   = rgba_pixels[index * 4 + 0];
-            auto green = rgba_pixels[index * 4 + 1];
-            auto blue  = rgba_pixels[index * 4 + 2];
-            // clang-format on
+            const auto r = rgba_pixels[idx * 4 + 0];
+            const auto g = rgba_pixels[idx * 4 + 1];
+            const auto b = rgba_pixels[idx * 4 + 2];
 
-            gpu_pixels[index] =
-                RGB(encoding.to_linear(red), encoding.to_linear(green), encoding.to_linear(blue));
+            gpu_pixels[idx] =
+                RGB(encoding.to_linear(r), encoding.to_linear(g), encoding.to_linear(b));
         }
     }
 
+    resolution = Point2i(width, height);
     pixels = gpu_pixels;
-    pixel_format = PixelFormat::U256;
 }
 
-void GPUImage::init_exr(const std::string &filename, GPUMemoryAllocator &allocator) {
-    float *out; // width * height * RGBA
-    int width;
-    int height;
-    const char *err = nullptr; // or nullptr in C++11
-    if (LoadEXR(&out, &width, &height, filename.c_str(), &err) != TINYEXR_SUCCESS) {
-        if (err) {
-            fprintf(stderr, "ERR : %s\n", err);
-            FreeEXRErrorMessage(err); // release memory of error message.
-        }
-        exit(1);
+void GPUImage::init_tga(const std::string &filename, GPUMemoryAllocator &allocator) {
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    unsigned char *img = stbi_load(filename.c_str(), &width, &height, &channels, 0);
+    if (img == NULL) {
+        printf("\ncouldn't read image `%s`\n", filename.c_str());
+        REPORT_FATAL_ERROR();
     }
-    resolution = Point2i(width, height);
+
+    if (width * height * channels == 0) {
+        REPORT_FATAL_ERROR();
+    }
+    if (channels != 3 && channels != 4) {
+        REPORT_FATAL_ERROR();
+    }
+
+    SRGBColorEncoding encoding;
 
     auto gpu_pixels = allocator.allocate<RGB>(width * height);
 
     for (uint idx = 0; idx < width * height; ++idx) {
-        auto r = out[idx * 4 + 0];
-        auto g = out[idx * 4 + 1];
-        auto b = out[idx * 4 + 2];
-        // auto alpha = out[idx * 4 + 3];
+        const auto r = img[idx * channels + 0];
+        const auto g = img[idx * channels + 1];
+        const auto b = img[idx * channels + 2];
 
-        gpu_pixels[idx] = RGB(r, g, b);
+        gpu_pixels[idx] = RGB(encoding.to_linear(r), encoding.to_linear(g), encoding.to_linear(b));
     }
 
+    stbi_image_free(img);
+
+    resolution = Point2i(width, height);
     pixels = gpu_pixels;
-    pixel_format = PixelFormat::U256;
 }
 
 PBRT_CPU_GPU

@@ -1,29 +1,34 @@
 [submodule "src/ext/lodepng"]
-path = src/ext/lodepng
-url = https://github.com/w3ntao/lodepng.git
-branch = master
+    path = src/ext/lodepng
+    url = https://github.com/w3ntao/lodepng.git
+    branch = master
 
 [submodule "src/ext/rply"]
-path = src/ext/rply
-url = https://github.com/w3ntao/rply.git
-branch = main
+    path = src/ext/rply
+    url = https://github.com/w3ntao/rply.git
+    branch = main
 
 [submodule "src/ext/zlib"]
-path = src/ext/zlib
-url = https://github.com/w3ntao/zlib.git
-branch = master
+    path = src/ext/zlib
+    url = https://github.com/w3ntao/zlib.git
+    branch = master
 
 [submodule "src/ext/tinyexr"]
-path = src/ext/tinyexr
-url = https://github.com/w3ntao/tinyexr.git
-branch = release
+    path = src/ext/tinyexr
+    url = https://github.com/w3ntao/tinyexr.git
+    branch = release
 
 [submodule "src/ext/glfw"]
-path = src/ext/glfw
-url = https://github.com/w3ntao/glfw.git
-branch = main
+    path = src/ext/glfw
+    url = https://github.com/w3ntao/glfw.git
+    branch = main
 
 [submodule "src/ext/glad-3.3-core"]
-path = src/ext/glad-3.3-core
-url = https://github.com/w3ntao/glad-3.3-core.git
-branch = main
+    path = src/ext/glad-3.3-core
+    url = https://github.com/w3ntao/glad-3.3-core.git
+    branch = main
+
+[submodule "src/ext/stb"]
+    path = src/ext/stb
+    url = git@github.com:w3ntao/stb.git
+    branch = master

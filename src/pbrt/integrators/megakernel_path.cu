@@ -17,7 +17,6 @@ MegakernelPathIntegrator::create(const ParameterDictionary &parameters,
     auto path_integrator = allocator.allocate<MegakernelPathIntegrator>();
 
     auto max_depth = parameters.get_integer("maxdepth", 5);
-
     auto regularize = parameters.get_bool("regularize", false);
 
     path_integrator->init(integrator_base, max_depth, regularize);

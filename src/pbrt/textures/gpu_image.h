@@ -88,12 +88,13 @@ class GPUImage {
     PBRT_CPU_GPU RGB bilerp(Point2f p, WrapMode2D wrap) const;
 
   private:
-    PixelFormat pixel_format;
     Point2i resolution;
 
     const RGB *pixels;
 
+    void init_exr(const std::string &filename, GPUMemoryAllocator &allocator);
+
     void init_png(const std::string &filename, GPUMemoryAllocator &allocator);
 
-    void init_exr(const std::string &filename, GPUMemoryAllocator &allocator);
+    void init_tga(const std::string &filename, GPUMemoryAllocator &allocator);
 };

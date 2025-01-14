@@ -29,7 +29,7 @@ struct PrimarySample {
 };
 
 class MLTSampler {
-    static const size_t LENGTH = 64;
+    static constexpr size_t LENGTH = 256;
 
     RNG rng;
 

@@ -14,7 +14,6 @@ class GLHelper {
 
     bool initialized = false;
 
-    Point2i window_dimension;
     Point2i image_resolution;
 
     GPUMemoryAllocator allocator;
@@ -52,7 +51,7 @@ class GLHelper {
         const GLFWvidmode *gflw_vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
         const auto monitor_resolution = Point2i(gflw_vid_mode->width, gflw_vid_mode->height);
 
-        window_dimension = _image_resolution;
+        auto window_dimension = _image_resolution;
 
         auto scale_numerator = 20;
         auto scale_denominator = 20;

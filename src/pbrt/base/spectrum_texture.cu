@@ -79,13 +79,13 @@ SampledSpectrum SpectrumTexture::evaluate(const TextureEvalContext &ctx,
                                           const SampledWavelengths &lambda) const {
     switch (type) {
     case Type::constant: {
-        return ((SpectrumConstantTexture *)ptr)->evaluate(ctx, lambda);
+        return static_cast<const SpectrumConstantTexture *>(ptr)->evaluate(ctx, lambda);
     }
     case Type::image: {
-        return ((SpectrumImageTexture *)ptr)->evaluate(ctx, lambda);
+        return static_cast<const SpectrumImageTexture *>(ptr)->evaluate(ctx, lambda);
     }
     case Type::scaled: {
-        return ((SpectrumScaledTexture *)ptr)->evaluate(ctx, lambda);
+        return static_cast<const SpectrumScaledTexture *>(ptr)->evaluate(ctx, lambda);
     }
     }
 
