@@ -159,7 +159,7 @@ class Light {
                                             SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    pbrt::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
+    pbrt::optional<LightLeSample> sample_le(Point2f u1, Point2f u2,
                                             SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU

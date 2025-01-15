@@ -105,7 +105,13 @@ class Shape {
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max = Infinity) const;
 
     PBRT_CPU_GPU
+    pbrt::optional<ShapeSample> sample(Point2f u) const;
+
+    PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
+
+    PBRT_CPU_GPU
+    FloatType pdf(const Interaction &in) const;
 
     PBRT_CPU_GPU
     FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;

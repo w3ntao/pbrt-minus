@@ -1,5 +1,6 @@
 #include <pbrt/base/light.h>
 #include <pbrt/base/shape.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/lights/diffuse_area_light.h>
 #include <pbrt/lights/distant_light.h>
 #include <pbrt/lights/image_infinite_light.h>
@@ -7,8 +8,6 @@
 #include <pbrt/lights/uniform_infinite_light.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
-
-#include <pbrt/gpu/gpu_memory_allocator.h>
 
 template <typename TypeOfLight>
 static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, uint num) {
@@ -201,9 +200,13 @@ pbrt::optional<LightLiSample> Light::sample_li(const LightSampleContext &ctx, co
 }
 
 PBRT_CPU_GPU
-pbrt::optional<LightLeSample> Light::sample_le(const Point2f u1, const Point2f u2,
+pbrt::optional<LightLeSample> Light::sample_le(Point2f u1, Point2f u2,
                                                SampledWavelengths &lambda) const {
     switch (type) {
+    case Type::diffuse_area_light: {
+        return static_cast<const DiffuseAreaLight *>(ptr)->sample_le(u1, u2, lambda);
+    }
+
     case Type::spot_light: {
         return static_cast<const SpotLight *>(ptr)->sample_le(u1, u2, lambda);
     }
@@ -246,13 +249,11 @@ FloatType Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
 PBRT_CPU_GPU
 void Light::pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos,
                    FloatType *pdfDir) const {
-    switch (type) {
-    case Type::spot_light: {
-        printf("ERROR: you shouldn't call %s() from non-area lights\n", __func__);
-        REPORT_FATAL_ERROR();
-    }
+    if (type == Type::diffuse_area_light) {
+        return static_cast<const DiffuseAreaLight *>(ptr)->pdf_le(intr, w, pdfPos, pdfDir);
     }
 
+    printf("ERROR: you shouldn't call %s() from non-area lights\n", __func__);
     REPORT_FATAL_ERROR();
 }
 
@@ -260,8 +261,7 @@ PBRT_CPU_GPU
 void Light::pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const {
     switch (type) {
     case Type::spot_light: {
-        static_cast<const SpotLight *>(ptr)->pdf_le(ray, pdfPos, pdfDir);
-        return;
+        return static_cast<const SpotLight *>(ptr)->pdf_le(ray, pdfPos, pdfDir);
     }
     }
 

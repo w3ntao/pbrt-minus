@@ -60,6 +60,9 @@ class Triangle {
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_CPU_GPU
+    FloatType pdf(const Interaction &in) const;
+
+    PBRT_CPU_GPU
     FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
     PBRT_CPU_GPU

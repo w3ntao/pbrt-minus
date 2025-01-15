@@ -2,8 +2,8 @@
 
 PBRT_CPU_GPU
 pbrt::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
-                                                        TransportMode mode,
-                                                        BxDFReflTransFlags sample_flags) const {
+                                                   TransportMode mode,
+                                                   BxDFReflTransFlags sample_flags) const {
     if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
         return {};
     }
@@ -51,11 +51,11 @@ pbrt::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType uc, Po
 PBRT_CPU_GPU
 SampledSpectrum ConductorBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     if (!wo.same_hemisphere(wi)) {
-        return {};
+        return SampledSpectrum(0);
     }
 
     if (mf_distrib.effectively_smooth()) {
-        return {};
+        return SampledSpectrum(0);
     }
 
     // Evaluate rough conductor BRDF
@@ -64,12 +64,12 @@ SampledSpectrum ConductorBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) c
     FloatType cosTheta_i = wi.abs_cos_theta();
 
     if (cosTheta_i == 0 || cosTheta_o == 0) {
-        return {};
+        return SampledSpectrum(0);
     }
 
     Vector3f wm = wi + wo;
     if (wm.squared_length() == 0) {
-        return {};
+        return SampledSpectrum(0);
     }
 
     wm = wm.normalize();

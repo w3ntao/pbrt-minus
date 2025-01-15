@@ -27,6 +27,13 @@ class DiffuseAreaLight : public LightBase {
                      bool allow_incomplete_pdf) const;
 
     PBRT_CPU_GPU
+    pbrt::optional<LightLeSample> sample_le(Point2f u1, Point2f u2,
+                                            SampledWavelengths &lambda) const;
+
+    PBRT_CPU_GPU
+    void pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos, FloatType *pdfDir) const;
+
+    PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
   private:

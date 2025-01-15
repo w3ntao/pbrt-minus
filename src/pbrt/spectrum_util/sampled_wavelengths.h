@@ -2,24 +2,37 @@
 
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/spectrum_util/spectrum_constants_cie.h>
-#include <pbrt/util/math.h>
 #include <pbrt/util/sampling.h>
 
 class SampledWavelengths {
   public:
-    PBRT_CPU_GPU SampledWavelengths() {
+    PBRT_CPU_GPU
+    SampledWavelengths() {
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             lambda[i] = 0.0;
             pdf[i] = 0.0;
         }
     }
 
-    PBRT_CPU_GPU SampledWavelengths(const FloatType _lambda[NSpectrumSamples],
-                                    const FloatType _pdf[NSpectrumSamples]) {
+    PBRT_CPU_GPU
+    SampledWavelengths(const FloatType _lambda[NSpectrumSamples],
+                       const FloatType _pdf[NSpectrumSamples]) {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             lambda[idx] = _lambda[idx];
             pdf[idx] = _pdf[idx];
         }
+    }
+
+    PBRT_CPU_GPU
+    bool has_nan() const {
+        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+            if (std::isnan(lambda[idx]) || std::isinf(lambda[idx]) || std::isnan(pdf[idx]) ||
+                std::isinf(pdf[idx])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     PBRT_CPU_GPU
@@ -104,7 +117,8 @@ class SampledWavelengths {
         return true;
     }
 
-    PBRT_CPU_GPU void print() const {
+    PBRT_CPU_GPU
+    void print() const {
         printf("lambda: [");
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             printf("%f, ", lambda[i]);

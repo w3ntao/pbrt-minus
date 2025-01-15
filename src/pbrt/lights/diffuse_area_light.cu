@@ -77,6 +77,58 @@ FloatType DiffuseAreaLight::pdf_li(const LightSampleContext &ctx, const Vector3f
 }
 
 PBRT_CPU_GPU
+pbrt::optional<LightLeSample> DiffuseAreaLight::sample_le(Point2f u1, Point2f u2,
+                                                          SampledWavelengths &lambda) const {
+    // Sample a point on the area light's _Shape_
+    auto ss = shape->sample(u1);
+    if (!ss) {
+        return {};
+    }
+
+    // Sample a cosine-weighted outgoing direction _w_ for area light
+    Vector3f w;
+    FloatType pdfDir;
+
+    if (this->two_sided) {
+        // Choose side of surface and sample cosine-weighted outgoing direction
+        if (u2[0] < 0.5f) {
+            u2[0] = std::min(u2[0] * 2, OneMinusEpsilon);
+            w = sample_cosine_hemisphere(u2);
+        } else {
+            u2[0] = std::min((u2[0] - 0.5f) * 2, OneMinusEpsilon);
+            w = sample_cosine_hemisphere(u2);
+            w.z *= -1;
+        }
+        pdfDir = cosine_hemisphere_pdf(std::abs(w.z)) / 2;
+
+    } else {
+        w = sample_cosine_hemisphere(u2);
+        pdfDir = cosine_hemisphere_pdf(w.z);
+    }
+
+    if (pdfDir == 0) {
+        return {};
+    }
+
+    // Return _LightLeSample_ for ray leaving area light
+    const Interaction &intr = ss->interaction;
+
+    Frame nFrame = Frame::from_z(intr.n.to_vector3());
+    w = nFrame.from_local(w);
+    SampledSpectrum Le = this->l(intr.p(), intr.n, intr.uv, w, lambda);
+
+    return LightLeSample(Le, intr.spawn_ray(w), intr, ss->pdf, pdfDir);
+}
+
+PBRT_CPU_GPU
+void DiffuseAreaLight::pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos,
+                              FloatType *pdfDir) const {
+    *pdfPos = shape->pdf(intr);
+    *pdfDir = this->two_sided ? (cosine_hemisphere_pdf(intr.n.abs_dot(w)) / 2)
+                              : cosine_hemisphere_pdf(intr.n.dot(w));
+}
+
+PBRT_CPU_GPU
 SampledSpectrum DiffuseAreaLight::phi(const SampledWavelengths &lambda) const {
     // TODO: image in DiffuseAreaLight is not implemented
 

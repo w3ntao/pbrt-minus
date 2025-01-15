@@ -179,6 +179,26 @@ pbrt::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_m
 }
 
 PBRT_CPU_GPU
+pbrt::optional<ShapeSample> Shape::sample(Point2f u) const {
+    switch (type) {
+    case Type::disk: {
+        return static_cast<const Disk *>(ptr)->sample(u);
+    }
+
+    case Type::sphere: {
+        return static_cast<const Sphere *>(ptr)->sample(u);
+    }
+
+    case Type::triangle: {
+        return static_cast<const Triangle *>(ptr)->sample(u);
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return {};
+}
+
+PBRT_CPU_GPU
 pbrt::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx, const Point2f &u) const {
     switch (type) {
     case Type::disk: {
@@ -196,6 +216,31 @@ pbrt::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx, const P
 
     REPORT_FATAL_ERROR();
     return {};
+}
+
+PBRT_CPU_GPU
+FloatType Shape::pdf(const Interaction &in) const {
+    switch (type) {
+    case Type::disk: {
+        REPORT_FATAL_ERROR();
+        return NAN;
+        // return static_cast<const Disk *>(ptr)->pdf(in);
+    }
+
+    case Type::sphere: {
+        REPORT_FATAL_ERROR();
+        return NAN;
+
+        // return static_cast<const Sphere *>(ptr)->pdf(in);
+    }
+
+    case Type::triangle: {
+        return static_cast<const Triangle *>(ptr)->pdf(in);
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+    return NAN;
 }
 
 PBRT_CPU_GPU

@@ -6,8 +6,8 @@
 #include <pbrt/bxdfs/conductor_bxdf.h>
 #include <pbrt/bxdfs/dielectric_bxdf.h>
 #include <pbrt/bxdfs/diffuse_bxdf.h>
-#include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/gpu/macro.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
 
 class BxDF {
   public:

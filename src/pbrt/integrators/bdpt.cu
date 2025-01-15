@@ -4,6 +4,7 @@
 #include <pbrt/base/interaction.h>
 #include <pbrt/base/material.h>
 #include <pbrt/base/sampler.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
@@ -12,9 +13,7 @@
 #include <pbrt/samplers/stratified.h>
 #include <pbrt/scene/parameter_dictionary.h>
 
-#include <pbrt/gpu/gpu_memory_allocator.h>
-
-const size_t NUM_SAMPLERS = 64 * 1024;
+constexpr size_t NUM_SAMPLERS = 64 * 1024;
 
 struct BDPTSample {
     Point2i p_pixel;
@@ -310,7 +309,7 @@ struct Vertex {
         Vector3f wi = next.p() - p();
 
         if (wi.squared_length() == 0) {
-            return {};
+            return SampledSpectrum(0);
         }
 
         wi = wi.normalize();
@@ -800,7 +799,7 @@ SampledSpectrum connect_bdpt(const IntegratorBase *integrator_base, SampledWavel
     SampledSpectrum L(0.f);
     // Ignore invalid connections related to infinite area lights
     if (t > 1 && s != 0 && cameraVertices[t - 1].type == VertexType::light) {
-        return SampledSpectrum(0.f);
+        return SampledSpectrum(0);
     }
 
     auto camera = integrator_base->camera;
@@ -921,6 +920,7 @@ BDPTIntegrator *BDPTIntegrator::create(int samples_per_pixel, const std::string 
     bdpt_integrator->base = integrator_base;
     bdpt_integrator->max_depth = parameters.get_integer("maxdepth", 10);
     bdpt_integrator->regularize = parameters.get_bool("regularize", false);
+    bdpt_integrator->film_sample_size = bdpt_integrator->max_depth * NUM_SAMPLERS;
 
     const uint threads = 1024;
     uint blocks = divide_and_ceil<uint>(NUM_SAMPLERS, threads);
@@ -1008,7 +1008,7 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
 
     auto bdpt_samples = local_allocator.allocate<BDPTSample>(NUM_SAMPLERS);
 
-    auto film_samples = local_allocator.allocate<FilmSample>(NUM_SAMPLERS);
+    auto film_samples = local_allocator.allocate<FilmSample>(film_sample_size);
 
     auto film_sample_counter = local_allocator.allocate<int>();
 
@@ -1042,7 +1042,7 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
 
         if (*film_sample_counter > 0) {
             // sort to make film writing deterministic
-            std::sort(film_samples + 0, film_samples + (*film_sample_counter) - 1, std::less{});
+            std::sort(film_samples + 0, film_samples + (*film_sample_counter), std::less{});
         }
 
         for (uint idx = 0; idx < *film_sample_counter; ++idx) {
@@ -1090,7 +1090,12 @@ SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, int *film_sample_co
                     REPORT_FATAL_ERROR();
                 }
 
-                auto film_sample_idx = atomicAdd(film_sample_counter, 1);
+                const auto film_sample_idx = atomicAdd(film_sample_counter, 1);
+
+                if (film_sample_idx >= film_sample_size) {
+                    REPORT_FATAL_ERROR();
+                }
+
                 film_samples[film_sample_idx].p_film = optional_p_film_new.value();
                 film_samples[film_sample_idx].l_path = l_path;
                 film_samples[film_sample_idx].lambda = lambda;

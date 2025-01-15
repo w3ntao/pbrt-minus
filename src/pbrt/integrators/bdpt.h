@@ -31,6 +31,7 @@ class BDPTIntegrator {
     Sampler *samplers;
 
     uint max_depth;
+    uint film_sample_size;
 
   private:
     bool regularize;

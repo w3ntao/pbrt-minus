@@ -18,6 +18,11 @@ pbrt::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, FloatType 
 }
 
 PBRT_CPU_GPU
+FloatType Triangle::pdf(const Interaction &in) const {
+    return 1.0 / this->area();
+}
+
+PBRT_CPU_GPU
 FloatType Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     FloatType solidAngle = solid_angle(ctx.p());
     // Return PDF based on uniform area sampling for challenging triangles
