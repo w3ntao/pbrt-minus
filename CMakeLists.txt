@@ -91,6 +91,8 @@ add_executable(${PROJ_NAME}
         src/pbrt/filters/gaussian.cu
         src/pbrt/filters/triangle.cu
 
+        src/pbrt/gpu/gpu_memory_allocator.cu
+
         src/pbrt/integrators/ambient_occlusion.cu
         src/pbrt/integrators/bdpt.cu
         src/pbrt/integrators/megakernel_path.cu

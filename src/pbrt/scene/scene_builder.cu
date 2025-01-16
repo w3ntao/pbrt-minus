@@ -890,8 +890,7 @@ void SceneBuilder::render() const {
 
     auto start = std::chrono::system_clock::now();
 
-    std::cout << "\n"
-              << "rendering a " << film_resolution.x << "x" << film_resolution.y << " image";
+    std::cout << "rendering a " << film_resolution.x << "x" << film_resolution.y << " image";
 
     const auto spp = samples_per_pixel.value();
 
@@ -930,7 +929,8 @@ void SceneBuilder::render() const {
 
     } else if (megakernel_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
-                  << " with " + megakernel_integrator->get_name() << std::flush;
+                  << " with " + megakernel_integrator->get_name() << ".\n"
+                  << std::flush;
 
         megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(),
                                       integrator_base, preview);
@@ -943,9 +943,11 @@ void SceneBuilder::render() const {
 
     const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
 
-    std::cout << std::fixed << std::setprecision(1) << "\nrendering took " << duration.count()
+    std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count()
               << " seconds.\n"
               << std::flush;
+
+    printf("GPU memory used: %s\n", allocator.get_allocated_memory_size().c_str());
 
     std::cout << "image saved to `" << output_filename << "`\n";
 }

@@ -15,12 +15,19 @@ class GPUMemoryAllocator {
     template <typename T>
     T *allocate(const size_t num = 1) {
         T *data;
-        CHECK_CUDA_ERROR(cudaMallocManaged(&data, sizeof(T) * num));
+
+        const auto size = sizeof(T) * num;
+        CHECK_CUDA_ERROR(cudaMallocManaged(&data, size));
         gpu_dynamic_pointers.push_back(data);
+
+        allocated_memory_size += size;
 
         return data;
     }
 
+    [[nodiscard]] std::string get_allocated_memory_size() const;
+
   private:
     std::vector<void *> gpu_dynamic_pointers;
+    ulong allocated_memory_size = 0;
 };
