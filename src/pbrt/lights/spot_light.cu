@@ -85,7 +85,7 @@ pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point
     // Choose whether to sample spotlight center cone or falloff region
     FloatType p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};
     FloatType sectionPDF;
-    int section = SampleDiscrete(p, 2, u2[0], &sectionPDF);
+    int section = sample_discrete(p, 2, u2[0], &sectionPDF);
 
     // Sample chosen region of spotlight cone
     Vector3f wLight;

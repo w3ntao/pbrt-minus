@@ -8,6 +8,7 @@ class BoxFilter;
 class GaussianFilter;
 class GPUMemoryAllocator;
 class MitchellFilter;
+class TriangleFilter;
 class ParameterDictionary;
 
 struct FilterSample {
@@ -28,6 +29,7 @@ class Filter {
         box,
         gaussian,
         mitchell,
+        triangle,
     };
 
     static const Filter *create(const std::string &filter_type,
@@ -41,10 +43,10 @@ class Filter {
     FloatType get_integral() const;
 
     PBRT_CPU_GPU
-    FloatType evaluate(const Point2f p) const;
+    FloatType evaluate(const Point2f &p) const;
 
     PBRT_CPU_GPU
-    FilterSample sample(const Point2f u) const;
+    FilterSample sample(const Point2f &u) const;
 
   private:
     Type type;
@@ -55,6 +57,8 @@ class Filter {
     void init(const GaussianFilter *gaussian_filter);
 
     void init(const MitchellFilter *mitchell_filter);
+
+    void init(const TriangleFilter *triangle_filter);
 };
 
 class FilterSampler {

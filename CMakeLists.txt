@@ -89,6 +89,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/filters/box.cu
         src/pbrt/filters/mitchell.cu
         src/pbrt/filters/gaussian.cu
+        src/pbrt/filters/triangle.cu
 
         src/pbrt/integrators/ambient_occlusion.cu
         src/pbrt/integrators/bdpt.cu

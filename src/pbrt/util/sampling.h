@@ -1,12 +1,12 @@
 #pragma once
 
+#include <cuda/std/tuple>
 #include <pbrt/euclidean_space/bounds2.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/euclidean_space/point3.h>
 #include <pbrt/euclidean_space/vector3.h>
 #include <pbrt/spectrum_util/spectrum_constants_cie.h>
 #include <pbrt/util/math.h>
-#include <cuda/std/tuple>
 
 PBRT_CPU_GPU
 inline FloatType cosine_hemisphere_pdf(FloatType cos_theta) {
@@ -20,6 +20,58 @@ inline FloatType sample_linear(FloatType u, FloatType a, FloatType b) {
     }
     FloatType x = u * (a + b) / (a + std::sqrt(pbrt::lerp(u, sqr(a), sqr(b))));
     return std::min(x, OneMinusEpsilon);
+}
+
+PBRT_CPU_GPU
+inline int sample_discrete(const FloatType *weights, uint num_weights, FloatType u,
+                           FloatType *pmf = nullptr, FloatType *uRemapped = nullptr) {
+    // Handle empty _weights_ for discrete sampling
+    if (num_weights == 0) {
+        if (pmf != nullptr) {
+            *pmf = 0;
+        }
+        return -1;
+    }
+
+    // Compute sum of _weights_
+    FloatType sumWeights = 0;
+    for (uint idx = 0; idx < num_weights; ++idx) {
+        sumWeights += weights[idx];
+    }
+
+    // Compute rescaled $u'$ sample
+    FloatType up = u * sumWeights;
+    if (up == sumWeights) {
+        up = next_float_down(up);
+    }
+
+    // Find offset in _weights_ corresponding to $u'$
+    int offset = 0;
+    FloatType sum = 0;
+    while (sum + weights[offset] <= up) {
+        sum += weights[offset++];
+    }
+
+    // Compute PMF and remapped _u_ value, if necessary
+    if (pmf != nullptr) {
+        *pmf = weights[offset] / sumWeights;
+    }
+    if (uRemapped != nullptr) {
+        *uRemapped = std::min((up - sum) / weights[offset], OneMinusEpsilon);
+    }
+
+    return offset;
+}
+
+PBRT_CPU_GPU
+inline FloatType sample_tent(FloatType u, FloatType r) {
+    const FloatType weigits[2] = {0.5, 0.5};
+
+    if (sample_discrete(weigits, 2, u, nullptr, &u) == 0) {
+        return -r + r * sample_linear(u, 0, 1);
+    }
+
+    return r * sample_linear(u, 1, 0);
 }
 
 PBRT_CPU_GPU
@@ -300,44 +352,3 @@ Point2f EqualAreaSphereToSquare(Vector3f v);
 
 PBRT_CPU_GPU
 Vector3f EqualAreaSquareToSphere(Point2f p);
-
-PBRT_CPU_GPU
-inline int SampleDiscrete(FloatType *weights, uint num_weights, FloatType u,
-                          FloatType *pmf = nullptr, FloatType *uRemapped = nullptr) {
-    // Handle empty _weights_ for discrete sampling
-    if (num_weights == 0) {
-        if (pmf != nullptr) {
-            *pmf = 0;
-        }
-        return -1;
-    }
-
-    // Compute sum of _weights_
-    FloatType sumWeights = 0;
-    for (uint idx = 0; idx < num_weights; ++idx) {
-        sumWeights += weights[idx];
-    }
-
-    // Compute rescaled $u'$ sample
-    FloatType up = u * sumWeights;
-    if (up == sumWeights) {
-        up = next_float_down(up);
-    }
-
-    // Find offset in _weights_ corresponding to $u'$
-    int offset = 0;
-    FloatType sum = 0;
-    while (sum + weights[offset] <= up) {
-        sum += weights[offset++];
-    }
-
-    // Compute PMF and remapped _u_ value, if necessary
-    if (pmf != nullptr) {
-        *pmf = weights[offset] / sumWeights;
-    }
-    if (uRemapped != nullptr) {
-        *uRemapped = std::min((up - sum) / weights[offset], OneMinusEpsilon);
-    }
-
-    return offset;
-}
