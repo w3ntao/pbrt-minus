@@ -1,6 +1,7 @@
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>
+#include <pbrt/textures/spectrum_checkerboard_texture.h>
 #include <pbrt/textures/spectrum_constant_texture.h>
 #include <pbrt/textures/spectrum_image_texture.h>
 #include <pbrt/textures/spectrum_scaled_texture.h>
@@ -9,10 +10,19 @@ const SpectrumTexture *
 SpectrumTexture::create(const std::string &texture_type, const SpectrumType spectrum_type,
                         const Transform &render_from_object, const RGBColorSpace *color_space,
                         const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
+    if (texture_type == "checkerboard") {
+        auto checkerboard_texture = SpectrumCheckerboardTexture::create(
+            render_from_object, spectrum_type, parameters, allocator);
+
+        auto spectrum_texture = allocator.allocate<SpectrumTexture>();
+        spectrum_texture->init(checkerboard_texture);
+
+        return spectrum_texture;
+    }
+
     if (texture_type == "imagemap") {
         auto image_texture = SpectrumImageTexture::create(spectrum_type, render_from_object,
                                                           color_space, parameters, allocator);
-
         auto spectrum_texture = allocator.allocate<SpectrumTexture>();
 
         spectrum_texture->init(image_texture);
@@ -59,6 +69,11 @@ const SpectrumTexture *SpectrumTexture::create_constant_texture(const Spectrum *
     return spectrum_texture;
 }
 
+void SpectrumTexture::init(const SpectrumCheckerboardTexture *checkerboard_texture) {
+    type = Type::checkerboard;
+    ptr = checkerboard_texture;
+}
+
 void SpectrumTexture::init(const SpectrumConstantTexture *constant_texture) {
     type = Type::constant;
     ptr = constant_texture;
@@ -78,12 +93,18 @@ PBRT_CPU_GPU
 SampledSpectrum SpectrumTexture::evaluate(const TextureEvalContext &ctx,
                                           const SampledWavelengths &lambda) const {
     switch (type) {
+    case Type::checkerboard: {
+        return static_cast<const SpectrumCheckerboardTexture *>(ptr)->evaluate(ctx, lambda);
+    }
+
     case Type::constant: {
         return static_cast<const SpectrumConstantTexture *>(ptr)->evaluate(ctx, lambda);
     }
+
     case Type::image: {
         return static_cast<const SpectrumImageTexture *>(ptr)->evaluate(ctx, lambda);
     }
+
     case Type::scaled: {
         return static_cast<const SpectrumScaledTexture *>(ptr)->evaluate(ctx, lambda);
     }

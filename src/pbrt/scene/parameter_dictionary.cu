@@ -271,9 +271,9 @@ const SpectrumTexture *
 ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType spectrum_type,
                                           GPUMemoryAllocator &allocator) const {
     switch (spectrum_type) {
-    case (SpectrumType::Albedo):
-    case (SpectrumType::Illuminant):
-    case (SpectrumType::Unbounded): {
+    case SpectrumType::Albedo:
+    case SpectrumType::Illuminant:
+    case SpectrumType::Unbounded: {
         break;
     }
     default: {

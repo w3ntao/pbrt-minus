@@ -11,6 +11,7 @@
 #undef STB_IMAGE_IMPLEMENTATION
 
 #define TINYEXR_IMPLEMENTATION
+#include <fstream>
 #include <ext/tinyexr/tinyexr.h>
 #undef TINYEXR_IMPLEMENTATION
 // clang-format on
@@ -79,6 +80,9 @@ const GPUImage *GPUImage::create_from_file(const std::string &filename,
     if (file_extension == ".exr") {
         image->init_exr(filename, allocator);
 
+    } else if (file_extension == ".pfm") {
+        image->init_pfm(filename, allocator);
+
     } else if (file_extension == ".png") {
         image->init_png(filename, allocator);
 
@@ -119,6 +123,75 @@ void GPUImage::init_exr(const std::string &filename, GPUMemoryAllocator &allocat
         // auto alpha = out[idx * 4 + 3];
 
         gpu_pixels[idx] = RGB(r, g, b);
+    }
+
+    resolution = Point2i(width, height);
+    pixels = gpu_pixels;
+}
+
+void GPUImage::init_pfm(const std::string &filename, GPUMemoryAllocator &allocator) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "ERROR: couldn't opening file: `" << filename << "`\n";
+        REPORT_FATAL_ERROR();
+    }
+
+    std::string header;
+    file >> header;
+
+    if (header != "PF" && header != "Pf") {
+        std::cerr << "ERROR: not a valid PFM file\n";
+        REPORT_FATAL_ERROR();
+    }
+
+    int width = 0;
+    int height = 0;
+
+    // Read width and height
+    file >> width >> height;
+
+    // Read scale factor
+    float scale;
+    file >> scale;
+
+    // Skip the newline after the scale
+    file.ignore(1);
+
+    // Check if the image is stored in little-endian format
+    bool isLittleEndian = scale < 0;
+    if (isLittleEndian) {
+        scale = -scale; // Make scale positive
+    }
+
+    // Read the pixel data
+    size_t num_pixels = width * height * 3;
+
+    // Resize the image vector to hold the pixel data
+    std::vector<FloatType> image(num_pixels);
+
+    file.read(reinterpret_cast<char *>(image.data()), num_pixels * sizeof(float));
+
+    // If the image is in big-endian format, we need to swap the byte order
+    if (!isLittleEndian) {
+        for (size_t i = 0; i < num_pixels; ++i) {
+            uint32_t *pixel = reinterpret_cast<uint32_t *>(&image[i]);
+            *pixel = (*pixel >> 24) | ((*pixel & 0x00FF0000) >> 8) | ((*pixel & 0x0000FF00) << 8) |
+                     (*pixel << 24);
+        }
+    }
+
+    auto gpu_pixels = allocator.allocate<RGB>(width * height);
+    for (uint x = 0; x < width; ++x) {
+        for (uint y = 0; y < height; ++y) {
+            const auto pfm_idx = (width - 1 - y) * width + x;
+            const auto image_idx = y * width + x;
+
+            auto r = image[pfm_idx * 3 + 0];
+            auto g = image[pfm_idx * 3 + 1];
+            auto b = image[pfm_idx * 3 + 2];
+
+            gpu_pixels[image_idx] = RGB(r, g, b);
+        }
     }
 
     resolution = Point2i(width, height);
@@ -176,9 +249,7 @@ void GPUImage::init_tga(const std::string &filename, GPUMemoryAllocator &allocat
     }
 
     SRGBColorEncoding encoding;
-
     auto gpu_pixels = allocator.allocate<RGB>(width * height);
-
     for (uint idx = 0; idx < width * height; ++idx) {
         const auto r = img[idx * channels + 0];
         const auto g = img[idx * channels + 1];

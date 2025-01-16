@@ -1,5 +1,7 @@
 #include <pbrt/euclidean_space/bounds3.h>
 #include <pbrt/euclidean_space/vector3.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/gpu/macro.h>
 #include <pbrt/lights/image_infinite_light.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectra/rgb_illuminant_spectrum.h>
@@ -8,10 +10,7 @@
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/textures/gpu_image.h>
 #include <pbrt/util/distribution_2d.h>
-#include <pbrt/gpu/macro.h>
 #include <pbrt/util/sampling.h>
-
-#include <pbrt/gpu/gpu_memory_allocator.h>
 
 ImageInfiniteLight *ImageInfiniteLight::create(const Transform &render_from_light,
                                                const ParameterDictionary &parameters,
@@ -75,7 +74,6 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
             if (image_luminance_array[x][y] < ignore_threshold) {
                 image_luminance_array[x][y] = 0.0;
                 num_ignore += 1;
-                continue;
             }
         }
     }

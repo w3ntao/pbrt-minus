@@ -94,6 +94,8 @@ class GPUImage {
 
     void init_exr(const std::string &filename, GPUMemoryAllocator &allocator);
 
+    void init_pfm(const std::string &filename, GPUMemoryAllocator &allocator);
+
     void init_png(const std::string &filename, GPUMemoryAllocator &allocator);
 
     void init_tga(const std::string &filename, GPUMemoryAllocator &allocator);

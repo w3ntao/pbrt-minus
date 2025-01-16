@@ -5,9 +5,10 @@
 #include <pbrt/gpu/macro.h>
 
 class GPUMemoryAllocator;
+class RGBColorSpace;
+class SpectrumCheckerboardTexture;
 class Transform;
 class ParameterDictionary;
-class RGBColorSpace;
 
 class Spectrum;
 class SpectrumConstantTexture;
@@ -19,6 +20,7 @@ struct TextureEvalContext;
 class SpectrumTexture {
   public:
     enum class Type {
+        checkerboard,
         constant,
         image,
         scaled,
@@ -34,6 +36,8 @@ class SpectrumTexture {
 
     static const SpectrumTexture *create_constant_texture(const Spectrum *spectrum,
                                                           GPUMemoryAllocator &allocator);
+
+    void init(const SpectrumCheckerboardTexture *checkerboard_texture);
 
     void init(const SpectrumConstantTexture *constant_texture);
 

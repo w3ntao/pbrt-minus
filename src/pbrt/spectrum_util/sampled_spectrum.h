@@ -9,7 +9,8 @@ class SampledWavelengths;
 
 class SampledSpectrum {
   public:
-    PBRT_CPU_GPU SampledSpectrum() {
+    PBRT_CPU_GPU
+    SampledSpectrum() {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             values[idx] = 0;
         }
