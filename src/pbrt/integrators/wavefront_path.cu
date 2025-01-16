@@ -89,15 +89,14 @@ static __global__ void gpu_init_path_state(WavefrontPathIntegrator::PathState *p
     path_state->init_new_path(worker_idx);
 }
 
-__global__ void control_logic(const WavefrontPathIntegrator *integrator,
-                              WavefrontPathIntegrator::PathState *path_state,
-                              WavefrontPathIntegrator::Queues *queues) {
+__global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
+                              WavefrontPathIntegrator::Queues *queues, const uint max_depth,
+                              const IntegratorBase *base) {
     const uint path_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (path_idx >= PATH_POOL_SIZE || path_state->finished[path_idx]) {
         return;
     }
 
-    // otherwise beta is larger than 0.0
     auto &isect = path_state->shape_intersections[path_idx]->interaction;
     const auto ray = path_state->camera_rays[path_idx].ray;
     auto &lambda = path_state->lambdas[path_idx];
@@ -112,7 +111,7 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator,
     const auto pdf_bsdf = path_state->mis_parameters[path_idx].pdf_bsdf;
 
     bool should_terminate_path = !path_state->shape_intersections[path_idx].has_value() ||
-                                 path_length > integrator->max_depth || !beta.is_positive();
+                                 path_length > max_depth || !beta.is_positive();
 
     if (!should_terminate_path && path_length > 8) {
         // possibly terminate the path with Russian roulette
@@ -137,8 +136,8 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator,
     if (should_terminate_path) {
         if (beta.is_positive()) {
             // sample infinite lights
-            for (uint idx = 0; idx < integrator->base->infinite_light_num; ++idx) {
-                auto light = integrator->base->infinite_lights[idx];
+            for (uint idx = 0; idx < base->infinite_light_num; ++idx) {
+                auto light = base->infinite_lights[idx];
                 auto Le = light->le(ray, lambda);
 
                 if (path_length == 0 || specular_bounce) {
@@ -146,8 +145,7 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator,
                 } else {
                     // Compute MIS weight for infinite light
                     FloatType pdf_light =
-                        integrator->base->light_sampler->pmf(prev_interaction_light_sample_ctx,
-                                                             light) *
+                        base->light_sampler->pmf(prev_interaction_light_sample_ctx, light) *
                         light->pdf_li(prev_interaction_light_sample_ctx, ray.d, true);
                     FloatType weight_bsdf = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
@@ -165,7 +163,7 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator,
             .weight = path_state->camera_samples[path_idx].filter_weight,
         };
 
-        queues->new_path_queue[atomicAdd(&queues->new_path_counter, 1)] = path_idx;
+        queues->new_paths->append_path(path_idx);
         return;
     }
 
@@ -177,9 +175,9 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator,
             // Compute MIS weight for area light
             auto area_light = isect.area_light;
 
-            FloatType pdf_light = integrator->base->light_sampler->pmf(
-                                      prev_interaction_light_sample_ctx, area_light) *
-                                  area_light->pdf_li(prev_interaction_light_sample_ctx, ray.d);
+            FloatType pdf_light =
+                base->light_sampler->pmf(prev_interaction_light_sample_ctx, area_light) *
+                area_light->pdf_li(prev_interaction_light_sample_ctx, ray.d);
             FloatType weight_light = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
             path_state->L[path_idx] += beta * weight_light * Le;
@@ -193,32 +191,27 @@ __global__ void control_logic(const WavefrontPathIntegrator *integrator,
     switch (isect.material->get_material_type()) {
 
     case Material::Type::conductor: {
-        const uint queue_idx = atomicAdd(&queues->conductor_material_counter, 1);
-        queues->conductor_material_queue[queue_idx] = path_idx;
+        queues->conductor_material->append_path(path_idx);
         break;
     }
 
     case Material::Type::coated_conductor: {
-        const uint queue_idx = atomicAdd(&queues->coated_conductor_material_counter, 1);
-        queues->coated_conductor_material_queue[queue_idx] = path_idx;
+        queues->coated_conductor_material->append_path(path_idx);
         break;
     }
 
     case Material::Type::coated_diffuse: {
-        const uint queue_idx = atomicAdd(&queues->coated_diffuse_material_counter, 1);
-        queues->coated_diffuse_material_queue[queue_idx] = path_idx;
+        queues->coated_diffuse_material->append_path(path_idx);
         break;
     }
 
     case Material::Type::dielectric: {
-        const uint queue_idx = atomicAdd(&queues->dielectric_material_counter, 1);
-        queues->dielectric_material_queue[queue_idx] = path_idx;
+        queues->dielectric_material->append_path(path_idx);
         break;
     }
 
     case Material::Type::diffuse: {
-        const uint queue_idx = atomicAdd(&queues->diffuse_material_counter, 1);
-        queues->diffuse_material_queue[queue_idx] = path_idx;
+        queues->diffuse_material->append_path(path_idx);
         break;
     }
 
@@ -259,18 +252,19 @@ __global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues) {
     if (worker_idx >= PATH_POOL_SIZE) {
         return;
     }
-    queues->new_path_queue[worker_idx] = worker_idx;
+
+    queues->new_paths->queue_array[worker_idx] = worker_idx;
 }
 
-__global__ void generate_new_path(const IntegratorBase *base,
-                                  WavefrontPathIntegrator::PathState *path_state,
-                                  WavefrontPathIntegrator::Queues *queues) {
+__global__ void generate_new_path(WavefrontPathIntegrator::PathState *path_state,
+                                  WavefrontPathIntegrator::Queues *queues,
+                                  const IntegratorBase *base) {
     const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (queue_idx >= queues->new_path_counter) {
+    if (queue_idx >= queues->new_paths->counter) {
         return;
     }
 
-    const uint path_idx = queues->new_path_queue[queue_idx];
+    const uint path_idx = queues->new_paths->queue_array[queue_idx];
 
     const auto unique_path_id = atomicAdd(&path_state->global_path_counter, 1);
     if (unique_path_id >= path_state->total_path_num) {
@@ -303,59 +297,19 @@ __global__ void generate_new_path(const IntegratorBase *base,
 
     path_state->init_new_path(path_idx);
 
-    uint ray_queue_idx = atomicAdd(&queues->ray_counter, 1);
-    queues->ray_queue[ray_queue_idx] = path_idx;
+    queues->rays->append_path(path_idx);
 }
 
-__global__ void gpu_evaluate_material(WavefrontPathIntegrator::PathState *path_state,
-                                      WavefrontPathIntegrator::Queues *queues,
-                                      const Material::Type material_type,
-                                      const WavefrontPathIntegrator *integrator) {
-    uint material_counter = 0;
-    uint *material_queue = nullptr;
-
-    switch (material_type) {
-    case Material::Type::coated_conductor: {
-        material_counter = queues->coated_conductor_material_counter;
-        material_queue = queues->coated_conductor_material_queue;
-        break;
-    }
-
-    case Material::Type::coated_diffuse: {
-        material_counter = queues->coated_diffuse_material_counter;
-        material_queue = queues->coated_diffuse_material_queue;
-        break;
-    }
-
-    case Material::Type::conductor: {
-        material_counter = queues->conductor_material_counter;
-        material_queue = queues->conductor_material_queue;
-        break;
-    }
-
-    case Material::Type::dielectric: {
-        material_counter = queues->dielectric_material_counter;
-        material_queue = queues->dielectric_material_queue;
-        break;
-    }
-
-    case Material::Type::diffuse: {
-        material_counter = queues->diffuse_material_counter;
-        material_queue = queues->diffuse_material_queue;
-        break;
-    }
-
-    default: {
-        REPORT_FATAL_ERROR();
-    }
-    }
-
+__global__ void gpu_evaluate_material(WavefrontPathIntegrator::Queues::SingleQueue *material_queue,
+                                      WavefrontPathIntegrator *integrator) {
     const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (queue_idx >= material_counter) {
+    if (queue_idx >= material_queue->counter) {
         return;
     }
 
-    const uint path_idx = material_queue[queue_idx];
+    auto path_state = &integrator->path_state;
+
+    const uint path_idx = material_queue->queue_array[queue_idx];
 
     auto &lambda = path_state->lambdas[path_idx];
 
@@ -368,24 +322,21 @@ __global__ void gpu_evaluate_material(WavefrontPathIntegrator::PathState *path_s
 
     integrator->sample_bsdf(path_idx, path_state);
 
-    uint ray_queue_idx = atomicAdd(&queues->ray_counter, 1);
-    queues->ray_queue[ray_queue_idx] = path_idx;
+    integrator->queues.rays->append_path(path_idx);
 }
 
-__global__ void ray_cast(const WavefrontPathIntegrator *integrator,
-                         WavefrontPathIntegrator::PathState *path_state,
-                         WavefrontPathIntegrator::Queues *queues) {
+__global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
+                         WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base) {
     const uint ray_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (ray_queue_idx >= queues->ray_counter) {
+    if (ray_queue_idx >= queues->rays->counter) {
         return;
     }
 
-    const uint path_idx = queues->ray_queue[ray_queue_idx];
+    const uint path_idx = queues->rays->queue_array[ray_queue_idx];
 
     const auto camera_ray = path_state->camera_rays[path_idx];
 
-    path_state->shape_intersections[path_idx] =
-        integrator->base->intersect(camera_ray.ray, Infinity);
+    path_state->shape_intersections[path_idx] = base->intersect(camera_ray.ray, Infinity);
 }
 
 PBRT_CPU_GPU
@@ -431,46 +382,15 @@ void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *path_state) 
 }
 
 void WavefrontPathIntegrator::evaluate_material(const Material::Type material_type) {
-    uint material_counter = 0;
-    switch (material_type) {
-    case Material::Type::coated_conductor: {
-        material_counter = queues.coated_conductor_material_counter;
-        break;
-    }
-
-    case Material::Type::coated_diffuse: {
-        material_counter = queues.coated_diffuse_material_counter;
-        break;
-    }
-
-    case Material::Type::conductor: {
-        material_counter = queues.conductor_material_counter;
-        break;
-    }
-
-    case Material::Type::dielectric: {
-        material_counter = queues.dielectric_material_counter;
-        break;
-    }
-
-    case Material::Type::diffuse: {
-        material_counter = queues.diffuse_material_counter;
-        break;
-    }
-
-    default: {
-        REPORT_FATAL_ERROR();
-    }
-    }
-
-    if (material_counter <= 0) {
+    auto material_queue = this->queues.get_material_queue(material_type);
+    if (material_queue->counter <= 0) {
         return;
     }
 
-    const uint threads = 256;
-    const auto blocks = divide_and_ceil(material_counter, threads);
+    constexpr uint threads = 256;
+    const auto blocks = divide_and_ceil(material_queue->counter, threads);
 
-    gpu_evaluate_material<<<blocks, threads>>>(&path_state, &queues, material_type, this);
+    gpu_evaluate_material<<<blocks, threads>>>(material_queue, this);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
@@ -539,15 +459,25 @@ void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Po
 }
 
 void WavefrontPathIntegrator::Queues::init(GPUMemoryAllocator &allocator) {
-    new_path_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
-    ray_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
-    frame_buffer_queue = allocator.allocate<FrameBuffer>(PATH_POOL_SIZE);
+    new_paths = build_new_queue(allocator);
+    rays = build_new_queue(allocator);
+    conductor_material = build_new_queue(allocator);
+    coated_conductor_material = build_new_queue(allocator);
+    coated_diffuse_material = build_new_queue(allocator);
+    dielectric_material = build_new_queue(allocator);
+    diffuse_material = build_new_queue(allocator);
 
-    coated_conductor_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
-    coated_diffuse_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
-    conductor_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
-    dielectric_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
-    diffuse_material_queue = allocator.allocate<uint>(PATH_POOL_SIZE);
+    frame_buffer_counter = 0;
+    frame_buffer_queue = allocator.allocate<FrameBuffer>(PATH_POOL_SIZE);
+}
+
+WavefrontPathIntegrator::Queues::SingleQueue *
+WavefrontPathIntegrator::Queues::build_new_queue(GPUMemoryAllocator &allocator) {
+    auto queue = allocator.allocate<SingleQueue>(PATH_POOL_SIZE);
+    queue->counter = 0;
+    queue->queue_array = allocator.allocate<uint>(PATH_POOL_SIZE);
+
+    return queue;
 }
 
 WavefrontPathIntegrator *WavefrontPathIntegrator::create(uint samples_per_pixel,
@@ -641,31 +571,26 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
     fill_new_path_queue<<<PATH_POOL_SIZE, threads>>>(&queues);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-    queues.new_path_counter = PATH_POOL_SIZE;
+    queues.new_paths->counter = PATH_POOL_SIZE;
+    queues.rays->counter = 0;
 
-    queues.ray_counter = 0;
-    generate_new_path<<<divide_and_ceil(queues.new_path_counter, threads), threads>>>(
-        base, &path_state, &queues);
+    generate_new_path<<<divide_and_ceil(queues.new_paths->counter, threads), threads>>>(
+        &path_state, &queues, base);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-    while (queues.ray_counter > 0) {
-        ray_cast<<<divide_and_ceil(queues.ray_counter, threads), threads>>>(this, &path_state,
-                                                                            &queues);
+    while (queues.rays->counter > 0) {
+        ray_cast<<<divide_and_ceil(queues.rays->counter, threads), threads>>>(&path_state, &queues,
+                                                                              base);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         // clear all queues before control stage
-        queues.new_path_counter = 0;
-        queues.ray_counter = 0;
+        for (auto _queue : queues.get_all_queues()) {
+            _queue->counter = 0;
+        }
         queues.frame_buffer_counter = 0;
 
-        queues.coated_conductor_material_counter = 0;
-        queues.coated_diffuse_material_counter = 0;
-        queues.conductor_material_counter = 0;
-        queues.dielectric_material_counter = 0;
-        queues.diffuse_material_counter = 0;
-
-        control_logic<<<divide_and_ceil(PATH_POOL_SIZE, threads), threads>>>(this, &path_state,
-                                                                             &queues);
+        control_logic<<<divide_and_ceil(PATH_POOL_SIZE, threads), threads>>>(&path_state, &queues,
+                                                                             max_depth, base);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         if (queues.frame_buffer_counter > 0) {
@@ -688,19 +613,13 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             }
         }
 
-        if (queues.new_path_counter > 0) {
-            generate_new_path<<<divide_and_ceil(queues.new_path_counter, threads), threads>>>(
-                base, &path_state, &queues);
+        if (queues.new_paths->counter > 0) {
+            generate_new_path<<<divide_and_ceil(queues.new_paths->counter, threads), threads>>>(
+                &path_state, &queues, base);
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
-        for (const auto material_type : {
-                 Material::Type::coated_conductor,
-                 Material::Type::coated_diffuse,
-                 Material::Type::conductor,
-                 Material::Type::dielectric,
-                 Material::Type::diffuse,
-             }) {
+        for (const auto material_type : Material::get_all_material_type()) {
             evaluate_material(material_type);
         }
     }

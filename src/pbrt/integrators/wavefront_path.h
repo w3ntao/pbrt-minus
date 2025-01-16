@@ -57,31 +57,72 @@ class WavefrontPathIntegrator {
     };
 
     struct Queues {
-        uint *new_path_queue;
-        uint new_path_counter;
+        struct SingleQueue {
+            uint *queue_array;
+            uint counter;
+
+            PBRT_GPU
+            void append_path(const uint path_idx) {
+                const uint queue_idx = atomicAdd(&counter, 1);
+                queue_array[queue_idx] = path_idx;
+            }
+        };
+
+        SingleQueue *new_paths;
+        SingleQueue *rays;
+
+        SingleQueue *conductor_material;
+        SingleQueue *coated_conductor_material;
+        SingleQueue *coated_diffuse_material;
+        SingleQueue *dielectric_material;
+        SingleQueue *diffuse_material;
 
         uint frame_buffer_counter;
         FrameBuffer *frame_buffer_queue;
 
-        uint *ray_queue;
-        uint ray_counter;
-
-        uint *conductor_material_queue;
-        uint conductor_material_counter;
-
-        uint *coated_conductor_material_queue;
-        uint coated_conductor_material_counter;
-
-        uint *coated_diffuse_material_queue;
-        uint coated_diffuse_material_counter;
-
-        uint *dielectric_material_queue;
-        uint dielectric_material_counter;
-
-        uint *diffuse_material_queue;
-        uint diffuse_material_counter;
-
         void init(GPUMemoryAllocator &allocator);
+
+        [[nodiscard]] std::vector<SingleQueue *> get_all_queues() const {
+            return {
+                new_paths,
+                rays,
+                conductor_material,
+                coated_conductor_material,
+                coated_diffuse_material,
+                dielectric_material,
+                diffuse_material,
+            };
+        }
+
+        SingleQueue *get_material_queue(const Material::Type material_type) const {
+            switch (material_type) {
+            case Material::Type::coated_conductor: {
+                return coated_conductor_material;
+            }
+
+            case Material::Type::coated_diffuse: {
+                return coated_diffuse_material;
+            }
+
+            case Material::Type::conductor: {
+                return conductor_material;
+            }
+
+            case Material::Type::dielectric: {
+                return dielectric_material;
+            }
+
+            case Material::Type::diffuse: {
+                return diffuse_material;
+            }
+            }
+
+            REPORT_FATAL_ERROR();
+            return nullptr;
+        }
+
+      private:
+        static SingleQueue *build_new_queue(GPUMemoryAllocator &allocator);
     };
 
     static WavefrontPathIntegrator *create(uint samples_per_pixel, const std::string &sampler_type,

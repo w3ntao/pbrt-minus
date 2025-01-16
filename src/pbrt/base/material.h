@@ -2,8 +2,8 @@
 
 #include <pbrt/base/bsdf.h>
 #include <pbrt/base/spectrum_texture.h>
-#include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/gpu/macro.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
 
 class CoatedConductorMaterial;
 class CoatedDiffuseMaterial;
@@ -25,6 +25,14 @@ class Material {
         dielectric,
         mix,
     };
+
+    static std::vector<Type> get_all_material_type() {
+        // consider only evaluable material (excluding mix)
+        return {
+            Type::coated_conductor, Type::coated_diffuse, Type::conductor,
+            Type::dielectric,       Type::diffuse,
+        };
+    }
 
     static const Material *create(const std::string &type_of_material,
                                   const ParameterDictionary &parameters,
