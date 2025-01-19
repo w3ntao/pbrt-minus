@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pbrt/gpu/macro.h>
+#include <vector>
 
 constexpr uint LAMBDA_MIN = 360;
 constexpr uint LAMBDA_MAX = 830;
@@ -339,7 +340,7 @@ constexpr FloatType CIE_LAMBDA_CPU[NUM_CIE_SAMPLES] = {
     819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830,
 };
 
-constexpr FloatType CIE_Illum_D6500[] = {
+const std::vector<FloatType> CIE_Illum_D6500 = {
     300.000000, 0.034100,   305.000000, 1.664300,   310.000000, 3.294500,   315.000000,
     11.765200,  320.000000, 20.236000,  325.000000, 28.644699,  330.000000, 37.053501,
     335.000000, 38.501099,  340.000000, 39.948799,  345.000000, 42.430199,  350.000000,

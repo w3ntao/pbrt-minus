@@ -40,17 +40,16 @@ SpectrumCheckerboardTexture::create(const Transform &renderFromTexture, Spectrum
         REPORT_FATAL_ERROR();
     }
 
-    const auto zero = Spectrum::create_constant_spectrum(0.0, allocator);
-    const auto one = Spectrum::create_constant_spectrum(1.0, allocator);
-
     auto tex1 = parameters.get_spectrum_texture("tex1", spectrumType, allocator);
     if (tex1 == nullptr) {
+        const auto zero = Spectrum::create_constant_spectrum(0.0, allocator);
         tex1 = SpectrumTexture::create_constant_texture(zero, allocator);
     }
 
     auto tex2 = parameters.get_spectrum_texture("tex2", spectrumType, allocator);
 
     if (tex2 == nullptr) {
+        const auto one = Spectrum::create_constant_spectrum(1.0, allocator);
         tex2 = SpectrumTexture::create_constant_texture(one, allocator);
     }
 

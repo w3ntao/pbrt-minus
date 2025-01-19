@@ -134,37 +134,39 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
 
     global_spectra = GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, allocator);
 
-    auto ag_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Ag_eta), std::end(Ag_eta)), false, nullptr, allocator);
+    auto ag_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Ag_eta, false,
+                                                                              nullptr, allocator);
 
-    auto ag_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Ag_k), std::end(Ag_k)), false, nullptr, allocator);
+    auto ag_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Ag_k, false, nullptr,
+                                                                            allocator);
 
-    auto al_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Al_eta), std::end(Al_eta)), false, nullptr, allocator);
+    auto al_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Al_eta, false,
+                                                                              nullptr, allocator);
 
-    auto al_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Al_k), std::end(Al_k)), false, nullptr, allocator);
+    auto al_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Al_k, false, nullptr,
+                                                                            allocator);
 
-    auto au_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Au_eta), std::end(Au_eta)), false, nullptr, allocator);
+    auto au_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Au_eta, false,
+                                                                              nullptr, allocator);
 
-    auto au_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Au_k), std::end(Au_k)), false, nullptr, allocator);
+    auto au_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Au_k, false, nullptr,
+                                                                            allocator);
 
-    auto cu_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Cu_eta), std::end(Cu_eta)), false, nullptr, allocator);
+    auto cu_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Cu_eta, false,
+                                                                              nullptr, allocator);
 
-    auto cu_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(Cu_k), std::end(Cu_k)), false, nullptr, allocator);
+    auto cu_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Cu_k, false, nullptr,
+                                                                            allocator);
 
     auto glass_bk7_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        std::vector(std::begin(GlassBK7_eta), std::end(GlassBK7_eta)), false, nullptr, allocator);
+        GlassBK7_eta, false, nullptr, allocator);
 
     spectra = {
-        {"metal-Ag-eta", ag_eta}, {"metal-Ag-k", ag_k},     {"metal-Al-eta", al_eta},
-        {"metal-Al-k", al_k},     {"metal-Au-eta", au_eta}, {"metal-Au-k", au_k},
-        {"metal-Cu-eta", cu_eta}, {"metal-Cu-k", cu_k},     {"glass-BK7", glass_bk7_eta},
+        {"metal-Ag-eta", ag_eta},     {"metal-Ag-k", ag_k},     {"metal-Al-eta", al_eta},
+        {"metal-Al-k", al_k},         {"metal-Au-eta", au_eta}, {"metal-Au-k", au_k},
+        {"metal-Cu-eta", cu_eta},     {"metal-Cu-k", cu_k},
+
+        {"glass-BK7", glass_bk7_eta},
     };
 
     integrator_base = allocator.allocate<IntegratorBase>();
@@ -204,7 +206,7 @@ void SceneBuilder::build_camera() {
         return;
     }
 
-    printf("\n%s(): Camera type `%s` not implemented.\n", __func__, camera_type.c_str());
+    printf("\n%s(): Camera type `%s` not implemented\n", __func__, camera_type.c_str());
     REPORT_FATAL_ERROR();
 }
 
@@ -543,7 +545,11 @@ void SceneBuilder::parse_named_material(const std::vector<Token> &tokens) {
         REPORT_FATAL_ERROR();
     }
 
-    auto material_name = tokens[1].values[0];
+    const auto material_name = tokens[1].values[0];
+
+    if (materials.find(material_name) == materials.end()) {
+        REPORT_FATAL_ERROR();
+    }
 
     graphics_state.material = materials.at(material_name);
 }
@@ -691,7 +697,7 @@ void SceneBuilder::parse_transform(const std::vector<Token> &tokens) {
         }
     }
 
-    auto transform_matrix = SquareMatrix<4>(transform_data);
+    const auto transform_matrix = SquareMatrix<4>(transform_data);
 
     graphics_state.transform = transform_matrix.transpose();
 }
@@ -830,7 +836,7 @@ void SceneBuilder::parse_file(const std::string &_filename) {
 void SceneBuilder::preprocess() {
     integrator_base->bvh = HLBVH::create(gpu_primitives, allocator);
 
-    auto full_scene_bounds = integrator_base->bvh->bounds();
+    const auto full_scene_bounds = integrator_base->bvh->bounds();
     for (auto light : gpu_lights) {
         light->preprocess(full_scene_bounds);
     }
@@ -896,7 +902,7 @@ void SceneBuilder::render() const {
 
     if (bdpt_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
-                  << " with BDPT.\n"
+                  << " with BDPT\n"
                   << std::flush;
 
         auto splat_scale = 1.0 / spp;
@@ -907,7 +913,7 @@ void SceneBuilder::render() const {
 
     } else if (mlt_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
-                  << " with MLT-path.\n"
+                  << " with MLT-path\n"
                   << std::flush;
 
         GreyScaleFilm heatmap(film_resolution);
@@ -920,7 +926,7 @@ void SceneBuilder::render() const {
 
     } else if (wavefront_path_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
-                  << " with wavefront-path.\n"
+                  << " with wavefront-path\n"
                   << std::flush;
 
         wavefront_path_integrator->render(film, preview);
@@ -929,7 +935,7 @@ void SceneBuilder::render() const {
 
     } else if (megakernel_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
-                  << " with " + megakernel_integrator->get_name() << ".\n"
+                  << " with " + megakernel_integrator->get_name() << "\n"
                   << std::flush;
 
         megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(),
@@ -944,7 +950,7 @@ void SceneBuilder::render() const {
     const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
 
     std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count()
-              << " seconds.\n"
+              << " seconds\n"
               << std::flush;
 
     printf("GPU memory used: %s\n", allocator.get_allocated_memory_size().c_str());

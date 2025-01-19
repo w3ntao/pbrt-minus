@@ -136,9 +136,9 @@ ParameterDictionary::ParameterDictionary(
 
             if (spectrum_arg_list.size() == 1) {
                 // the only value could be a path
-                auto spectrum_arg = spectrum_arg_list[0];
+                const auto spectrum_name = spectrum_arg_list[0];
 
-                auto file_path = root + "/" + spectrum_arg;
+                auto file_path = root + "/" + spectrum_name;
                 if (std::filesystem::is_regular_file(file_path)) {
                     auto spectrum_samples = read_spectrum_file(file_path);
 
@@ -151,11 +151,16 @@ ParameterDictionary::ParameterDictionary(
                     continue;
                 }
 
-                if (_spectra.find(spectrum_arg) != _spectra.end()) {
+                if (_spectra.find(spectrum_name) != _spectra.end()) {
                     // or name of a spectrum
-                    spectra[variable_name] = _spectra.at(spectrum_arg);
+                    spectra[variable_name] = _spectra.at(spectrum_name);
                     continue;
                 }
+
+                printf("\nspectrum `%s` does not indicate a spectrum name or a valid file\n",
+                       spectrum_name.c_str());
+
+                REPORT_FATAL_ERROR();
             }
 
             // build PiecewiseLinearSpectrum from Interleaved data
