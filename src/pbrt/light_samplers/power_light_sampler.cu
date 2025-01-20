@@ -1,7 +1,7 @@
 #include <pbrt/base/light.h>
+#include <pbrt/distribution/distribution_1d.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
-#include <pbrt/util/distribution_1d.h>
 #include <pbrt/util/hash_map.h>
 
 const PowerLightSampler *PowerLightSampler::create(const Light **lights, const uint light_num,
@@ -26,12 +26,7 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
         lights_pmf[idx] = phi.average();
     }
 
-    auto lights_power_distribution = allocator.allocate<Distribution1D>();
-
-    lights_power_distribution->build(lights_pmf, allocator);
-
     auto light_to_idx = HashMap::create(light_num, allocator);
-
     for (auto idx = 0; idx < light_num; ++idx) {
         light_to_idx->insert((uintptr_t)lights[idx], idx);
     }
@@ -39,7 +34,8 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
     power_light_sampler->light_num = light_num;
     power_light_sampler->lights = lights;
     power_light_sampler->light_ptr_to_idx = light_to_idx;
-    power_light_sampler->lights_power_distribution = lights_power_distribution;
+    power_light_sampler->lights_power_distribution = Distribution1D::create(lights_pmf, allocator);
+    ;
 
     return power_light_sampler;
 }

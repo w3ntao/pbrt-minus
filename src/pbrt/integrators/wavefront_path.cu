@@ -25,6 +25,7 @@ struct FrameBuffer {
     FloatType weight;
 
     // to help sorting
+    PBRT_CPU_GPU
     bool operator<(const FrameBuffer &right) const {
         if (pixel_idx < right.pixel_idx) {
             return true;

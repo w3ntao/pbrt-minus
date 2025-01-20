@@ -1,8 +1,8 @@
 #pragma once
 
+#include <pbrt/distribution/piecewise_constant_2d.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/util/array_2d.h>
-#include <pbrt/util/piecewise_constant_2d.h>
 
 class BoxFilter;
 class GaussianFilter;

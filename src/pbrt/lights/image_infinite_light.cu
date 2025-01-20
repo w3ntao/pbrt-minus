@@ -1,3 +1,4 @@
+#include <pbrt/distribution/distribution_2d.h>
 #include <pbrt/euclidean_space/bounds3.h>
 #include <pbrt/euclidean_space/vector3.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
@@ -9,7 +10,6 @@
 #include <pbrt/spectrum_util/rgb_color_space.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/textures/gpu_image.h>
-#include <pbrt/util/distribution_2d.h>
 #include <pbrt/util/sampling.h>
 
 ImageInfiniteLight *ImageInfiniteLight::create(const Transform &render_from_light,

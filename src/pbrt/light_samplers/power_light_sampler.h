@@ -6,8 +6,8 @@ class Distribution1D;
 class GPUMemoryAllocator;
 class HashMap;
 class Light;
-class LightSampleContext;
-class SampledLight;
+struct LightSampleContext;
+struct SampledLight;
 
 class PowerLightSampler {
   public:
@@ -39,6 +39,5 @@ class PowerLightSampler {
     const Light **lights;
     const Distribution1D *lights_power_distribution;
 
-    // TODO: rewrite Distribution1D with AliasTable: Ray Tracing Gem 2: chapter 21
     const HashMap *light_ptr_to_idx;
 };

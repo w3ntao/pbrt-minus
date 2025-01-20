@@ -1,9 +1,11 @@
 #pragma once
 
+#include <cuda/std/tuple>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/gpu/macro.h>
-#include <cuda/std/tuple>
+#include <vector>
 
+class AliasTable;
 class Distribution1D;
 class GPUMemoryAllocator;
 
@@ -12,8 +14,6 @@ class Distribution2D {
     static const Distribution2D *create(const std::vector<std::vector<FloatType>> &data,
                                         GPUMemoryAllocator &allocator);
 
-    void build(const std::vector<std::vector<FloatType>> &data, GPUMemoryAllocator &allocator);
-
     PBRT_CPU_GPU
     cuda::std::pair<Point2f, FloatType> sample(const Point2f &uv) const;
 
@@ -21,10 +21,10 @@ class Distribution2D {
     FloatType get_pdf(const Point2f &u) const;
 
   private:
-    const FloatType *cdf;
-    const FloatType *pmf;
-
-    Distribution1D *distribution_1d_list;
-
     Point2i dimension;
+
+    Distribution1D *dimension_y_distribution_list;
+    const AliasTable *dimension_x_distribution;
+
+    void build(const std::vector<std::vector<FloatType>> &data, GPUMemoryAllocator &allocator);
 };

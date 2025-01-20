@@ -1,7 +1,7 @@
 #pragma once
 
-#include <pbrt/gpu/macro.h>
 #include <cstring>
+#include <pbrt/gpu/macro.h>
 
 namespace HIDDEN {
 

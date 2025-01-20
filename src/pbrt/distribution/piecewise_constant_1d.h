@@ -2,6 +2,8 @@
 
 #include <pbrt/gpu/macro.h>
 #include <vector>
+#include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/util/math.h>
 
 class PiecewiseConstant1D {
   public:

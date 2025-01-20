@@ -80,6 +80,10 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/cameras/perspective.cu
 
+        src/pbrt/distribution/alias_table.cu
+        src/pbrt/distribution/distribution_1d.cu
+        src/pbrt/distribution/distribution_2d.cu
+
         src/pbrt/euclidean_space/squared_matrix.cu
         src/pbrt/euclidean_space/transform.cu
 
@@ -149,7 +153,6 @@ add_executable(${PROJ_NAME}
         src/pbrt/textures/spectrum_scaled_texture.cu
         src/pbrt/textures/texture_mapping_2d.cu
 
-        src/pbrt/util/distribution_2d.cu
         src/pbrt/util/hash_map.cu
         src/pbrt/util/sampling.cu
 

@@ -28,6 +28,7 @@ struct FilmSample {
     SampledWavelengths lambda;
 
     // to help sorting
+    PBRT_CPU_GPU
     bool operator<(const FilmSample &right) const {
         if (p_film.x < right.p_film.x) {
             return true;

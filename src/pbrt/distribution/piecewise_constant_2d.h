@@ -1,7 +1,8 @@
 #pragma once
 
+#include <pbrt/distribution/piecewise_constant_1d.h>
 #include <pbrt/euclidean_space/bounds2.h>
-#include <pbrt/util/piecewise_constant_1d.h>
+#include <pbrt/util/array_2d.h>
 
 class PiecewiseConstant2D {
   public:
