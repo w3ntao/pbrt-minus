@@ -113,6 +113,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/materials/coated_diffuse_material.cu
         src/pbrt/materials/dielectric_material.cu
         src/pbrt/materials/diffuse_material.cu
+        src/pbrt/materials/diffuse_transmission_material.cu
         src/pbrt/materials/mix_material.cu
 
         src/pbrt/primitives/geometric_primitive.cu

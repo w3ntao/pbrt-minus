@@ -83,44 +83,25 @@ std::map<std::string, uint> count_light_type(const std::vector<Light *> &gpu_lig
 }
 
 std::map<std::string, uint> count_material_type(const std::vector<const Primitive *> &primitives) {
+    const std::map<Material::Type, std::string> material_names = {
+        {Material::Type::coated_conductor, "CoatedConductor"},
+        {Material::Type::coated_diffuse, "CoatedDiffuse"},
+        {Material::Type::conductor, "Conductor"},
+        {Material::Type::dielectric, "Dielectric"},
+        {Material::Type::diffuse, "Diffuse"},
+        {Material::Type::diffuse_transmission, "DiffuseTransmission"},
+        {Material::Type::mix, "Mix"},
+    };
+
     std::map<std::string, uint> counter;
     for (const auto primitive : primitives) {
-
-        switch (primitive->get_material()->get_material_type()) {
-        case Material::Type::coated_conductor: {
-            add_one_to_map("CoatedConductor", counter);
-            break;
-        }
-
-        case Material::Type::coated_diffuse: {
-            add_one_to_map("CoatedDiffuse", counter);
-            break;
-        }
-
-        case Material::Type::conductor: {
-            add_one_to_map("Conductor", counter);
-            break;
-        }
-
-        case Material::Type::diffuse: {
-            add_one_to_map("Diffuse", counter);
-            break;
-        }
-
-        case Material::Type::dielectric: {
-            add_one_to_map("Dielectric", counter);
-            break;
-        }
-
-        case Material::Type::mix: {
-            add_one_to_map("Mix", counter);
-            break;
-        }
-
-        default: {
+        const auto type = primitive->get_material()->get_material_type();
+        if (material_names.find(type) == material_names.end()) {
             REPORT_FATAL_ERROR();
         }
-        }
+
+        const auto name = material_names.at(type);
+        add_one_to_map(name, counter);
     }
 
     return counter;

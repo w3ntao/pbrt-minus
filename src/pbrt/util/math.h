@@ -1,8 +1,8 @@
 #pragma once
 
-#include <pbrt/gpu/macro.h>
 #include <cuda/std/tuple>
 #include <limits>
+#include <pbrt/gpu/macro.h>
 
 #define _DoubleOneMinusEpsilon 0x1.fffffffffffffp-1
 #define _FloatOneMinusEpsilon float(0x1.fffffep-1)

@@ -1,14 +1,14 @@
 #pragma once
 
+#include <filesystem>
+#include <fstream>
+#include <map>
+#include <optional>
 #include <pbrt/base/spectrum.h>
 #include <pbrt/euclidean_space/normal3f.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/euclidean_space/point3.h>
 #include <pbrt/spectrum_util/rgb.h>
-#include <filesystem>
-#include <fstream>
-#include <map>
-#include <optional>
 #include <vector>
 
 class FloatTexture;
@@ -170,19 +170,6 @@ class ParameterDictionary {
         }
 
         return normals.at(key);
-    }
-
-    RGB get_rgb(const std::string &key, std::optional<RGB> default_val) const {
-        if (rgbs.find(key) == rgbs.end()) {
-            if (!default_val.has_value()) {
-                printf("%s(): key not available: %s\n", __func__, key.c_str());
-                REPORT_FATAL_ERROR();
-            }
-
-            return default_val.value();
-        }
-
-        return rgbs.at(key);
     }
 
     const Spectrum *get_spectrum(const std::string &key, SpectrumType spectrum_type,

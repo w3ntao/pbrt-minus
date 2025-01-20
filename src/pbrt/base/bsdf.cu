@@ -29,6 +29,11 @@ void BSDF::init_bxdf(const Material *material, SampledWavelengths &lambda,
         return;
     }
 
+    case Material::Type::diffuse_transmission: {
+        bxdf.init(material->get_diffuse_transmission_bsdf(material_eval_context, lambda));
+        return;
+    }
+
     case Material::Type::mix: {
         printf("\nyou should not see MixMaterial here\n\n");
         REPORT_FATAL_ERROR();

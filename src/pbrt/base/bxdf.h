@@ -6,6 +6,7 @@
 #include <pbrt/bxdfs/conductor_bxdf.h>
 #include <pbrt/bxdfs/dielectric_bxdf.h>
 #include <pbrt/bxdfs/diffuse_bxdf.h>
+#include <pbrt/bxdfs/diffuse_transmission_bxdf.h>
 #include <pbrt/gpu/macro.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 
@@ -18,6 +19,7 @@ class BxDF {
         conductor,
         dielectric,
         diffuse,
+        diffuse_transmission,
     };
 
     PBRT_CPU_GPU
@@ -37,6 +39,9 @@ class BxDF {
 
     PBRT_CPU_GPU
     void init(const DiffuseBxDF &_diffuse_bxdf);
+
+    PBRT_CPU_GPU
+    void init(const DiffuseTransmissionBxDF &_diffuse_transmission_bxdf);
 
     PBRT_CPU_GPU
     BxDFFlags flags() const;
@@ -69,4 +74,5 @@ class BxDF {
     ConductorBxDF conductor_bxdf;
     DielectricBxDF dielectric_bxdf;
     DiffuseBxDF diffuse_bxdf;
+    DiffuseTransmissionBxDF diffuse_transmission_bxdf;
 };

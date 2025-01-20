@@ -31,6 +31,12 @@ void BxDF::init(const DiffuseBxDF &_diffuse_bxdf) {
 }
 
 PBRT_CPU_GPU
+void BxDF::init(const DiffuseTransmissionBxDF &_diffuse_transmission_bxdf) {
+    type = Type::diffuse_transmission;
+    diffuse_transmission_bxdf = _diffuse_transmission_bxdf;
+}
+
+PBRT_CPU_GPU
 BxDFFlags BxDF::flags() const {
     switch (type) {
     case Type::coated_conductor: {
@@ -51,6 +57,10 @@ BxDFFlags BxDF::flags() const {
 
     case Type::diffuse: {
         return diffuse_bxdf.flags();
+    }
+
+    case Type::diffuse_transmission: {
+        return diffuse_transmission_bxdf.flags();
     }
     }
 
@@ -85,6 +95,11 @@ void BxDF::regularize() {
         diffuse_bxdf.regularize();
         return;
     }
+
+    case Type::diffuse_transmission: {
+        diffuse_transmission_bxdf.regularize();
+        return;
+    }
     }
     REPORT_FATAL_ERROR();
 }
@@ -111,6 +126,10 @@ SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     case Type::diffuse: {
         return diffuse_bxdf.f(wo, wi, mode);
     }
+
+    case Type::diffuse_transmission: {
+        return diffuse_transmission_bxdf.f(wo, wi, mode);
+    }
     }
 
     REPORT_FATAL_ERROR();
@@ -118,9 +137,8 @@ SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
-                                               TransportMode mode,
-                                               BxDFReflTransFlags sampleFlags) const {
+pbrt::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
+                                          BxDFReflTransFlags sampleFlags) const {
     switch (type) {
     case Type::coated_conductor: {
         return coated_conductor_bxdf.sample_f(wo, uc, u, mode, sampleFlags);
@@ -140,6 +158,10 @@ pbrt::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
 
     case Type::diffuse: {
         return diffuse_bxdf.sample_f(wo, uc, u, mode, sampleFlags);
+    }
+
+    case Type::diffuse_transmission: {
+        return diffuse_transmission_bxdf.sample_f(wo, uc, u, mode, sampleFlags);
     }
     }
 
@@ -169,6 +191,10 @@ FloatType BxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
 
     case Type::dielectric: {
         return dielectric_bxdf.pdf(wo, wi, mode, sampleFlags);
+    }
+
+    case Type::diffuse_transmission: {
+        return diffuse_transmission_bxdf.pdf(wo, wi, mode, sampleFlags);
     }
     }
 

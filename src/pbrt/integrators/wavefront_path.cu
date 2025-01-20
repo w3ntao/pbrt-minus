@@ -192,38 +192,41 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
 
     case Material::Type::conductor: {
         queues->conductor_material->append_path(path_idx);
-        break;
+        return;
     }
 
     case Material::Type::coated_conductor: {
         queues->coated_conductor_material->append_path(path_idx);
-        break;
+        return;
     }
 
     case Material::Type::coated_diffuse: {
         queues->coated_diffuse_material->append_path(path_idx);
-        break;
+        return;
     }
 
     case Material::Type::dielectric: {
         queues->dielectric_material->append_path(path_idx);
-        break;
+        return;
     }
 
     case Material::Type::diffuse: {
         queues->diffuse_material->append_path(path_idx);
-        break;
+        return;
+    }
+
+    case Material::Type::diffuse_transmission: {
+        queues->diffuse_transmission_material->append_path(path_idx);
+        return;
     }
 
     case Material::Type::mix: {
         printf("\nyou should not see MixMaterial here\n\n");
         REPORT_FATAL_ERROR();
     }
+    }
 
-    default: {
-        REPORT_FATAL_ERROR();
-    }
-    }
+    REPORT_FATAL_ERROR();
 }
 
 __global__ void write_frame_buffer(Film *film, WavefrontPathIntegrator::Queues *queues) {
@@ -466,6 +469,7 @@ void WavefrontPathIntegrator::Queues::init(GPUMemoryAllocator &allocator) {
     coated_diffuse_material = build_new_queue(allocator);
     dielectric_material = build_new_queue(allocator);
     diffuse_material = build_new_queue(allocator);
+    diffuse_transmission_material = build_new_queue(allocator);
 
     frame_buffer_counter = 0;
     frame_buffer_queue = allocator.allocate<FrameBuffer>(PATH_POOL_SIZE);

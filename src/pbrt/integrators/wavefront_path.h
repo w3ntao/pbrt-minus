@@ -76,6 +76,7 @@ class WavefrontPathIntegrator {
         SingleQueue *coated_diffuse_material;
         SingleQueue *dielectric_material;
         SingleQueue *diffuse_material;
+        SingleQueue *diffuse_transmission_material;
 
         uint frame_buffer_counter;
         FrameBuffer *frame_buffer_queue;
@@ -83,15 +84,13 @@ class WavefrontPathIntegrator {
         void init(GPUMemoryAllocator &allocator);
 
         [[nodiscard]] std::vector<SingleQueue *> get_all_queues() const {
-            return {
-                new_paths,
-                rays,
-                conductor_material,
-                coated_conductor_material,
-                coated_diffuse_material,
-                dielectric_material,
-                diffuse_material,
-            };
+            auto all_queues = std::vector({new_paths, rays});
+
+            for (const auto material_type : Material::get_all_material_type()) {
+                all_queues.push_back(get_material_queue(material_type));
+            }
+
+            return all_queues;
         }
 
         SingleQueue *get_material_queue(const Material::Type material_type) const {
@@ -114,6 +113,10 @@ class WavefrontPathIntegrator {
 
             case Material::Type::diffuse: {
                 return diffuse_material;
+            }
+
+            case Material::Type::diffuse_transmission: {
+                return diffuse_transmission_material;
             }
             }
 

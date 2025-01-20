@@ -10,6 +10,7 @@ class CoatedDiffuseMaterial;
 class ConductorMaterial;
 class DielectricMaterial;
 class DiffuseMaterial;
+class DiffuseTransmissionMaterial;
 class GPUMemoryAllocator;
 class MixMaterial;
 
@@ -22,6 +23,7 @@ class Material {
         coated_diffuse,
         conductor,
         diffuse,
+        diffuse_transmission,
         dielectric,
         mix,
     };
@@ -30,7 +32,7 @@ class Material {
         // consider only evaluable material (excluding mix)
         return {
             Type::coated_conductor, Type::coated_diffuse, Type::conductor,
-            Type::dielectric,       Type::diffuse,
+            Type::dielectric,       Type::diffuse,        Type::diffuse_transmission,
         };
     }
 
@@ -40,18 +42,6 @@ class Material {
 
     static const Material *create_diffuse_material(const SpectrumTexture *texture,
                                                    GPUMemoryAllocator &allocator);
-
-    void init(const CoatedConductorMaterial *coated_conductor_material);
-
-    void init(const CoatedDiffuseMaterial *coated_diffuse_material);
-
-    void init(const ConductorMaterial *conductor_material);
-
-    void init(const DielectricMaterial *dielectric_material);
-
-    void init(const DiffuseMaterial *diffuse_material);
-
-    void init(const MixMaterial *mix_material);
 
     PBRT_CPU_GPU
     Type get_material_type() const {
@@ -80,7 +70,25 @@ class Material {
     PBRT_CPU_GPU
     DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
+    PBRT_CPU_GPU
+    DiffuseTransmissionBxDF get_diffuse_transmission_bsdf(const MaterialEvalContext &ctx,
+                                                          SampledWavelengths &lambda) const;
+
   private:
     const void *ptr;
     Type type;
+
+    void init(const CoatedConductorMaterial *coated_conductor_material);
+
+    void init(const CoatedDiffuseMaterial *coated_diffuse_material);
+
+    void init(const ConductorMaterial *conductor_material);
+
+    void init(const DielectricMaterial *dielectric_material);
+
+    void init(const DiffuseMaterial *diffuse_material);
+
+    void init(const DiffuseTransmissionMaterial *diffuse_transmission_material);
+
+    void init(const MixMaterial *mix_material);
 };

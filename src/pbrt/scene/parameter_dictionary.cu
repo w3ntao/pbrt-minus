@@ -205,13 +205,13 @@ const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
     }
 
     if (has_rgb(key)) {
-        auto rgb_val = rgbs.at(key);
+        const auto rgb_val = rgbs.at(key);
         return Spectrum::create_from_rgb(rgb_val, spectrum_type, global_spectra->rgb_color_space,
                                          allocator);
     }
 
     if (blackbodies.find(key) != blackbodies.end()) {
-        auto value = blackbodies.at(key);
+        const auto value = blackbodies.at(key);
         return Spectrum::create_black_body(value, allocator);
     }
 
@@ -306,7 +306,7 @@ ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType s
         return nullptr;
     }
 
-    auto spectrum = get_spectrum(key, spectrum_type, allocator);
+    const auto spectrum = get_spectrum(key, spectrum_type, allocator);
     if (spectrum) {
         return SpectrumTexture::create_constant_texture(spectrum, allocator);
     }

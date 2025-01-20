@@ -4,12 +4,14 @@
 #include <pbrt/bxdfs/conductor_bxdf.h>
 #include <pbrt/bxdfs/dielectric_bxdf.h>
 #include <pbrt/bxdfs/diffuse_bxdf.h>
+#include <pbrt/bxdfs/diffuse_transmission_bxdf.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/materials/coated_conductor_material.h>
 #include <pbrt/materials/coated_diffuse_material.h>
 #include <pbrt/materials/conductor_material.h>
 #include <pbrt/materials/dielectric_material.h>
 #include <pbrt/materials/diffuse_material.h>
+#include <pbrt/materials/diffuse_transmission_material.h>
 #include <pbrt/materials/mix_material.h>
 
 const Material *Material::create(const std::string &type_of_material,
@@ -58,6 +60,15 @@ const Material *Material::create(const std::string &type_of_material,
 
         diffuse_material->init(parameters, allocator);
         material->init(diffuse_material);
+
+        return material;
+    }
+
+    if (type_of_material == "diffusetransmission") {
+        const auto diffuse_transmission_material =
+            DiffuseTransmissionMaterial::create(parameters, allocator);
+
+        material->init(diffuse_transmission_material);
 
         return material;
     }
@@ -111,6 +122,11 @@ void Material::init(const DielectricMaterial *dielectric_material) {
 void Material::init(const DiffuseMaterial *diffuse_material) {
     type = Type::diffuse;
     ptr = diffuse_material;
+}
+
+void Material::init(const DiffuseTransmissionMaterial *diffuse_transmission_material) {
+    type = Type::diffuse_transmission;
+    ptr = diffuse_transmission_material;
 }
 
 void Material::init(const MixMaterial *mix_material) {
@@ -176,4 +192,15 @@ DiffuseBxDF Material::get_diffuse_bsdf(const MaterialEvalContext &ctx,
     }
 
     return static_cast<const DiffuseMaterial *>(ptr)->get_diffuse_bsdf(ctx, lambda);
+}
+
+PBRT_CPU_GPU
+DiffuseTransmissionBxDF Material::get_diffuse_transmission_bsdf(const MaterialEvalContext &ctx,
+                                                                SampledWavelengths &lambda) const {
+    if (type != Type::diffuse_transmission) {
+        REPORT_FATAL_ERROR();
+    }
+
+    return static_cast<const DiffuseTransmissionMaterial *>(ptr)->get_diffuse_transmission_bsdf(
+        ctx, lambda);
 }
