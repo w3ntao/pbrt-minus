@@ -10,12 +10,22 @@ const SpectrumTexture *
 SpectrumTexture::create(const std::string &texture_type, const SpectrumType spectrum_type,
                         const Transform &render_from_object, const RGBColorSpace *color_space,
                         const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
+    auto spectrum_texture = allocator.allocate<SpectrumTexture>();
+
     if (texture_type == "checkerboard") {
         auto checkerboard_texture = SpectrumCheckerboardTexture::create(
             render_from_object, spectrum_type, parameters, allocator);
 
-        auto spectrum_texture = allocator.allocate<SpectrumTexture>();
         spectrum_texture->init(checkerboard_texture);
+
+        return spectrum_texture;
+    }
+
+    if (texture_type == "constant") {
+        auto spectrum_constant_texture =
+            SpectrumConstantTexture::create(parameters, spectrum_type, allocator);
+
+        spectrum_texture->init(spectrum_constant_texture);
 
         return spectrum_texture;
     }
@@ -23,15 +33,12 @@ SpectrumTexture::create(const std::string &texture_type, const SpectrumType spec
     if (texture_type == "imagemap") {
         auto image_texture = SpectrumImageTexture::create(spectrum_type, render_from_object,
                                                           color_space, parameters, allocator);
-        auto spectrum_texture = allocator.allocate<SpectrumTexture>();
-
         spectrum_texture->init(image_texture);
         return spectrum_texture;
     }
 
     if (texture_type == "scale") {
         auto scaled_texture = allocator.allocate<SpectrumScaledTexture>();
-        auto spectrum_texture = allocator.allocate<SpectrumTexture>();
 
         scaled_texture->init(spectrum_type, parameters, allocator);
         spectrum_texture->init(scaled_texture);

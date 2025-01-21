@@ -1,20 +1,24 @@
 #pragma once
 
 #include <pbrt/base/spectrum.h>
-#include <pbrt/base/spectrum_texture.h>
+
+class ParameterDictionary;
+class Transform;
+struct TextureEvalContext;
 
 class SpectrumConstantTexture {
   public:
+    static const SpectrumConstantTexture *create(const ParameterDictionary &parameters,
+                                                 SpectrumType spectrum_type,
+                                                 GPUMemoryAllocator &allocator);
+
     void init(const Spectrum *_value) {
         value = _value;
     }
 
     PBRT_CPU_GPU
-    SampledSpectrum evaluate(const TextureEvalContext &ctx,
-                             const SampledWavelengths &lambda) const {
-        return value->sample(lambda);
-    }
+    SampledSpectrum evaluate(const TextureEvalContext &ctx, const SampledWavelengths &lambda) const;
 
-  public:
+  private:
     const Spectrum *value;
 };
