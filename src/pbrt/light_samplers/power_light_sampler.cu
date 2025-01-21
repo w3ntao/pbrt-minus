@@ -48,7 +48,7 @@ pbrt::optional<SampledLight> PowerLightSampler::sample(const FloatType u) const 
 
     auto result = lights_power_distribution->sample(u);
 
-    if (DEBUG_MODE) {
+    if constexpr (DEBUG_MODE) {
         if (result.first >= light_num) {
             REPORT_FATAL_ERROR();
         }

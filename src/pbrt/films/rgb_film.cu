@@ -91,7 +91,7 @@ void RGBFilm::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
 
     auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
 
-    if (DEBUG_MODE && rgb.has_nan()) {
+    if constexpr (DEBUG_MODE && rgb.has_nan()) {
         printf("RGBFilm::%s(): pixel(%d): has a NAN component\n", __func__, pixel_index);
     }
 
