@@ -4,6 +4,7 @@
 #include <pbrt/textures/spectrum_checkerboard_texture.h>
 #include <pbrt/textures/spectrum_constant_texture.h>
 #include <pbrt/textures/spectrum_image_texture.h>
+#include <pbrt/textures/spectrum_mix_texture.h>
 #include <pbrt/textures/spectrum_scaled_texture.h>
 
 const SpectrumTexture *
@@ -22,10 +23,10 @@ SpectrumTexture::create(const std::string &texture_type, const SpectrumType spec
     }
 
     if (texture_type == "constant") {
-        auto spectrum_constant_texture =
+        auto constant_texture =
             SpectrumConstantTexture::create(parameters, spectrum_type, allocator);
 
-        spectrum_texture->init(spectrum_constant_texture);
+        spectrum_texture->init(constant_texture);
 
         return spectrum_texture;
     }
@@ -34,6 +35,13 @@ SpectrumTexture::create(const std::string &texture_type, const SpectrumType spec
         auto image_texture = SpectrumImageTexture::create(spectrum_type, render_from_object,
                                                           color_space, parameters, allocator);
         spectrum_texture->init(image_texture);
+        return spectrum_texture;
+    }
+
+    if (texture_type == "mix") {
+        auto mix_texture = SpectrumMixTexture::create(parameters, spectrum_type, allocator);
+
+        spectrum_texture->init(mix_texture);
         return spectrum_texture;
     }
 
@@ -91,6 +99,11 @@ void SpectrumTexture::init(const SpectrumImageTexture *image_texture) {
     ptr = image_texture;
 }
 
+void SpectrumTexture::init(const SpectrumMixTexture *mix_texture) {
+    type = Type::mix;
+    ptr = mix_texture;
+}
+
 void SpectrumTexture::init(const SpectrumScaledTexture *scale_texture) {
     type = Type::scaled;
     ptr = scale_texture;
@@ -110,6 +123,10 @@ SampledSpectrum SpectrumTexture::evaluate(const TextureEvalContext &ctx,
 
     case Type::image: {
         return static_cast<const SpectrumImageTexture *>(ptr)->evaluate(ctx, lambda);
+    }
+
+    case Type::mix: {
+        return static_cast<const SpectrumMixTexture *>(ptr)->evaluate(ctx, lambda);
     }
 
     case Type::scaled: {

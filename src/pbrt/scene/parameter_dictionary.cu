@@ -255,7 +255,7 @@ const FloatTexture *ParameterDictionary::get_float_texture(const std::string &ke
                                                            FloatType default_val,
                                                            GPUMemoryAllocator &allocator) const {
     auto texture = get_float_texture_or_null(key, allocator);
-    if (texture) {
+    if (texture != nullptr) {
         return texture;
     }
 

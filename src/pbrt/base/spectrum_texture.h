@@ -13,6 +13,7 @@ class ParameterDictionary;
 class Spectrum;
 class SpectrumConstantTexture;
 class SpectrumImageTexture;
+class SpectrumMixTexture;
 class SpectrumScaledTexture;
 
 struct TextureEvalContext;
@@ -23,6 +24,7 @@ class SpectrumTexture {
         checkerboard,
         constant,
         image,
+        mix,
         scaled,
     };
 
@@ -42,6 +44,8 @@ class SpectrumTexture {
     void init(const SpectrumConstantTexture *constant_texture);
 
     void init(const SpectrumImageTexture *image_texture);
+
+    void init(const SpectrumMixTexture *mix_texture);
 
     void init(const SpectrumScaledTexture *scale_texture);
 

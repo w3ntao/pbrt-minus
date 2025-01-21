@@ -151,6 +151,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/textures/spectrum_checkerboard_texture.cu
         src/pbrt/textures/spectrum_constant_texture.cu
         src/pbrt/textures/spectrum_image_texture.cu
+        src/pbrt/textures/spectrum_mix_texture.cu
         src/pbrt/textures/spectrum_scaled_texture.cu
         src/pbrt/textures/texture_mapping_2d.cu
 
