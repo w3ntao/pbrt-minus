@@ -4,6 +4,7 @@
 #include <pbrt/base/texture_eval_context.h>
 #include <pbrt/gpu/macro.h>
 
+class SpectrumDirectionMixTexture;
 class GPUMemoryAllocator;
 class RGBColorSpace;
 class SpectrumCheckerboardTexture;
@@ -23,6 +24,7 @@ class SpectrumTexture {
     enum class Type {
         checkerboard,
         constant,
+        direction_mix,
         image,
         mix,
         scaled,
@@ -30,7 +32,7 @@ class SpectrumTexture {
 
     static const SpectrumTexture *
     create(const std::string &texture_type, SpectrumType spectrum_type,
-           const Transform &render_from_object, const RGBColorSpace *color_space,
+           const Transform &render_from_texture, const RGBColorSpace *color_space,
            const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     static const SpectrumTexture *create_constant_float_val_texture(FloatType val,
@@ -42,6 +44,8 @@ class SpectrumTexture {
     void init(const SpectrumCheckerboardTexture *checkerboard_texture);
 
     void init(const SpectrumConstantTexture *constant_texture);
+
+    void init(const SpectrumDirectionMixTexture *direction_mix_texture);
 
     void init(const SpectrumImageTexture *image_texture);
 

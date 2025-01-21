@@ -2,7 +2,6 @@
 
 #include <pbrt/textures/mipmap.h>
 #include <pbrt/textures/texture_mapping_2d.h>
-#include <vector>
 
 class GPUMemoryAllocator;
 class MIPMap;

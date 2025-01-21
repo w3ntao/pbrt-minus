@@ -1,4 +1,3 @@
-#include <pbrt/euclidean_space/transform.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/textures/image_texture_base.h>
 #include <pbrt/textures/mipmap.h>

@@ -3,19 +3,20 @@
 #include <pbrt/spectrum_util/rgb_color_space.h>
 #include <pbrt/textures/spectrum_checkerboard_texture.h>
 #include <pbrt/textures/spectrum_constant_texture.h>
+#include <pbrt/textures/spectrum_direction_mix_texture.h>
 #include <pbrt/textures/spectrum_image_texture.h>
 #include <pbrt/textures/spectrum_mix_texture.h>
 #include <pbrt/textures/spectrum_scaled_texture.h>
 
 const SpectrumTexture *
 SpectrumTexture::create(const std::string &texture_type, const SpectrumType spectrum_type,
-                        const Transform &render_from_object, const RGBColorSpace *color_space,
+                        const Transform &render_from_texture, const RGBColorSpace *color_space,
                         const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
     auto spectrum_texture = allocator.allocate<SpectrumTexture>();
 
     if (texture_type == "checkerboard") {
         auto checkerboard_texture = SpectrumCheckerboardTexture::create(
-            render_from_object, spectrum_type, parameters, allocator);
+            render_from_texture, spectrum_type, parameters, allocator);
 
         spectrum_texture->init(checkerboard_texture);
 
@@ -31,8 +32,17 @@ SpectrumTexture::create(const std::string &texture_type, const SpectrumType spec
         return spectrum_texture;
     }
 
+    if (texture_type == "directionmix") {
+        auto direction_mix_texture = SpectrumDirectionMixTexture::create(
+            render_from_texture, parameters, spectrum_type, allocator);
+
+        spectrum_texture->init(direction_mix_texture);
+
+        return spectrum_texture;
+    }
+
     if (texture_type == "imagemap") {
-        auto image_texture = SpectrumImageTexture::create(spectrum_type, render_from_object,
+        auto image_texture = SpectrumImageTexture::create(spectrum_type, render_from_texture,
                                                           color_space, parameters, allocator);
         spectrum_texture->init(image_texture);
         return spectrum_texture;
@@ -94,6 +104,11 @@ void SpectrumTexture::init(const SpectrumConstantTexture *constant_texture) {
     ptr = constant_texture;
 }
 
+void SpectrumTexture::init(const SpectrumDirectionMixTexture *direction_mix_texture) {
+    type = Type::direction_mix;
+    ptr = direction_mix_texture;
+}
+
 void SpectrumTexture::init(const SpectrumImageTexture *image_texture) {
     type = Type::image;
     ptr = image_texture;
@@ -119,6 +134,10 @@ SampledSpectrum SpectrumTexture::evaluate(const TextureEvalContext &ctx,
 
     case Type::constant: {
         return static_cast<const SpectrumConstantTexture *>(ptr)->evaluate(ctx, lambda);
+    }
+
+    case Type::direction_mix: {
+        return static_cast<const SpectrumDirectionMixTexture *>(ptr)->evaluate(ctx, lambda);
     }
 
     case Type::image: {

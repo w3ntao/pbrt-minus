@@ -5,7 +5,7 @@
 #include <pbrt/textures/spectrum_mix_texture.h>
 
 const SpectrumMixTexture *SpectrumMixTexture::create(const ParameterDictionary &parameters,
-                                                     SpectrumType spectrum_type,
+                                                     const SpectrumType spectrum_type,
                                                      GPUMemoryAllocator &allocator) {
     auto tex1 = parameters.get_spectrum_texture("tex1", spectrum_type, allocator);
     if (tex1 == nullptr) {

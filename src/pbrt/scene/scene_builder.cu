@@ -18,7 +18,6 @@
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/spectrum_constants_glass.h>
 #include <pbrt/spectrum_util/spectrum_constants_metal.h>
-#include <pbrt/textures/spectrum_constant_texture.h>
 #include <pbrt/util/std_container.h>
 #include <set>
 
@@ -142,12 +141,15 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
     auto glass_bk7_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
         GlassBK7_eta, false, nullptr, allocator);
 
+    auto glass_f11_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
+        GlassSF11_eta, false, nullptr, allocator);
+
     spectra = {
-        {"metal-Ag-eta", ag_eta},     {"metal-Ag-k", ag_k},     {"metal-Al-eta", al_eta},
-        {"metal-Al-k", al_k},         {"metal-Au-eta", au_eta}, {"metal-Au-k", au_k},
+        {"metal-Ag-eta", ag_eta},     {"metal-Ag-k", ag_k},         {"metal-Al-eta", al_eta},
+        {"metal-Al-k", al_k},         {"metal-Au-eta", au_eta},     {"metal-Au-k", au_k},
         {"metal-Cu-eta", cu_eta},     {"metal-Cu-k", cu_k},
 
-        {"glass-BK7", glass_bk7_eta},
+        {"glass-BK7", glass_bk7_eta}, {"glass-F11", glass_f11_eta},
     };
 
     integrator_base = allocator.allocate<IntegratorBase>();
