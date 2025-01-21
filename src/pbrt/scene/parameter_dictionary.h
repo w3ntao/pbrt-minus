@@ -76,14 +76,13 @@ class ParameterDictionary {
     }
 
     FloatType get_float(const std::string &key,
-                        std::optional<FloatType> default_val = std::nullopt) const {
+                        const std::optional<FloatType> default_val = std::nullopt) const {
         if (floats.find(key) == floats.end()) {
-            if (!default_val.has_value()) {
-                printf("key `%s` not available\n", key.c_str());
-                REPORT_FATAL_ERROR();
+            if (default_val.has_value()) {
+                return default_val.value();
             }
 
-            return default_val.value();
+            REPORT_FATAL_ERROR();
         }
 
         return floats.at(key)[0];
@@ -162,6 +161,19 @@ class ParameterDictionary {
         }
 
         return point3s.at(key);
+    }
+
+    Vector3f get_vector3f(const std::string &key,
+                          const std::optional<Vector3f> default_val = std::nullopt) const {
+        if (vector3s.find(key) == vector3s.end()) {
+            if (default_val.has_value()) {
+                return default_val.value();
+            }
+
+            REPORT_FATAL_ERROR();
+        }
+
+        return vector3s.at(key);
     }
 
     std::vector<Normal3f> get_normal_array(const std::string &key) const {
