@@ -174,38 +174,57 @@ class Vector3 {
         return std::abs(z);
     }
 
-    PBRT_CPU_GPU inline FloatType cos_theta() const {
+    PBRT_CPU_GPU
+    FloatType cos_theta() const {
         return z;
     }
 
-    PBRT_CPU_GPU inline FloatType cos2_theta() const {
+    PBRT_CPU_GPU
+    FloatType cos2_theta() const {
         return sqr(z);
     }
 
-    PBRT_CPU_GPU inline FloatType sin2_theta() const {
+    PBRT_CPU_GPU
+    FloatType sin2_theta() const {
         return std::max<FloatType>(0.0, 1.0 - cos2_theta());
     }
 
-    PBRT_CPU_GPU inline FloatType sin_theta() const {
+    PBRT_CPU_GPU
+    FloatType sin_theta() const {
         return std::sqrt(sin2_theta());
     }
 
-    PBRT_CPU_GPU inline FloatType tan_theta() const {
+    PBRT_CPU_GPU
+    FloatType tan_theta() const {
         return sin_theta() / cos_theta();
     }
 
-    PBRT_CPU_GPU inline FloatType tan2_theta() const {
+    PBRT_CPU_GPU
+    FloatType tan2_theta() const {
         return sin2_theta() / cos2_theta();
     }
 
-    PBRT_CPU_GPU inline FloatType cos_phi() const {
+    PBRT_CPU_GPU
+    FloatType cos_phi() const {
         FloatType sinTheta = sin_theta();
         return (sinTheta == 0) ? 1 : clamp<FloatType>(x / sinTheta, -1, 1);
     }
 
-    PBRT_CPU_GPU inline FloatType sin_phi() const {
+    PBRT_CPU_GPU
+    FloatType sin_phi() const {
         FloatType sinTheta = sin_theta();
         return (sinTheta == 0) ? 0 : clamp<FloatType>(y / sinTheta, -1, 1);
+    }
+
+    PBRT_CPU_GPU
+    FloatType spherical_theta() const {
+        return safe_acos(z);
+    }
+
+    PBRT_CPU_GPU
+    FloatType spherical_phi() const {
+        FloatType p = std::atan2(y, x);
+        return (p < 0) ? (p + 2 * compute_pi()) : p;
     }
 
     PBRT_CPU_GPU void print() const {
