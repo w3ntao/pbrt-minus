@@ -47,7 +47,7 @@ class MegakernelIntegrator {
         return "";
     }
 
-    PBRT_GPU
+    PBRT_CPU_GPU
     SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
     void render(Film *film, const std::string &sampler_type, uint samples_per_pixel,

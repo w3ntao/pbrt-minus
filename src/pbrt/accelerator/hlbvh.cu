@@ -4,6 +4,8 @@
 #include <pbrt/util/stack.h>
 #include <pbrt/util/thread_pool.h>
 
+constexpr uint STACK_SIZE = 128;
+
 constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
 constexpr uint BIT_LENGTH_OF_TREELET_MASK = 21;
 constexpr uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_OF_TREELET_MASK;
@@ -190,7 +192,7 @@ bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
         int(inv_dir.z < 0.0),
     };
 
-    Stack<uint, 128> nodes_to_visit;
+    Stack<uint, STACK_SIZE> nodes_to_visit;
     nodes_to_visit.push(0);
     while (true) {
         if (nodes_to_visit.empty()) {
@@ -245,7 +247,7 @@ pbrt::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray, FloatType t_m
         int(inv_dir.z < 0.0),
     };
 
-    Stack<uint, 128> nodes_to_visit;
+    Stack<uint, STACK_SIZE> nodes_to_visit;
     nodes_to_visit.push(0);
 
     while (true) {
@@ -394,20 +396,18 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         return;
     }
 
-    printf("\ntotal primitives: %u\n", num_total_primitives);
+    // printf("\ntotal primitives: %u\n", num_total_primitives);
 
     GPUMemoryAllocator local_allocator;
 
     auto sparse_treelets = local_allocator.allocate<Treelet>(MAX_TREELET_NUM);
 
-    auto gpu_morton_primitives = allocator.allocate<MortonPrimitive>(num_total_primitives);
-    auto gpu_primitives_array = allocator.allocate<const Primitive *>(num_total_primitives);
+    morton_primitives = allocator.allocate<MortonPrimitive>(num_total_primitives);
+    primitives = allocator.allocate<const Primitive *>(num_total_primitives);
 
-    CHECK_CUDA_ERROR(cudaMemcpy(gpu_primitives_array, gpu_primitives.data(),
+    CHECK_CUDA_ERROR(cudaMemcpy(primitives, gpu_primitives.data(),
                                 sizeof(Primitive *) * num_total_primitives,
                                 cudaMemcpyHostToDevice));
-
-    this->init(gpu_primitives_array, gpu_morton_primitives);
 
     constexpr uint threads = 1024;
     {
@@ -427,7 +427,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
 
     Bounds3f bounds_of_primitives_centroids;
     for (uint idx = 0; idx < num_total_primitives; idx++) {
-        bounds_of_primitives_centroids += gpu_morton_primitives[idx].bounds.centroid();
+        bounds_of_primitives_centroids += morton_primitives[idx].bounds.centroid();
     }
     auto max_dim = bounds_of_primitives_centroids.max_dimension();
     auto radius = (bounds_of_primitives_centroids.p_max[max_dim] -
@@ -544,9 +544,8 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
 
     auto dense_treelets = local_allocator.allocate<Treelet>(dense_treelet_indices.size());
     for (uint idx = 0; idx < dense_treelet_indices.size(); idx++) {
-        uint sparse_idx = dense_treelet_indices[idx];
-        CHECK_CUDA_ERROR(cudaMemcpy(&dense_treelets[idx], &sparse_treelets[sparse_idx],
-                                    sizeof(Treelet), cudaMemcpyDeviceToDevice));
+        const uint sparse_idx = dense_treelet_indices[idx];
+        dense_treelets[idx] = sparse_treelets[sparse_idx];
     }
 
     uint max_build_node_length =
@@ -578,7 +577,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
 
         if (array_length > last_allocated_size) {
             // to avoid unnecessarily repeated memory allocation
-            uint current_size = array_length * 2;
+            uint current_size = array_length;
             bvh_args_array = local_allocator.allocate<BottomBVHArgs>(current_size);
             last_allocated_size = current_size;
         }
@@ -618,7 +617,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
                                                                start_bottom_bvh};
 
     printf("BVH constructing took %.2f seconds "
-           "(sorting: %.2f, top SAH-BVH building: %.2f, bottom BVH building: %.2f)\n",
+           "(sorting: %.2f, top SAH-BVH building: %.2f, bottom BVH building: %.2f)\n\n",
            (duration_sorting + duration_top_bvh + duration_bottom_bvh).count(),
            duration_sorting.count(), duration_top_bvh.count(), duration_bottom_bvh.count());
 }
@@ -640,8 +639,10 @@ uint HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, const uint num_d
     });
     thread_pool.sync();
 
+    /*
     printf("HLBVH: build top BVH with SAH using %d buckets\n", NUM_BUCKETS);
     printf("HLBVH: top BVH nodes: %u\n", node_count.load());
+    */
 
     return node_count.load();
 }

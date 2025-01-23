@@ -1,9 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <pbrt/base/primitive.h>
 #include <pbrt/base/shape.h>
 #include <pbrt/euclidean_space/bounds3.h>
-#include <atomic>
 #include <vector>
 
 class GPUMemoryAllocator;
@@ -95,12 +95,6 @@ class HLBVH {
     void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length);
 
   private:
-    void init(const Primitive **_primitives, MortonPrimitive *gpu_morton_primitives) {
-        primitives = _primitives;
-        morton_primitives = gpu_morton_primitives;
-        build_nodes = nullptr;
-    }
-
     void build_bvh(const std::vector<const Primitive *> &gpu_primitives,
                    GPUMemoryAllocator &allocator);
 

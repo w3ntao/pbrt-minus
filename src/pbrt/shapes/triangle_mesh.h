@@ -15,7 +15,7 @@ class TriangleMesh {
     const Normal3f *n;
     const Vector3f *s;
     const Point2f *uv = nullptr;
-    const int *faceIndices = nullptr;
+    const int *faceIndices;
 
     bool reverse_orientation;
     bool transformSwapsHandedness;
@@ -39,6 +39,7 @@ class TriangleMesh {
         // default value:
         n = _n;
         s = nullptr;
+        faceIndices = nullptr;
 
         transformSwapsHandedness = false;
     }

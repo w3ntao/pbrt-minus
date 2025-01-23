@@ -11,7 +11,7 @@
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <thread>
 
-PBRT_GPU
+PBRT_CPU_GPU
 static void evaluate_pixel_sample(Film *film, const Point2i p_pixel, const uint samples_per_pixel,
                                   Sampler *samplers, const MegakernelIntegrator *integrator,
                                   const IntegratorBase *integrator_base) {
@@ -132,7 +132,7 @@ void MegakernelIntegrator::init(const SurfaceNormalIntegrator *surface_normal_in
     ptr = surface_normal_integrator;
 }
 
-PBRT_GPU
+PBRT_CPU_GPU
 SampledSpectrum MegakernelIntegrator::li(const Ray &ray, SampledWavelengths &lambda,
                                          Sampler *sampler) const {
     switch (type) {
@@ -176,8 +176,8 @@ void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
     }
 
     dim3 blocks(divide_and_ceil(uint(film_resolution.x), thread_width),
-                divide_and_ceil(uint(film_resolution.y), thread_height), 1);
-    dim3 threads(thread_width, thread_height, 1);
+                divide_and_ceil(uint(film_resolution.y), thread_height));
+    dim3 threads(thread_width, thread_height);
     megakernel_render<<<blocks, threads>>>(film, gl_helper.gpu_frame_buffer, counter,
                                            samples_per_pixel, samplers, this, integrator_base);
 

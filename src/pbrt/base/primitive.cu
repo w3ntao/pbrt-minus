@@ -1,3 +1,4 @@
+#include <pbrt/accelerator/hlbvh.h>
 #include <pbrt/base/light.h>
 #include <pbrt/base/primitive.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
@@ -112,6 +113,12 @@ const Primitive *Primitive::create_transformed_primitives(const Primitive *base_
 }
 
 PBRT_CPU_GPU
+void Primitive::init(const HLBVH *hlbvh) {
+    type = Type::bvh;
+    ptr = hlbvh;
+}
+
+PBRT_CPU_GPU
 void Primitive::init(const GeometricPrimitive *geometric_primitive) {
     type = Type::geometric;
     ptr = geometric_primitive;
@@ -132,6 +139,11 @@ void Primitive::init(const TransformedPrimitive *transformed_primitive) {
 PBRT_CPU_GPU
 const Material *Primitive::get_material() const {
     switch (type) {
+    case Type::bvh: {
+        REPORT_FATAL_ERROR();
+        return nullptr;
+    }
+
     case Type::geometric: {
         return static_cast<const GeometricPrimitive *>(ptr)->get_material();
     }
@@ -152,6 +164,10 @@ const Material *Primitive::get_material() const {
 PBRT_CPU_GPU
 Bounds3f Primitive::bounds() const {
     switch (type) {
+    case Type::bvh: {
+        return static_cast<const HLBVH *>(ptr)->bounds();
+    }
+
     case Type::geometric: {
         return static_cast<const GeometricPrimitive *>(ptr)->bounds();
     }
@@ -170,8 +186,12 @@ Bounds3f Primitive::bounds() const {
 }
 
 PBRT_CPU_GPU
-bool Primitive::fast_intersect(const Ray &ray, FloatType t_max) const {
+bool Primitive::fast_intersect(const Ray &ray, const FloatType t_max) const {
     switch (type) {
+    case Type::bvh: {
+        return static_cast<const HLBVH *>(ptr)->fast_intersect(ray, t_max);
+    }
+
     case Type::geometric: {
         return static_cast<const GeometricPrimitive *>(ptr)->fast_intersect(ray, t_max);
     }
@@ -190,8 +210,12 @@ bool Primitive::fast_intersect(const Ray &ray, FloatType t_max) const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<ShapeIntersection> Primitive::intersect(const Ray &ray, FloatType t_max) const {
+pbrt::optional<ShapeIntersection> Primitive::intersect(const Ray &ray,
+                                                       const FloatType t_max) const {
     switch (type) {
+    case Type::bvh: {
+        return static_cast<const HLBVH *>(ptr)->intersect(ray, t_max);
+    }
 
     case Type::geometric: {
         return static_cast<const GeometricPrimitive *>(ptr)->intersect(ray, t_max);

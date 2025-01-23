@@ -1,13 +1,13 @@
 #pragma once
 
+#include <filesystem>
+#include <map>
 #include <pbrt/base/light.h>
 #include <pbrt/euclidean_space/transform.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/command_line_option.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/scene/parser.h>
-#include <filesystem>
-#include <map>
 #include <stack>
 
 class BDPTIntegrator;
@@ -96,18 +96,26 @@ class SceneBuilder {
     std::map<std::string, Transform> named_coordinate_systems;
     Transform render_from_world;
 
-    struct InstantiatedPrimitive {
-        const Primitive *primitives = nullptr;
-        uint num;
-
-        InstantiatedPrimitive(const Primitive *_primitives, uint _num)
-            : primitives(_primitives), num(_num) {}
-    };
-
     struct ActiveInstanceDefinition {
-        ActiveInstanceDefinition() = default;
         std::string name;
-        std::vector<InstantiatedPrimitive> instantiated_primitives;
+
+        void add_primitive(const Primitive *_primitive) {
+            primitives.push_back(_primitive);
+            bvh_build = false;
+        }
+
+        void build_bvh(GPUMemoryAllocator &allocator);
+
+        [[nodiscard]] const Primitive *get_instanced_primitive() const {
+            if (!bvh_build || primitives.size() != 1) {
+                REPORT_FATAL_ERROR();
+            }
+
+            return primitives.at(0);
+        }
+
+        bool bvh_build = false;
+        std::vector<const Primitive *> primitives;
     };
 
     std::shared_ptr<ActiveInstanceDefinition> active_instance_definition = nullptr;

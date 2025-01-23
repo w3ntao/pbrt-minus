@@ -6,6 +6,7 @@
 #include <pbrt/gpu/macro.h>
 
 class GPUMemoryAllocator;
+class HLBVH;
 class Shape;
 class Material;
 
@@ -16,6 +17,7 @@ class TransformedPrimitive;
 class Primitive {
   public:
     enum class Type {
+        bvh,
         geometric,
         simple,
         transformed,
@@ -33,7 +35,11 @@ class Primitive {
                                                           const Transform &render_from_primitive,
                                                           uint num, GPUMemoryAllocator &allocator);
 
-    PBRT_CPU_GPU void init(const GeometricPrimitive *geometric_primitive);
+    PBRT_CPU_GPU
+    void init(const HLBVH *hlbvh);
+
+    PBRT_CPU_GPU
+    void init(const GeometricPrimitive *geometric_primitive);
 
     PBRT_CPU_GPU
     void init(const SimplePrimitive *simple_primitive);

@@ -1,7 +1,10 @@
 #pragma once
 
+#include <iomanip>
+#include <pbrt/euclidean_space/point2.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gui/shader.h>
+#include <sstream>
 
 class GLHelper {
     uint VBO = 0;
@@ -10,11 +13,11 @@ class GLHelper {
     GLFWwindow *window = nullptr;
 
     Shader shader;
-    unsigned int texture;
+    unsigned int texture = 0;
 
     bool initialized = false;
 
-    Point2i image_resolution;
+    Point2i image_resolution = Point2i(0, 0);
 
     GPUMemoryAllocator allocator;
 
@@ -31,7 +34,6 @@ class GLHelper {
         initialized = true;
 
         image_resolution = _image_resolution;
-
         const uint num_pixels = _image_resolution.x * _image_resolution.y;
 
         gpu_frame_buffer = allocator.allocate<uint8_t>(3 * num_pixels);
@@ -116,6 +118,7 @@ class GLHelper {
     void draw_frame(const std::string &title) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_resolution.x, image_resolution.y, 0, GL_RGB,
                      GL_UNSIGNED_BYTE, this->gpu_frame_buffer);
+
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, texture);
 

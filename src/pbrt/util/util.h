@@ -34,7 +34,7 @@ PBRT_CPU_GPU constexpr float pow(float v) {
     }
 
     float n2 = pow<n / 2>(v);
-    return n2 * n2 * pow<n & 1>(v);
+    return n2 * n2 * pow < n & 1 > (v);
 }
 
 template <>

@@ -10,6 +10,7 @@ class GPUMemoryAllocator {
             CHECK_CUDA_ERROR(cudaFree(ptr));
         }
         CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     template <typename T>

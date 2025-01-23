@@ -14,6 +14,7 @@
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/light_samplers/uniform_light_sampler.h>
+#include <pbrt/primitives/transformed_primitive.h>
 #include <pbrt/scene/scene_builder.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/spectrum_constants_glass.h>
@@ -104,6 +105,24 @@ std::map<std::string, uint> count_material_type(const std::vector<const Primitiv
     }
 
     return counter;
+}
+
+void SceneBuilder::ActiveInstanceDefinition::build_bvh(GPUMemoryAllocator &allocator) {
+    if (bvh_build || this->primitives.empty()) {
+        REPORT_FATAL_ERROR();
+    }
+    bvh_build = true;
+
+    if (primitives.size() == 1) {
+        return;
+    }
+
+    auto bvh = HLBVH::create(primitives, allocator);
+
+    auto root = allocator.allocate<Primitive>();
+    root->init(bvh);
+
+    primitives = {root};
 }
 
 SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
@@ -596,8 +615,9 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
             shapes, graphics_state.material, num_shapes, allocator);
 
         if (active_instance_definition) {
-            active_instance_definition->instantiated_primitives.push_back(
-                InstantiatedPrimitive(simple_primitives, num_shapes));
+            for (uint idx = 0; idx < num_shapes; ++idx) {
+                active_instance_definition->add_primitive(&simple_primitives[idx]);
+            }
         } else {
             for (uint idx = 0; idx < num_shapes; ++idx) {
                 gpu_primitives.push_back(&simple_primitives[idx]);
@@ -606,6 +626,8 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
 
         return;
     }
+
+    // otherwise: build AreaDiffuseLight
 
     if (active_instance_definition) {
         printf("\nERROR: area lights not supported with object instancing\n");
@@ -619,7 +641,6 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     auto geometric_primitives = Primitive::create_geometric_primitives(
         shapes, graphics_state.material, diffuse_area_lights, num_shapes, allocator);
 
-    // otherwise: build AreaDiffuseLight
     for (uint idx = 0; idx < num_shapes; ++idx) {
         auto primitive_ptr = &geometric_primitives[idx];
         auto area_light_ptr = &diffuse_area_lights[idx];
@@ -751,6 +772,9 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
                 REPORT_FATAL_ERROR();
             }
 
+            const auto name = active_instance_definition->name;
+
+            active_instance_definition->build_bvh(allocator);
             instance_definition[active_instance_definition->name] = active_instance_definition;
 
             active_instance_definition = nullptr;
@@ -765,7 +789,7 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
         if (first_token.type == TokenType::ObjectInstance) {
             const auto object_name = first_token.values[0];
             if (instance_definition.find(object_name) == instance_definition.end()) {
-                printf("\nERROR: object `%s` not found\n", object_name.c_str());
+                printf("\nERROR: ObjectInstance `%s` not found\n", object_name.c_str());
                 REPORT_FATAL_ERROR();
             }
 
@@ -774,22 +798,18 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
             auto world_from_render = render_from_world.inverse();
             auto render_from_instance = get_render_from_object() * world_from_render;
 
-            if (render_from_instance.is_identity()) {
-                for (auto &instanced_primitives : instance->instantiated_primitives) {
-                    for (uint p_idx = 0; p_idx < instanced_primitives.num; ++p_idx) {
-                        gpu_primitives.push_back(&instanced_primitives.primitives[p_idx]);
-                    }
-                }
-            } else {
-                for (auto &instanced_primitives : instance->instantiated_primitives) {
-                    auto transformed_primitives = Primitive::create_transformed_primitives(
-                        instanced_primitives.primitives, render_from_instance,
-                        instanced_primitives.num, allocator);
+            const auto instanced_primitive = instance->get_instanced_primitive();
 
-                    for (uint p_idx = 0; p_idx < instanced_primitives.num; ++p_idx) {
-                        gpu_primitives.push_back(&transformed_primitives[p_idx]);
-                    }
-                }
+            if (render_from_instance.is_identity()) {
+                gpu_primitives.push_back(instanced_primitive);
+            } else {
+                auto transformed_primitive = allocator.allocate<TransformedPrimitive>();
+                auto primitive = allocator.allocate<Primitive>();
+
+                transformed_primitive->init(instanced_primitive, render_from_instance);
+                primitive->init(transformed_primitive);
+
+                gpu_primitives.push_back(primitive);
             }
 
             token_idx += 1;
@@ -849,6 +869,8 @@ void SceneBuilder::preprocess() {
     }
     printf("\n");
 
+    // TODO: rewrite count_material_type()
+    /*
     auto primitives_size = gpu_primitives.size();
     auto material_type_counter = count_material_type(gpu_primitives);
     printf("materials' type: %zu\n", material_type_counter.size());
@@ -857,6 +879,7 @@ void SceneBuilder::preprocess() {
                double(kv.second) / primitives_size * 100);
     }
     printf("\n");
+    */
 }
 
 void SceneBuilder::render() const {

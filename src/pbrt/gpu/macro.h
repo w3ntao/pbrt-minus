@@ -17,7 +17,7 @@ using FloatType = float;
 #define FLAG_COLORFUL_PRINT_END "\033[0m\n"
 
 namespace HIDDEN {
-static void _check_cuda_error(cudaError_t error_code, char const *const func,
+static void _check_cuda_error(const cudaError_t error_code, char const *const func,
                               const char *const file, int const line) {
     if (!error_code) {
         return;
@@ -51,4 +51,4 @@ static void _report_error(const char *file_name, const char *func_name, const ui
 
 #define REPORT_FATAL_ERROR() HIDDEN::_report_error(__FILE__, __func__, __LINE__)
 
-static const bool DEBUG_MODE = false;
+static constexpr bool DEBUG_MODE = false;
