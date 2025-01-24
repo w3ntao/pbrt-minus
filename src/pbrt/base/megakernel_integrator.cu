@@ -34,7 +34,7 @@ static void evaluate_pixel_sample(Film *film, const Point2i p_pixel, const uint 
 
         auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, local_sampler);
 
-        if constexpr (DEBUG_MODE && radiance_l.has_nan()) {
+        if (DEBUG_MODE && radiance_l.has_nan()) {
             printf("%s(): pixel(%d, %d), samples %u: has NAN\n", __func__, p_pixel.x, p_pixel.y, i);
         }
 

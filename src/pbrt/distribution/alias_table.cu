@@ -87,7 +87,7 @@ cuda::std::pair<uint, FloatType> AliasTable::sample(const FloatType u0) const {
 
     const auto sampled_idx = u1 <= bins[idx].p ? bins[idx].first_idx : bins[idx].second_idx;
 
-    if constexpr (DEBUG_MODE && sampled_idx < 0) {
+    if (DEBUG_MODE && sampled_idx < 0) {
         REPORT_FATAL_ERROR();
     }
 

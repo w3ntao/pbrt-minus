@@ -320,7 +320,7 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
                                                node.first_primitive_idx + node.num_primitives,
                                                split_dimension, split_val);
 
-    if constexpr (DEBUG_MODE) {
+    if (DEBUG_MODE) {
         bool kill_thread = false;
 
         if (mid_idx < node.first_primitive_idx ||
@@ -590,7 +590,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
-        if constexpr (DEBUG_MODE) {
+        if (DEBUG_MODE) {
             printf("HLBVH: building bottom BVH: depth %u, node number: %u\n", depth, array_length);
         }
 
@@ -777,7 +777,7 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
         }
     }
 
-    if constexpr (DEBUG_MODE) {
+    if (DEBUG_MODE) {
         // check missing indices
         std::vector<uint> combined_indices = left_indices;
         combined_indices.insert(combined_indices.end(), right_indices.begin(), right_indices.end());

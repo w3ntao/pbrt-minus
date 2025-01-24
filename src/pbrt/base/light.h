@@ -91,7 +91,7 @@ struct LightLeSample {
     LightLeSample(const SampledSpectrum &_L, const Ray &_ray, const Interaction &_intr,
                   FloatType _pdfPos, FloatType _pdfDir)
         : L(_L), ray(_ray), intr(_intr), pdfPos(_pdfPos), pdfDir(_pdfDir) {
-        if constexpr (DEBUG_MODE && this->intr->n != Normal3f(0, 0, 0)) {
+        if (DEBUG_MODE && this->intr->n != Normal3f(0, 0, 0)) {
             REPORT_FATAL_ERROR();
         }
     }

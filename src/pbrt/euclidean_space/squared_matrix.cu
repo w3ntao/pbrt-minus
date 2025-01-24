@@ -55,7 +55,7 @@ template <>
 PBRT_CPU_GPU SquareMatrix<3> SquareMatrix<3>::inverse() const {
     const FloatType det = determinant();
     if (det == 0.0) {
-        if constexpr (DEBUG_MODE) {
+        if (DEBUG_MODE) {
             print_warning_on_nan_result();
         }
         return SquareMatrix::nan();
@@ -114,7 +114,7 @@ Via: https://github.com/google/ion/blob/master/ion/math/matrixutils.cc,
 
     FloatType determinant = inner_product(s0, c5, -s1, c4, s2, c3, s3, c2, s5, c0, -s4, c1);
     if (determinant == 0) {
-        if constexpr (DEBUG_MODE) {
+        if (DEBUG_MODE) {
             print_warning_on_nan_result();
         }
         return SquareMatrix::nan();

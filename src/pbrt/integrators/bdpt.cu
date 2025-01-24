@@ -367,7 +367,7 @@ struct Vertex {
             pdf = 1.0 / (compute_pi() * sqr(sceneRadius));
         } else if (is_on_surface()) {
             // Compute sampling density at emissive surface
-            if constexpr (DEBUG_MODE && type == VertexType::light) {
+            if (DEBUG_MODE && type == VertexType::light) {
                 if (ei.light->get_light_type() != LightType::area) {
                     REPORT_FATAL_ERROR();
                 }
@@ -378,7 +378,7 @@ struct Vertex {
             light->pdf_le(ei, w, &pdfPos, &pdfDir);
             pdf = pdfDir * invDist2;
         } else {
-            if constexpr (DEBUG_MODE) {
+            if (DEBUG_MODE) {
                 if (type != VertexType::light || ei.light == nullptr) {
                     REPORT_FATAL_ERROR();
                 }
@@ -419,7 +419,7 @@ struct Vertex {
             }
             wp = wp.normalize();
         } else {
-            if constexpr (DEBUG_MODE && type != VertexType::camera) {
+            if (DEBUG_MODE && type != VertexType::camera) {
                 REPORT_FATAL_ERROR();
             }
         }
@@ -1087,7 +1087,7 @@ SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, int *film_sample_co
             if (t != 1) {
                 accumulated_l += l_path;
             } else if (l_path.is_positive()) {
-                if constexpr (DEBUG_MODE && !optional_p_film_new.has_value()) {
+                if (DEBUG_MODE && !optional_p_film_new.has_value()) {
                     REPORT_FATAL_ERROR();
                 }
 

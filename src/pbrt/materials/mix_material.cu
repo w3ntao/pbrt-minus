@@ -17,7 +17,7 @@ void MixMaterial::init(const ParameterDictionary &parameters) {
 
 PBRT_CPU_GPU
 const Material *MixMaterial::get_material(const SurfaceInteraction *si) const {
-    if constexpr (DEBUG_MODE && (si->pi.has_nan() || si->wo.has_nan())) {
+    if (DEBUG_MODE && (si->pi.has_nan() || si->wo.has_nan())) {
         REPORT_FATAL_ERROR();
     }
 
