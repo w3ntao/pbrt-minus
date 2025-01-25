@@ -84,8 +84,11 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
         REPORT_FATAL_ERROR();
     }
 
-    printf("ImageInfiniteLight::%s(): %d/%d (%.2f%) pixels ignored (ignored ratio: %f)\n", __func__,
-           num_ignore, num_pixels, FloatType(num_ignore) / num_pixels * 100, ignore_ratio);
+    if (num_ignore > 0) {
+        printf("ImageInfiniteLight::%s(): %d/%d (%.2f%) pixels ignored (ignored ratio: %f)\n",
+               __func__, num_ignore, num_pixels, FloatType(num_ignore) / num_pixels * 100,
+               ignore_ratio);
+    }
 
     image_le_distribution = Distribution2D::create(image_luminance_array, allocator);
 }

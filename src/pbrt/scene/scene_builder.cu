@@ -108,9 +108,14 @@ std::map<std::string, uint> count_material_type(const std::vector<const Primitiv
 }
 
 void SceneBuilder::ActiveInstanceDefinition::build_bvh(GPUMemoryAllocator &allocator) {
-    if (bvh_build || this->primitives.empty()) {
+    if (bvh_build) {
         REPORT_FATAL_ERROR();
     }
+
+    if (this->primitives.empty()) {
+        return;
+    }
+
     bvh_build = true;
 
     if (primitives.size() == 1) {
@@ -717,8 +722,41 @@ void SceneBuilder::parse_translate(const std::vector<Token> &tokens) {
 
 void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
     uint token_idx = 0;
+    uint last_token_idx = 0;
+    auto last_time_check = std::chrono::system_clock::now();
+
+    auto report_time = [&token_idx, &last_token_idx, &last_time_check, &tokens,
+                        function_name = __func__] {
+        const auto current = std::chrono::system_clock::now();
+
+        const std::chrono::duration<FloatType> duration{current - last_time_check};
+
+        const auto time_in_second = duration.count();
+        if (time_in_second > 5) {
+            // when parsing one token took too long
+            std::stringstream stream;
+            stream << tokens[last_token_idx];
+            const auto keyword = stream.str();
+
+            printf("%sSceneBuilder::%s(): parsing token `%s` took %.1f seconds%s:\n",
+                   FLAG_COLORFUL_PRINT_RED_START, function_name, keyword.c_str(), time_in_second,
+                   FLAG_COLORFUL_PRINT_END);
+            for (uint idx = last_token_idx; idx < token_idx; ++idx) {
+                std::cout << tokens[idx] << "\n";
+            }
+        }
+
+        last_time_check = current;
+        last_token_idx = token_idx;
+    };
+
     while (token_idx < tokens.size()) {
+        if (token_idx > 0) {
+            report_time();
+        }
+
         const Token &first_token = tokens[token_idx];
+
         if (first_token.type == TokenType::WorldBegin) {
             build_filter();
             build_film();
@@ -795,6 +833,11 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
 
             const auto instance = instance_definition.at(object_name);
 
+            if (instance->empty()) {
+                token_idx += 1;
+                continue;
+            }
+
             auto world_from_render = render_from_world.inverse();
             auto render_from_instance = get_render_from_object() * world_from_render;
 
@@ -829,11 +872,24 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
         std::cout << "\nillegal token: \n" << first_token << "\n";
         REPORT_FATAL_ERROR();
     }
+
+    report_time();
 }
 
 void SceneBuilder::parse_file(const std::string &_filename) {
+    const auto start = std::chrono::system_clock::now();
+
     const auto all_tokens = parse_pbrt_into_token(_filename);
     parse_tokens(all_tokens);
+
+    const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
+
+    const auto time_in_seconds = duration.count();
+    if (time_in_seconds > 10) {
+        // report abnormal behavior
+        printf("%sSceneBuilder::%s(): took %.1f seconds%s\n", FLAG_COLORFUL_PRINT_RED_START,
+               __func__, time_in_seconds, FLAG_COLORFUL_PRINT_END);
+    }
 }
 
 void SceneBuilder::preprocess() {

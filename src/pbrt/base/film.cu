@@ -1,8 +1,8 @@
 #include <ext/lodepng/lodepng.h>
 #include <pbrt/base/film.h>
 #include <pbrt/films/rgb_film.h>
-#include <pbrt/spectrum_util/color_encoding.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/spectrum_util/color_encoding.h>
 #include <vector>
 
 Film *Film::create_rgb_film(const Filter *filter, const ParameterDictionary &parameters,
@@ -166,7 +166,7 @@ void Film::write_to_png(const std::string &filename, FloatType splat_scale) cons
     }
 
     if (nan_pixels > 0) {
-        printf("%sFilm::%s(): %d/%d (%.2f%) pixels with NAN component%s",
+        printf("%sFilm::%s(): %d/%d (%.2f%) pixels with NAN component%s\n",
                FLAG_COLORFUL_PRINT_RED_START, __func__, nan_pixels, width * height,
                double(nan_pixels) / (width * height) * 100, FLAG_COLORFUL_PRINT_END);
     }

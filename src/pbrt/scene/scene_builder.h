@@ -99,6 +99,10 @@ class SceneBuilder {
     struct ActiveInstanceDefinition {
         std::string name;
 
+        bool empty() const {
+            return primitives.empty();
+        }
+
         void add_primitive(const Primitive *_primitive) {
             primitives.push_back(_primitive);
             bvh_build = false;
@@ -114,6 +118,7 @@ class SceneBuilder {
             return primitives.at(0);
         }
 
+      private:
         bool bvh_build = false;
         std::vector<const Primitive *> primitives;
     };

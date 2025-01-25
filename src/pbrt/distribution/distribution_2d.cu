@@ -3,6 +3,7 @@
 #include <pbrt/distribution/distribution_2d.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/spectrum_util/rgb.h>
+#include <pbrt/util/thread_pool.h>
 
 const Distribution2D *Distribution2D::create(const std::vector<std::vector<FloatType>> &data,
                                              GPUMemoryAllocator &allocator) {
@@ -34,14 +35,18 @@ void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
 
     auto _distribution_1d_list = allocator.allocate<Distribution1D>(dimension.x);
 
-    for (int x = 0; x < dimension.x; ++x) {
-        std::vector<FloatType> pdfs(dimension.y);
-        for (int y = 0; y < dimension.y; ++y) {
-            pdfs[y] = data[x][y];
-        }
+    // not an elegant solution indeed, but it's simple enough
+    ThreadPool thread_pool;
+    thread_pool.parallel_execute(
+        0, dimension.x,
+        [data, &_distribution_1d_list, &allocator, dimension = this->dimension](const int x) {
+            std::vector<FloatType> pdfs(dimension.y);
+            for (int y = 0; y < dimension.y; ++y) {
+                pdfs[y] = data[x][y];
+            }
 
-        _distribution_1d_list[x].build(pdfs, allocator);
-    }
+            _distribution_1d_list[x].build(pdfs, allocator);
+        });
 
     dimension_y_distribution_list = _distribution_1d_list;
 }

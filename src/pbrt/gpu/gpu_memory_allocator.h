@@ -1,11 +1,14 @@
 #pragma once
 
+#include <mutex>
 #include <pbrt/gpu/macro.h>
 #include <vector>
 
 class GPUMemoryAllocator {
   public:
     ~GPUMemoryAllocator() {
+        std::unique_lock lock(mtx);
+
         for (auto ptr : gpu_dynamic_pointers) {
             CHECK_CUDA_ERROR(cudaFree(ptr));
         }
@@ -15,8 +18,9 @@ class GPUMemoryAllocator {
 
     template <typename T>
     T *allocate(const size_t num = 1) {
-        T *data;
+        std::unique_lock lock(mtx);
 
+        T *data;
         const auto size = sizeof(T) * num;
         CHECK_CUDA_ERROR(cudaMallocManaged(&data, size));
         gpu_dynamic_pointers.push_back(data);
@@ -31,4 +35,5 @@ class GPUMemoryAllocator {
   private:
     std::vector<void *> gpu_dynamic_pointers;
     ulong allocated_memory_size = 0;
+    std::mutex mtx;
 };
