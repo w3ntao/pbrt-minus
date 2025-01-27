@@ -116,6 +116,8 @@ class GLHelper {
     }
 
     void draw_frame(const std::string &title) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_resolution.x, image_resolution.y, 0, GL_RGB,
                      GL_UNSIGNED_BYTE, this->gpu_frame_buffer);
 
