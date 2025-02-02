@@ -80,7 +80,7 @@ void SceneBuilder::ActiveInstanceDefinition::build_bvh(GPUMemoryAllocator &alloc
         return;
     }
 
-    auto bvh = HLBVH::create(primitives, allocator);
+    auto bvh = HLBVH::create(primitives, "for instance `" + this->name + "`", allocator);
 
     auto root = allocator.allocate<Primitive>();
     root->init(bvh);
@@ -849,7 +849,7 @@ void SceneBuilder::parse_file(const std::string &_filename) {
 }
 
 void SceneBuilder::preprocess() {
-    integrator_base->bvh = HLBVH::create(gpu_primitives, allocator);
+    integrator_base->bvh = HLBVH::create(gpu_primitives, "for ROOT", allocator);
 
     const auto full_scene_bounds = integrator_base->bvh->bounds();
     for (auto light : gpu_lights) {

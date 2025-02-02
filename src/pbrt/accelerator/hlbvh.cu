@@ -171,9 +171,9 @@ __global__ void init_bvh_args(HLBVH::BottomBVHArgs *bvh_args_array,
 }
 
 const HLBVH *HLBVH::create(const std::vector<const Primitive *> &gpu_primitives,
-                           GPUMemoryAllocator &allocator) {
+                           const std::string &tag, GPUMemoryAllocator &allocator) {
     auto bvh = allocator.allocate<HLBVH>();
-    bvh->build_bvh(gpu_primitives, allocator);
+    bvh->build_bvh(gpu_primitives, tag, allocator);
 
     return bvh;
 }
@@ -383,7 +383,7 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
                                                    left_bounds + right_bounds);
 }
 
-void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
+void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, const std::string &tag,
                       GPUMemoryAllocator &allocator) {
     auto start_sorting = std::chrono::system_clock::now();
 
@@ -532,10 +532,12 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
             REPORT_FATAL_ERROR();
         }
 
-        printf("HLBVH: %zu/%d (%.2f%) treelets filled (max primitives in a treelet: %d)\n",
-               dense_treelet_indices.size(), MAX_TREELET_NUM,
-               double(dense_treelet_indices.size()) / MAX_TREELET_NUM * 100,
-               max_primitive_num_in_a_treelet);
+        if (DEBUG_MODE) {
+            printf("HLBVH: %zu/%d (%.2f%) treelets filled (max primitives in a treelet: %d)\n",
+                   dense_treelet_indices.size(), MAX_TREELET_NUM,
+                   double(dense_treelet_indices.size()) / MAX_TREELET_NUM * 100,
+                   max_primitive_num_in_a_treelet);
+        }
     }
 
     auto dense_treelets = local_allocator.allocate<Treelet>(dense_treelet_indices.size());
@@ -600,9 +602,10 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
-    printf("HLBVH: bottom BVH nodes: %u, max depth: %u, max primitives in a leaf: %u\n",
-           end - top_bvh_node_num, depth, MAX_PRIMITIVES_NUM_IN_LEAF);
-    printf("HLBVH: total nodes: %u/%u\n", end, max_build_node_length);
+    if (DEBUG_MODE) {
+        printf("HLBVH: bottom BVH nodes: %u, max depth: %u, max primitives in a leaf: %u\n",
+               end - top_bvh_node_num, depth, MAX_PRIMITIVES_NUM_IN_LEAF);
+    }
 
     const std::chrono::duration<FloatType> duration_sorting{start_top_bvh - start_sorting};
 
@@ -611,10 +614,10 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives,
     const std::chrono::duration<FloatType> duration_bottom_bvh{std::chrono::system_clock::now() -
                                                                start_bottom_bvh};
 
-    printf("BVH constructing took %.2f seconds "
-           "(sorting: %.2f, top SAH-BVH building: %.2f, bottom BVH building: %.2f)\n\n",
+    printf("BVH building: %.2f seconds (sort: %.2f, top: %.2f, bottom: %.2f) %s\n",
            (duration_sorting + duration_top_bvh + duration_bottom_bvh).count(),
-           duration_sorting.count(), duration_top_bvh.count(), duration_bottom_bvh.count());
+           duration_sorting.count(), duration_top_bvh.count(), duration_bottom_bvh.count(),
+           tag.c_str());
 }
 
 uint HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, const uint num_dense_treelets,

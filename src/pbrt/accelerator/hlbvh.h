@@ -74,7 +74,7 @@ class HLBVH {
     };
 
     static const HLBVH *create(const std::vector<const Primitive *> &gpu_primitives,
-                               GPUMemoryAllocator &allocator);
+                               const std::string &tag, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const {
@@ -100,7 +100,7 @@ class HLBVH {
     void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length);
 
   private:
-    void build_bvh(const std::vector<const Primitive *> &gpu_primitives,
+    void build_bvh(const std::vector<const Primitive *> &gpu_primitives, const std::string &tag,
                    GPUMemoryAllocator &allocator);
 
     uint build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_treelets,
