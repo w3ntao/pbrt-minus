@@ -28,6 +28,8 @@ class Material {
         mix,
     };
 
+    static std::string material_type_to_string(Type type);
+
     static std::vector<Type> get_all_material_type() {
         // consider only evaluable material (excluding mix)
         return {

@@ -1,3 +1,4 @@
+#include <map>
 #include <pbrt/base/interaction.h>
 #include <pbrt/base/material.h>
 #include <pbrt/bxdfs/coated_conductor_bxdf.h>
@@ -13,6 +14,24 @@
 #include <pbrt/materials/diffuse_material.h>
 #include <pbrt/materials/diffuse_transmission_material.h>
 #include <pbrt/materials/mix_material.h>
+
+std::string Material::material_type_to_string(const Type type) {
+    const std::map<Type, std::string> material_names = {
+        {Type::coated_conductor, "CoatedConductor"},
+        {Type::coated_diffuse, "CoatedDiffuse"},
+        {Type::conductor, "Conductor"},
+        {Type::dielectric, "Dielectric"},
+        {Type::diffuse, "Diffuse"},
+        {Type::diffuse_transmission, "DiffuseTransmission"},
+        {Type::mix, "Mix"},
+    };
+
+    if (material_names.find(type) == material_names.end()) {
+        REPORT_FATAL_ERROR();
+    }
+
+    return material_names.at(type);
+}
 
 const Material *Material::create(const std::string &type_of_material,
                                  const ParameterDictionary &parameters,

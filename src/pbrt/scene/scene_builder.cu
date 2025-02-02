@@ -35,73 +35,31 @@ uint next_keyword_position(const std::vector<Token> &tokens, uint start) {
     return tokens.size();
 }
 
-void add_one_to_map(const std::string &key, std::map<std::string, uint> &counter) {
-    if (counter.find(key) == counter.end()) {
-        counter[key] = 1;
-        return;
-    }
-
-    counter[key] += 1;
-}
-
 std::map<std::string, uint> count_light_type(const std::vector<Light *> &gpu_lights) {
-    std::map<std::string, uint> counter;
-    for (const auto light : gpu_lights) {
-        switch (light->type) {
-        case Light::Type::diffuse_area_light: {
-            add_one_to_map("DiffuseAreaLight", counter);
-            break;
-        }
-
-        case Light::Type::distant_light: {
-            add_one_to_map("DistantLight", counter);
-            break;
-        }
-
-        case Light::Type::image_infinite_light: {
-            add_one_to_map("ImageInfiniteLight", counter);
-            break;
-        }
-
-        case Light::Type::spot_light: {
-            add_one_to_map("SpotLight", counter);
-            break;
-        }
-
-        case Light::Type::uniform_infinite_light: {
-            add_one_to_map("UniformInfiniteLight", counter);
-            break;
-        }
-
-        default: {
-            REPORT_FATAL_ERROR();
-        }
-        }
-    }
-
-    return counter;
-}
-
-std::map<std::string, uint> count_material_type(const std::vector<const Primitive *> &primitives) {
-    const std::map<Material::Type, std::string> material_names = {
-        {Material::Type::coated_conductor, "CoatedConductor"},
-        {Material::Type::coated_diffuse, "CoatedDiffuse"},
-        {Material::Type::conductor, "Conductor"},
-        {Material::Type::dielectric, "Dielectric"},
-        {Material::Type::diffuse, "Diffuse"},
-        {Material::Type::diffuse_transmission, "DiffuseTransmission"},
-        {Material::Type::mix, "Mix"},
+    const std::map<Light::Type, std::string> lights_name = {
+        {Light::Type::diffuse_area_light, "DiffuseAreaLight"},
+        {Light::Type::distant_light, "DistantLight"},
+        {Light::Type::image_infinite_light, "ImageInfiniteLight"},
+        {Light::Type::spot_light, "SpotLight"},
+        {Light::Type::uniform_infinite_light, "UniformInfiniteLight"},
     };
 
     std::map<std::string, uint> counter;
-    for (const auto primitive : primitives) {
-        const auto type = primitive->get_material()->get_material_type();
-        if (material_names.find(type) == material_names.end()) {
+
+    for (const auto light : gpu_lights) {
+        const auto type = light->type;
+        if (lights_name.find(type) == lights_name.end()) {
             REPORT_FATAL_ERROR();
         }
 
-        const auto name = material_names.at(type);
-        add_one_to_map(name, counter);
+        auto name = lights_name.at(type);
+
+        if (counter.find(name) == counter.end()) {
+            counter[name] = 1;
+            continue;
+        }
+
+        counter[name] += 1;
     }
 
     return counter;
@@ -135,7 +93,6 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
       output_filename(command_line_option.output_file),
       samples_per_pixel(command_line_option.samples_per_pixel),
       preview(command_line_option.preview) {
-
     global_spectra = GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, allocator);
 
     auto ag_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Ag_eta, false,
@@ -832,7 +789,6 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
             }
 
             const auto instance = instance_definition.at(object_name);
-
             if (instance->empty()) {
                 token_idx += 1;
                 continue;
@@ -915,27 +871,38 @@ void SceneBuilder::preprocess() {
     }
     printf("\n");
 
-    auto light_type_counter = count_light_type(gpu_lights);
+    const auto light_type_counter = count_light_type(gpu_lights);
 
-    auto light_size = gpu_lights.size();
+    const auto light_size = gpu_lights.size();
     printf("total lights: %zu\n", light_size);
     for (auto const &kv : light_type_counter) {
         printf("    %s: %d (%.2f%)\n", kv.first.c_str(), kv.second,
-               double(kv.second) / light_size * 100);
+               static_cast<double>(kv.second) / light_size * 100);
     }
     printf("\n");
 
-    // TODO: rewrite count_material_type()
-    /*
-    auto primitives_size = gpu_primitives.size();
-    auto material_type_counter = count_material_type(gpu_primitives);
-    printf("materials' type: %zu\n", material_type_counter.size());
-    for (auto const &kv : material_type_counter) {
-        printf("    %s: %d (%.2f%)\n", kv.first.c_str(), kv.second,
-               double(kv.second) / primitives_size * 100);
+    const auto material_type_counter = count_material_type();
+    uint total_material_size = 0;
+    for (auto const &[_, _num] : material_type_counter) {
+        total_material_size += _num;
+    }
+
+    printf("total material: %zu\n", material_type_counter.size());
+    for (const auto &[name, num] : material_type_counter) {
+        printf("    %s: %d (%.2f%)\n", name.c_str(), num,
+               static_cast<double>(num) / total_material_size * 100);
     }
     printf("\n");
-    */
+}
+
+std::map<std::string, uint> SceneBuilder::count_material_type() const {
+    std::map<std::string, uint> counter;
+
+    for (const auto primitive : gpu_primitives) {
+        primitive->record_material(counter);
+    }
+
+    return counter;
 }
 
 void SceneBuilder::render() const {

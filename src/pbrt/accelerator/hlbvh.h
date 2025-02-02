@@ -86,6 +86,11 @@ class HLBVH {
     }
 
     PBRT_CPU_GPU
+    cuda::std::pair<const Primitive **, uint> get_primitives() const {
+        return {primitives, num_primtives};
+    }
+
+    PBRT_CPU_GPU
     bool fast_intersect(const Ray &ray, FloatType t_max) const;
 
     PBRT_CPU_GPU
@@ -110,6 +115,7 @@ class HLBVH {
                                      FloatType split_val);
 
     const Primitive **primitives;
+    uint num_primtives;
 
     MortonPrimitive *morton_primitives;
     BVHBuildNode *build_nodes;

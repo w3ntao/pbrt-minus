@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <pbrt/base/interaction.h>
 #include <pbrt/euclidean_space/bounds3.h>
 #include <pbrt/euclidean_space/transform.h>
@@ -52,6 +53,8 @@ class Primitive {
 
     PBRT_CPU_GPU
     Bounds3f bounds() const;
+
+    void record_material(std::map<std::string, uint> &counter) const;
 
     PBRT_CPU_GPU
     bool fast_intersect(const Ray &ray, FloatType t_max) const;

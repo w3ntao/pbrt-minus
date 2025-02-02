@@ -185,6 +185,54 @@ Bounds3f Primitive::bounds() const {
     return {};
 }
 
+void Primitive::record_material(std::map<std::string, uint> &counter) const {
+    const auto count_material = [](const Material *material, std::map<std::string, uint> &counter) {
+        const auto name = Material::material_type_to_string(material->get_material_type());
+
+        if (counter.find(name) == counter.end()) {
+            counter[name] = 1;
+            return;
+        }
+
+        counter[name] += 1;
+    };
+
+    if (type == Type::geometric) {
+        const auto material = static_cast<const GeometricPrimitive *>(ptr)->get_material();
+        count_material(material, counter);
+
+        return;
+    }
+
+    if (type == Type::simple) {
+        const auto material = static_cast<const SimplePrimitive *>(ptr)->get_material();
+        count_material(material, counter);
+
+        return;
+    }
+
+    if (type == Type::transformed) {
+        const auto primitive = static_cast<const TransformedPrimitive *>(ptr)->get_primitive();
+        primitive->record_material(counter);
+
+        return;
+    }
+
+    if (type == Type::bvh) {
+        const auto result = static_cast<const HLBVH *>(ptr)->get_primitives();
+        const auto primitives = result.first;
+        const auto num = result.second;
+
+        for (uint idx = 0; idx < num; idx++) {
+            primitives[idx]->record_material(counter);
+        }
+
+        return;
+    }
+
+    REPORT_FATAL_ERROR();
+}
+
 PBRT_CPU_GPU
 bool Primitive::fast_intersect(const Ray &ray, const FloatType t_max) const {
     switch (type) {

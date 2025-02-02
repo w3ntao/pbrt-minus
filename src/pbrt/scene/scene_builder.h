@@ -99,7 +99,7 @@ class SceneBuilder {
     struct ActiveInstanceDefinition {
         std::string name;
 
-        bool empty() const {
+        [[nodiscard]] bool empty() const {
             return primitives.empty();
         }
 
@@ -130,7 +130,7 @@ class SceneBuilder {
   public:
     explicit SceneBuilder(const CommandLineOption &command_line_option);
 
-    ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
+    [[nodiscard]] ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
         return ParameterDictionary(tokens, root, global_spectra, spectra, materials, float_textures,
                                    albedo_spectrum_textures, illuminant_spectrum_textures,
                                    unbounded_spectrum_textures, allocator);
@@ -176,13 +176,15 @@ class SceneBuilder {
 
     void parse_tokens(const std::vector<Token> &tokens);
 
-    Transform get_render_from_object() const {
+    [[nodiscard]] Transform get_render_from_object() const {
         return render_from_world * graphics_state.transform;
     }
 
     void parse_file(const std::string &_filename);
 
     void preprocess();
+
+    [[nodiscard]] std::map<std::string, uint> count_material_type() const;
 
     void render() const;
 
@@ -194,7 +196,7 @@ class SceneBuilder {
 
         auto builder = SceneBuilder(command_line_option);
 
-        auto input_file = command_line_option.input_file;
+        const auto input_file = command_line_option.input_file;
 
         if (std::filesystem::path p(input_file); p.extension() != ".pbrt") {
             printf("ERROR: input file `%s` not ended with `.pbrt`\n", input_file.c_str());
