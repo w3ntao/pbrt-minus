@@ -1,10 +1,8 @@
 #pragma once
 
-#include <ext/rply/rply.h>
 #include <pbrt/euclidean_space/normal3f.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/euclidean_space/point3.h>
-#include <pbrt/gpu/macro.h>
 #include <vector>
 
 struct TriQuadMesh {
@@ -16,4 +14,6 @@ struct TriQuadMesh {
     std::vector<int> quadIndices;
 
     static TriQuadMesh read_ply(const std::string &filename);
+
+    void convert_to_only_triangles();
 };

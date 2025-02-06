@@ -1,3 +1,4 @@
+#include <ext/rply/rply.h>
 #include <pbrt/shapes/tri_quad_mesh.h>
 
 struct FaceCallbackContext {
@@ -186,4 +187,24 @@ TriQuadMesh TriQuadMesh::read_ply(const std::string &filename) {
     }
 
     return mesh;
+}
+
+void TriQuadMesh::convert_to_only_triangles() {
+    if (quadIndices.empty()) {
+        return;
+    }
+
+    triIndices.reserve(triIndices.size() + 3 * quadIndices.size() / 2);
+
+    for (size_t i = 0; i < quadIndices.size(); i += 4) {
+        triIndices.push_back(quadIndices[i]); // 0, 1, 2 of original
+        triIndices.push_back(quadIndices[i + 1]);
+        triIndices.push_back(quadIndices[i + 3]);
+
+        triIndices.push_back(quadIndices[i]); // 0, 2, 3 of original
+        triIndices.push_back(quadIndices[i + 3]);
+        triIndices.push_back(quadIndices[i + 2]);
+    }
+
+    quadIndices.clear();
 }

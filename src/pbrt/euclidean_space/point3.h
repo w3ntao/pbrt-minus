@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iomanip>
 #include <pbrt/euclidean_space/vector3.h>
 
 template <typename T>
@@ -7,9 +8,9 @@ class Point3 {
   public:
     T x, y, z;
 
-    PBRT_CPU_GPU Point3() : x(NAN), y(NAN), z(NAN){};
+    PBRT_CPU_GPU Point3() : x(NAN), y(NAN), z(NAN) {};
 
-    PBRT_CPU_GPU Point3(T _x, T _y, T _z) : x(_x), y(_y), z(_z){};
+    PBRT_CPU_GPU Point3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {};
 
     PBRT_CPU_GPU T &operator[](uint8_t index) {
         switch (index) {
@@ -144,7 +145,7 @@ class Point3 {
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Point3 &p) {
-        stream << "Point3(" << p.x << ", " << p.y << ", " << p.z << ")";
+        stream << std::setprecision(4) << "Point3(" << p.x << ", " << p.y << ", " << p.z << ")";
         return stream;
     }
 };

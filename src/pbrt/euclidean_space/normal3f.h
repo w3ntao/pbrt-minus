@@ -1,8 +1,8 @@
 #pragma once
 
 #include <pbrt/euclidean_space/vector3.h>
-#include <pbrt/util/math.h>
 #include <pbrt/gpu/macro.h>
+#include <pbrt/util/math.h>
 
 class Normal3f {
   public:
@@ -134,17 +134,17 @@ class Normal3f {
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Normal3f &n) {
-        stream << "Normal3(" << n.x << ", " << n.y << ", " << n.z << ")";
+        stream << std::setprecision(4) << "[" << n.x << ", " << n.y << ", " << n.z << "]";
         return stream;
     }
 };
 
 PBRT_CPU_GPU
-static Normal3f operator*(FloatType factor, const Normal3f &n) {
+static Normal3f operator*(const FloatType factor, const Normal3f &n) {
     return n * factor;
 }
 
 PBRT_CPU_GPU
-static inline Normal3f FMA(FloatType a, const Normal3f &b, const Normal3f &c) {
+static inline Normal3f FMA(const FloatType a, const Normal3f &b, const Normal3f &c) {
     return {FMA(a, b.x, c.x), FMA(a, b.y, c.y), FMA(a, b.z, c.z)};
 }

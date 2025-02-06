@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iomanip>
 #include <pbrt/euclidean_space/interval.h>
 #include <pbrt/util/math.h>
 
@@ -232,7 +233,7 @@ class Vector3 {
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Vector3 &v) {
-        stream << "Vector3(" << v.x << ", " << v.y << ", " << v.z << ")";
+        stream << std::setprecision(4) << "Vector3(" << v.x << ", " << v.y << ", " << v.z << ")";
         return stream;
     }
 };

@@ -33,20 +33,22 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
         auto file_path = parameters.root + "/" + parameters.get_one_string("filename");
         auto ply_mesh = TriQuadMesh::read_ply(file_path);
 
+        ply_mesh.convert_to_only_triangles();
+
+        if (!ply_mesh.quadIndices.empty()) {
+            printf("\nShape::%s(): plymesh.quadIndices should be empty now\n", __func__);
+            REPORT_FATAL_ERROR();
+        }
+
         const Shape *shapes = nullptr;
         uint num_shapes = 0;
 
         if (!ply_mesh.triIndices.empty()) {
-            const auto result = TriangleMesh::build_triangles(
+            const auto [ply_shapes, ply_shape_num] = TriangleMesh::build_triangles(
                 render_from_object, reverse_orientation, ply_mesh.p, ply_mesh.triIndices,
                 ply_mesh.n, ply_mesh.uv, allocator);
-            shapes = result.first;
-            num_shapes = result.second;
-        }
-
-        if (!ply_mesh.quadIndices.empty()) {
-            printf("\n%s(): Shape::plymesh.quadIndices not implemented\n", __func__);
-            REPORT_FATAL_ERROR();
+            shapes = ply_shapes;
+            num_shapes = ply_shape_num;
         }
 
         return {shapes, num_shapes};

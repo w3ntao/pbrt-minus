@@ -37,7 +37,7 @@ static __global__ void init_shapes(Shape *shapes, const TypeOfShape *concrete_sh
 }
 
 std::pair<const Shape *, uint>
-TriangleMesh::build_triangles(const Transform &render_from_object, bool reverse_orientation,
+TriangleMesh::build_triangles(const Transform &render_from_object, const bool reverse_orientation,
                               const std::vector<Point3f> &points, const std::vector<int> &indices,
                               const std::vector<Normal3f> &normals, const std::vector<Point2f> &uv,
                               GPUMemoryAllocator &allocator) {
