@@ -415,7 +415,12 @@ void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Po
                                                 GPUMemoryAllocator &allocator) {
     image_resolution = _resolution;
     global_path_counter = 0;
-    total_path_num = samples_per_pixel * image_resolution.x * image_resolution.y;
+
+    total_path_num =
+        static_cast<long long int>(samples_per_pixel) * image_resolution.x * image_resolution.y;
+    if (total_path_num / samples_per_pixel != image_resolution.x * image_resolution.y) {
+        REPORT_FATAL_ERROR();
+    }
 
     camera_samples = allocator.allocate<CameraSample>(PATH_POOL_SIZE);
     camera_rays = allocator.allocate<CameraRay>(PATH_POOL_SIZE);
@@ -582,6 +587,10 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
     generate_new_path<<<divide_and_ceil(queues.new_paths->counter, threads), threads>>>(
         &path_state, &queues, base);
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    if (queues.rays->counter <= 0) {
+        REPORT_FATAL_ERROR();
+    }
 
     while (queues.rays->counter > 0) {
         ray_cast<<<divide_and_ceil(queues.rays->counter, threads), threads>>>(&path_state, &queues,
