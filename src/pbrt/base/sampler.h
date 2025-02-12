@@ -31,6 +31,9 @@ class Sampler {
     void init(StratifiedSampler *stratified_sampler);
 
     PBRT_CPU_GPU
+    MLTSampler *get_mlt_sampler() const;
+
+    PBRT_CPU_GPU
     void start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension);
 
     PBRT_CPU_GPU

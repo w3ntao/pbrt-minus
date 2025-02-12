@@ -1,14 +1,14 @@
 #pragma once
 
 #include <pbrt/euclidean_space/point2.h>
-#include <pbrt/util/hash.h>
+#include <pbrt/spectrum_util/sampled_wavelengths.h>
 #include <pbrt/util/rng.h>
 
 struct PrimarySample {
     PBRT_CPU_GPU
-    PrimarySample() : value(0), value_backup(0), modify_backup(0), last_modification_iteration(0) {}
+    PrimarySample() : value(0), last_modification_iteration(0), value_backup(0), modify_backup(0) {}
 
-    FloatType value = 0;
+    FloatType value;
     // PrimarySample Public Methods
     PBRT_CPU_GPU
     void backup() {
@@ -23,14 +23,15 @@ struct PrimarySample {
     }
 
     // PrimarySample Public Members
-    int64_t last_modification_iteration = 0;
-    FloatType value_backup = 0;
-    int64_t modify_backup = 0;
+    int64_t last_modification_iteration;
+    FloatType value_backup;
+    int64_t modify_backup;
 };
 
 class MLTSampler {
     static constexpr size_t LENGTH = 256;
 
+  public:
     RNG rng;
 
     PrimarySample samples[LENGTH];
@@ -47,7 +48,6 @@ class MLTSampler {
     int stream_index;
     int sample_index;
 
-  public:
     PBRT_CPU_GPU
     void ensure_ready(int index);
 
@@ -70,6 +70,11 @@ class MLTSampler {
         current_iteration = 0;
         last_large_step_iteration = 0;
         large_step = true;
+    }
+
+    PBRT_CPU_GPU
+    void advance(int64_t idelta) {
+        rng.advance(idelta);
     }
 
     PBRT_CPU_GPU

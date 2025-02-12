@@ -14,6 +14,7 @@ class BDPTIntegrator;
 class Film;
 class GlobalSpectra;
 class MegakernelIntegrator;
+class MLTBDPTIntegrator;
 class MLTPathIntegrator;
 class Primitive;
 class Renderer;
@@ -62,7 +63,8 @@ class SceneBuilder {
     const MegakernelIntegrator *megakernel_integrator = nullptr;
     WavefrontPathIntegrator *wavefront_path_integrator = nullptr;
     BDPTIntegrator *bdpt_integrator = nullptr;
-    MLTPathIntegrator *mlt_integrator = nullptr;
+    MLTBDPTIntegrator *mlt_bdpt_integrator = nullptr;
+    MLTPathIntegrator *mlt_path_integrator = nullptr;
 
     IntegratorBase *integrator_base = nullptr;
 

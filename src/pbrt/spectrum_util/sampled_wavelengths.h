@@ -24,6 +24,30 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
+    static SampledWavelengths nan() {
+        SampledWavelengths wavelengths;
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
+            wavelengths.lambda[i] = NAN;
+            wavelengths.pdf[i] = NAN;
+        }
+
+        return wavelengths;
+    }
+
+    PBRT_CPU_GPU
+    static SampledWavelengths zero() {
+        SampledWavelengths wavelengths;
+
+        for (uint i = 0; i < NSpectrumSamples; ++i) {
+            wavelengths.lambda[i] = 0;
+            wavelengths.pdf[i] = 0;
+        }
+
+        return wavelengths;
+    }
+
+    PBRT_CPU_GPU
     bool has_nan() const {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             if (std::isnan(lambda[idx]) || std::isinf(lambda[idx]) || std::isnan(pdf[idx]) ||

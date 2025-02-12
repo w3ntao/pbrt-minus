@@ -103,6 +103,15 @@ void Sampler::init(StratifiedSampler *stratified_sampler) {
 }
 
 PBRT_CPU_GPU
+MLTSampler *Sampler::get_mlt_sampler() const {
+    if (type != Type::mlt) {
+        REPORT_FATAL_ERROR();
+    }
+
+    return static_cast<MLTSampler *>(ptr);
+}
+
+PBRT_CPU_GPU
 void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension) {
     switch (type) {
     case Type::independent: {

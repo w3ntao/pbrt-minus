@@ -10,6 +10,7 @@
 #include <pbrt/base/shape.h>
 #include <pbrt/films/grey_scale_film.h>
 #include <pbrt/integrators/bdpt.h>
+#include <pbrt/integrators/mlt_bdpt.h>
 #include <pbrt/integrators/mlt_path.h>
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
@@ -262,9 +263,15 @@ void SceneBuilder::build_integrator() {
         return;
     }
 
-    if (integrator_name == "mlt" || integrator_name == "mltpath") {
-        mlt_integrator = MLTPathIntegrator::create(samples_per_pixel.value(), parameters,
-                                                   integrator_base, allocator);
+    if (integrator_name == "mlt") {
+        mlt_bdpt_integrator = MLTBDPTIntegrator::create(samples_per_pixel.value(), parameters,
+                                                        integrator_base, allocator);
+        return;
+    }
+
+    if (integrator_name == "mltpath") {
+        mlt_path_integrator = MLTPathIntegrator::create(samples_per_pixel.value(), parameters,
+                                                        integrator_base, allocator);
         return;
     }
 
@@ -860,12 +867,19 @@ void SceneBuilder::preprocess() {
 
     if (bdpt_integrator != nullptr) {
         printf("Integrator: (wavefront) bdpt\n");
-    } else if (mlt_integrator != nullptr) {
-        printf("Integrator: (wavefront) mlt\n");
+
+    } else if (mlt_bdpt_integrator != nullptr) {
+        printf("Integrator: (wavefront) mlt-bdpt\n");
+
+    } else if (mlt_path_integrator != nullptr) {
+        printf("Integrator: (wavefront) mlt-path\n");
+
     } else if (wavefront_path_integrator != nullptr) {
         printf("Integrator: (wavefront) path\n");
+
     } else if (megakernel_integrator != nullptr) {
         printf("Integrator: (megakernel) %s\n", megakernel_integrator->get_name().c_str());
+
     } else {
         REPORT_FATAL_ERROR();
     }
@@ -940,14 +954,26 @@ void SceneBuilder::render() const {
 
         film->write_to_png(output_filename, splat_scale);
 
-    } else if (mlt_integrator != nullptr) {
+    } else if (mlt_bdpt_integrator != nullptr) {
+        std::cout << " (mutations per pixel: " << spp << ")"
+                  << " with MLT-BDPT\n"
+                  << std::flush;
+
+        GreyScaleFilm heatmap(film_resolution);
+        const auto brightness = mlt_bdpt_integrator->render(film, heatmap, spp, preview);
+
+        film->write_to_png(output_filename, brightness / spp);
+
+        heatmap.write_to_png("heatmap-" + output_filename);
+
+    } else if (mlt_path_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
                   << " with MLT-path\n"
                   << std::flush;
 
         GreyScaleFilm heatmap(film_resolution);
 
-        const auto brightness = mlt_integrator->render(film, heatmap, spp, preview);
+        const auto brightness = mlt_path_integrator->render(film, heatmap, spp, preview);
 
         film->write_to_png(output_filename, brightness / spp);
 

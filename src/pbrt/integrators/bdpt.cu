@@ -15,54 +15,175 @@
 
 constexpr size_t NUM_SAMPLERS = 64 * 1024;
 
-struct BDPTSample {
-    Point2i p_pixel;
-    FloatType weight;
-    SampledSpectrum l_path;
-    SampledWavelengths lambda;
-};
-
-struct FilmSample {
-    Point2f p_film;
-    SampledSpectrum l_path;
-    SampledWavelengths lambda;
-
-    // to help sorting
-    PBRT_CPU_GPU
-    bool operator<(const FilmSample &right) const {
-        if (p_film.x < right.p_film.x) {
-            return true;
-        }
-        if (p_film.x > right.p_film.x) {
-            return false;
-        }
-
-        if (p_film.y < right.p_film.y) {
-            return true;
-        }
-        if (p_film.y > right.p_film.y) {
-            return false;
-        }
-
-        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
-            if (l_path[idx] < right.l_path[idx]) {
-                return true;
-            }
-            if (l_path[idx] > right.l_path[idx]) {
-                return false;
-            }
-
-            if (lambda[idx] < right.lambda[idx]) {
-                return true;
-            }
-            if (lambda[idx] > right.lambda[idx]) {
-                return false;
-            }
-        }
-
-        return false;
+PBRT_CPU_GPU
+FloatType infinite_light_density(const Light **infinite_lights, int num_infinite_lights,
+                                 const PowerLightSampler *lightSampler, const Vector3f w) {
+    FloatType pdf = 0;
+    for (auto idx = 0; idx < num_infinite_lights; ++idx) {
+        auto light = infinite_lights[idx];
+        pdf += light->pdf_li(LightSampleContext(Interaction()), -w) * lightSampler->pmf(light);
     }
-};
+
+    return pdf;
+}
+
+PBRT_CPU_GPU
+FloatType Vertex::pdf_light(const IntegratorBase *integrator_base, const Vertex &v) const {
+    Vector3f w = v.p() - p();
+    auto invDist2 = 1.0 / w.squared_length();
+    w *= std::sqrt(invDist2);
+
+    // Compute sampling density _pdf_ for light type
+    FloatType pdf;
+    if (is_infinite_light()) {
+        // Compute planar sampling density for infinite light sources
+        Bounds3f sceneBounds = integrator_base->bvh->bounds();
+        Point3f sceneCenter;
+        FloatType sceneRadius;
+        sceneBounds.bounding_sphere(&sceneCenter, &sceneRadius);
+        pdf = 1.0 / (compute_pi() * sqr(sceneRadius));
+    } else if (is_on_surface()) {
+        // Compute sampling density at emissive surface
+        if (DEBUG_MODE && type == VertexType::light) {
+            if (ei.light->get_light_type() != LightType::area) {
+                REPORT_FATAL_ERROR();
+            }
+        }
+
+        auto light = (type == VertexType::light) ? ei.light : si.area_light;
+        FloatType pdfPos, pdfDir;
+        light->pdf_le(ei, w, &pdfPos, &pdfDir);
+        pdf = pdfDir * invDist2;
+    } else {
+        if (DEBUG_MODE) {
+            if (type != VertexType::light || ei.light == nullptr) {
+                REPORT_FATAL_ERROR();
+            }
+        }
+
+        // Compute sampling density for noninfinite light sources
+        FloatType pdfPos, pdfDir;
+        ei.light->pdf_le(Ray(p(), w), &pdfPos, &pdfDir);
+        pdf = pdfDir * invDist2;
+    }
+
+    if (v.is_on_surface()) {
+        pdf *= v.ng().abs_dot(w);
+    }
+
+    return pdf;
+}
+
+PBRT_CPU_GPU
+FloatType Vertex::pdf(const IntegratorBase *integrator_base, const Vertex *prev,
+                      const Vertex &next) const {
+    if (type == VertexType::light) {
+        return pdf_light(integrator_base, next);
+    }
+
+    // Compute directions to preceding and next vertex
+    Vector3f wn = next.p() - p();
+    if (wn.squared_length() == 0) {
+        return 0;
+    }
+
+    wn = wn.normalize();
+    Vector3f wp;
+    if (prev) {
+        wp = prev->p() - p();
+        if (wp.squared_length() == 0) {
+            return 0;
+        }
+        wp = wp.normalize();
+    } else {
+        if (DEBUG_MODE && type != VertexType::camera) {
+            REPORT_FATAL_ERROR();
+        }
+    }
+
+    // Compute directional density depending on the vertex type
+    FloatType pdf = 0;
+
+    switch (type) {
+    case VertexType::camera: {
+        FloatType unused;
+        ei.camera->pdf_we(ei.spawn_ray(wn), &unused, &pdf);
+        break;
+    }
+    case VertexType::surface: {
+        pdf = bsdf.pdf(wp, wn);
+        break;
+    }
+    default: {
+        REPORT_FATAL_ERROR();
+    }
+    }
+
+    // Return probability per unit area at vertex _next_
+    return convert_density(pdf, next);
+}
+
+PBRT_CPU_GPU
+SampledSpectrum Vertex::Le(const Light **infinite_lights, int num_infinite_lights, const Vertex &v,
+                           const SampledWavelengths &lambda) const {
+    if (!is_light()) {
+        return SampledSpectrum(0.0);
+    }
+
+    Vector3f w = v.p() - p();
+    if (w.squared_length() == 0) {
+        return SampledSpectrum(0.0);
+    }
+
+    w = w.normalize();
+    if (is_infinite_light()) {
+        // Return emitted radiance for infinite light sources
+        SampledSpectrum Le(0.f);
+
+        for (uint idx = 0; idx < num_infinite_lights; ++idx) {
+            auto light = infinite_lights[idx];
+            Le += light->le(Ray(p(), -w), lambda);
+        }
+
+        return Le;
+    }
+
+    if (si.area_light != nullptr) {
+        return si.area_light->l(si.p(), si.n, si.uv, w, lambda);
+    }
+
+    return SampledSpectrum(0.f);
+}
+
+PBRT_CPU_GPU
+FloatType Vertex::pdf_light_origin(const Light **infinite_lights, int num_infinite_lights,
+                                   const Vertex &v, const PowerLightSampler *lightSampler) {
+    Vector3f w = v.p() - p();
+    if (w.squared_length() == 0) {
+        return 0.0;
+    }
+
+    w = w.normalize();
+
+    if (is_infinite_light()) {
+        // Return sampling density for infinite light sources
+        return infinite_light_density(infinite_lights, num_infinite_lights, lightSampler, w);
+    }
+
+    // Return sampling density for noninfinite light source
+    auto light = type == VertexType::light ? ei.light : si.area_light;
+
+    FloatType pdfPos, pdfDir;
+    auto pdfChoice = lightSampler->pmf(light);
+
+    if (is_on_surface()) {
+        light->pdf_le(ei, w, &pdfPos, &pdfDir);
+    } else {
+        light->pdf_le(Ray(p(), w), &pdfPos, &pdfDir);
+    }
+
+    return pdfPos * pdfChoice;
+}
 
 static __global__ void gpu_init_stratified_samplers(Sampler *samplers,
                                                     StratifiedSampler *stratified_samplers,
@@ -87,8 +208,6 @@ static __global__ void gpu_init_independent_samplers(Sampler *samplers,
 
     samplers[worker_idx].init(&independent_samplers[worker_idx]);
 }
-
-enum class VertexType { camera, light, surface };
 
 template <typename Type>
 class ScopedAssignment {
@@ -118,395 +237,6 @@ class ScopedAssignment {
   private:
     Type *target;
     Type backup;
-};
-
-struct EndpointInteraction : Interaction {
-    const Camera *camera;
-    const Light *light;
-
-    PBRT_CPU_GPU
-    EndpointInteraction() : Interaction(), camera(nullptr), light(nullptr) {}
-
-    PBRT_CPU_GPU
-    EndpointInteraction(const Light *light, const Ray &r)
-        : Interaction(r.o), camera(nullptr), light(light) {}
-
-    PBRT_CPU_GPU
-    EndpointInteraction(const Camera *camera, const Ray &ray)
-        : Interaction(ray.o), camera(camera), light(nullptr) {}
-
-    PBRT_CPU_GPU
-    EndpointInteraction(const Light *light, const Interaction &intr)
-        : Interaction(intr), camera(nullptr), light(light) {}
-
-    PBRT_CPU_GPU
-    EndpointInteraction(const Interaction &it, const Camera *camera)
-        : Interaction(it), camera(camera), light(nullptr) {}
-
-    PBRT_CPU_GPU
-    EndpointInteraction(const Ray &ray)
-        : Interaction(ray.at(1), Normal3f(-ray.d)), camera(nullptr), light(nullptr) {}
-};
-
-PBRT_CPU_GPU
-FloatType infinite_light_density(const Light **infinite_lights, int num_infinite_lights,
-                                 const PowerLightSampler *lightSampler, const Vector3f w) {
-    FloatType pdf = 0;
-    for (auto idx = 0; idx < num_infinite_lights; ++idx) {
-        auto light = infinite_lights[idx];
-        pdf += light->pdf_li(LightSampleContext(Interaction()), -w) * lightSampler->pmf(light);
-    }
-
-    return pdf;
-}
-
-struct Vertex {
-    VertexType type;
-    SampledSpectrum beta;
-    EndpointInteraction ei;
-    SurfaceInteraction si;
-    BSDF bsdf;
-
-    bool delta;
-    FloatType pdfFwd;
-    FloatType pdfRev;
-
-    PBRT_CPU_GPU
-    Vertex() : type(VertexType::camera), beta(NAN), delta(false), pdfFwd(0), pdfRev(0) {}
-
-    PBRT_CPU_GPU
-    Vertex(VertexType _type, const EndpointInteraction &_ei, const SampledSpectrum &_beta)
-        : type(_type), beta(_beta), delta(false), pdfFwd(0), pdfRev(0), ei(_ei) {}
-
-    PBRT_CPU_GPU
-    Vertex(const SurfaceInteraction &_si, const BSDF &_bsdf, const SampledSpectrum &_beta)
-        : type(VertexType::surface), beta(_beta), delta(false), pdfFwd(0), pdfRev(0), si(_si),
-          bsdf(_bsdf) {}
-
-    PBRT_CPU_GPU
-    bool is_light() const {
-        return type == VertexType::light ||
-               (type == VertexType::surface && si.area_light != nullptr);
-    }
-
-    PBRT_CPU_GPU
-    bool is_delta_light() const {
-        return type == VertexType::light && ei.light &&
-               pbrt::is_delta_light(ei.light->get_light_type());
-    }
-
-    PBRT_CPU_GPU
-    static Vertex create_camera(const Camera *camera, const Ray &ray, const SampledSpectrum &beta) {
-        return Vertex(VertexType::camera, EndpointInteraction(camera, ray), beta);
-    }
-
-    PBRT_CPU_GPU
-    static Vertex create_camera(const Camera *camera, const Interaction &it,
-                                const SampledSpectrum &beta) {
-        return Vertex(VertexType::camera, EndpointInteraction(it, camera), beta);
-    }
-
-    PBRT_CPU_GPU
-    static Vertex create_light(const EndpointInteraction &ei, const SampledSpectrum &beta,
-                               FloatType pdf) {
-        Vertex v(VertexType::light, ei, beta);
-        v.pdfFwd = pdf;
-        return v;
-    }
-
-    PBRT_CPU_GPU
-    static Vertex create_light(const Light *light, const Interaction &intr,
-                               const SampledSpectrum &Le, FloatType pdf) {
-        Vertex v(VertexType::light, EndpointInteraction(light, intr), Le);
-        v.pdfFwd = pdf;
-        return v;
-    }
-
-    PBRT_CPU_GPU
-    static Vertex create_light(const Light *light, const Ray &ray, const SampledSpectrum &Le,
-                               FloatType pdf) {
-        Vertex v(VertexType::light, EndpointInteraction(light, ray), Le);
-        v.pdfFwd = pdf;
-        return v;
-    }
-
-    PBRT_CPU_GPU
-    static Vertex create_surface(const SurfaceInteraction &si, const BSDF &bsdf,
-                                 const SampledSpectrum &beta, FloatType pdf, const Vertex &prev) {
-        Vertex v(si, bsdf, beta);
-        v.pdfFwd = prev.convert_density(pdf, v);
-        return v;
-    }
-
-    PBRT_CPU_GPU
-    bool is_connectible() const {
-        switch (type) {
-        case VertexType::light: {
-            return ei.light->get_light_type() != LightType::delta_direction;
-        }
-        case VertexType::camera: {
-            return true;
-        }
-        case VertexType::surface: {
-            return pbrt::is_non_specular(bsdf.flags());
-        }
-        }
-
-        REPORT_FATAL_ERROR();
-        return false;
-    }
-
-    PBRT_CPU_GPU
-    const Interaction &get_interaction() const {
-        switch (type) {
-        case VertexType::surface: {
-            return si;
-        }
-        default: {
-            return ei;
-        }
-        }
-
-        REPORT_FATAL_ERROR();
-    }
-
-    PBRT_CPU_GPU
-    const SurfaceInteraction &get_surface_interaction() const {
-        if (type == VertexType::surface) {
-            return si;
-        }
-
-        REPORT_FATAL_ERROR();
-        SurfaceInteraction unused;
-        return unused;
-    }
-
-    PBRT_CPU_GPU
-    Point3f p() const {
-        return get_interaction().p();
-    }
-
-    PBRT_CPU_GPU
-    const Normal3f &ng() const {
-        return get_interaction().n;
-    }
-
-    PBRT_CPU_GPU
-    const Normal3f &ns() const {
-        if (type == VertexType::surface) {
-            return si.shading.n;
-        }
-
-        return get_interaction().n;
-    }
-
-    PBRT_CPU_GPU
-    bool is_on_surface() const {
-        return get_interaction().is_surface_interaction();
-    }
-
-    PBRT_CPU_GPU
-    SampledSpectrum f(const Vertex &next, TransportMode mode) const {
-        Vector3f wi = next.p() - p();
-
-        if (wi.squared_length() == 0) {
-            return SampledSpectrum(0);
-        }
-
-        wi = wi.normalize();
-        switch (type) {
-        case VertexType::surface:
-            return bsdf.f(si.wo, wi, mode);
-        }
-
-        REPORT_FATAL_ERROR();
-        return SampledSpectrum(NAN);
-    }
-
-    PBRT_CPU_GPU
-    bool is_infinite_light() const {
-        return type == VertexType::light &&
-               (!ei.light || ei.light->get_light_type() == LightType::infinite ||
-                ei.light->get_light_type() == LightType::delta_direction);
-    }
-
-    PBRT_CPU_GPU
-    FloatType convert_density(FloatType pdf, const Vertex &next) const {
-        // Return solid angle density if _next_ is an infinite area light
-        if (next.is_infinite_light()) {
-            return pdf;
-        }
-
-        Vector3f w = next.p() - p();
-        if (w.squared_length() == 0) {
-            return 0;
-        }
-
-        FloatType invDist2 = 1 / w.squared_length();
-        if (next.is_on_surface()) {
-            pdf *= next.ng().abs_dot(w * std::sqrt(invDist2));
-        }
-
-        return pdf * invDist2;
-    }
-
-    PBRT_CPU_GPU
-    FloatType pdf_light(const IntegratorBase *integrator_base, const Vertex &v) const {
-        Vector3f w = v.p() - p();
-        auto invDist2 = 1.0 / w.squared_length();
-        w *= std::sqrt(invDist2);
-
-        // Compute sampling density _pdf_ for light type
-        FloatType pdf;
-        if (is_infinite_light()) {
-            // Compute planar sampling density for infinite light sources
-            Bounds3f sceneBounds = integrator_base->bvh->bounds();
-            Point3f sceneCenter;
-            FloatType sceneRadius;
-            sceneBounds.bounding_sphere(&sceneCenter, &sceneRadius);
-            pdf = 1.0 / (compute_pi() * sqr(sceneRadius));
-        } else if (is_on_surface()) {
-            // Compute sampling density at emissive surface
-            if (DEBUG_MODE && type == VertexType::light) {
-                if (ei.light->get_light_type() != LightType::area) {
-                    REPORT_FATAL_ERROR();
-                }
-            }
-
-            auto light = (type == VertexType::light) ? ei.light : si.area_light;
-            FloatType pdfPos, pdfDir;
-            light->pdf_le(ei, w, &pdfPos, &pdfDir);
-            pdf = pdfDir * invDist2;
-        } else {
-            if (DEBUG_MODE) {
-                if (type != VertexType::light || ei.light == nullptr) {
-                    REPORT_FATAL_ERROR();
-                }
-            }
-
-            // Compute sampling density for noninfinite light sources
-            FloatType pdfPos, pdfDir;
-            ei.light->pdf_le(Ray(p(), w), &pdfPos, &pdfDir);
-            pdf = pdfDir * invDist2;
-        }
-
-        if (v.is_on_surface()) {
-            pdf *= v.ng().abs_dot(w);
-        }
-
-        return pdf;
-    }
-
-    PBRT_CPU_GPU
-    FloatType pdf(const IntegratorBase *integrator_base, const Vertex *prev,
-                  const Vertex &next) const {
-        if (type == VertexType::light) {
-            return pdf_light(integrator_base, next);
-        }
-
-        // Compute directions to preceding and next vertex
-        Vector3f wn = next.p() - p();
-        if (wn.squared_length() == 0) {
-            return 0;
-        }
-
-        wn = wn.normalize();
-        Vector3f wp;
-        if (prev) {
-            wp = prev->p() - p();
-            if (wp.squared_length() == 0) {
-                return 0;
-            }
-            wp = wp.normalize();
-        } else {
-            if (DEBUG_MODE && type != VertexType::camera) {
-                REPORT_FATAL_ERROR();
-            }
-        }
-
-        // Compute directional density depending on the vertex type
-        FloatType pdf = 0;
-
-        switch (type) {
-        case VertexType::camera: {
-            FloatType unused;
-            ei.camera->pdf_we(ei.spawn_ray(wn), &unused, &pdf);
-            break;
-        }
-        case VertexType::surface: {
-            pdf = bsdf.pdf(wp, wn);
-            break;
-        }
-        default: {
-            REPORT_FATAL_ERROR();
-        }
-        }
-
-        // Return probability per unit area at vertex _next_
-        return convert_density(pdf, next);
-    }
-
-    PBRT_CPU_GPU
-    SampledSpectrum Le(const Light **infinite_lights, int num_infinite_lights, const Vertex &v,
-                       const SampledWavelengths &lambda) const {
-        if (!is_light()) {
-            return SampledSpectrum(0.0);
-        }
-
-        Vector3f w = v.p() - p();
-        if (w.squared_length() == 0) {
-            return SampledSpectrum(0.0);
-        }
-
-        w = w.normalize();
-        if (is_infinite_light()) {
-            // Return emitted radiance for infinite light sources
-            SampledSpectrum Le(0.f);
-
-            for (uint idx = 0; idx < num_infinite_lights; ++idx) {
-                auto light = infinite_lights[idx];
-                Le += light->le(Ray(p(), -w), lambda);
-            }
-
-            return Le;
-        }
-
-        if (si.area_light != nullptr) {
-            return si.area_light->l(si.p(), si.n, si.uv, w, lambda);
-        }
-
-        return SampledSpectrum(0.f);
-    }
-
-    PBRT_CPU_GPU
-    FloatType pdf_light_origin(const Light **infinite_lights, int num_infinite_lights,
-                               const Vertex &v, const PowerLightSampler *lightSampler) {
-        Vector3f w = v.p() - p();
-        if (w.squared_length() == 0) {
-            return 0.0;
-        }
-
-        w = w.normalize();
-
-        if (is_infinite_light()) {
-            // Return sampling density for infinite light sources
-            return infinite_light_density(infinite_lights, num_infinite_lights, lightSampler, w);
-        }
-
-        // Return sampling density for noninfinite light source
-        auto light = type == VertexType::light ? ei.light : si.area_light;
-
-        FloatType pdfPos, pdfDir;
-        auto pdfChoice = lightSampler->pmf(light);
-
-        if (is_on_surface()) {
-            light->pdf_le(ei, w, &pdfPos, &pdfDir);
-        } else {
-            light->pdf_le(Ray(p(), w), &pdfPos, &pdfDir);
-        }
-
-        return pdfPos * pdfChoice;
-    }
 };
 
 PBRT_CPU_GPU
@@ -621,14 +351,14 @@ FloatType mis_weight(const IntegratorBase *integrator_base, Vertex *lightVertice
 }
 
 PBRT_CPU_GPU
-int random_walk(const IntegratorBase *integrator_base, SampledWavelengths &lambda, Ray ray,
-                Sampler *sampler, SampledSpectrum beta, FloatType pdf, int maxDepth,
-                TransportMode mode, Vertex *path, bool regularize) {
+int random_walk(SampledWavelengths &lambda, Ray ray, Sampler *sampler, SampledSpectrum beta,
+                FloatType pdf, int maxDepth, TransportMode mode, Vertex *path,
+                const BDPTConfig *config) {
     if (maxDepth == 0) {
         return 0;
     }
 
-    const auto camera = integrator_base->camera;
+    const auto camera = config->base->camera;
 
     // Follow random walk to initialize BDPT path vertices
     int bounces = 0;
@@ -645,7 +375,7 @@ int random_walk(const IntegratorBase *integrator_base, SampledWavelengths &lambd
         // Trace a ray and sample the medium, if any
         Vertex &vertex = path[bounces];
         Vertex &prev = path[bounces - 1];
-        auto si = integrator_base->intersect(ray, Infinity);
+        auto si = config->base->intersect(ray, Infinity);
 
         if (terminated) {
             return bounces;
@@ -671,7 +401,7 @@ int random_walk(const IntegratorBase *integrator_base, SampledWavelengths &lambd
         auto bsdf = isect.get_bsdf(lambda, camera, sampler->get_samples_per_pixel());
 
         // Possibly regularize the BSDF
-        if (regularize && anyNonSpecularBounces) {
+        if (config->regularize && anyNonSpecularBounces) {
             bsdf.regularize();
         }
 
@@ -712,14 +442,14 @@ int random_walk(const IntegratorBase *integrator_base, SampledWavelengths &lambd
 }
 
 PBRT_CPU_GPU
-int generate_camera_subpath(const IntegratorBase *integrator_base, const Ray &ray,
-                            SampledWavelengths &lambda, Sampler *sampler, int maxDepth,
-                            Vertex *path, bool regularize) {
+int BDPTIntegrator::generate_camera_subpath(const Ray &ray, SampledWavelengths &lambda,
+                                            Sampler *sampler, int maxDepth, Vertex *path,
+                                            const BDPTConfig *config) {
     if (maxDepth == 0) {
         return 0;
     }
 
-    const auto camera = integrator_base->camera;
+    const auto camera = config->base->camera;
 
     SampledSpectrum beta(1.f);
     // Generate first vertex on camera subpath and start random walk
@@ -729,18 +459,20 @@ int generate_camera_subpath(const IntegratorBase *integrator_base, const Ray &ra
 
     camera->pdf_we(ray, &pdfPos, &pdfDir);
 
-    return random_walk(integrator_base, lambda, ray, sampler, beta, pdfDir, maxDepth - 1,
-                       TransportMode::Radiance, path + 1, regularize) +
+    return random_walk(lambda, ray, sampler, beta, pdfDir, maxDepth - 1, TransportMode::Radiance,
+                       path + 1, config) +
            1;
 }
 
 PBRT_CPU_GPU
-int generate_light_subpath(const IntegratorBase *integrator_base, SampledWavelengths &lambda,
-                           Sampler *sampler, int maxDepth, Vertex *path, bool regularize) {
+int BDPTIntegrator::generate_light_subpath(SampledWavelengths &lambda, Sampler *sampler,
+                                           int maxDepth, Vertex *path, const BDPTConfig *config) {
     // Generate light subpath and initialize _path_ vertices
     if (maxDepth == 0) {
         return 0;
     }
+
+    const auto integrator_base = config->base;
 
     // Sample initial ray for light subpath
     // Sample light for BDPT light subpath
@@ -770,8 +502,8 @@ int generate_light_subpath(const IntegratorBase *integrator_base, SampledWavelen
     // Follow light subpath random walk
     SampledSpectrum beta = les->L * les->abs_cos_theta(ray.d) / (p_l * les->pdfDir);
 
-    int nVertices = random_walk(integrator_base, lambda, ray, sampler, beta, les->pdfDir,
-                                maxDepth - 1, TransportMode::Importance, path + 1, regularize);
+    int nVertices = random_walk(lambda, ray, sampler, beta, les->pdfDir, maxDepth - 1,
+                                TransportMode::Importance, path + 1, config);
 
     // Correct subpath sampling densities for infinite area lights
     if (path[0].is_infinite_light()) {
@@ -792,18 +524,20 @@ int generate_light_subpath(const IntegratorBase *integrator_base, SampledWavelen
     return nVertices + 1;
 }
 
-PBRT_CPU_GPU
-SampledSpectrum connect_bdpt(const IntegratorBase *integrator_base, SampledWavelengths &lambda,
-                             Vertex *lightVertices, Vertex *cameraVertices, int s, int t,
-                             Sampler *sampler, pbrt::optional<Point2f> *pRaster,
-                             FloatType *misWeightPtr = nullptr) {
+PBRT_GPU
+SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex *lightVertices,
+                                             Vertex *cameraVertices, int s, int t, Sampler *sampler,
+                                             pbrt::optional<Point2f> *pRaster,
+                                             const BDPTConfig *config, FloatType *misWeightPtr) {
     SampledSpectrum L(0.f);
     // Ignore invalid connections related to infinite area lights
-    if (t > 1 && s != 0 && cameraVertices[t - 1].type == VertexType::light) {
+    if (t > 1 && s != 0 && cameraVertices[t - 1].type == Vertex::VertexType::light) {
         return SampledSpectrum(0);
     }
 
-    auto camera = integrator_base->camera;
+    const auto integrator_base = config->base;
+
+    const auto camera = integrator_base->camera;
 
     // Perform connection and write contribution to _L_
     Vertex sampled;
@@ -836,6 +570,7 @@ SampledSpectrum connect_bdpt(const IntegratorBase *integrator_base, SampledWavel
                 }
             }
         }
+
     } else if (s == 1) {
         // Sample a point on a light and connect it to the camera subpath
         const Vertex &pt = cameraVertices[t - 1];
@@ -884,6 +619,7 @@ SampledSpectrum connect_bdpt(const IntegratorBase *integrator_base, SampledWavel
                 }
             }
         }
+
     } else {
         // Handle all other bidirectional connection cases
         const Vertex &qs = lightVertices[s - 1], &pt = cameraVertices[t - 1];
@@ -918,12 +654,17 @@ BDPTIntegrator *BDPTIntegrator::create(int samples_per_pixel, const std::string 
     auto samplers = allocator.allocate<Sampler>(NUM_SAMPLERS);
 
     bdpt_integrator->samplers = samplers;
-    bdpt_integrator->base = integrator_base;
-    bdpt_integrator->max_depth = parameters.get_integer("maxdepth", 10);
-    bdpt_integrator->regularize = parameters.get_bool("regularize", false);
-    bdpt_integrator->film_sample_size = bdpt_integrator->max_depth * NUM_SAMPLERS;
 
-    const uint threads = 1024;
+    auto config = allocator.allocate<BDPTConfig>();
+
+    config->base = integrator_base;
+    config->max_depth = parameters.get_integer("maxdepth", 5);
+    config->regularize = parameters.get_bool("regularize", false);
+    config->film_sample_size = config->max_depth * NUM_SAMPLERS;
+
+    bdpt_integrator->config = config;
+
+    constexpr uint threads = 1024;
     uint blocks = divide_and_ceil<uint>(NUM_SAMPLERS, threads);
 
     if (sampler_type == "independent") {
@@ -968,29 +709,28 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, FilmSample *film_samp
         return;
     }
 
+    const auto config = bdpt_integrator->config;
+
     auto local_sampler = &bdpt_integrator->samplers[worker_idx];
     local_sampler->start_pixel_sample(pixel_idx, sample_idx, 0);
 
     auto p_pixel = Point2i(pixel_idx % width, pixel_idx / width);
 
-    auto camera_sample = local_sampler->get_camera_sample(p_pixel, bdpt_integrator->base->filter);
+    auto camera_sample = local_sampler->get_camera_sample(p_pixel, config->base->filter);
 
     auto lu = local_sampler->get_1d();
     auto lambda = SampledWavelengths::sample_visible(lu);
 
-    auto ray = bdpt_integrator->base->camera->generate_ray(camera_sample, local_sampler);
+    auto ray = config->base->camera->generate_ray(camera_sample, local_sampler);
 
-    auto local_camera_vertices =
-        &global_camera_vertices[worker_idx * (bdpt_integrator->max_depth + 2)];
-    auto local_light_vertices =
-        &global_light_vertices[worker_idx * (bdpt_integrator->max_depth + 1)];
-
-    auto rendered_sample = &bdpt_samples[worker_idx];
+    auto local_camera_vertices = &global_camera_vertices[worker_idx * (config->max_depth + 2)];
+    auto local_light_vertices = &global_light_vertices[worker_idx * (config->max_depth + 1)];
 
     auto radiance_l = ray.weight * bdpt_integrator->li(film_samples, film_sample_counter, ray.ray,
                                                        lambda, local_sampler, local_camera_vertices,
-                                                       local_light_vertices);
+                                                       local_light_vertices, config);
 
+    auto rendered_sample = &bdpt_samples[worker_idx];
     rendered_sample->p_pixel = p_pixel;
     rendered_sample->weight = camera_sample.filter_weight;
     rendered_sample->l_path = radiance_l;
@@ -1009,12 +749,14 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
 
     auto bdpt_samples = local_allocator.allocate<BDPTSample>(NUM_SAMPLERS);
 
-    auto film_samples = local_allocator.allocate<FilmSample>(film_sample_size);
+    auto film_samples = local_allocator.allocate<FilmSample>(config->film_sample_size);
 
     auto film_sample_counter = local_allocator.allocate<int>();
 
-    auto global_camera_vertices = local_allocator.allocate<Vertex>(NUM_SAMPLERS * (max_depth + 2));
-    auto global_light_vertices = local_allocator.allocate<Vertex>(NUM_SAMPLERS * (max_depth + 1));
+    auto global_camera_vertices =
+        local_allocator.allocate<Vertex>(NUM_SAMPLERS * (config->max_depth + 2));
+    auto global_light_vertices =
+        local_allocator.allocate<Vertex>(NUM_SAMPLERS * (config->max_depth + 1));
 
     auto num_pixels = image_resolution.x * image_resolution.y;
 
@@ -1061,12 +803,13 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
 PBRT_GPU
 SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, int *film_sample_counter,
                                    const Ray &ray, SampledWavelengths &lambda, Sampler *sampler,
-                                   Vertex *camera_vertices, Vertex *light_vertices) const {
+                                   Vertex *camera_vertices, Vertex *light_vertices,
+                                   const BDPTConfig *config) {
     // Trace the camera and light subpaths
-    int nCamera = generate_camera_subpath(base, ray, lambda, sampler, max_depth + 2,
-                                          camera_vertices, regularize);
+    int nCamera = generate_camera_subpath(ray, lambda, sampler, config->max_depth + 2,
+                                          camera_vertices, config);
     int nLight =
-        generate_light_subpath(base, lambda, sampler, max_depth + 1, light_vertices, regularize);
+        generate_light_subpath(lambda, sampler, config->max_depth + 1, light_vertices, config);
 
     SampledSpectrum accumulated_l(0);
 
@@ -1074,15 +817,16 @@ SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, int *film_sample_co
     for (int t = 1; t <= nCamera; ++t) {
         for (int s = 0; s <= nLight; ++s) {
             int depth = t + s - 2;
-            if ((s == 1 && t == 1) || depth < 0 || depth > max_depth) {
+            if ((s == 1 && t == 1) || depth < 0 || depth > config->max_depth) {
                 continue;
             }
 
             // Execute the $(s, t)$ connection strategy and update _L_
             pbrt::optional<Point2f> optional_p_film_new;
             FloatType misWeight = 0;
-            SampledSpectrum l_path = connect_bdpt(base, lambda, light_vertices, camera_vertices, s,
-                                                  t, sampler, &optional_p_film_new, &misWeight);
+            SampledSpectrum l_path =
+                connect_bdpt(lambda, light_vertices, camera_vertices, s, t, sampler,
+                             &optional_p_film_new, config, &misWeight);
 
             if (t != 1) {
                 accumulated_l += l_path;
@@ -1093,7 +837,7 @@ SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, int *film_sample_co
 
                 const auto film_sample_idx = atomicAdd(film_sample_counter, 1);
 
-                if (film_sample_idx >= film_sample_size) {
+                if (film_sample_idx >= config->film_sample_size) {
                     REPORT_FATAL_ERROR();
                 }
 

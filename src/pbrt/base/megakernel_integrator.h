@@ -5,7 +5,6 @@
 class Film;
 class GPUMemoryAllocator;
 class HLBVH;
-class IntegratorBase;
 class ParameterDictionary;
 class Ray;
 class SampledWavelengths;
@@ -14,6 +13,8 @@ class Sampler;
 class AmbientOcclusionIntegrator;
 class MegakernelPathIntegrator;
 class SurfaceNormalIntegrator;
+
+struct IntegratorBase;
 
 class MegakernelIntegrator {
   public:

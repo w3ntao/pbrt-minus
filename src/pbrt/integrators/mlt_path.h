@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pbrt/gpu/macro.h>
+#include <pbrt/samplers/mlt.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 
 class Film;
@@ -24,8 +25,7 @@ struct PathSample {
 
 class MLTPathIntegrator {
   public:
-    static MLTPathIntegrator *create(const int mutations_per_pixel,
-                                     const ParameterDictionary &parameters,
+    static MLTPathIntegrator *create(int mutations_per_pixel, const ParameterDictionary &parameters,
                                      const IntegratorBase *base, GPUMemoryAllocator &allocator);
 
     double render(Film *film, GreyScaleFilm &heat_map, uint mutations_per_pixel, bool preview);

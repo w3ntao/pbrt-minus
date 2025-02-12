@@ -43,6 +43,11 @@ class Point2 {
         return NAN;
     }
 
+    PBRT_CPU_GPU
+    bool has_nan() const {
+        return std::isnan(x) || std::isinf(x) || std::isnan(y) || std::isinf(y);
+    }
+
     PBRT_CPU_GPU bool operator==(const Point2 &p) const {
         return x == p.x && y == p.y;
     }
