@@ -614,8 +614,8 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
     const std::chrono::duration<FloatType> duration_bottom_bvh{std::chrono::system_clock::now() -
                                                                start_bottom_bvh};
 
-    printf("BVH building: %.2f seconds (sort: %.2f, top: %.2f, bottom: %.2f) %s\n",
-           (duration_sorting + duration_top_bvh + duration_bottom_bvh).count(),
+    printf("BVH building: %d primitives, %.2f seconds (sort: %.2f, top: %.2f, bottom: %.2f) %s\n",
+           num_primtives, (duration_sorting + duration_top_bvh + duration_bottom_bvh).count(),
            duration_sorting.count(), duration_top_bvh.count(), duration_bottom_bvh.count(),
            tag.c_str());
 }

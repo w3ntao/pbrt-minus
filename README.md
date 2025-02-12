@@ -51,16 +51,20 @@ $ ./pbrt-minus ../example/cornell-box-specular.pbrt --spp 4
 
 More scenes at https://github.com/w3ntao/pbrt-minus-scenes.
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/caustic-glass-v4-bdpt-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/book-wavefrontpath-4096.png)
-
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame300-wavefrontpath-4096.png)
 
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame675-wavefrontpath-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/bmw-m6-wavefrontpath-4096.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/book-wavefrontpath-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/veach-mis-colorized-wavefrontpath-4096.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/caustic-glass-v4-bdpt-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/lte-orb-rough-glass-wavefrontpath-4096.png)
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/bathroom-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/staircase-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/staircase2-4096.png)
+
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/material-testball-sequence-4096.png)
+
+
