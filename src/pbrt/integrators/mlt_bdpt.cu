@@ -16,8 +16,8 @@ constexpr size_t NUM_BOOT_STRAP = 1000000;
 
 struct MLTSample {
     BDPTPathSample path_sample;
-    FloatType sampling_density;
     FloatType weight;
+    FloatType sampling_density;
 
     PBRT_CPU_GPU
     MLTSample(const Point2f &p_film, const SampledSpectrum &_radiance,
@@ -322,15 +322,6 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, uint mutat
         gl_helper.init("initializing", film_dimension);
     }
 
-    auto add_sample_to_heatmap = [&heat_map, this](const Point2f &p_film,
-                                                   const FloatType sampling_density) {
-        auto p_discrete = (p_film + Vector2f(0.5, 0.5)).floor();
-        p_discrete.x = clamp<int>(p_discrete.x, 0, film_dimension.x - 1);
-        p_discrete.y = clamp<int>(p_discrete.y, 0, film_dimension.y - 1);
-
-        heat_map.add_sample(p_discrete, sampling_density);
-    };
-
     long long accumulate_samples = 0; // this is for debugging and verification
     for (uint pass = 0; pass < total_pass; ++pass) {
         const uint num_mutations = pass == total_pass - 1
@@ -353,7 +344,14 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, uint mutat
 
             if (weight > 0) {
                 film->add_splat(p_film, path_sample->radiance * weight, path_sample->lambda);
-                add_sample_to_heatmap(p_film, sampling_density);
+            }
+
+            if (sampling_density > 0) {
+                auto p_discrete = (p_film + Vector2f(0.5, 0.5)).floor();
+                p_discrete.x = clamp<int>(p_discrete.x, 0, film_dimension.x - 1);
+                p_discrete.y = clamp<int>(p_discrete.y, 0, film_dimension.y - 1);
+
+                heat_map.add_sample(p_discrete, sampling_density);
             }
         }
 

@@ -257,13 +257,7 @@ void SceneBuilder::build_integrator() {
         integrator_name = "path";
     }
 
-    if (integrator_name == "bdpt") {
-        bdpt_integrator = BDPTIntegrator::create(samples_per_pixel.value(), sampler_type,
-                                                 parameters, integrator_base, allocator);
-        return;
-    }
-
-    if (integrator_name == "mlt") {
+    if (integrator_name == "mlt" || integrator_name == "mltbdpt") {
         mlt_bdpt_integrator = MLTBDPTIntegrator::create(samples_per_pixel.value(), parameters,
                                                         integrator_base, allocator);
         return;
@@ -276,6 +270,12 @@ void SceneBuilder::build_integrator() {
     }
 
     printf("sampler: %s\n", sampler_type.c_str());
+
+    if (integrator_name == "bdpt") {
+        bdpt_integrator = BDPTIntegrator::create(samples_per_pixel.value(), sampler_type,
+                                                 parameters, integrator_base, allocator);
+        return;
+    }
 
     if (integrator_name == "path") {
         wavefront_path_integrator = WavefrontPathIntegrator::create(
