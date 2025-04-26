@@ -22,7 +22,7 @@ A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT
 
 Debian/Ubuntu:
 ```
-$ sudo apt install -y cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev
+$ sudo apt install -y cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev libxrandr-dev
 ```
 
 Setting up for other distros should be similar.
@@ -43,7 +43,7 @@ $ cd pbrt-minus
 $ mkdir build; cd build
 $ cmake ..; make -j
 
-$ ./pbrt-minus ../example/cornell-box-specular.pbrt --spp 4
+$ ./pbrt-minus ../example/cornell-box-specular.pbrt --preview --spp 16
 ```
 
 

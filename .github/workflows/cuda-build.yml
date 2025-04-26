@@ -15,8 +15,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04 ]
-        cuda: [ '12.1.0', '12.2.0', '12.3.0', '12.4.0', '12.5.0', '12.6.0' ]
+        os: [ ubuntu-latest ] # namely ubuntu 24.04
+        # cuda: [ '12.1.0', '12.2.0', '12.3.0', '12.4.0', '12.5.0', '12.6.0' ]
+        cuda: [ '12.5.0', '12.6.0' ]
         # all available versions:
         # https://github.com/Jimver/cuda-toolkit/blob/master/src/links/linux-links.ts
 
@@ -36,7 +37,7 @@ jobs:
 
     - name: install dependencies
       run:
-        sudo apt install -y cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev
+        sudo apt install -y cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev libxrandr-dev
 
     - uses: actions/checkout@v4
       with:

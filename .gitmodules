@@ -30,5 +30,5 @@
 
 [submodule "src/ext/stb"]
     path = src/ext/stb
-    url = git@github.com:w3ntao/stb.git
+    url = https://github.com/w3ntao/stb.git
     branch = master

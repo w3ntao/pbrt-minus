@@ -1,37 +1,32 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 # `CUDA_ARCHITECTURES native` is available in CMake since 3.24
 
-if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-endif ()
-
-if (NOT CMAKE_CUDA_COMPILER)
-    set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
-    # required by CLion
-endif ()
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(PROJ_NAME "pbrt-minus")
+set(CMAKE_CUDA_ARCHITECTURES "native")
 
+# CUDA_ARCHITECTURES native: CUDA_ARCHITECTURES is detected automatically
+# https://stackoverflow.com/questions/68223398/how-can-i-get-cmake-to-automatically-detect-the-value-for-cuda-architectures
+
+set(PROJ_NAME "pbrt-minus")
 project(${PROJ_NAME} LANGUAGES CUDA CXX C)
+
+message(STATUS "NVCC Detected: ${CMAKE_CUDA_COMPILER} - ${CMAKE_CUDA_COMPILER_VERSION}")
+
+#if (${CMAKE_CUDA_COMPILER_VERSION} VERSION_LESS "11.0.1")
+#    message(FATAL_ERROR "NVCC < 11.0.1 has not been tested")
+#endif ()
+
+if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+endif ()
 
 option(PBRT_FLOAT_AS_DOUBLE "use 64-bit floats" OFF)
 
 if (PBRT_FLOAT_AS_DOUBLE)
     list(APPEND PBRT_DEFINITIONS "PBRT_FLOAT_AS_DOUBLE")
 endif ()
-
-enable_language(CUDA)
-include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
-
-message(STATUS "nvcc path: ${CMAKE_CUDA_COMPILER}")
-message(STATUS "nvcc version = ${CMAKE_CUDA_COMPILER_VERSION}")
-
-#if (${CMAKE_CUDA_COMPILER_VERSION} VERSION_LESS "11.0.1")
-#    message(FATAL_ERROR "NVCC < 11.0.1 was not test")
-#endif ()
 
 add_subdirectory("src/ext")
 
@@ -181,15 +176,11 @@ target_link_libraries(
 
 set_target_properties(
         ${PROJ_NAME} PROPERTIES
-        CUDA_ARCHITECTURES native
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
 # CUDA_SEPARABLE_COMPILATION ON: member function declaration and implementation can be separate
 # https://developer.nvidia.com/blog/separate-compilation-linking-cuda-device-code/
-
-# CUDA_ARCHITECTURES native: CUDA_ARCHITECTURES is detected automatically
-# https://stackoverflow.com/questions/68223398/how-can-i-get-cmake-to-automatically-detect-the-value-for-cuda-architectures
 
 target_compile_options(
         ${PROJ_NAME} PRIVATE
