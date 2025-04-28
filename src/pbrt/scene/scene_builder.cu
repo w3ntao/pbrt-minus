@@ -90,7 +90,8 @@ void SceneBuilder::ActiveInstanceDefinition::build_bvh(GPUMemoryAllocator &alloc
 }
 
 SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
-    : integrator_name(command_line_option.integrator_name),
+    : input_filename(command_line_option.input_file),
+      integrator_name(command_line_option.integrator_name),
       output_filename(command_line_option.output_file),
       samples_per_pixel(command_line_option.samples_per_pixel),
       preview(command_line_option.preview) {
@@ -190,7 +191,11 @@ void SceneBuilder::build_film() {
     const auto parameters = build_parameter_dictionary(sub_vector(film_tokens, 2));
 
     if (output_filename.empty()) {
-        output_filename = parameters.get_one_string("filename");
+        if (parameters.has_string("filename")) {
+            output_filename = parameters.get_one_string("filename");
+        } else {
+            output_filename = this->input_filename;
+        }
     }
 
     if (std::filesystem::path p(output_filename); p.extension() != ".png") {

@@ -105,13 +105,14 @@ RGB Film::get_pixel_rgb(const Point2i &p, FloatType splat_scale) const {
 
 __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint width, uint height,
                             FloatType splat_scale) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= width * height) {
+    const auto x = blockIdx.x * blockDim.x + threadIdx.x;
+    const auto y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x >= width || y >= height) {
         return;
     }
 
-    auto y = worker_idx / width;
-    auto x = worker_idx % width;
+    const auto worker_idx = y * width + x;
 
     auto rgb = film->get_pixel_rgb(Point2i(x, y), splat_scale);
     if (rgb.has_nan()) {
@@ -130,12 +131,18 @@ __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint wi
 }
 
 void Film::copy_to_frame_buffer(uint8_t *gpu_frame_buffer, FloatType splat_scale) const {
-    auto image_resolution = this->get_resolution();
+    const auto image_resolution = this->get_resolution();
 
-    constexpr int threads = 1024;
-    const auto blocks = divide_and_ceil<uint>(image_resolution.x * image_resolution.y, threads);
+    constexpr uint thread_width = 16;
+    constexpr uint thread_height = 16;
+
+    dim3 blocks(divide_and_ceil(uint(image_resolution.x), thread_width),
+                divide_and_ceil(uint(image_resolution.y), thread_height));
+    dim3 threads(thread_width, thread_height);
+
     copy_pixels<<<blocks, threads>>>(gpu_frame_buffer, this, image_resolution.x, image_resolution.y,
                                      splat_scale);
+    CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 

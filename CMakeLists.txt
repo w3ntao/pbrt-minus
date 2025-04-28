@@ -14,10 +14,6 @@ project(${PROJ_NAME} LANGUAGES CUDA CXX C)
 
 message(STATUS "NVCC Detected: ${CMAKE_CUDA_COMPILER} - ${CMAKE_CUDA_COMPILER_VERSION}")
 
-#if (${CMAKE_CUDA_COMPILER_VERSION} VERSION_LESS "11.0.1")
-#    message(FATAL_ERROR "NVCC < 11.0.1 has not been tested")
-#endif ()
-
 if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 endif ()
@@ -26,6 +22,9 @@ option(PBRT_FLOAT_AS_DOUBLE "use 64-bit floats" OFF)
 
 if (PBRT_FLOAT_AS_DOUBLE)
     list(APPEND PBRT_DEFINITIONS "PBRT_FLOAT_AS_DOUBLE")
+    message(STATUS "PBRT Float type: double")
+else ()
+    message(STATUS "PBRT Float type: float")
 endif ()
 
 add_subdirectory("src/ext")

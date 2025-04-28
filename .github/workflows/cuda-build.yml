@@ -5,6 +5,10 @@ on:
     branches: [ "*" ]
   pull_request:
     branches: [ "*" ]
+  schedule:
+    - cron: "0 0 1 * *"
+    # runs on 00:00 1st day of every month
+    # 00:00 UTC = 08:00 Beijing
   workflow_dispatch:
 
 env:
@@ -20,8 +24,9 @@ jobs:
         cuda: [ '12.5.0', '12.6.0' ]
         # all available versions:
         # https://github.com/Jimver/cuda-toolkit/blob/master/src/links/linux-links.ts
+        float_config: [" -DPBRT_FLOAT_AS_DOUBLE=off", " -DPBRT_FLOAT_AS_DOUBLE=on"]
 
-    name: cuda build ${{ matrix.cuda }} - ${{ matrix.os }}
+    name: cuda ${{ matrix.cuda }} ${{ matrix.float_config }} - ${{ matrix.os }}
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -47,6 +52,6 @@ jobs:
       run:
         mkdir build;
         cd build;
-        cmake ..;
+        cmake .. ${{ matrix.float_config }};
         make -j2;
         # `make -j` could crash CI instances because of limited memory

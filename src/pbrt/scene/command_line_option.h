@@ -13,12 +13,36 @@ struct CommandLineOption {
     bool preview = false;
 
     CommandLineOption(int argc, const char **argv) {
+
         int idx = 1;
         while (idx < argc) {
             std::string argument = argv[idx];
+
+            auto read_next_argument = [&]() -> std::string {
+                if (idx + 1 >= argc) {
+                    const std::string error =
+                        "CommandLineOption(): expect valid argument after `" + argument + "`";
+                    throw std::runtime_error(error.c_str());
+                }
+
+                return argv[idx + 1];
+            };
+
             if (argument.size() > 2 && argument.substr(0, 2) == "--") {
                 if (argument == "--spp") {
-                    samples_per_pixel = stoi(std::string(argv[idx + 1]));
+                    samples_per_pixel = stoi(read_next_argument());
+                    idx += 2;
+                    continue;
+                }
+
+                if (argument == "--integrator") {
+                    integrator_name = read_next_argument();
+                    idx += 2;
+                    continue;
+                }
+
+                if (argument == "--outfile") {
+                    output_file = read_next_argument();
                     idx += 2;
                     continue;
                 }
@@ -29,23 +53,14 @@ struct CommandLineOption {
                     continue;
                 }
 
-                if (argument == "--integrator") {
-                    integrator_name = argv[idx + 1];
-                    idx += 2;
-                    continue;
-                }
-
-                if (argument == "--outfile") {
-                    output_file = argv[idx + 1];
-                    idx += 2;
-                    continue;
-                }
-
                 const std::string error = "CommandLineOption(): unknown arg: `" + argument + "`";
                 throw std::runtime_error(error.c_str());
             }
 
-            input_file = argument;
+            if (std::filesystem::path p(argument); p.extension() == ".pbrt") {
+                input_file = argument;
+            }
+
             idx += 1;
         }
 

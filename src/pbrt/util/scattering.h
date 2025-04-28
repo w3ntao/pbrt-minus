@@ -3,8 +3,8 @@
 #include <pbrt/euclidean_space/normal3f.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/euclidean_space/vector3.h>
-#include <pbrt/util/complex.h>
 #include <pbrt/gpu/macro.h>
+#include <pbrt/util/complex.h>
 #include <pbrt/util/sampling.h>
 
 PBRT_CPU_GPU
@@ -109,7 +109,7 @@ class TrowbridgeReitzDistribution {
   public:
     // TrowbridgeReitzDistribution Public Methods
     PBRT_CPU_GPU
-    TrowbridgeReitzDistribution() : alpha_x(NAN), alpha_y(NAN){};
+    TrowbridgeReitzDistribution() : alpha_x(NAN), alpha_y(NAN) {};
 
     PBRT_CPU_GPU
     TrowbridgeReitzDistribution(FloatType ax, FloatType ay) : alpha_x(ax), alpha_y(ay) {
@@ -214,12 +214,12 @@ class TrowbridgeReitzDistribution {
 
     PBRT_CPU_GPU
     void regularize() {
-        if (alpha_x < 0.3f) {
-            alpha_x = clamp(2 * alpha_x, 0.1f, 0.3f);
+        if (alpha_x < 0.3) {
+            alpha_x = clamp(2 * alpha_x, FloatType(0.1), FloatType(0.3));
         }
 
-        if (alpha_y < 0.3f) {
-            alpha_y = clamp(2 * alpha_y, 0.1f, 0.3f);
+        if (alpha_y < 0.3) {
+            alpha_y = clamp(2 * alpha_y, FloatType(0.1), FloatType(0.3));
         }
     }
 

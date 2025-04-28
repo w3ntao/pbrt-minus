@@ -78,7 +78,8 @@ class Bounds3 {
         }
 
         REPORT_FATAL_ERROR();
-        return Point3(NAN, NAN, NAN);
+        const auto float_nan = std::numeric_limits<FloatType>::quiet_NaN();
+        return Point3(float_nan, float_nan, float_nan);
     }
 
     PBRT_CPU_GPU Bounds3 operator+(const Bounds3 &b) const {

@@ -84,6 +84,7 @@ class SceneBuilder {
     std::map<std::string, const SpectrumTexture *> unbounded_spectrum_textures;
 
     std::string output_filename;
+    std::string input_filename;
 
     std::vector<Token> camera_tokens;
     std::vector<Token> film_tokens;

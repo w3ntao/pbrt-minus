@@ -15,7 +15,7 @@
 #include <pbrt/spectrum_util/sampled_wavelengths.h>
 #include <pbrt/util/math.h>
 
-constexpr uint PATH_POOL_SIZE = 2 * 1024 * 1024;
+constexpr uint PATH_POOL_SIZE = 1 * 1024 * 1024;
 
 struct FrameBuffer {
     uint pixel_idx;
@@ -395,6 +395,7 @@ void WavefrontPathIntegrator::evaluate_material(const Material::Type material_ty
     const auto blocks = divide_and_ceil(material_queue->counter, threads);
 
     gpu_evaluate_material<<<blocks, threads>>>(material_queue, this);
+    CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
@@ -452,18 +453,21 @@ void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Po
 
         gpu_init_stratified_samplers<<<blocks, threads>>>(samplers, stratified_samplers,
                                                           samples_per_dimension, PATH_POOL_SIZE);
+        CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     } else if (sampler_type == "independent") {
         auto independent_samplers = allocator.allocate<IndependentSampler>(PATH_POOL_SIZE);
 
         gpu_init_independent_samplers<<<blocks, threads>>>(samplers, independent_samplers,
                                                            PATH_POOL_SIZE);
+        CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     } else {
         REPORT_FATAL_ERROR();
     }
 
     gpu_init_path_state<<<PATH_POOL_SIZE, threads>>>(this);
+    CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
@@ -579,6 +583,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
 
     // generate new paths for the whole pool
     fill_new_path_queue<<<PATH_POOL_SIZE, threads>>>(&queues);
+    CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     queues.new_paths->counter = PATH_POOL_SIZE;
@@ -586,6 +591,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
 
     generate_new_path<<<divide_and_ceil(queues.new_paths->counter, threads), threads>>>(
         &path_state, &queues, base);
+    CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     if (queues.rays->counter <= 0) {
@@ -595,6 +601,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
     while (queues.rays->counter > 0) {
         ray_cast<<<divide_and_ceil(queues.rays->counter, threads), threads>>>(&path_state, &queues,
                                                                               base);
+        CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         // clear all queues before control stage
@@ -605,6 +612,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
 
         control_logic<<<divide_and_ceil(PATH_POOL_SIZE, threads), threads>>>(&path_state, &queues,
                                                                              max_depth, base);
+        CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         if (queues.frame_buffer_counter > 0) {
@@ -614,6 +622,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
 
             write_frame_buffer<<<divide_and_ceil(queues.frame_buffer_counter, threads), threads>>>(
                 film, &queues);
+            CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
             if (preview) {
@@ -630,6 +639,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         if (queues.new_paths->counter > 0) {
             generate_new_path<<<divide_and_ceil(queues.new_paths->counter, threads), threads>>>(
                 &path_state, &queues, base);
+            CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 

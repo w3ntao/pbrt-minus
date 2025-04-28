@@ -129,10 +129,12 @@ int main(int argc, const char **argv) {
     display_system_info();
 
 #ifdef PBRT_FLOAT_AS_DOUBLE
-    std::cout << "Float type: double\n";
+    std::string float_type = "double";
 #else
-    std::cout << "Float type: float\n";
+    std::string float_type = "float";
 #endif
+
+    printf("Float type: %s (%lu bit)\n", float_type.c_str(), sizeof(FloatType) * CHAR_BIT);
 
     const auto command_line_option = CommandLineOption(argc, argv);
     SceneBuilder::render_pbrt(command_line_option);

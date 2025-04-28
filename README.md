@@ -9,11 +9,13 @@ A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT
 
 * CUDA acceleration
 * HLBVH with work queues ([Pantaleoni et al. 2010](https://research.nvidia.com/publication/2010-06_hlbvh-hierarchical-lbvh-construction-real-time-ray-tracing), [Garanzha et al. 2011](https://research.nvidia.com/publication/simpler-and-faster-hlbvh-work-queues))
-* wavefront path tracing ([Laine et al. 2013](https://research.nvidia.com/sites/default/files/pubs/2013-07_Megakernels-Considered-Harmful/laine2013hpg_paper.pdf)), bidirectional path tracing, metropolis light transport
+* uni-directional path tracing: wavefront path tracing ([Laine et al. 2013](https://research.nvidia.com/sites/default/files/pubs/2013-07_Megakernels-Considered-Harmful/laine2013hpg_paper.pdf)), light sampling, multiple importance sampling, russian roulette
+* bi-directional path tracing
+* metropolis light transport: on uni-directional and bi-directional path tracing
 * spectral rendering
-* multiple importance sampling
 * power light sampler
 * stratified sampler
+* visualize progressive rendering with OpenGL
 
 
 ## set up environment
@@ -22,14 +24,15 @@ A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT
 
 Debian/Ubuntu:
 ```
-$ sudo apt install -y cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev libxrandr-dev
+$ sudo apt install -y \
+  cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev libxrandr-dev
 ```
 
 Setting up for other distros should be similar.
 
 ### Windows
 
-It's recommended to build it with [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install).
+It's recommended to build with [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install).
 
 [CUDA on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html#getting-started-with-cuda-on-wsl) might help set up CUDA.
 
