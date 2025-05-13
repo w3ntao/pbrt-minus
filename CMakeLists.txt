@@ -31,8 +31,8 @@ add_subdirectory("src/ext")
 
 include_directories("src/ext/glad-3.3-core/include")
 
-include_directories("${GLFW_SOURCE_DIR}/deps")
-link_libraries(glfw)
+find_package(glfw3 REQUIRED)
+link_libraries(glfw ${GLFW_LIBRARIES})
 
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)

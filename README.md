@@ -25,7 +25,7 @@ A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT
 Debian/Ubuntu:
 ```
 $ sudo apt install -y \
-  cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev libxrandr-dev
+  cmake libglfw3-dev libglu1-mesa-dev libpng-dev libx11-dev xorg-dev libxrandr-dev
 ```
 
 Setting up for other distros should be similar.

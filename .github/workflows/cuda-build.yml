@@ -42,7 +42,7 @@ jobs:
 
     - name: install dependencies
       run:
-        sudo apt install -y cmake libglu1-mesa-dev libpng-dev libx11-dev xorg-dev libxrandr-dev
+        sudo apt install -y cmake libglfw3-dev libglu1-mesa-dev libpng-dev libx11-dev xorg-dev libxrandr-dev
 
     - uses: actions/checkout@v4
       with:
