@@ -54,11 +54,11 @@ class BxDF {
 
     PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
-    sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode = TransportMode::Radiance,
+    sample_f(Vector3f wo, Real uc, Point2f u, TransportMode mode = TransportMode::Radiance,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 
     PBRT_CPU_GPU
-    FloatType pdf(Vector3f wo, Vector3f wi, TransportMode mode,
+    Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 
     PBRT_CPU_GPU

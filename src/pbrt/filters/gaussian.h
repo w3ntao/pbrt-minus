@@ -17,18 +17,18 @@ class GaussianFilter {
     }
 
     PBRT_CPU_GPU
-    FloatType evaluate(Point2f p) const;
+    Real evaluate(Point2f p) const;
 
     PBRT_CPU_GPU
-    FloatType get_integral() const;
+    Real get_integral() const;
 
     PBRT_CPU_GPU
     FilterSample sample(Point2f u) const;
 
   private:
-    void init(const Vector2f &_radius, FloatType _sigma = 0.5f);
+    void init(const Vector2f &_radius, Real _sigma = 0.5f);
 
     Vector2f radius;
-    FloatType sigma, expX, expY;
+    Real sigma, expX, expY;
     const FilterSampler *sampler;
 };

@@ -31,22 +31,22 @@ class SpotLight : public LightBase {
                                             SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    void pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
+    void pdf_le(const Ray &ray, Real *pdfPos, Real *pdfDir) const;
 
     PBRT_CPU_GPU
-    FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+    Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf = false) const;
     PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
   private:
     const Spectrum *i_emit;
-    FloatType scale;
-    FloatType cosFalloffStart;
-    FloatType cosFalloffEnd;
+    Real scale;
+    Real cosFalloffStart;
+    Real cosFalloffEnd;
 
-    void init(const Transform &renderFromLight, const Spectrum *Iemit, FloatType _scale,
-              FloatType totalWidth, FloatType falloffStart);
+    void init(const Transform &renderFromLight, const Spectrum *Iemit, Real _scale,
+              Real totalWidth, Real falloffStart);
 
     PBRT_CPU_GPU
     SampledSpectrum I(const Vector3f &w, const SampledWavelengths &lambda) const;

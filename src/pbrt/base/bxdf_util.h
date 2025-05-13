@@ -106,7 +106,7 @@ struct BSDFSample {
     BSDFSample() : pdf(0), eta(1), pdf_is_proportional(false), wi(Vector3f(NAN, NAN, NAN)) {}
 
     PBRT_CPU_GPU
-    BSDFSample(SampledSpectrum f, Vector3f wi, FloatType pdf, BxDFFlags flags, FloatType eta = 1,
+    BSDFSample(SampledSpectrum f, Vector3f wi, Real pdf, BxDFFlags flags, Real eta = 1,
                bool _pdf_is_proportional = false)
         : f(f), wi(wi), pdf(pdf), flags(flags), eta(eta),
           pdf_is_proportional(_pdf_is_proportional) {}
@@ -134,8 +134,8 @@ struct BSDFSample {
 
     SampledSpectrum f;
     Vector3f wi;
-    FloatType pdf;
+    Real pdf;
     BxDFFlags flags;
-    FloatType eta;
+    Real eta;
     bool pdf_is_proportional;
 };

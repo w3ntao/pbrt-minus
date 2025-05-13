@@ -9,7 +9,7 @@ class Spectrum;
 class DenselySampledSpectrum {
   public:
     PBRT_CPU_GPU
-    FloatType inner_product(const Spectrum *spectrum) const;
+    Real inner_product(const Spectrum *spectrum) const;
 
     PBRT_CPU_GPU
     void init_from_spectrum(const Spectrum *spectrum);
@@ -34,7 +34,7 @@ class DenselySampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    FloatType operator()(FloatType lambda) const {
+    Real operator()(Real lambda) const {
         const int floor = std::floor(lambda);
         const int ceil = std::ceil(lambda);
 
@@ -64,12 +64,12 @@ class DenselySampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    void scale(FloatType s) {
+    void scale(Real s) {
         for (uint i = 0; i < LAMBDA_RANGE; ++i) {
             values[i] = values[i] * s;
         }
     }
 
   private:
-    FloatType values[LAMBDA_RANGE];
+    Real values[LAMBDA_RANGE];
 };

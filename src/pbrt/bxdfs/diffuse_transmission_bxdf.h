@@ -20,7 +20,7 @@ class DiffuseTransmissionBxDF {
 
     PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
-    sample_f(const Vector3f &wo, const FloatType uc, const Point2f &u, const TransportMode mode,
+    sample_f(const Vector3f &wo, const Real uc, const Point2f &u, const TransportMode mode,
              const BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         // Compute reflection and transmission probabilities for diffuse BSDF
         auto pr = R.max_component_value();
@@ -59,7 +59,7 @@ class DiffuseTransmissionBxDF {
     }
 
     PBRT_CPU_GPU
-    FloatType pdf(const Vector3f &wo, const Vector3f &wi, const TransportMode mode,
+    Real pdf(const Vector3f &wo, const Vector3f &wi, const TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         // Compute reflection and transmission probabilities for diffuse BSDF
         auto pr = R.max_component_value();

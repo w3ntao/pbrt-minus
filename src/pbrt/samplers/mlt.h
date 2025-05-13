@@ -8,7 +8,7 @@ struct PrimarySample {
     PBRT_CPU_GPU
     PrimarySample() : value(0), last_modification_iteration(0), value_backup(0), modify_backup(0) {}
 
-    FloatType value;
+    Real value;
     // PrimarySample Public Methods
     PBRT_CPU_GPU
     void backup() {
@@ -24,7 +24,7 @@ struct PrimarySample {
 
     // PrimarySample Public Members
     int64_t last_modification_iteration;
-    FloatType value_backup;
+    Real value_backup;
     int64_t modify_backup;
 };
 
@@ -38,8 +38,8 @@ class MLTSampler {
 
     // MLTSampler Private Members
     int mutations_per_pixel;
-    FloatType sigma;
-    FloatType large_step_probability;
+    Real sigma;
+    Real large_step_probability;
 
     int stream_count;
     int64_t current_iteration;
@@ -52,8 +52,8 @@ class MLTSampler {
     void ensure_ready(int index);
 
     PBRT_CPU_GPU
-    void setup_config(const uint _mutation_per_pixel, const FloatType _sigma,
-                      const FloatType _large_step_probability, const int _stream_count) {
+    void setup_config(const uint _mutation_per_pixel, const Real _sigma,
+                      const Real _large_step_probability, const int _stream_count) {
         mutations_per_pixel = _mutation_per_pixel;
         sigma = _sigma;
         large_step_probability = _large_step_probability;
@@ -100,7 +100,7 @@ class MLTSampler {
     }
 
     PBRT_CPU_GPU
-    FloatType get_1d();
+    Real get_1d();
 
     PBRT_CPU_GPU
     Point2f get_2d();

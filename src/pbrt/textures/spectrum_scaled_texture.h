@@ -21,5 +21,5 @@ class SpectrumScaledTexture {
 
   private:
     const SpectrumTexture *texture;
-    FloatType scale;
+    Real scale;
 };

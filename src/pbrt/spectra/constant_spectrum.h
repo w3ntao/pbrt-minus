@@ -4,12 +4,12 @@
 
 class ConstantSpectrum {
   public:
-    void init(FloatType _c) {
+    void init(Real _c) {
         c = _c;
     }
 
     PBRT_CPU_GPU
-    FloatType operator()(FloatType) const {
+    Real operator()(Real) const {
         return c;
     }
 
@@ -20,5 +20,5 @@ class ConstantSpectrum {
     }
 
   private:
-    FloatType c;
+    Real c;
 };

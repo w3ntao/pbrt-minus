@@ -1,7 +1,7 @@
 #include <pbrt/bxdfs/conductor_bxdf.h>
 
 PBRT_CPU_GPU
-pbrt::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
+pbrt::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, Real uc, Point2f u,
                                                    TransportMode mode,
                                                    BxDFReflTransFlags sample_flags) const {
     if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
@@ -31,10 +31,10 @@ pbrt::optional<BSDFSample> ConductorBxDF::sample_f(Vector3f wo, FloatType uc, Po
     }
 
     // Compute PDF of _wi_ for microfacet reflection
-    FloatType pdf = mf_distrib.pdf(wo, wm) / (4 * wo.abs_dot(wm));
+    Real pdf = mf_distrib.pdf(wo, wm) / (4 * wo.abs_dot(wm));
 
-    FloatType cosTheta_o = wo.abs_cos_theta();
-    FloatType cosTheta_i = wi.abs_cos_theta();
+    Real cosTheta_o = wo.abs_cos_theta();
+    Real cosTheta_i = wi.abs_cos_theta();
 
     if (cosTheta_i == 0 || cosTheta_o == 0) {
         return {};
@@ -60,8 +60,8 @@ SampledSpectrum ConductorBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) c
 
     // Evaluate rough conductor BRDF
     // Compute cosines and $\wm$ for conductor BRDF
-    FloatType cosTheta_o = wo.abs_cos_theta();
-    FloatType cosTheta_i = wi.abs_cos_theta();
+    Real cosTheta_o = wo.abs_cos_theta();
+    Real cosTheta_i = wi.abs_cos_theta();
 
     if (cosTheta_i == 0 || cosTheta_o == 0) {
         return SampledSpectrum(0);
@@ -81,7 +81,7 @@ SampledSpectrum ConductorBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) c
 }
 
 PBRT_CPU_GPU
-FloatType ConductorBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
+Real ConductorBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                              BxDFReflTransFlags sample_flags) const {
     if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
         return 0;

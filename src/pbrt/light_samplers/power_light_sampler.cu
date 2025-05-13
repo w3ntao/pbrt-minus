@@ -17,7 +17,7 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
         return power_light_sampler;
     }
 
-    std::vector<FloatType> lights_pmf(light_num);
+    std::vector<Real> lights_pmf(light_num);
     SampledWavelengths lambda = SampledWavelengths::sample_visible(0.5f);
     for (uint idx = 0; idx < light_num; ++idx) {
         auto light = lights[idx];
@@ -41,7 +41,7 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
 }
 
 PBRT_CPU_GPU
-pbrt::optional<SampledLight> PowerLightSampler::sample(const FloatType u) const {
+pbrt::optional<SampledLight> PowerLightSampler::sample(const Real u) const {
     if (light_num == 0) {
         return {};
     }
@@ -59,12 +59,12 @@ pbrt::optional<SampledLight> PowerLightSampler::sample(const FloatType u) const 
 
 PBRT_CPU_GPU
 pbrt::optional<SampledLight> PowerLightSampler::sample(const LightSampleContext &ctx,
-                                                       FloatType u) const {
+                                                       Real u) const {
     return sample(u);
 }
 
 PBRT_CPU_GPU
-FloatType PowerLightSampler::pmf(const Light *light) const {
+Real PowerLightSampler::pmf(const Light *light) const {
     if (light_num == 0) {
         return 0;
     }

@@ -36,7 +36,7 @@ UniformInfiniteLight *UniformInfiniteLight::create(const Transform &renderFromLi
 }
 
 void UniformInfiniteLight::init(const Transform &renderFromLight, const Spectrum *_Lemit,
-                                FloatType _scale) {
+                                Real _scale) {
     this->render_from_light = renderFromLight;
     this->light_type = LightType::infinite;
 
@@ -66,7 +66,7 @@ pbrt::optional<LightLiSample> UniformInfiniteLight::sample_li(const LightSampleC
 }
 
 PBRT_CPU_GPU
-FloatType UniformInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+Real UniformInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                                        bool allow_incomplete_pdf) const {
     if (allow_incomplete_pdf) {
         return 0;

@@ -12,7 +12,7 @@ class RGBAlbedoSpectrum {
     PBRT_CPU_GPU
     void init(const RGB &rgb, const RGBColorSpace *cs);
 
-    PBRT_CPU_GPU FloatType operator()(FloatType lambda) const {
+    PBRT_CPU_GPU Real operator()(Real lambda) const {
         return rsp(lambda);
     }
 

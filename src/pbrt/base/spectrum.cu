@@ -8,7 +8,7 @@
 #include <pbrt/spectra/rgb_illuminant_spectrum.h>
 #include <pbrt/spectra/rgb_unbounded_spectrum.h>
 
-const Spectrum *Spectrum::create_black_body(FloatType temperature, GPUMemoryAllocator &allocator) {
+const Spectrum *Spectrum::create_black_body(Real temperature, GPUMemoryAllocator &allocator) {
     auto black_body = allocator.allocate<BlackbodySpectrum>();
     auto spectrum = allocator.allocate<Spectrum>();
 
@@ -18,17 +18,17 @@ const Spectrum *Spectrum::create_black_body(FloatType temperature, GPUMemoryAllo
     return spectrum;
 }
 
-const Spectrum *Spectrum::create_cie_d(FloatType temperature, const FloatType *cie_s0,
-                                       const FloatType *cie_s1, const FloatType *cie_s2,
-                                       const FloatType *cie_lambda, GPUMemoryAllocator &allocator) {
-    FloatType cct = temperature * 1.4388f / 1.4380f;
+const Spectrum *Spectrum::create_cie_d(Real temperature, const Real *cie_s0,
+                                       const Real *cie_s1, const Real *cie_s2,
+                                       const Real *cie_lambda, GPUMemoryAllocator &allocator) {
+    Real cct = temperature * 1.4388f / 1.4380f;
     if (cct < 4000) {
         // CIE D ill-defined, use blackbody
         BlackbodySpectrum bb = BlackbodySpectrum(cct);
 
         auto densely_sampled_spectrum = allocator.allocate<DenselySampledSpectrum>();
         densely_sampled_spectrum->init_with_sample_function(
-            [=](FloatType lambda) { return bb(lambda); });
+            [=](Real lambda) { return bb(lambda); });
 
         auto spectrum = allocator.allocate<Spectrum>();
         spectrum->init(densely_sampled_spectrum);
@@ -37,20 +37,20 @@ const Spectrum *Spectrum::create_cie_d(FloatType temperature, const FloatType *c
     }
 
     // Convert CCT to xy
-    FloatType x = cct <= 7000 ? -4.607f * 1e9f / pbrt::pow<3>(cct) + 2.9678f * 1e6f / sqr(cct) +
+    Real x = cct <= 7000 ? -4.607f * 1e9f / pbrt::pow<3>(cct) + 2.9678f * 1e6f / sqr(cct) +
                                     0.09911f * 1e3f / cct + 0.244063f
                               : -2.0064f * 1e9f / pbrt::pow<3>(cct) + 1.9018f * 1e6f / sqr(cct) +
                                     0.24748f * 1e3f / cct + 0.23704f;
 
-    FloatType y = -3 * x * x + 2.870f * x - 0.275f;
+    Real y = -3 * x * x + 2.870f * x - 0.275f;
 
     // Interpolate D spectrum
-    FloatType M = 0.0241f + 0.2562f * x - 0.7341f * y;
-    FloatType M1 = (-1.3515f - 1.7703f * x + 5.9114f * y) / M;
-    FloatType M2 = (0.0300f - 31.4424f * x + 30.0717f * y) / M;
+    Real M = 0.0241f + 0.2562f * x - 0.7341f * y;
+    Real M1 = (-1.3515f - 1.7703f * x + 5.9114f * y) / M;
+    Real M2 = (0.0300f - 31.4424f * x + 30.0717f * y) / M;
 
-    std::vector<FloatType> cpu_cie_lambdas(nCIES);
-    std::vector<FloatType> cpu_values(nCIES);
+    std::vector<Real> cpu_cie_lambdas(nCIES);
+    std::vector<Real> cpu_values(nCIES);
 
     for (uint idx = 0; idx < nCIES; ++idx) {
         cpu_cie_lambdas.push_back(cie_lambda[idx]);
@@ -61,7 +61,7 @@ const Spectrum *Spectrum::create_cie_d(FloatType temperature, const FloatType *c
                                                                     allocator);
 }
 
-const Spectrum *Spectrum::create_constant_spectrum(FloatType val, GPUMemoryAllocator &allocator) {
+const Spectrum *Spectrum::create_constant_spectrum(Real val, GPUMemoryAllocator &allocator) {
     auto constant_spectrum = allocator.allocate<ConstantSpectrum>();
     auto spectrum = allocator.allocate<Spectrum>();
 
@@ -116,7 +116,7 @@ const Spectrum *Spectrum::create_from_rgb(const RGB &val, SpectrumType spectrum_
 }
 
 const Spectrum *Spectrum::create_piecewise_linear_spectrum_from_lambdas_and_values(
-    const std::vector<FloatType> &cpu_lambdas, const std::vector<FloatType> &cpu_values,
+    const std::vector<Real> &cpu_lambdas, const std::vector<Real> &cpu_values,
     GPUMemoryAllocator &allocator) {
     auto piecewise_linear_spectrum =
         PiecewiseLinearSpectrum::create_from_lambdas_values(cpu_lambdas, cpu_values, allocator);
@@ -129,7 +129,7 @@ const Spectrum *Spectrum::create_piecewise_linear_spectrum_from_lambdas_and_valu
 }
 
 const Spectrum *
-Spectrum::create_piecewise_linear_spectrum_from_interleaved(const std::vector<FloatType> &samples,
+Spectrum::create_piecewise_linear_spectrum_from_interleaved(const std::vector<Real> &samples,
                                                             bool normalize, const Spectrum *cie_y,
                                                             GPUMemoryAllocator &allocator) {
     auto piecewise_linear_spectrum =
@@ -185,7 +185,7 @@ void Spectrum::init(const PiecewiseLinearSpectrum *piecewise_linear_spectrum) {
 }
 
 PBRT_CPU_GPU
-FloatType Spectrum::operator()(FloatType lambda) const {
+Real Spectrum::operator()(Real lambda) const {
     switch (type) {
     case (Type::black_body): {
         return static_cast<const BlackbodySpectrum *>(ptr)->operator()(lambda);
@@ -221,7 +221,7 @@ FloatType Spectrum::operator()(FloatType lambda) const {
 }
 
 PBRT_CPU_GPU
-FloatType Spectrum::to_photometric(const Spectrum *cie_y) const {
+Real Spectrum::to_photometric(const Spectrum *cie_y) const {
     if (type == Type::rgb_illuminant) {
         return static_cast<const RGBIlluminantSpectrum *>(ptr)->to_photometric(cie_y);
     }

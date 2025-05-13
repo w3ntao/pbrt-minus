@@ -45,9 +45,9 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
 
     image_resolution = image_ptr->get_resolution();
 
-    FloatType max_luminance = 0.0;
-    std::vector<std::vector<FloatType>> image_luminance_array(
-        image_resolution.x, std::vector<FloatType>(image_resolution.y));
+    Real max_luminance = 0.0;
+    std::vector<std::vector<Real>> image_luminance_array(
+        image_resolution.x, std::vector<Real>(image_resolution.y));
     for (int x = 0; x < image_resolution.x; ++x) {
         for (int y = 0; y < image_resolution.y; ++y) {
             const auto rgb = image_ptr->fetch_pixel(Point2i(x, y), WrapMode::OctahedralSphere)
@@ -86,7 +86,7 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
 
     if (num_ignore > 0) {
         printf("ImageInfiniteLight::%s(): %d/%d (%.2f%) pixels ignored (ignored ratio: %f)\n",
-               __func__, num_ignore, num_pixels, FloatType(num_ignore) / num_pixels * 100,
+               __func__, num_ignore, num_pixels, Real(num_ignore) / num_pixels * 100,
                ignore_ratio);
     }
 
@@ -113,7 +113,7 @@ pbrt::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleCon
     Vector3f wi = render_from_light(wLight);
 
     // Compute PDF for sampled infinite light direction
-    FloatType pdf = map_pdf / (4 * compute_pi());
+    Real pdf = map_pdf / (4 * compute_pi());
 
     const auto interaction = Interaction(ctx.p() + wi * (2 * scene_radius));
 
@@ -142,7 +142,7 @@ PBRT_CPU_GPU SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &l
 }
 
 PBRT_CPU_GPU
-FloatType ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &w,
+Real ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &w,
                                      bool allow_incomplete_pdf) const {
     Vector3f wLight = render_from_light.apply_inverse(w);
     Point2f uv = EqualAreaSphereToSquare(wLight);

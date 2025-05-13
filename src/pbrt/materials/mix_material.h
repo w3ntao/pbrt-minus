@@ -14,6 +14,6 @@ class MixMaterial {
     const Material *get_material(const SurfaceInteraction *si) const;
 
   private:
-    FloatType amount;
+    Real amount;
     const Material *materials[2];
 };

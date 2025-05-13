@@ -5,7 +5,7 @@
 #include <pbrt/util/hash.h>
 #include <pbrt/util/math.h>
 
-const AliasTable *AliasTable::create(const std::vector<FloatType> &values,
+const AliasTable *AliasTable::create(const std::vector<Real> &values,
                                      GPUMemoryAllocator &allocator) {
     if (values.empty()) {
         REPORT_FATAL_ERROR();
@@ -19,11 +19,11 @@ const AliasTable *AliasTable::create(const std::vector<FloatType> &values,
     const auto value_sum = std::accumulate(values.begin(), values.end(), 0.0);
     if (value_sum == 0) {
         auto gpu_bins = allocator.allocate<Bin>(size);
-        auto gpu_pdfs = allocator.allocate<FloatType>(size);
+        auto gpu_pdfs = allocator.allocate<Real>(size);
 
         for (uint idx = 0; idx < size; ++idx) {
             gpu_bins[idx] = Bin(1.0, idx);
-            gpu_pdfs[idx] = FloatType(idx) / size;
+            gpu_pdfs[idx] = Real(idx) / size;
         }
 
         auto alias_table = allocator.allocate<AliasTable>();
@@ -34,13 +34,13 @@ const AliasTable *AliasTable::create(const std::vector<FloatType> &values,
         return alias_table;
     }
 
-    auto gpu_pdfs = allocator.allocate<FloatType>(size);
+    auto gpu_pdfs = allocator.allocate<Real>(size);
     for (uint idx = 0; idx < size; ++idx) {
         bins_to_sort[idx] = Bin(values[idx] * size / value_sum, idx);
         gpu_pdfs[idx] = values[idx] / value_sum;
     }
 
-    constexpr FloatType tolerance = 0.001;
+    constexpr Real tolerance = 0.001;
 
     while (true) {
         if (bins_to_sort.size() == 1) {
@@ -76,7 +76,7 @@ const AliasTable *AliasTable::create(const std::vector<FloatType> &values,
 }
 
 PBRT_CPU_GPU
-cuda::std::pair<uint, FloatType> AliasTable::sample(const FloatType u0) const {
+cuda::std::pair<uint, Real> AliasTable::sample(const Real u0) const {
     const auto idx = clamp<int>(u0 * double(size), 0, size - 1);
     if (bins[idx].second_idx < 0) {
         const auto sampled_idx = bins[idx].first_idx;

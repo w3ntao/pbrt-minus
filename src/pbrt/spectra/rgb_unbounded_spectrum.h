@@ -20,7 +20,7 @@ class RGBUnboundedSpectrum {
     void init(RGB rgb, const RGBColorSpace *cs);
 
     PBRT_CPU_GPU
-    FloatType operator()(FloatType lambda) const {
+    Real operator()(Real lambda) const {
         return scale * rsp(lambda);
     }
 
@@ -28,6 +28,6 @@ class RGBUnboundedSpectrum {
     SampledSpectrum sample(const SampledWavelengths &lambda) const;
 
   private:
-    FloatType scale;
+    Real scale;
     RGBSigmoidPolynomial rsp;
 };

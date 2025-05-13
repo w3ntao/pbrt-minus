@@ -57,7 +57,7 @@ const FloatTexture *FloatTexture::create(const std::string &texture_type,
     return nullptr;
 }
 
-const FloatTexture *FloatTexture::create_constant_float_texture(FloatType val,
+const FloatTexture *FloatTexture::create_constant_float_texture(Real val,
                                                                 GPUMemoryAllocator &allocator) {
     auto float_constant_texture = allocator.allocate<FloatConstantTexture>();
     auto float_texture = allocator.allocate<FloatTexture>();
@@ -69,7 +69,7 @@ const FloatTexture *FloatTexture::create_constant_float_texture(FloatType val,
 }
 
 PBRT_CPU_GPU
-FloatType FloatTexture::evaluate(const TextureEvalContext &ctx) const {
+Real FloatTexture::evaluate(const TextureEvalContext &ctx) const {
     switch (type) {
     case Type::constant: {
         return static_cast<const FloatConstantTexture *>(ptr)->evaluate(ctx);

@@ -137,4 +137,4 @@ class Bounds2 {
 };
 
 using Bounds2i = Bounds2<int>;
-using Bounds2f = Bounds2<FloatType>;
+using Bounds2f = Bounds2<Real>;

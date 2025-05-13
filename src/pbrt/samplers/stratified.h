@@ -27,13 +27,13 @@ class StratifiedSampler {
         rng.advance(_sample_idx * 65536ull + _dimension);
     }
 
-    PBRT_CPU_GPU FloatType get_1d() {
+    PBRT_CPU_GPU Real get_1d() {
         uint64_t hash = pbrt::hash(pixel_idx, dimension);
         int stratum = permutation_element(sample_idx, get_samples_per_pixel(), hash);
 
         dimension += 1;
 
-        auto delta = rng.uniform<FloatType>();
+        auto delta = rng.uniform<Real>();
 
         return (stratum + delta) / get_samples_per_pixel();
     }
@@ -46,8 +46,8 @@ class StratifiedSampler {
         auto x = stratum % samples_per_dimension;
         auto y = stratum / samples_per_dimension;
 
-        auto delta_x = rng.uniform<FloatType>();
-        auto delta_y = rng.uniform<FloatType>();
+        auto delta_x = rng.uniform<Real>();
+        auto delta_y = rng.uniform<Real>();
 
         return Point2f((x + delta_x) / samples_per_dimension,
                        (y + delta_y) / samples_per_dimension);

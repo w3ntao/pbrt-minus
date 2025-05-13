@@ -80,7 +80,7 @@ PBRT_CPU_GPU inline uint64_t hash(Args... args) {
 }
 
 template <typename... Args>
-PBRT_CPU_GPU inline FloatType hash_float(Args... args) {
+PBRT_CPU_GPU inline Real hash_float(Args... args) {
     return uint32_t(hash(args...)) * 0x1p-32f;
 }
 

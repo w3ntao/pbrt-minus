@@ -13,25 +13,25 @@
 #define OneMinusEpsilon _FloatOneMinusEpsilon
 #endif
 
-constexpr FloatType Sqrt2 = 1.41421356237309504880;
+constexpr Real Sqrt2 = 1.41421356237309504880;
 
-constexpr FloatType Infinity = std::numeric_limits<FloatType>::infinity();
+constexpr Real Infinity = std::numeric_limits<Real>::infinity();
 
-constexpr FloatType MachineEpsilon = std::numeric_limits<FloatType>::epsilon() * 0.5;
+constexpr Real MachineEpsilon = std::numeric_limits<Real>::epsilon() * 0.5;
 
 // Mathematical Constants
-constexpr FloatType ShadowEpsilon = 0.0001;
+constexpr Real ShadowEpsilon = 0.0001;
 
 namespace pbrt {
 PBRT_CPU_GPU
-constexpr FloatType lerp(FloatType x, FloatType a, FloatType b) {
+constexpr Real lerp(Real x, Real a, Real b) {
     return (1 - x) * a + x * b;
 }
 } // namespace pbrt
 
 PBRT_CPU_GPU
-constexpr FloatType gamma(int n) {
-    return (FloatType(n) * MachineEpsilon) / (FloatType(1.0) - FloatType(n) * MachineEpsilon);
+constexpr Real gamma(int n) {
+    return (Real(n) * MachineEpsilon) / (Real(1.0) - Real(n) * MachineEpsilon);
 }
 
 template <typename T>
@@ -46,23 +46,23 @@ PBRT_CPU_GPU constexpr T clamp(T x, T low, T high) {
 }
 
 PBRT_CPU_GPU
-static FloatType compute_pi() {
+static Real compute_pi() {
     return acos(-1);
 }
 
 PBRT_CPU_GPU
-static FloatType degree_to_radian(FloatType degree) {
+static Real degree_to_radian(Real degree) {
     return compute_pi() / 180.0 * degree;
 }
 
 PBRT_CPU_GPU
-inline FloatType safe_asin(FloatType x) {
-    return std::asin(clamp<FloatType>(x, -1, 1));
+inline Real safe_asin(Real x) {
+    return std::asin(clamp<Real>(x, -1, 1));
 }
 
 PBRT_CPU_GPU
 inline float safe_acos(float x) {
-    return std::acos(clamp<FloatType>(x, -1, 1));
+    return std::acos(clamp<Real>(x, -1, 1));
 }
 
 template <typename T>
@@ -98,25 +98,25 @@ PBRT_CPU_GPU size_t find_interval(size_t sz, const Predicate &pred) {
 }
 
 PBRT_CPU_GPU
-constexpr FloatType sqr(FloatType v) {
+constexpr Real sqr(Real v) {
     return v * v;
 }
 
 PBRT_CPU_GPU
-static FloatType safe_sqrt(FloatType x) {
-    return std::sqrt(std::max(FloatType(0.0), x));
+static Real safe_sqrt(Real x) {
+    return std::sqrt(std::max(Real(0.0), x));
 }
 
-PBRT_CPU_GPU constexpr FloatType evaluate_polynomial(FloatType t, FloatType c) {
+PBRT_CPU_GPU constexpr Real evaluate_polynomial(Real t, Real c) {
     return c;
 }
 
 template <typename... Args>
-PBRT_CPU_GPU constexpr FloatType evaluate_polynomial(FloatType t, FloatType c, Args... cRemaining) {
+PBRT_CPU_GPU constexpr Real evaluate_polynomial(Real t, Real c, Args... cRemaining) {
     return std::fma(t, evaluate_polynomial(t, cRemaining...), c);
 }
 
-template <typename T, std::enable_if_t<std::is_same_v<T, FloatType>, bool> = true>
+template <typename T, std::enable_if_t<std::is_same_v<T, Real>, bool> = true>
 PBRT_CPU_GPU T FMA(T a, T b, T c) {
     return std::fma(a, b, c);
 }
@@ -165,21 +165,21 @@ PBRT_CPU_GPU constexpr T encode_morton3(T x, T y, T z) {
 }
 
 PBRT_CPU_GPU
-inline FloatType smooth_step(FloatType x, FloatType a, FloatType b) {
+inline Real smooth_step(Real x, Real a, Real b) {
     if (a == b) {
         return (x < a) ? 0 : 1;
     }
 
-    auto t = clamp<FloatType>((x - a) / (b - a), 0, 1);
+    auto t = clamp<Real>((x - a) / (b - a), 0, 1);
     return t * t * (3 - 2 * t);
 }
 
 template <typename Func>
-PBRT_CPU_GPU inline FloatType NewtonBisection(FloatType x0, FloatType x1, Func f,
-                                              FloatType xEps = 1e-6f, FloatType fEps = 1e-6f) {
+PBRT_CPU_GPU inline Real NewtonBisection(Real x0, Real x1, Func f,
+                                              Real xEps = 1e-6f, Real fEps = 1e-6f) {
     // Check function endpoints for roots
-    FloatType fx0 = f(x0).first;
-    FloatType fx1 = f(x1).first;
+    Real fx0 = f(x0).first;
+    Real fx1 = f(x1).first;
 
     if (std::abs(fx0) < fEps) {
         return x0;
@@ -191,7 +191,7 @@ PBRT_CPU_GPU inline FloatType NewtonBisection(FloatType x0, FloatType x1, Func f
     bool startIsNegative = fx0 < 0;
 
     // Set initial midpoint using linear approximation of _f_
-    FloatType xMid = x0 + (x1 - x0) * -fx0 / (fx1 - fx0);
+    Real xMid = x0 + (x1 - x0) * -fx0 / (fx1 - fx0);
 
     while (true) {
         // Fall back to bisection if _xMid_ is out of bounds
@@ -200,7 +200,7 @@ PBRT_CPU_GPU inline FloatType NewtonBisection(FloatType x0, FloatType x1, Func f
         }
 
         // Evaluate function and narrow bracket range _[x0, x1]_
-        cuda::std::pair<FloatType, FloatType> fxMid = f(xMid);
+        cuda::std::pair<Real, Real> fxMid = f(xMid);
         if (startIsNegative == (fxMid.first < 0)) {
             x0 = xMid;
         } else {
@@ -218,7 +218,7 @@ PBRT_CPU_GPU inline FloatType NewtonBisection(FloatType x0, FloatType x1, Func f
 }
 
 PBRT_CPU_GPU
-inline FloatType erf_inv(FloatType a) {
+inline Real erf_inv(Real a) {
     /*
     erfinv:
          0 -> 0
@@ -233,9 +233,9 @@ inline FloatType erf_inv(FloatType a) {
     return erfinv(a);
 #else
     // https://stackoverflow.com/a/49743348
-    FloatType p;
-    FloatType t =
-        std::log(std::max<FloatType>(std::fma(a, -a, 1), std::numeric_limits<FloatType>::min()));
+    Real p;
+    Real t =
+        std::log(std::max<Real>(std::fma(a, -a, 1), std::numeric_limits<Real>::min()));
 
     if (std::abs(t) > 6.125f) {              // maximum ulp error = 2.35793
         p = 3.03697567e-10f;                 //  0x1.4deb44p-32

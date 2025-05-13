@@ -234,7 +234,7 @@ void Primitive::record_material(std::map<std::string, uint> &counter) const {
 }
 
 PBRT_CPU_GPU
-bool Primitive::fast_intersect(const Ray &ray, const FloatType t_max) const {
+bool Primitive::fast_intersect(const Ray &ray, const Real t_max) const {
     switch (type) {
     case Type::bvh: {
         return static_cast<const HLBVH *>(ptr)->fast_intersect(ray, t_max);
@@ -259,7 +259,7 @@ bool Primitive::fast_intersect(const Ray &ray, const FloatType t_max) const {
 
 PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> Primitive::intersect(const Ray &ray,
-                                                       const FloatType t_max) const {
+                                                       const Real t_max) const {
     switch (type) {
     case Type::bvh: {
         return static_cast<const HLBVH *>(ptr)->intersect(ray, t_max);

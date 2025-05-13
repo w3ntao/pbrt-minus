@@ -18,7 +18,7 @@ class PerspectiveCamera {
     CameraBase camera_base;
 
     PBRT_CPU_GPU
-    void pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
+    void pdf_we(const Ray &ray, Real *pdfPos, Real *pdfDir) const;
 
     PBRT_CPU_GPU
     SampledSpectrum we(const Ray &ray, SampledWavelengths &lambda, Point2f *pRasterOut) const;
@@ -36,11 +36,11 @@ class PerspectiveCamera {
     Vector3f dx_camera;
     Vector3f dy_camera;
 
-    FloatType lens_radius;
-    FloatType focal_distance;
+    Real lens_radius;
+    Real focal_distance;
 
-    FloatType cosTotalWidth;
-    FloatType A;
+    Real cosTotalWidth;
+    Real A;
 
     const Film *film;
 };

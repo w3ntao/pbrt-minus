@@ -7,8 +7,8 @@
 
 class PiecewiseConstant1D {
   public:
-    static const PiecewiseConstant1D *create(const std::vector<FloatType> &f, FloatType min,
-                                             FloatType max, GPUMemoryAllocator &allocator) {
+    static const PiecewiseConstant1D *create(const std::vector<Real> &f, Real min,
+                                             Real max, GPUMemoryAllocator &allocator) {
         auto piecewise_constant_1D = allocator.allocate<PiecewiseConstant1D>();
 
         piecewise_constant_1D->init(f.data(), f.size(), min, max, allocator);
@@ -16,7 +16,7 @@ class PiecewiseConstant1D {
         return piecewise_constant_1D;
     }
 
-    void init(const FloatType *f, uint f_size, FloatType _min, FloatType _max,
+    void init(const Real *f, uint f_size, Real _min, Real _max,
               GPUMemoryAllocator &allocator) {
         cdf = nullptr;
         func = nullptr;
@@ -25,13 +25,13 @@ class PiecewiseConstant1D {
         max = _max;
         _size = f_size;
 
-        func = allocator.allocate<FloatType>(f_size);
+        func = allocator.allocate<Real>(f_size);
 
         for (uint idx = 0; idx < f_size; ++idx) {
             func[idx] = std::abs(f[idx]);
         }
 
-        cdf = allocator.allocate<FloatType>(f_size + 1);
+        cdf = allocator.allocate<Real>(f_size + 1);
 
         cdf[0] = 0;
         size_t n = f_size;
@@ -43,7 +43,7 @@ class PiecewiseConstant1D {
         funcInt = cdf[n];
         if (funcInt == 0) {
             for (size_t i = 1; i < n + 1; ++i) {
-                cdf[i] = FloatType(i) / FloatType(n);
+                cdf[i] = Real(i) / Real(n);
             }
         } else {
             for (size_t i = 1; i < n + 1; ++i) {
@@ -53,7 +53,7 @@ class PiecewiseConstant1D {
     }
 
     PBRT_CPU_GPU
-    FloatType integral() const {
+    Real integral() const {
         return funcInt;
     }
 
@@ -62,7 +62,7 @@ class PiecewiseConstant1D {
     }
 
     PBRT_CPU_GPU
-    FloatType sample(FloatType u, FloatType *pdf = nullptr, int *offset = nullptr) const {
+    Real sample(Real u, Real *pdf = nullptr, int *offset = nullptr) const {
         // Find surrounding CDF segments and _offset_
         int o = find_interval(_size + 1, [&](int index) { return cdf[index] <= u; });
 
@@ -71,7 +71,7 @@ class PiecewiseConstant1D {
         }
 
         // Compute offset along CDF segment
-        FloatType du = u - cdf[o];
+        Real du = u - cdf[o];
 
         if (cdf[o + 1] - cdf[o] > 0) {
             du /= cdf[o + 1] - cdf[o];
@@ -89,10 +89,10 @@ class PiecewiseConstant1D {
   private:
     uint _size;
 
-    FloatType *func; // size = _size
-    FloatType *cdf;  // size = _size + 1
+    Real *func; // size = _size
+    Real *cdf;  // size = _size + 1
 
-    FloatType min;
-    FloatType max;
-    FloatType funcInt;
+    Real min;
+    Real max;
+    Real funcInt;
 };

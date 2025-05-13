@@ -58,7 +58,7 @@ Bounds2f Film::sample_bounds() const {
 
 PBRT_CPU_GPU
 void Film::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
-                      const SampledWavelengths &lambda, FloatType weight) {
+                      const SampledWavelengths &lambda, Real weight) {
     switch (type) {
     case Type::rgb: {
         return static_cast<RGBFilm *>(ptr)->add_sample(pixel_index, radiance_l, lambda, weight);
@@ -70,7 +70,7 @@ void Film::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
 
 PBRT_CPU_GPU
 void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
-                      const SampledWavelengths &lambda, FloatType weight) {
+                      const SampledWavelengths &lambda, Real weight) {
     switch (type) {
     case Type::rgb: {
         return static_cast<RGBFilm *>(ptr)->add_sample(p_film, radiance_l, lambda, weight);
@@ -92,7 +92,7 @@ void Film::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
 }
 
 PBRT_CPU_GPU
-RGB Film::get_pixel_rgb(const Point2i &p, FloatType splat_scale) const {
+RGB Film::get_pixel_rgb(const Point2i &p, Real splat_scale) const {
     switch (type) {
     case Type::rgb: {
         return static_cast<RGBFilm *>(ptr)->get_pixel_rgb(p, splat_scale);
@@ -104,7 +104,7 @@ RGB Film::get_pixel_rgb(const Point2i &p, FloatType splat_scale) const {
 }
 
 __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint width, uint height,
-                            FloatType splat_scale) {
+                            Real splat_scale) {
     const auto x = blockIdx.x * blockDim.x + threadIdx.x;
     const auto y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -130,7 +130,7 @@ __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint wi
     gpu_frame_buffer[worker_idx * 3 + 2] = srgb_encoding.from_linear(rgb.b);
 }
 
-void Film::copy_to_frame_buffer(uint8_t *gpu_frame_buffer, FloatType splat_scale) const {
+void Film::copy_to_frame_buffer(uint8_t *gpu_frame_buffer, Real splat_scale) const {
     const auto image_resolution = this->get_resolution();
 
     constexpr uint thread_width = 16;
@@ -146,7 +146,7 @@ void Film::copy_to_frame_buffer(uint8_t *gpu_frame_buffer, FloatType splat_scale
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-void Film::write_to_png(const std::string &filename, FloatType splat_scale) const {
+void Film::write_to_png(const std::string &filename, Real splat_scale) const {
     auto resolution = get_resolution();
 
     int width = resolution.x;

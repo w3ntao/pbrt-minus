@@ -9,17 +9,17 @@ class RGBSigmoidPolynomial {
     RGBSigmoidPolynomial() : c0(NAN), c1(NAN), c2(NAN) {}
 
     PBRT_CPU_GPU
-    RGBSigmoidPolynomial(FloatType c0, FloatType c1, FloatType c2) : c0(c0), c1(c1), c2(c2) {}
+    RGBSigmoidPolynomial(Real c0, Real c1, Real c2) : c0(c0), c1(c1), c2(c2) {}
 
     PBRT_CPU_GPU
-    FloatType operator()(FloatType lambda) const {
+    Real operator()(Real lambda) const {
         return s(evaluate_polynomial(lambda, c2, c1, c0));
     }
 
     PBRT_CPU_GPU
-    FloatType max_value() const {
-        FloatType result = std::max((*this)(LAMBDA_MIN), (*this)(LAMBDA_MAX));
-        FloatType lambda = -c1 / (2 * c0);
+    Real max_value() const {
+        Real result = std::max((*this)(LAMBDA_MIN), (*this)(LAMBDA_MAX));
+        Real lambda = -c1 / (2 * c0);
 
         if (lambda >= LAMBDA_MIN && lambda <= LAMBDA_MAX) {
             result = std::max(result, (*this)(lambda));
@@ -30,7 +30,7 @@ class RGBSigmoidPolynomial {
 
   private:
     PBRT_CPU_GPU
-    static FloatType s(FloatType x) {
+    static Real s(Real x) {
         if (is_inf(x)) {
             return x > 0 ? 1 : 0;
         }
@@ -38,5 +38,5 @@ class RGBSigmoidPolynomial {
         return .5f + x / (2 * std::sqrt(1 + sqr(x)));
     }
 
-    FloatType c0, c1, c2;
+    Real c0, c1, c2;
 };

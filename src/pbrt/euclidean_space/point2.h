@@ -100,12 +100,12 @@ class Point2 {
         return Point2<int>(std::floor(x), std::floor(y));
     }
 
-    PBRT_CPU_GPU Point2<FloatType> to_point2f() const {
-        return {FloatType(x), FloatType(y)};
+    PBRT_CPU_GPU Point2<Real> to_point2f() const {
+        return {Real(x), Real(y)};
     }
 
-    PBRT_CPU_GPU Vector2<FloatType> to_vector2f() const {
-        return {FloatType(x), FloatType(y)};
+    PBRT_CPU_GPU Vector2<Real> to_vector2f() const {
+        return {Real(x), Real(y)};
     }
 
     friend std::ostream &operator<<(std::ostream &stream, const Point2 &p) {
@@ -114,7 +114,7 @@ class Point2 {
     }
 };
 
-using Point2f = Point2<FloatType>;
+using Point2f = Point2<Real>;
 using Point2i = Point2<int>;
 
 template <typename T>

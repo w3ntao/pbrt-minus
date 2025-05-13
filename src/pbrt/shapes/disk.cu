@@ -19,13 +19,13 @@ const Disk *Disk::create(const Transform &render_from_object, const Transform &o
     disk->inner_radius = parameters.get_float("innerradius", 0);
 
     auto _phi_max = parameters.get_float("phimax", 360);
-    disk->phi_max = degree_to_radian(clamp<FloatType>(_phi_max, 0, 360));
+    disk->phi_max = degree_to_radian(clamp<Real>(_phi_max, 0, 360));
 
     return disk;
 }
 
 PBRT_CPU_GPU
-FloatType Disk::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
+Real Disk::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     // Intersect sample ray with shape geometry
     Ray ray = ctx.spawn_ray(wi);
 
@@ -35,7 +35,7 @@ FloatType Disk::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     }
 
     // Compute PDF in solid angle measure from shape intersection point
-    FloatType pdf = (1.0 / area()) / (isect->interaction.n.abs_dot(-wi) /
+    Real pdf = (1.0 / area()) / (isect->interaction.n.abs_dot(-wi) /
                                       ctx.p().squared_distance(isect->interaction.p()));
 
     if (isinf(pdf)) {
@@ -59,15 +59,15 @@ pbrt::optional<ShapeSample> Disk::sample(const Point2f &u) const {
     }
 
     // Compute $(u,v)$ for sampled point on disk
-    FloatType phi = std::atan2(pd.y, pd.x);
+    Real phi = std::atan2(pd.y, pd.x);
     if (phi < 0) {
         phi += 2 * compute_pi();
     }
 
-    FloatType radiusSample = std::sqrt(sqr(pObj.x) + sqr(pObj.y));
+    Real radiusSample = std::sqrt(sqr(pObj.x) + sqr(pObj.y));
     Point2f uv(phi / phi_max, (radius - radiusSample) / (radius - inner_radius));
 
-    return ShapeSample{Interaction(pi, n, uv), FloatType(1.0 / this->area())};
+    return ShapeSample{Interaction(pi, n, uv), Real(1.0 / this->area())};
 }
 
 PBRT_CPU_GPU
@@ -93,32 +93,32 @@ pbrt::optional<ShapeSample> Disk::sample(const ShapeSampleContext &ctx, const Po
 }
 
 PBRT_CPU_GPU
-pbrt::optional<QuadricIntersection> Disk::basic_intersect(const Ray &r, FloatType tMax) const {
+pbrt::optional<QuadricIntersection> Disk::basic_intersect(const Ray &r, Real tMax) const {
     // Transform _Ray_ origin and direction to object space
     Point3fi oi = object_from_render(Point3fi(r.o));
     Vector3fi di = object_from_render(Vector3fi(r.d));
 
     // Compute plane intersection for disk
     // Reject disk intersections for rays parallel to the disk's plane
-    if (FloatType(di.z) == 0) {
+    if (Real(di.z) == 0) {
         return {};
     }
 
-    FloatType tShapeHit = (height - FloatType(oi.z)) / FloatType(di.z);
+    Real tShapeHit = (height - Real(oi.z)) / Real(di.z);
     if (tShapeHit <= 0 || tShapeHit >= tMax) {
         return {};
     }
 
     // See if hit point is inside disk radii and $\phimax$
-    Point3f pHit = oi.to_point3f() + (FloatType)tShapeHit * di.to_vector3f();
+    Point3f pHit = oi.to_point3f() + (Real)tShapeHit * di.to_vector3f();
 
-    FloatType dist2 = sqr(pHit.x) + sqr(pHit.y);
+    Real dist2 = sqr(pHit.x) + sqr(pHit.y);
     if (dist2 > sqr(radius) || dist2 < sqr(inner_radius)) {
         return {};
     }
 
     // Test disk $\phi$ value against $\phimax$
-    FloatType phi = std::atan2(pHit.y, pHit.x);
+    Real phi = std::atan2(pHit.y, pHit.x);
     if (phi < 0) {
         phi += 2 * compute_pi();
     }
@@ -135,11 +135,11 @@ PBRT_CPU_GPU
 SurfaceInteraction Disk::interaction_from_intersection(const QuadricIntersection &isect,
                                                        const Vector3f &wo) const {
     Point3f pHit = isect.p_obj;
-    FloatType phi = isect.phi;
+    Real phi = isect.phi;
     // Find parametric representation of disk hit
-    FloatType u = phi / phi_max;
-    FloatType rHit = std::sqrt(sqr(pHit.x) + sqr(pHit.y));
-    FloatType v = (radius - rHit) / (radius - inner_radius);
+    Real u = phi / phi_max;
+    Real rHit = std::sqrt(sqr(pHit.x) + sqr(pHit.y));
+    Real v = (radius - rHit) / (radius - inner_radius);
     Vector3f dpdu(-phi_max * pHit.y, phi_max * pHit.x, 0);
     Vector3f dpdv = Vector3f(pHit.x, pHit.y, 0) * (inner_radius - radius) / rHit;
     Normal3f dndu(0, 0, 0), dndv(0, 0, 0);

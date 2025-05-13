@@ -25,7 +25,7 @@ class FloatTexture {
                                       const ParameterDictionary &parameters,
                                       GPUMemoryAllocator &allocator);
 
-    static const FloatTexture *create_constant_float_texture(FloatType val,
+    static const FloatTexture *create_constant_float_texture(Real val,
                                                              GPUMemoryAllocator &allocator);
 
     void init(const FloatConstantTexture *float_constant_texture);
@@ -35,7 +35,7 @@ class FloatTexture {
     void init(const FloatScaledTexture *float_scaled_texture);
 
     PBRT_CPU_GPU
-    FloatType evaluate(const TextureEvalContext &ctx) const;
+    Real evaluate(const TextureEvalContext &ctx) const;
 
   private:
     Type type;

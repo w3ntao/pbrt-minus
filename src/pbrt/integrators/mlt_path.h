@@ -31,7 +31,7 @@ class MLTPathIntegrator {
     double render(Film *film, GreyScaleFilm &heat_map, uint mutations_per_pixel, bool preview);
 
     PBRT_CPU_GPU
-    FloatType compute_luminance(const SampledSpectrum &radiance,
+    Real compute_luminance(const SampledSpectrum &radiance,
                                 const SampledWavelengths &lambda) const {
         return radiance.y(lambda, cie_y);
     }

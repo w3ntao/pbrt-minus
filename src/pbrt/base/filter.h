@@ -13,14 +13,14 @@ class ParameterDictionary;
 
 struct FilterSample {
     Point2f p;
-    FloatType weight;
+    Real weight;
 
     PBRT_CPU_GPU FilterSample() {
         p = Point2f(NAN, NAN);
         weight = NAN;
     }
 
-    PBRT_CPU_GPU FilterSample(const Point2f _p, FloatType _weight) : p(_p), weight(_weight) {}
+    PBRT_CPU_GPU FilterSample(const Point2f _p, Real _weight) : p(_p), weight(_weight) {}
 };
 
 class Filter {
@@ -40,10 +40,10 @@ class Filter {
     Vector2f get_radius() const;
 
     PBRT_CPU_GPU
-    FloatType get_integral() const;
+    Real get_integral() const;
 
     PBRT_CPU_GPU
-    FloatType evaluate(const Point2f &p) const;
+    Real evaluate(const Point2f &p) const;
 
     PBRT_CPU_GPU
     FilterSample sample(const Point2f &u) const;
@@ -69,7 +69,7 @@ class FilterSampler {
 
     PBRT_CPU_GPU
     FilterSample sample(Point2f u) const {
-        FloatType pdf;
+        Real pdf;
         Point2i pi;
         Point2f p = distrib.sample(u, &pdf, &pi);
 
@@ -77,7 +77,7 @@ class FilterSampler {
     }
 
   private:
-    Array2D<FloatType> f;
+    Array2D<Real> f;
     Bounds2f domain;
     PiecewiseConstant2D distrib;
 };

@@ -46,7 +46,7 @@ CameraRay Camera::generate_ray(const CameraSample &sample, Sampler *sampler) con
 }
 
 PBRT_CPU_GPU
-void Camera::pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const {
+void Camera::pdf_we(const Ray &ray, Real *pdfPos, Real *pdfDir) const {
     switch (type) {
     case Type::perspective: {
         return static_cast<const PerspectiveCamera *>(ptr)->pdf_we(ray, pdfPos, pdfDir);

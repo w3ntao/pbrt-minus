@@ -23,7 +23,7 @@ void MitchellFilter::init_sampler(const Filter *filter, GPUMemoryAllocator &allo
 }
 
 PBRT_CPU_GPU
-FloatType MitchellFilter::mitchell_1d(FloatType x) const {
+Real MitchellFilter::mitchell_1d(Real x) const {
     x = std::abs(x);
     if (x <= 1) {
         return ((12 - 9 * b - 6 * c) * x * x * x + (-18 + 12 * b + 6 * c) * x * x + (6 - 2 * b)) *

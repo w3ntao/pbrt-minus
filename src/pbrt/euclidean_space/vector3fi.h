@@ -16,7 +16,7 @@ class Vector3fi : public Vector3<Interval> {
     Vector3fi() = default;
 
     PBRT_CPU_GPU
-    Vector3fi(FloatType x, FloatType y, FloatType z)
+    Vector3fi(Real x, Real y, Real z)
         : Vector3<Interval>(Interval(x), Interval(y), Interval(z)) {}
 
     PBRT_CPU_GPU

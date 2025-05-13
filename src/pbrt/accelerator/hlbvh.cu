@@ -179,7 +179,7 @@ const HLBVH *HLBVH::create(const std::vector<const Primitive *> &gpu_primitives,
 }
 
 PBRT_CPU_GPU
-bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
+bool HLBVH::fast_intersect(const Ray &ray, Real t_max) const {
     if (build_nodes == nullptr) {
         return false;
     }
@@ -231,7 +231,7 @@ bool HLBVH::fast_intersect(const Ray &ray, FloatType t_max) const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray, FloatType t_max) const {
+pbrt::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray, Real t_max) const {
     if (build_nodes == nullptr) {
         return {};
     }
@@ -607,11 +607,11 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
                end - top_bvh_node_num, depth, MAX_PRIMITIVES_NUM_IN_LEAF);
     }
 
-    const std::chrono::duration<FloatType> duration_sorting{start_top_bvh - start_sorting};
+    const std::chrono::duration<Real> duration_sorting{start_top_bvh - start_sorting};
 
-    const std::chrono::duration<FloatType> duration_top_bvh{start_bottom_bvh - start_sorting};
+    const std::chrono::duration<Real> duration_top_bvh{start_bottom_bvh - start_sorting};
 
-    const std::chrono::duration<FloatType> duration_bottom_bvh{std::chrono::system_clock::now() -
+    const std::chrono::duration<Real> duration_bottom_bvh{std::chrono::system_clock::now() -
                                                                start_bottom_bvh};
 
     printf("BVH building: %d primitives, %.2f seconds (sort: %.2f, top: %.2f, bottom: %.2f) %s\n",
@@ -707,7 +707,7 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
     const auto total_surface_area = full_bounds_of_current_level.surface_area();
 
     // Compute costs for splitting after each bucket
-    FloatType sah_cost[NUM_BUCKETS - 1];
+    Real sah_cost[NUM_BUCKETS - 1];
     for (uint split_idx = 0; split_idx < NUM_BUCKETS - 1; ++split_idx) {
         Bounds3f bounds_left;
         Bounds3f bounds_right;
@@ -730,7 +730,7 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
     }
 
     // Find bucket to split at that minimizes SAH metric
-    FloatType min_cost_so_far = sah_cost[0];
+    Real min_cost_so_far = sah_cost[0];
     uint min_cost_split = 0;
     for (uint idx = 1; idx < NUM_BUCKETS - 1; ++idx) {
         if (sah_cost[idx] < min_cost_so_far) {
@@ -826,7 +826,7 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
 
 PBRT_GPU
 uint HLBVH::partition_morton_primitives(const uint start, const uint end,
-                                        const uint8_t split_dimension, const FloatType split_val) {
+                                        const uint8_t split_dimension, const Real split_val) {
     // taken and modified from
     // https://users.cs.duke.edu/~reif/courses/alglectures/littman.lectures/lect05/node27.html
 

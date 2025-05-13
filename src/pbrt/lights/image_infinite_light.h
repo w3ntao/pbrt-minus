@@ -35,13 +35,13 @@ class ImageInfiniteLight : public LightBase {
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &w,
+    Real pdf_li(const LightSampleContext &ctx, const Vector3f &w,
                      bool allow_incomplete_pdf) const;
 
-    void preprocess(const Bounds3<FloatType> &scene_bounds);
+    void preprocess(const Bounds3<Real> &scene_bounds);
 
   private:
-    FloatType scale;
+    Real scale;
     const RGBColorSpace *color_space;
 
     const GPUImage *image_ptr;
@@ -50,7 +50,7 @@ class ImageInfiniteLight : public LightBase {
 
     Point2i image_resolution;
 
-    FloatType scene_radius;
+    Real scene_radius;
     Point3f scene_center;
 
     PBRT_CPU_GPU SampledSpectrum ImageLe(Point2f uv, const SampledWavelengths &lambda) const;

@@ -30,7 +30,7 @@ struct ShapeSampleContext {
     PBRT_CPU_GPU
     Point3f offset_ray_origin(const Vector3f &w) const {
         // Find vector _offset_ to corner of error bounds and compute initial _po_
-        FloatType d = n.abs().dot(pi.error());
+        Real d = n.abs().dot(pi.error());
 
         Vector3f offset = d * n.to_vector3();
         if (n.dot(w) < 0) {
@@ -67,7 +67,7 @@ struct ShapeSampleContext {
 
 struct ShapeSample {
     Interaction interaction;
-    FloatType pdf;
+    Real pdf;
 };
 
 class Shape {
@@ -96,13 +96,13 @@ class Shape {
     Bounds3f bounds() const;
 
     PBRT_CPU_GPU
-    FloatType area() const;
+    Real area() const;
 
     PBRT_CPU_GPU
-    bool fast_intersect(const Ray &ray, FloatType t_max) const;
+    bool fast_intersect(const Ray &ray, Real t_max) const;
 
     PBRT_CPU_GPU
-    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max = Infinity) const;
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, Real t_max = Infinity) const;
 
     PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(Point2f u) const;
@@ -111,10 +111,10 @@ class Shape {
     pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
 
     PBRT_CPU_GPU
-    FloatType pdf(const Interaction &in) const;
+    Real pdf(const Interaction &in) const;
 
     PBRT_CPU_GPU
-    FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
+    Real pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
   private:
     Type type;

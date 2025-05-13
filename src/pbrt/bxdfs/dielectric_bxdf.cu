@@ -2,17 +2,17 @@
 #include <pbrt/euclidean_space/normal3f.h>
 
 PBRT_CPU_GPU
-pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, Point2f u,
+pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, Real uc, Point2f u,
                                                          TransportMode mode,
                                                          BxDFReflTransFlags sample_flags) const {
     if (eta == 1 || mfDistrib.effectively_smooth()) {
         // Sample perfect specular dielectric BSDF
         // FloatType R = FrDielectric(CosTheta(wo), eta), T = 1 - R;
-        FloatType R = FrDielectric(wo.cos_theta(), eta);
-        FloatType T = 1 - R;
+        Real R = FrDielectric(wo.cos_theta(), eta);
+        Real T = 1 - R;
         // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission
-        FloatType pr = R;
-        FloatType pt = T;
+        Real pr = R;
+        Real pt = T;
 
         if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
             pr = 0;
@@ -37,7 +37,7 @@ pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, P
         // Sample perfect specular dielectric BTDF
         // Compute ray direction for specular transmission
         Vector3f wi;
-        FloatType etap;
+        Real etap;
         bool valid = refract(wo, Normal3f(0, 0, 1), eta, &etap, &wi);
         if (!valid) {
             return {};
@@ -53,10 +53,10 @@ pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, P
     }
     // Sample rough dielectric BSDF
     Vector3f wm = mfDistrib.sample_wm(wo, u);
-    FloatType R = FrDielectric(wo.dot(wm), eta);
-    FloatType T = 1 - R;
+    Real R = FrDielectric(wo.dot(wm), eta);
+    Real T = 1 - R;
     // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission
-    FloatType pr = R, pt = T;
+    Real pr = R, pt = T;
     if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
         pr = 0;
     }
@@ -69,7 +69,7 @@ pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, P
         return {};
     }
 
-    FloatType _pdf;
+    Real _pdf;
     if (uc < pr / (pr + pt)) {
         // Sample reflection at rough dielectric interface
         Vector3f wi = Reflect(wo, wm);
@@ -86,7 +86,7 @@ pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, P
     }
 
     // Sample transmission at rough dielectric interface
-    FloatType etap;
+    Real etap;
     Vector3f wi;
     bool tir = !refract(wo, (Normal3f)wm, eta, &etap, &wi);
 
@@ -95,9 +95,9 @@ pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, FloatType uc, P
     }
 
     // Compute PDF of rough dielectric transmission
-    FloatType denom = sqr(wi.dot(wm) + wo.dot(wm) / etap);
+    Real denom = sqr(wi.dot(wm) + wo.dot(wm) / etap);
 
-    FloatType dwm_dwi = wi.abs_dot(wm) / denom;
+    Real dwm_dwi = wi.abs_dot(wm) / denom;
     _pdf = mfDistrib.pdf(wo, wm) * dwm_dwi * pt / (pr + pt);
 
     // Evaluate BRDF and return _BSDFSample_ for rough transmission
@@ -121,8 +121,8 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
 
     // Evaluate rough dielectric BSDF
     // Compute generalized half vector _wm_
-    FloatType cosTheta_o = wo.cos_theta();
-    FloatType cosTheta_i = wi.cos_theta();
+    Real cosTheta_o = wo.cos_theta();
+    Real cosTheta_i = wi.cos_theta();
 
     bool reflect = cosTheta_i * cosTheta_o > 0;
     float etap = 1;
@@ -143,7 +143,7 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
         return SampledSpectrum(0.0);
     }
 
-    FloatType F = FrDielectric(wo.dot(wm), eta);
+    Real F = FrDielectric(wo.dot(wm), eta);
 
     if (reflect) {
         // Compute reflection at rough dielectric interface
@@ -152,9 +152,9 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
     }
 
     // Compute transmission at rough dielectric interface
-    FloatType denom = sqr(wi.dot(wm) + wo.dot(wm) / etap) * cosTheta_i * cosTheta_o;
+    Real denom = sqr(wi.dot(wm) + wo.dot(wm) / etap) * cosTheta_i * cosTheta_o;
 
-    FloatType ft =
+    Real ft =
         mfDistrib.D(wm) * (1 - F) * mfDistrib.G(wo, wi) * std::abs(wi.dot(wm) * wo.dot(wm) / denom);
 
     // Account for non-symmetry with transmission to different medium
@@ -166,7 +166,7 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
 }
 
 PBRT_CPU_GPU
-FloatType DielectricBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
+Real DielectricBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                               BxDFReflTransFlags sampleFlags) const {
     if (eta == 1 || mfDistrib.effectively_smooth()) {
         return 0;
@@ -174,8 +174,8 @@ FloatType DielectricBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
 
     // Evaluate sampling PDF of rough dielectric BSDF
     // Compute generalized half vector _wm_
-    FloatType cosTheta_o = wo.cos_theta();
-    FloatType cosTheta_i = wi.cos_theta();
+    Real cosTheta_o = wo.cos_theta();
+    Real cosTheta_i = wi.cos_theta();
 
     bool reflect = cosTheta_i * cosTheta_o > 0;
     float etap = 1;
@@ -197,11 +197,11 @@ FloatType DielectricBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
     }
 
     // Determine Fresnel reflectance of rough dielectric boundary
-    FloatType R = FrDielectric(wo.dot(wm), eta);
-    FloatType T = 1 - R;
+    Real R = FrDielectric(wo.dot(wm), eta);
+    Real T = 1 - R;
 
     // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission
-    FloatType pr = R, pt = T;
+    Real pr = R, pt = T;
     if (!(sampleFlags & BxDFReflTransFlags::Reflection)) {
         pr = 0;
     }
@@ -215,15 +215,15 @@ FloatType DielectricBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
     }
 
     // Return PDF for rough dielectric
-    FloatType pdf;
+    Real pdf;
     if (reflect) {
         // Compute PDF of rough dielectric reflection
         pdf = mfDistrib.pdf(wo, wm) / (4 * wo.abs_dot(wm)) * pr / (pr + pt);
 
     } else {
         // Compute PDF of rough dielectric transmission
-        FloatType denom = sqr(wi.dot(wm) + wo.dot(wm) / etap);
-        FloatType dwm_dwi = wi.abs_dot(wm) / denom;
+        Real denom = sqr(wi.dot(wm) + wo.dot(wm) / etap);
+        Real dwm_dwi = wi.abs_dot(wm) / denom;
         pdf = mfDistrib.pdf(wo, wm) * dwm_dwi * pt / (pr + pt);
     }
     return pdf;

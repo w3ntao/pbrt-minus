@@ -6,7 +6,7 @@
 #include <pbrt/scene/parameter_dictionary.h>
 
 const FloatTexture *build_float_texture(const std::string &primary_key,
-                                        const std::string &secondary_key, FloatType val,
+                                        const std::string &secondary_key, Real val,
                                         const ParameterDictionary &parameters,
                                         GPUMemoryAllocator &allocator) {
     auto texture = parameters.get_float_texture_or_null(primary_key, allocator);
@@ -133,7 +133,7 @@ CoatedConductorMaterial::get_coated_conductor_bsdf(const MaterialEvalContext &ct
     TrowbridgeReitzDistribution conductorDistrib(curough, cvrough);
 
     SampledSpectrum a = albedo->evaluate(ctx, lambda).clamp(0, 1);
-    auto gg = clamp<FloatType>(g->evaluate(ctx), -1, 1);
+    auto gg = clamp<Real>(g->evaluate(ctx), -1, 1);
 
     return CoatedConductorBxDF(DielectricBxDF(ieta, interfaceDistrib),
                                ConductorBxDF(conductorDistrib, ce, ck), thick, a, gg, maxDepth,

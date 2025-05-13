@@ -6,21 +6,21 @@
 
 class Normal3f {
   public:
-    FloatType x;
-    FloatType y;
-    FloatType z;
+    Real x;
+    Real y;
+    Real z;
 
     PBRT_CPU_GPU
     Normal3f() : x(NAN), y(NAN), z(NAN) {}
 
     PBRT_CPU_GPU
-    Normal3f(FloatType _x, FloatType _y, FloatType _z) : x(_x), y(_y), z(_z) {}
+    Normal3f(Real _x, Real _y, Real _z) : x(_x), y(_y), z(_z) {}
 
     PBRT_CPU_GPU
     explicit Normal3f(const Vector3f &v) : x(v.x), y(v.y), z(v.z) {}
 
     PBRT_CPU_GPU
-    FloatType operator[](uint8_t index) const {
+    Real operator[](uint8_t index) const {
         switch (index) {
         case 0: {
             return x;
@@ -53,12 +53,12 @@ class Normal3f {
     }
 
     PBRT_CPU_GPU
-    FloatType squared_length() const {
+    Real squared_length() const {
         return sqr(x) + sqr(y) + sqr(z);
     }
 
     PBRT_CPU_GPU
-    FloatType length() const {
+    Real length() const {
         return std::sqrt(sqr(x) + sqr(y) + sqr(z));
     }
 
@@ -68,22 +68,22 @@ class Normal3f {
     }
 
     PBRT_CPU_GPU
-    FloatType dot(const Normal3f &n) const {
+    Real dot(const Normal3f &n) const {
         return FMA(x, n.x, sum_of_products(y, n.y, z, n.z));
     }
 
     PBRT_CPU_GPU
-    FloatType dot(const Vector3f &v) const {
+    Real dot(const Vector3f &v) const {
         return FMA(x, v.x, sum_of_products(y, v.y, z, v.z));
     }
 
     PBRT_CPU_GPU
-    FloatType abs_dot(const Normal3f &n) const {
+    Real abs_dot(const Normal3f &n) const {
         return std::abs(this->dot(n));
     }
 
     PBRT_CPU_GPU
-    FloatType abs_dot(const Vector3f &v) const {
+    Real abs_dot(const Vector3f &v) const {
         return std::abs(this->dot(v));
     }
 
@@ -121,15 +121,15 @@ class Normal3f {
         return Normal3f(x - right.x, y - right.y, z - right.z);
     }
 
-    PBRT_CPU_GPU Normal3f operator*(FloatType factor) const {
+    PBRT_CPU_GPU Normal3f operator*(Real factor) const {
         return Normal3f(x * factor, y * factor, z * factor);
     }
 
-    PBRT_CPU_GPU void operator*=(FloatType factor) {
+    PBRT_CPU_GPU void operator*=(Real factor) {
         *this = *this * factor;
     }
 
-    PBRT_CPU_GPU Normal3f operator/(FloatType divisor) const {
+    PBRT_CPU_GPU Normal3f operator/(Real divisor) const {
         return Normal3f(x / divisor, y / divisor, z / divisor);
     }
 
@@ -140,11 +140,11 @@ class Normal3f {
 };
 
 PBRT_CPU_GPU
-static Normal3f operator*(const FloatType factor, const Normal3f &n) {
+static Normal3f operator*(const Real factor, const Normal3f &n) {
     return n * factor;
 }
 
 PBRT_CPU_GPU
-static inline Normal3f FMA(const FloatType a, const Normal3f &b, const Normal3f &c) {
+static inline Normal3f FMA(const Real a, const Normal3f &b, const Normal3f &c) {
     return {FMA(a, b.x, c.x), FMA(a, b.y, c.y), FMA(a, b.z, c.z)};
 }

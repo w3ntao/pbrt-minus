@@ -23,7 +23,7 @@ class DiffuseAreaLight : public LightBase {
                                             SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+    Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf) const;
 
     PBRT_CPU_GPU
@@ -31,7 +31,7 @@ class DiffuseAreaLight : public LightBase {
                                             SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    void pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos, FloatType *pdfDir) const;
+    void pdf_le(const Interaction &intr, Vector3f w, Real *pdfPos, Real *pdfDir) const;
 
     PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
@@ -40,5 +40,5 @@ class DiffuseAreaLight : public LightBase {
     const Shape *shape;
     bool two_sided;
     const Spectrum *l_emit;
-    FloatType scale;
+    Real scale;
 };

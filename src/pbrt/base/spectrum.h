@@ -33,24 +33,24 @@ class Spectrum {
         piecewise_linear,
     };
 
-    static const Spectrum *create_black_body(FloatType temperature, GPUMemoryAllocator &allocator);
+    static const Spectrum *create_black_body(Real temperature, GPUMemoryAllocator &allocator);
 
-    static const Spectrum *create_cie_d(FloatType temperature, const FloatType *cie_s0,
-                                        const FloatType *cie_s1, const FloatType *cie_s2,
-                                        const FloatType *cie_lambda, GPUMemoryAllocator &allocator);
+    static const Spectrum *create_cie_d(Real temperature, const Real *cie_s0,
+                                        const Real *cie_s1, const Real *cie_s2,
+                                        const Real *cie_lambda, GPUMemoryAllocator &allocator);
 
-    static const Spectrum *create_constant_spectrum(FloatType val, GPUMemoryAllocator &allocator);
+    static const Spectrum *create_constant_spectrum(Real val, GPUMemoryAllocator &allocator);
 
     static const Spectrum *create_from_rgb(const RGB &val, SpectrumType spectrum_type,
                                            const RGBColorSpace *color_space,
                                            GPUMemoryAllocator &allocator);
 
     static const Spectrum *create_piecewise_linear_spectrum_from_lambdas_and_values(
-        const std::vector<FloatType> &cpu_lambdas, const std::vector<FloatType> &cpu_values,
+        const std::vector<Real> &cpu_lambdas, const std::vector<Real> &cpu_values,
         GPUMemoryAllocator &allocator);
 
     static const Spectrum *
-    create_piecewise_linear_spectrum_from_interleaved(const std::vector<FloatType> &samples,
+    create_piecewise_linear_spectrum_from_interleaved(const std::vector<Real> &samples,
                                                       bool normalize, const Spectrum *cie_y,
                                                       GPUMemoryAllocator &allocator);
     PBRT_CPU_GPU
@@ -78,11 +78,11 @@ class Spectrum {
         return type == Type::constant;
     }
 
-    PBRT_CPU_GPU FloatType operator()(FloatType lambda) const;
+    PBRT_CPU_GPU Real operator()(Real lambda) const;
 
     PBRT_CPU_GPU
-    FloatType inner_product(const Spectrum *const spectrum) const {
-        FloatType sum = 0;
+    Real inner_product(const Spectrum *const spectrum) const {
+        Real sum = 0;
         for (int lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
             sum += (*this)(lambda) * (*spectrum)(lambda);
         }
@@ -101,7 +101,7 @@ class Spectrum {
     }
 
     PBRT_CPU_GPU
-    FloatType to_photometric(const Spectrum *cie_y) const;
+    Real to_photometric(const Spectrum *cie_y) const;
 
   private:
     Type type;

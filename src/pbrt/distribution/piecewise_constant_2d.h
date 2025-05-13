@@ -6,7 +6,7 @@
 
 class PiecewiseConstant2D {
   public:
-    void init(const Array2D<FloatType> *func, const Bounds2f &_domain,
+    void init(const Array2D<Real> *func, const Bounds2f &_domain,
               GPUMemoryAllocator &allocator) {
         const int nu = func->x_size();
         const int nv = func->y_size();
@@ -21,7 +21,7 @@ class PiecewiseConstant2D {
                                   domain.p_max[0], allocator);
         }
 
-        std::vector<FloatType> marginalFunc;
+        std::vector<Real> marginalFunc;
         for (int v = 0; v < nv; ++v) {
             marginalFunc.push_back(pConditionalV[v].integral());
         }
@@ -31,11 +31,11 @@ class PiecewiseConstant2D {
     }
 
     PBRT_CPU_GPU
-    Point2f sample(Point2f u, FloatType *pdf = nullptr, Point2i *offset = nullptr) const {
-        FloatType pdfs[2];
+    Point2f sample(Point2f u, Real *pdf = nullptr, Point2i *offset = nullptr) const {
+        Real pdfs[2];
         Point2i uv;
-        FloatType d1 = pMarginal.sample(u[1], &pdfs[1], &uv[1]);
-        FloatType d0 = pConditionalV[uv[1]].sample(u[0], &pdfs[0], &uv[0]);
+        Real d1 = pMarginal.sample(u[1], &pdfs[1], &uv[1]);
+        Real d0 = pConditionalV[uv[1]].sample(u[0], &pdfs[0], &uv[0]);
 
         if (pdf) {
             *pdf = pdfs[0] * pdfs[1];

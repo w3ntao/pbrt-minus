@@ -20,16 +20,16 @@ class PowerLightSampler {
     }
 
     PBRT_CPU_GPU
-    pbrt::optional<SampledLight> sample(FloatType u) const;
+    pbrt::optional<SampledLight> sample(Real u) const;
 
     PBRT_CPU_GPU
-    pbrt::optional<SampledLight> sample(const LightSampleContext &ctx, FloatType u) const;
+    pbrt::optional<SampledLight> sample(const LightSampleContext &ctx, Real u) const;
 
     PBRT_CPU_GPU
-    FloatType pmf(const Light *light) const;
+    Real pmf(const Light *light) const;
 
     PBRT_CPU_GPU
-    FloatType pmf(const LightSampleContext &ctx, const Light *light) const {
+    Real pmf(const LightSampleContext &ctx, const Light *light) const {
         return pmf(light);
     }
 

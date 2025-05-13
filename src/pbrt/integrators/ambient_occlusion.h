@@ -17,7 +17,7 @@ class AmbientOcclusionIntegrator {
                                                     GPUMemoryAllocator &allocator);
 
     void init(const IntegratorBase *_base, const Spectrum *_illuminant_spectrum,
-              const FloatType _illuminant_scale) {
+              const Real _illuminant_scale) {
         base = _base;
         illuminant_spectrum = _illuminant_spectrum;
         illuminant_scale = _illuminant_scale;
@@ -29,5 +29,5 @@ class AmbientOcclusionIntegrator {
   private:
     const IntegratorBase *base;
     const Spectrum *illuminant_spectrum;
-    FloatType illuminant_scale;
+    Real illuminant_scale;
 };

@@ -14,12 +14,12 @@ class BoxFilter {
     BoxFilter() : radius(Vector2f(0.5, 0.5)) {}
 
     PBRT_CPU_GPU
-    FloatType get_integral() const {
+    Real get_integral() const {
         return 4 * radius.x * radius.y;
     }
 
     PBRT_CPU_GPU
-    FloatType evaluate(const Point2f p) const {
+    Real evaluate(const Point2f p) const {
         return std::abs(p.x) <= radius.x && std::abs(p.y) <= radius.y ? 1 : 0;
     }
 

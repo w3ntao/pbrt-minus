@@ -5,23 +5,23 @@
 struct CompensatedFloat {
     // CompensatedFloat Public Methods
     PBRT_CPU_GPU
-    explicit CompensatedFloat(FloatType _v, FloatType _err = 0) : v(_v), err(_err) {}
+    explicit CompensatedFloat(Real _v, Real _err = 0) : v(_v), err(_err) {}
 
     PBRT_CPU_GPU
-    explicit operator FloatType() const {
+    explicit operator Real() const {
         return v + err;
     }
 
-    FloatType v, err;
+    Real v, err;
 };
 
-PBRT_CPU_GPU inline CompensatedFloat two_prod(FloatType a, FloatType b) {
-    FloatType ab = a * b;
+PBRT_CPU_GPU inline CompensatedFloat two_prod(Real a, Real b) {
+    Real ab = a * b;
     return CompensatedFloat(ab, std::fma(a, b, -ab));
 }
 
-PBRT_CPU_GPU inline CompensatedFloat two_sum(FloatType a, FloatType b) {
-    FloatType s = a + b, delta = s - a;
+PBRT_CPU_GPU inline CompensatedFloat two_sum(Real a, Real b) {
+    Real s = a + b, delta = s - a;
     return CompensatedFloat(s, (a - (s - delta)) + (b - delta));
 }
 
@@ -48,8 +48,8 @@ PBRT_CPU_GPU CompensatedFloat inner_product(Float a, Float b, T... terms) {
 } // namespace internal
 
 template <typename... T>
-PBRT_CPU_GPU std::enable_if_t<std::conjunction_v<std::is_arithmetic<T>...>, FloatType>
+PBRT_CPU_GPU std::enable_if_t<std::conjunction_v<std::is_arithmetic<T>...>, Real>
 inner_product(T... terms) {
     CompensatedFloat ip = internal::inner_product(terms...);
-    return FloatType(ip);
+    return Real(ip);
 }

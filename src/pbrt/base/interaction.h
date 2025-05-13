@@ -84,10 +84,10 @@ class SurfaceInteraction : public Interaction {
 
     Vector3f dpdx;
     Vector3f dpdy;
-    FloatType dudx;
-    FloatType dvdx;
-    FloatType dudy;
-    FloatType dvdy;
+    Real dudx;
+    Real dvdx;
+    Real dudy;
+    Real dvdy;
 
     const Material *material;
     const Light *area_light;
@@ -140,14 +140,14 @@ class SurfaceInteraction : public Interaction {
 // ShapeIntersection Definition
 struct ShapeIntersection {
     SurfaceInteraction interaction;
-    FloatType t_hit;
+    Real t_hit;
 
     PBRT_CPU_GPU
-    ShapeIntersection(const SurfaceInteraction &si, FloatType t) : interaction(si), t_hit(t) {}
+    ShapeIntersection(const SurfaceInteraction &si, Real t) : interaction(si), t_hit(t) {}
 };
 
 struct QuadricIntersection {
-    FloatType t_hit;
+    Real t_hit;
     Point3f p_obj;
-    FloatType phi;
+    Real phi;
 };

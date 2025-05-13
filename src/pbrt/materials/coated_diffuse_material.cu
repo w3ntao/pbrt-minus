@@ -68,8 +68,8 @@ CoatedDiffuseBxDF CoatedDiffuseMaterial::get_coated_diffuse_bsdf(const MaterialE
     SampledSpectrum r = reflectance->evaluate(ctx, lambda).clamp(0, 1);
 
     // Create microfacet distribution _distrib_ for coated diffuse material
-    FloatType urough = u_roughness->evaluate(ctx);
-    FloatType vrough = v_roughness->evaluate(ctx);
+    Real urough = u_roughness->evaluate(ctx);
+    Real vrough = v_roughness->evaluate(ctx);
 
     if (remapRoughness) {
         urough = TrowbridgeReitzDistribution::RoughnessToAlpha(urough);
@@ -78,9 +78,9 @@ CoatedDiffuseBxDF CoatedDiffuseMaterial::get_coated_diffuse_bsdf(const MaterialE
 
     TrowbridgeReitzDistribution distrib(urough, vrough);
 
-    FloatType thick = thickness->evaluate(ctx);
+    Real thick = thickness->evaluate(ctx);
 
-    FloatType sampledEta = (*eta)(lambda[0]);
+    Real sampledEta = (*eta)(lambda[0]);
 
     if (!eta->is_constant_spectrum()) {
         lambda.terminate_secondary();
@@ -90,7 +90,7 @@ CoatedDiffuseBxDF CoatedDiffuseMaterial::get_coated_diffuse_bsdf(const MaterialE
     }
 
     SampledSpectrum a = albedo->evaluate(ctx, lambda).clamp(0, 1);
-    FloatType gg = clamp<FloatType>(g->evaluate(ctx), -1, 1);
+    Real gg = clamp<Real>(g->evaluate(ctx), -1, 1);
 
     return CoatedDiffuseBxDF(DielectricBxDF(sampledEta, distrib), DiffuseBxDF(r), thick, a, gg,
                              maxDepth, nSamples);

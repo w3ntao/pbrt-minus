@@ -13,7 +13,7 @@ class FloatScaledTexture {
                                             GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    FloatType evaluate(const TextureEvalContext &ctx) const;
+    Real evaluate(const TextureEvalContext &ctx) const;
 
   private:
     const FloatTexture *texture;

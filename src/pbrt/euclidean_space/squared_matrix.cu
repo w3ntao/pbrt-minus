@@ -6,42 +6,42 @@ static void print_warning_on_nan_result() {
 }
 
 template <>
-PBRT_CPU_GPU FloatType SquareMatrix<3>::determinant() const {
+PBRT_CPU_GPU Real SquareMatrix<3>::determinant() const {
     const auto m = this->val;
 
-    FloatType minor12 = difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
-    FloatType minor02 = difference_of_products(m[1][0], m[2][2], m[1][2], m[2][0]);
-    FloatType minor01 = difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
+    Real minor12 = difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
+    Real minor02 = difference_of_products(m[1][0], m[2][2], m[1][2], m[2][0]);
+    Real minor01 = difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
 
     return std::fma(m[0][2], minor01, difference_of_products(m[0][0], minor12, m[0][1], minor02));
 }
 
 template <>
-PBRT_CPU_GPU FloatType SquareMatrix<4>::determinant() const {
+PBRT_CPU_GPU Real SquareMatrix<4>::determinant() const {
     const auto m = this->val;
 
-    FloatType s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
-    FloatType s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
-    FloatType s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
+    Real s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
+    Real s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
+    Real s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
 
-    FloatType s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
-    FloatType s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
-    FloatType s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
+    Real s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
+    Real s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
+    Real s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
 
-    FloatType c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
-    FloatType c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
-    FloatType c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
+    Real c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
+    Real c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
+    Real c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
 
-    FloatType c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
-    FloatType c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
-    FloatType c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
+    Real c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
+    Real c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
+    Real c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
 
     return difference_of_products(s0, c5, s1, c4) + difference_of_products(s2, c3, -s3, c2) +
            difference_of_products(s5, c0, s4, c1);
 }
 
 template <uint N>
-PBRT_CPU_GPU FloatType SquareMatrix<N>::determinant() const {
+PBRT_CPU_GPU Real SquareMatrix<N>::determinant() const {
     printf("determinant() not implemented for SquareMatrix<%d>\n", N);
 
 #if defined(__CUDA_ARCH__)
@@ -53,7 +53,7 @@ PBRT_CPU_GPU FloatType SquareMatrix<N>::determinant() const {
 
 template <>
 PBRT_CPU_GPU SquareMatrix<3> SquareMatrix<3>::inverse() const {
-    const FloatType det = determinant();
+    const Real det = determinant();
     if (det == 0.0) {
         if (DEBUG_MODE) {
             print_warning_on_nan_result();
@@ -61,11 +61,11 @@ PBRT_CPU_GPU SquareMatrix<3> SquareMatrix<3>::inverse() const {
         return SquareMatrix::nan();
     }
 
-    const FloatType inv_det = 1.0 / det;
+    const Real inv_det = 1.0 / det;
 
     const auto m = this->val;
 
-    FloatType r[3][3];
+    Real r[3][3];
     r[0][0] = inv_det * difference_of_products(m[1][1], m[2][2], m[1][2], m[2][1]);
     r[1][0] = inv_det * difference_of_products(m[1][2], m[2][0], m[1][0], m[2][2]);
     r[2][0] = inv_det * difference_of_products(m[1][0], m[2][1], m[1][1], m[2][0]);
@@ -96,23 +96,23 @@ Via: https://github.com/google/ion/blob/master/ion/math/matrixutils.cc,
 
     const auto m = this->val;
 
-    FloatType s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
-    FloatType s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
-    FloatType s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
+    Real s0 = difference_of_products(m[0][0], m[1][1], m[1][0], m[0][1]);
+    Real s1 = difference_of_products(m[0][0], m[1][2], m[1][0], m[0][2]);
+    Real s2 = difference_of_products(m[0][0], m[1][3], m[1][0], m[0][3]);
 
-    FloatType s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
-    FloatType s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
-    FloatType s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
+    Real s3 = difference_of_products(m[0][1], m[1][2], m[1][1], m[0][2]);
+    Real s4 = difference_of_products(m[0][1], m[1][3], m[1][1], m[0][3]);
+    Real s5 = difference_of_products(m[0][2], m[1][3], m[1][2], m[0][3]);
 
-    FloatType c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
-    FloatType c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
-    FloatType c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
+    Real c0 = difference_of_products(m[2][0], m[3][1], m[3][0], m[2][1]);
+    Real c1 = difference_of_products(m[2][0], m[3][2], m[3][0], m[2][2]);
+    Real c2 = difference_of_products(m[2][0], m[3][3], m[3][0], m[2][3]);
 
-    FloatType c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
-    FloatType c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
-    FloatType c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
+    Real c3 = difference_of_products(m[2][1], m[3][2], m[3][1], m[2][2]);
+    Real c4 = difference_of_products(m[2][1], m[3][3], m[3][1], m[2][3]);
+    Real c5 = difference_of_products(m[2][2], m[3][3], m[3][2], m[2][3]);
 
-    FloatType determinant = inner_product(s0, c5, -s1, c4, s2, c3, s3, c2, s5, c0, -s4, c1);
+    Real determinant = inner_product(s0, c5, -s1, c4, s2, c3, s3, c2, s5, c0, -s4, c1);
     if (determinant == 0) {
         if (DEBUG_MODE) {
             print_warning_on_nan_result();
@@ -120,9 +120,9 @@ Via: https://github.com/google/ion/blob/master/ion/math/matrixutils.cc,
         return SquareMatrix::nan();
     }
 
-    FloatType s = 1.0 / determinant;
+    Real s = 1.0 / determinant;
 
-    FloatType inv[4][4] = {{
+    Real inv[4][4] = {{
                                s * inner_product(m[1][1], c5, m[1][3], c3, -m[1][2], c4),
                                s * inner_product(-m[0][1], c5, m[0][2], c4, -m[0][3], c3),
                                s * inner_product(m[3][1], s5, m[3][3], s3, -m[3][2], s4),

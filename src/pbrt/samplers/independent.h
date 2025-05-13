@@ -22,12 +22,12 @@ class IndependentSampler {
         return samples_per_pixel;
     }
 
-    PBRT_CPU_GPU FloatType get_1d() {
-        return rng.uniform<FloatType>();
+    PBRT_CPU_GPU Real get_1d() {
+        return rng.uniform<Real>();
     }
 
     PBRT_CPU_GPU Point2f get_2d() {
-        return Point2f(rng.uniform<FloatType>(), rng.uniform<FloatType>());
+        return Point2f(rng.uniform<Real>(), rng.uniform<Real>());
     }
 
     PBRT_CPU_GPU Point2f get_pixel_2d() {

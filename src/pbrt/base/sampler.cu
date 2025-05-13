@@ -156,7 +156,7 @@ uint Sampler::get_samples_per_pixel() const {
 }
 
 PBRT_CPU_GPU
-FloatType Sampler::get_1d() {
+Real Sampler::get_1d() {
     switch (type) {
     case Type::independent: {
         return static_cast<IndependentSampler *>(ptr)->get_1d();

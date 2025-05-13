@@ -23,10 +23,10 @@ RGBFilm *RGBFilm::create(const Filter *filter, const ParameterDictionary &parame
 
     auto film_resolution = Point2i(resolution_x, resolution_y);
 
-    FloatType iso = 100;
-    FloatType white_balance_val = 0.0;
-    FloatType exposure_time = 1.0;
-    FloatType imaging_ratio = exposure_time * iso / 100.0;
+    Real iso = 100;
+    Real white_balance_val = 0.0;
+    Real exposure_time = 1.0;
+    Real imaging_ratio = exposure_time * iso / 100.0;
 
     auto d_illum = Spectrum::create_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val,
                                           CIE_S0, CIE_S1, CIE_S2, CIE_S_lambda, allocator);
@@ -84,7 +84,7 @@ Bounds2f RGBFilm::sample_bounds() const {
 
 PBRT_CPU_GPU
 void RGBFilm::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
-                         const SampledWavelengths &lambda, FloatType weight) {
+                         const SampledWavelengths &lambda, Real weight) {
     if (weight == 0) {
         return;
     }
@@ -127,7 +127,7 @@ void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l
 }
 
 PBRT_CPU_GPU
-RGB RGBFilm::get_pixel_rgb(const Point2i p, FloatType splat_scale) const {
+RGB RGBFilm::get_pixel_rgb(const Point2i p, Real splat_scale) const {
     const int idx = p.x + p.y * resolution.x;
 
     const Pixel &pixel = pixels[idx];

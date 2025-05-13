@@ -11,7 +11,7 @@ class DielectricBxDF {
     DielectricBxDF() : eta(NAN) {}
 
     PBRT_CPU_GPU
-    DielectricBxDF(FloatType eta, TrowbridgeReitzDistribution mfDistrib)
+    DielectricBxDF(Real eta, TrowbridgeReitzDistribution mfDistrib)
         : eta(eta), mfDistrib(mfDistrib) {}
 
     PBRT_CPU_GPU
@@ -23,14 +23,14 @@ class DielectricBxDF {
 
     PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
-    sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
+    sample_f(Vector3f wo, Real uc, Point2f u, TransportMode mode,
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
 
     PBRT_CPU_GPU
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;
 
     PBRT_CPU_GPU
-    FloatType pdf(Vector3f wo, Vector3f wi, TransportMode mode,
+    Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 
     PBRT_CPU_GPU
@@ -39,6 +39,6 @@ class DielectricBxDF {
     }
 
   private:
-    FloatType eta;
+    Real eta;
     TrowbridgeReitzDistribution mfDistrib;
 };

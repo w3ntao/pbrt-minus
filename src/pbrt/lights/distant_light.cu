@@ -26,7 +26,7 @@ DistantLight *DistantLight::create(const Transform &renderFromLight,
     Vector3f v1, v2;
     w.coordinate_system(&v1, &v2);
 
-    FloatType m[4][4] = {v1.x, v2.x, w.x, 0, v1.y, v2.y, w.y, 0, v1.z, v2.z, w.z, 0, 0, 0, 0, 1};
+    Real m[4][4] = {v1.x, v2.x, w.x, 0, v1.y, v2.y, w.y, 0, v1.z, v2.z, w.z, 0, 0, 0, 0, 1};
     auto t = Transform(m);
 
     Transform finalRenderFromLight = renderFromLight * t;

@@ -18,16 +18,16 @@ class RGBIlluminantSpectrum {
     void init(const RGB &rgb, const RGBColorSpace *rgb_color_space);
 
     PBRT_CPU_GPU
-    FloatType operator()(FloatType lambda) const;
+    Real operator()(Real lambda) const;
 
     PBRT_CPU_GPU
-    FloatType to_photometric(const Spectrum *cie_y) const;
+    Real to_photometric(const Spectrum *cie_y) const;
 
     PBRT_CPU_GPU
     SampledSpectrum sample(const SampledWavelengths &lambda) const;
 
   private:
-    FloatType scale;
+    Real scale;
     RGBSigmoidPolynomial rsp;
     const Spectrum *illuminant;
 };

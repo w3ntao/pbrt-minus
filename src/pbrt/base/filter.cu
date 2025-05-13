@@ -89,7 +89,7 @@ Vector2f Filter::get_radius() const {
 }
 
 PBRT_CPU_GPU
-FloatType Filter::get_integral() const {
+Real Filter::get_integral() const {
     switch (type) {
     case Type::box: {
         return static_cast<const BoxFilter *>(ptr)->get_integral();
@@ -114,7 +114,7 @@ FloatType Filter::get_integral() const {
 }
 
 PBRT_CPU_GPU
-FloatType Filter::evaluate(const Point2f &p) const {
+Real Filter::evaluate(const Point2f &p) const {
     switch (type) {
     case Type::box: {
         return static_cast<const BoxFilter *>(ptr)->evaluate(p);

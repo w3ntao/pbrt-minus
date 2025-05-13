@@ -28,14 +28,14 @@ class TopOrBottomBxDF {
 
     PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
-    sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
+    sample_f(Vector3f wo, Real uc, Point2f u, TransportMode mode,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         return top ? top->sample_f(wo, uc, u, mode, sampleFlags)
                    : bottom->sample_f(wo, uc, u, mode, sampleFlags);
     }
 
     PBRT_CPU_GPU
-    FloatType pdf(Vector3f wo, Vector3f wi, TransportMode mode,
+    Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         return top ? top->pdf(wo, wi, mode, sampleFlags) : bottom->pdf(wo, wi, mode, sampleFlags);
     }

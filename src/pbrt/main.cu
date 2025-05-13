@@ -134,7 +134,7 @@ int main(int argc, const char **argv) {
     std::string float_type = "float";
 #endif
 
-    printf("Float type: %s (%lu bit)\n", float_type.c_str(), sizeof(FloatType) * CHAR_BIT);
+    printf("Float type: %s (%lu bit)\n", float_type.c_str(), sizeof(Real) * CHAR_BIT);
 
     const auto command_line_option = CommandLineOption(argc, argv);
     SceneBuilder::render_pbrt(command_line_option);

@@ -10,12 +10,12 @@ void RGBIlluminantSpectrum::init(const RGB &rgb, const RGBColorSpace *rgb_color_
 }
 
 PBRT_CPU_GPU
-FloatType RGBIlluminantSpectrum::operator()(FloatType lambda) const {
+Real RGBIlluminantSpectrum::operator()(Real lambda) const {
     return scale * rsp(lambda) * (*illuminant)(lambda);
 }
 
 PBRT_CPU_GPU
-FloatType RGBIlluminantSpectrum::to_photometric(const Spectrum *cie_y) const {
+Real RGBIlluminantSpectrum::to_photometric(const Spectrum *cie_y) const {
     return illuminant->inner_product(cie_y);
 }
 

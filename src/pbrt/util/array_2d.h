@@ -14,7 +14,7 @@ class Array2D {
     }
 
     PBRT_CPU_GPU
-    const FloatType *get_values_ptr() const {
+    const Real *get_values_ptr() const {
         return values;
     }
 

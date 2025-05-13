@@ -42,8 +42,8 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
     bool any_non_specular_bounces = false;
 
     uint depth = 0;
-    FloatType pdf_bsdf = NAN;
-    FloatType eta_scale = 1.0;
+    Real pdf_bsdf = NAN;
+    Real eta_scale = 1.0;
     LightSampleContext prev_interaction_light_sample_ctx;
 
     auto ray = primary_ray;
@@ -63,10 +63,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
-                    FloatType pdf_light =
+                    Real pdf_light =
                         base->light_sampler->pmf(prev_interaction_light_sample_ctx, light) *
                         light->pdf_li(prev_interaction_light_sample_ctx, ray.d, true);
-                    FloatType weight_bsdf = power_heuristic(1, pdf_bsdf, 1, pdf_light);
+                    Real weight_bsdf = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
                     L += beta * weight_bsdf * Le;
                 }
@@ -86,10 +86,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
                 // Compute MIS weight for area light
                 auto area_light = isect.area_light;
 
-                FloatType pdf_light =
+                Real pdf_light =
                     base->light_sampler->pmf(prev_interaction_light_sample_ctx, area_light) *
                     area_light->pdf_li(prev_interaction_light_sample_ctx, ray.d);
-                FloatType weight_light = power_heuristic(1, pdf_bsdf, 1, pdf_light);
+                Real weight_light = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
                 L += beta * weight_light * Le;
             }
@@ -114,7 +114,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
 
         // Sample BSDF to get new path direction
         Vector3f wo = -ray.d;
-        FloatType u = sampler->get_1d();
+        Real u = sampler->get_1d();
         auto bs = bsdf.sample_f(wo, u, sampler->get_2d());
         if (!bs) {
             break;
@@ -140,7 +140,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
             // depth-8 and clamped-to-0.95 are taken from Mitsuba
             SampledSpectrum russian_roulette_beta = beta * eta_scale;
             if (russian_roulette_beta.max_component_value() < 1) {
-                auto q = clamp<FloatType>(1 - russian_roulette_beta.max_component_value(), 0, 0.95);
+                auto q = clamp<Real>(1 - russian_roulette_beta.max_component_value(), 0, 0.95);
 
                 if (sampler->get_1d() < q) {
                     break;
@@ -174,7 +174,7 @@ SampledSpectrum MegakernelPathIntegrator::sample_ld(const SurfaceInteraction &in
     }
 
     // Choose a light source for the direct lighting calculation
-    FloatType u = sampler->get_1d();
+    Real u = sampler->get_1d();
     auto sampled_light = base->light_sampler->sample(ctx, u);
 
     Point2f uLight = sampler->get_2d();
@@ -199,14 +199,14 @@ SampledSpectrum MegakernelPathIntegrator::sample_ld(const SurfaceInteraction &in
     }
 
     // Return light's contribution to reflected radiance
-    FloatType pdf_light = sampled_light->p * ls->pdf;
+    Real pdf_light = sampled_light->p * ls->pdf;
     if (pbrt::is_delta_light(light->get_light_type())) {
         return ls->l * f / pdf_light;
     }
 
     // for non delta light
-    FloatType pdf_bsdf = bsdf->pdf(wo, wi);
-    FloatType weight_light = power_heuristic(1, pdf_light, 1, pdf_bsdf);
+    Real pdf_bsdf = bsdf->pdf(wo, wi);
+    Real weight_light = power_heuristic(1, pdf_light, 1, pdf_bsdf);
 
     return weight_light * ls->l * f / pdf_light;
 }

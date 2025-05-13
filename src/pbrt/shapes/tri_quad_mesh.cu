@@ -12,7 +12,7 @@ void rply_message_callback(p_ply ply, const char *message) {
 
 /* Callback to handle vertex data from RPly */
 int rply_vertex_callback(p_ply_argument argument) {
-    FloatType *buffer;
+    Real *buffer;
     long index, flags;
 
     ply_get_argument_user_data(argument, (void **)&buffer, &flags);

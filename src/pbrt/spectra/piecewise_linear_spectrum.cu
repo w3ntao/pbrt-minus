@@ -5,8 +5,8 @@
 #include <pbrt/gpu/gpu_memory_allocator.h>
 
 const PiecewiseLinearSpectrum *
-PiecewiseLinearSpectrum::create_from_lambdas_values(const std::vector<FloatType> &cpu_lambdas,
-                                                    const std::vector<FloatType> &cpu_values,
+PiecewiseLinearSpectrum::create_from_lambdas_values(const std::vector<Real> &cpu_lambdas,
+                                                    const std::vector<Real> &cpu_values,
                                                     GPUMemoryAllocator &allocator) {
     auto spectrum = allocator.allocate<PiecewiseLinearSpectrum>();
 
@@ -16,7 +16,7 @@ PiecewiseLinearSpectrum::create_from_lambdas_values(const std::vector<FloatType>
 }
 
 const PiecewiseLinearSpectrum *
-PiecewiseLinearSpectrum::create_from_interleaved(const std::vector<FloatType> &samples,
+PiecewiseLinearSpectrum::create_from_interleaved(const std::vector<Real> &samples,
                                                  bool normalize, const Spectrum *cie_y,
                                                  GPUMemoryAllocator &allocator) {
     auto piecewise_linear_spectrum = allocator.allocate<PiecewiseLinearSpectrum>();
@@ -26,24 +26,24 @@ PiecewiseLinearSpectrum::create_from_interleaved(const std::vector<FloatType> &s
     return piecewise_linear_spectrum;
 }
 
-void PiecewiseLinearSpectrum::init_from_lambdas_values(const std::vector<FloatType> &cpu_lambdas,
-                                                       const std::vector<FloatType> &cpu_values,
+void PiecewiseLinearSpectrum::init_from_lambdas_values(const std::vector<Real> &cpu_lambdas,
+                                                       const std::vector<Real> &cpu_values,
                                                        GPUMemoryAllocator &allocator) {
     if (cpu_lambdas.size() != cpu_values.size()) {
         REPORT_FATAL_ERROR();
     }
     size = cpu_lambdas.size();
 
-    lambdas = allocator.allocate<FloatType>(size);
-    values = allocator.allocate<FloatType>(size);
+    lambdas = allocator.allocate<Real>(size);
+    values = allocator.allocate<Real>(size);
 
     CHECK_CUDA_ERROR(
-        cudaMemcpy(lambdas, cpu_lambdas.data(), sizeof(FloatType) * size, cudaMemcpyHostToDevice));
+        cudaMemcpy(lambdas, cpu_lambdas.data(), sizeof(Real) * size, cudaMemcpyHostToDevice));
     CHECK_CUDA_ERROR(
-        cudaMemcpy(values, cpu_values.data(), sizeof(FloatType) * size, cudaMemcpyHostToDevice));
+        cudaMemcpy(values, cpu_values.data(), sizeof(Real) * size, cudaMemcpyHostToDevice));
 }
 
-void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<FloatType> &samples,
+void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<Real> &samples,
                                                     bool normalize, const Spectrum *cie_y,
                                                     GPUMemoryAllocator &allocator) {
     if (samples.size() % 2 != 0) {
@@ -51,7 +51,7 @@ void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<FloatType>
     }
 
     uint n = samples.size() / 2;
-    std::vector<FloatType> cpu_lambdas, cpu_values;
+    std::vector<Real> cpu_lambdas, cpu_values;
 
     // Extend samples to cover range of visible wavelengths if needed.
     if (samples[0] > LAMBDA_MIN) {
@@ -89,7 +89,7 @@ SampledSpectrum PiecewiseLinearSpectrum::sample(const SampledWavelengths &lambda
 }
 
 PBRT_CPU_GPU
-FloatType PiecewiseLinearSpectrum::operator()(FloatType lambda) const {
+Real PiecewiseLinearSpectrum::operator()(Real lambda) const {
     if (size == 0 || lambda < lambdas[0] || lambda > lambdas[size - 1]) {
         return 0;
     }
@@ -102,8 +102,8 @@ FloatType PiecewiseLinearSpectrum::operator()(FloatType lambda) const {
 }
 
 PBRT_CPU_GPU
-FloatType PiecewiseLinearSpectrum::inner_product(const Spectrum *spectrum) const {
-    FloatType sum = 0;
+Real PiecewiseLinearSpectrum::inner_product(const Spectrum *spectrum) const {
+    Real sum = 0;
     for (int lambda = LAMBDA_MIN; lambda <= LAMBDA_MAX; ++lambda) {
         sum += (*this)(lambda) * (*spectrum)(lambda);
     }

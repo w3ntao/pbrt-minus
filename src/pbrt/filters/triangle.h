@@ -18,14 +18,14 @@ class TriangleFilter {
     }
 
     PBRT_CPU_GPU
-    FloatType get_integral() const {
+    Real get_integral() const {
         return sqr(radius.x) * sqr(radius.y);
     }
 
     PBRT_CPU_GPU
-    FloatType evaluate(const Point2f &p) const {
-        return std::max<FloatType>(0, radius.x - std::abs(p.x)) *
-               std::max<FloatType>(0, radius.y - std::abs(p.y));
+    Real evaluate(const Point2f &p) const {
+        return std::max<Real>(0, radius.x - std::abs(p.x)) *
+               std::max<Real>(0, radius.y - std::abs(p.y));
     }
 
     PBRT_CPU_GPU

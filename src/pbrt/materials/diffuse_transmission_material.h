@@ -19,5 +19,5 @@ class DiffuseTransmissionMaterial {
   private:
     const SpectrumTexture *reflectance;
     const SpectrumTexture *transmittance;
-    FloatType scale;
+    Real scale;
 };

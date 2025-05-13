@@ -121,7 +121,7 @@ Bounds3f Shape::bounds() const {
 }
 
 PBRT_CPU_GPU
-FloatType Shape::area() const {
+Real Shape::area() const {
     switch (type) {
     case Type::disk: {
         return static_cast<const Disk *>(ptr)->area();
@@ -141,7 +141,7 @@ FloatType Shape::area() const {
 }
 
 PBRT_CPU_GPU
-bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
+bool Shape::fast_intersect(const Ray &ray, Real t_max) const {
     switch (type) {
     case Type::disk: {
         return static_cast<const Disk *>(ptr)->fast_intersect(ray, t_max);
@@ -161,7 +161,7 @@ bool Shape::fast_intersect(const Ray &ray, FloatType t_max) const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<ShapeIntersection> Shape::intersect(const Ray &ray, FloatType t_max) const {
+pbrt::optional<ShapeIntersection> Shape::intersect(const Ray &ray, Real t_max) const {
     switch (type) {
     case Type::disk: {
         return static_cast<const Disk *>(ptr)->intersect(ray, t_max);
@@ -221,7 +221,7 @@ pbrt::optional<ShapeSample> Shape::sample(const ShapeSampleContext &ctx, const P
 }
 
 PBRT_CPU_GPU
-FloatType Shape::pdf(const Interaction &in) const {
+Real Shape::pdf(const Interaction &in) const {
     switch (type) {
     case Type::disk: {
         REPORT_FATAL_ERROR();
@@ -246,7 +246,7 @@ FloatType Shape::pdf(const Interaction &in) const {
 }
 
 PBRT_CPU_GPU
-FloatType Shape::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
+Real Shape::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     switch (type) {
     case Type::disk: {
         return static_cast<const Disk *>(ptr)->pdf(ctx, wi);

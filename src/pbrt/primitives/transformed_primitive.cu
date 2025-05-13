@@ -12,14 +12,14 @@ Bounds3f TransformedPrimitive::bounds() const {
 }
 
 PBRT_CPU_GPU
-bool TransformedPrimitive::fast_intersect(const Ray &ray, FloatType t_max) const {
+bool TransformedPrimitive::fast_intersect(const Ray &ray, Real t_max) const {
     auto inverse_ray = render_from_pritimive.apply_inverse(ray, &t_max);
     return primitive->fast_intersect(inverse_ray, t_max);
 }
 
 PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> TransformedPrimitive::intersect(const Ray &ray,
-                                                                       FloatType t_max) const {
+                                                                       Real t_max) const {
     // Transform ray to primitive-space and intersect with primitive
     auto inverse_ray = render_from_pritimive.apply_inverse(ray, &t_max);
 

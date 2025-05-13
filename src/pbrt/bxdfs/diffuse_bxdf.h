@@ -43,7 +43,7 @@ class DiffuseBxDF {
 
     PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
-    sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode = TransportMode::Radiance,
+    sample_f(Vector3f wo, Real uc, Point2f u, TransportMode mode = TransportMode::Radiance,
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const {
         if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
             return {};
@@ -55,13 +55,13 @@ class DiffuseBxDF {
             wi.z *= -1;
         }
 
-        FloatType pdf = cosine_hemisphere_pdf(wi.abs_cos_theta());
+        Real pdf = cosine_hemisphere_pdf(wi.abs_cos_theta());
 
         return BSDFSample(r * (1.0 / compute_pi()), wi, pdf, BxDFFlags::DiffuseReflection);
     }
 
     PBRT_CPU_GPU
-    FloatType pdf(Vector3f wo, Vector3f wi, TransportMode mode,
+    Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         if (!(sampleFlags & BxDFReflTransFlags::Reflection) || !wo.same_hemisphere(wi)) {
             return 0;

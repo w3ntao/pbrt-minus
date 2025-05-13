@@ -44,7 +44,7 @@ PBRT_CPU_GPU
 DielectricBxDF DielectricMaterial::get_dielectric_bsdf(const MaterialEvalContext &ctx,
                                                        SampledWavelengths &lambda) const {
     // Compute index of refraction for dielectric material
-    FloatType sampled_eta = (*eta)(lambda[0]);
+    Real sampled_eta = (*eta)(lambda[0]);
     if (!eta->is_constant_spectrum()) {
         lambda.terminate_secondary();
     }

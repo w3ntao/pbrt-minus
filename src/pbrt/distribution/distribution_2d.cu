@@ -5,7 +5,7 @@
 #include <pbrt/spectrum_util/rgb.h>
 #include <pbrt/util/thread_pool.h>
 
-const Distribution2D *Distribution2D::create(const std::vector<std::vector<FloatType>> &data,
+const Distribution2D *Distribution2D::create(const std::vector<std::vector<Real>> &data,
                                              GPUMemoryAllocator &allocator) {
     auto distribution = allocator.allocate<Distribution2D>();
     distribution->build(data, allocator);
@@ -13,7 +13,7 @@ const Distribution2D *Distribution2D::create(const std::vector<std::vector<Float
     return distribution;
 }
 
-void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
+void Distribution2D::build(const std::vector<std::vector<Real>> &data,
                            GPUMemoryAllocator &allocator) {
     if (data.empty()) {
         REPORT_FATAL_ERROR();
@@ -21,9 +21,9 @@ void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
 
     dimension = Point2i(data.size(), data[0].size());
 
-    std::vector<FloatType> sum_per_row(dimension.x, 0);
+    std::vector<Real> sum_per_row(dimension.x, 0);
     for (int x = 0; x < dimension.x; ++x) {
-        FloatType current_sum = 0.0;
+        Real current_sum = 0.0;
         for (int y = 0; y < dimension.y; ++y) {
             current_sum += data[x][y];
         }
@@ -40,7 +40,7 @@ void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
     thread_pool.parallel_execute(
         0, dimension.x,
         [data, &_distribution_1d_list, &allocator, dimension = this->dimension](const int x) {
-            std::vector<FloatType> pdfs(dimension.y);
+            std::vector<Real> pdfs(dimension.y);
             for (int y = 0; y < dimension.y; ++y) {
                 pdfs[y] = data[x][y];
             }
@@ -52,7 +52,7 @@ void Distribution2D::build(const std::vector<std::vector<FloatType>> &data,
 }
 
 PBRT_CPU_GPU
-cuda::std::pair<Point2f, FloatType> Distribution2D::sample(const Point2f &uv) const {
+cuda::std::pair<Point2f, Real> Distribution2D::sample(const Point2f &uv) const {
     auto first_dim_sample = dimension_x_distribution->sample(uv.x);
 
     auto sampled_dim_x = clamp<int>(first_dim_sample.first, 0, dimension.x - 1);
@@ -63,19 +63,19 @@ cuda::std::pair<Point2f, FloatType> Distribution2D::sample(const Point2f &uv) co
 
     auto pdf = first_pdf * second_dim_sample.second;
 
-    return {Point2f(FloatType(sampled_dim_x) / FloatType(dimension.x),
-                    FloatType(second_dim_sample.first) / FloatType(dimension.y)),
+    return {Point2f(Real(sampled_dim_x) / Real(dimension.x),
+                    Real(second_dim_sample.first) / Real(dimension.y)),
             pdf};
 }
 
 PBRT_CPU_GPU
-FloatType Distribution2D::get_pdf(const Point2f &u) const {
+Real Distribution2D::get_pdf(const Point2f &u) const {
     const auto first_dimension_index =
-        clamp<uint>(u.x * FloatType(dimension.x), 0, dimension.x - 1);
+        clamp<uint>(u.x * Real(dimension.x), 0, dimension.x - 1);
     const auto first_dimension_pdf = dimension_x_distribution->pdfs[first_dimension_index];
 
     const auto second_dimension_index =
-        clamp<uint>(u.y * FloatType(dimension.y), 0, dimension.y - 1);
+        clamp<uint>(u.y * Real(dimension.y), 0, dimension.y - 1);
     const auto second_dimension_pdf =
         dimension_y_distribution_list[first_dimension_index].get_pdf(second_dimension_index);
 

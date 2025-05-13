@@ -8,9 +8,9 @@
 #define PBRT_GPU __device__
 
 #ifdef PBRT_FLOAT_AS_DOUBLE
-using FloatType = double;
+using Real = double;
 #else
-using FloatType = float;
+using Real = float;
 #endif
 
 #define FLAG_COLORFUL_PRINT_RED_START "\033[0;31m"

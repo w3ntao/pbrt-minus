@@ -11,9 +11,9 @@ class GreyScaleFilm {
     GreyScaleFilm(const Point2i &_resolution)
         : resolution(_resolution),
           pixel_bound(Bounds2i(Point2i(0, 0), Point2i(_resolution.x, _resolution.y))),
-          pixels(std::vector<FloatType>(_resolution.x * _resolution.y, 0)) {}
+          pixels(std::vector<Real>(_resolution.x * _resolution.y, 0)) {}
 
-    void add_sample(const Point2i &coord, FloatType val) {
+    void add_sample(const Point2i &coord, Real val) {
         pixels[coord.y * resolution.x + coord.x] += val;
     }
 
@@ -21,6 +21,6 @@ class GreyScaleFilm {
 
   private:
     Point2i resolution;
-    std::vector<FloatType> pixels;
+    std::vector<Real> pixels;
     Bounds2i pixel_bound;
 };

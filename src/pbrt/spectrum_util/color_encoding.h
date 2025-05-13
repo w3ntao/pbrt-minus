@@ -4,18 +4,18 @@
 #include <pbrt/util/math.h>
 
 PBRT_CPU_GPU
-inline FloatType LinearToSRGB(FloatType value) {
+inline Real LinearToSRGB(Real value) {
     if (value <= 0.0031308f) {
         return 12.92f * value;
     }
     // Minimax polynomial approximation from enoki's color.h.
 
-    FloatType sqrt_value = safe_sqrt(value);
+    Real sqrt_value = safe_sqrt(value);
 
-    FloatType p = evaluate_polynomial(sqrt_value, -0.0016829072605308378f, 0.03453868659826638f,
+    Real p = evaluate_polynomial(sqrt_value, -0.0016829072605308378f, 0.03453868659826638f,
                                       0.7642611304733891f, 2.0041169284241644f, 0.7551545191665577f,
                                       -0.016202083165206348f);
-    FloatType q =
+    Real q =
         evaluate_polynomial(sqrt_value, 4.178892964897981e-7f, -0.00004375359692957097f,
                             0.03467195408529984f, 0.6085338522168684f, 1.8970238036421054f, 1.f);
     return p / q * value;
@@ -26,12 +26,12 @@ class SRGBColorEncoding {
     PBRT_CPU_GPU SRGBColorEncoding() {}
 
     PBRT_CPU_GPU
-    FloatType to_linear(uint8_t value) const {
+    Real to_linear(uint8_t value) const {
         return SRGBToLinearLUT[value];
     }
 
     PBRT_CPU_GPU
-    uint8_t from_linear(FloatType value) const {
+    uint8_t from_linear(Real value) const {
         if (value <= 0) {
             return 0;
         }
@@ -43,7 +43,7 @@ class SRGBColorEncoding {
     }
 
   private:
-    const FloatType SRGBToLinearLUT[256] = {
+    const Real SRGBToLinearLUT[256] = {
         0.0000000000, 0.0003035270, 0.0006070540, 0.0009105810, 0.0012141080, 0.0015176350,
         0.0018211619, 0.0021246888, 0.0024282159, 0.0027317430, 0.0030352699, 0.0033465356,
         0.0036765069, 0.0040247170, 0.0043914421, 0.0047769533, 0.0051815170, 0.0056053917,
@@ -93,14 +93,14 @@ class SRGBColorEncoding {
 PBRT_CPU_GPU
 static SquareMatrix<3> white_balance(const Point2f srcWhite, const Point2f targetWhite) {
     // Find LMS coefficients for source and target white
-    const FloatType data_LMSFromXYZ[3][3] = {
+    const Real data_LMSFromXYZ[3][3] = {
         {0.8951, 0.2664, -0.1614},
         {-0.7502, 1.7135, 0.0367},
         {0.0389, -0.0685, 1.0296},
     };
     const SquareMatrix<3> LMSFromXYZ(data_LMSFromXYZ);
 
-    const FloatType data_XYZFromLMS[3][3] = {
+    const Real data_XYZFromLMS[3][3] = {
         {0.986993, -0.147054, 0.159963},
         {0.432305, 0.51836, 0.0492912},
         {-0.00852866, 0.0400428, 0.968487},
@@ -115,7 +115,7 @@ static SquareMatrix<3> white_balance(const Point2f srcWhite, const Point2f targe
 
     // Return white balancing matrix for source and target white
 
-    FloatType diag_data[3] = {dstLMS[0] / srcLMS[0], dstLMS[1] / srcLMS[1], dstLMS[2] / srcLMS[2]};
+    Real diag_data[3] = {dstLMS[0] / srcLMS[0], dstLMS[1] / srcLMS[1], dstLMS[2] / srcLMS[2]};
     SquareMatrix<3> LMScorrect = SquareMatrix<3>::diag(diag_data);
 
     return XYZFromLMS * LMScorrect * LMSFromXYZ;

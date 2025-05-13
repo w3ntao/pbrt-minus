@@ -16,6 +16,6 @@ const FloatScaledTexture *FloatScaledTexture::create(const ParameterDictionary &
 }
 
 PBRT_CPU_GPU
-FloatType FloatScaledTexture::evaluate(const TextureEvalContext &ctx) const {
+Real FloatScaledTexture::evaluate(const TextureEvalContext &ctx) const {
     return scale->evaluate(ctx) * texture->evaluate(ctx);
 }

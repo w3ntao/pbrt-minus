@@ -40,7 +40,7 @@ static FilterFunction parse_filter_function(const std::string &filter_function) 
 struct MIPMapFilterOptions {
     FilterFunction filter;
     // default value: FilterFunction::EWA
-    FloatType max_anisotropy;
+    Real max_anisotropy;
     // default value: 8.0
 };
 

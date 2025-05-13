@@ -8,7 +8,7 @@
 class PixelSensor {
   public:
     PBRT_CPU_GPU void init(const Spectrum *_r_bar, const Spectrum *_g_bar, const Spectrum *_b_bar,
-                           FloatType _imaging_ratio, const SquareMatrix<3> _xyz_from_sensor_rgb) {
+                           Real _imaging_ratio, const SquareMatrix<3> _xyz_from_sensor_rgb) {
         r_bar = _r_bar;
         g_bar = _g_bar;
         b_bar = _b_bar;
@@ -18,7 +18,7 @@ class PixelSensor {
 
     PBRT_CPU_GPU void init_cie_1931(const Spectrum *const cie_xyz[3],
                                     const RGBColorSpace *output_color_space,
-                                    const Spectrum *sensor_illum, FloatType imaging_ratio) {
+                                    const Spectrum *sensor_illum, Real imaging_ratio) {
         xyz_from_sensor_rgb = SquareMatrix<3>::identity();
         if (sensor_illum) {
             auto source_white = sensor_illum->to_xyz(cie_xyz).xy();
@@ -46,5 +46,5 @@ class PixelSensor {
     const Spectrum *g_bar;
     const Spectrum *b_bar;
 
-    FloatType imaging_ratio;
+    Real imaging_ratio;
 };

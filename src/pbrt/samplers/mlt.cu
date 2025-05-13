@@ -11,20 +11,20 @@ void MLTSampler::ensure_ready(const int index) {
 
     // Reset $\VEC{X}_i$ if a large step took place in the meantime
     if (sample_i.last_modification_iteration < last_large_step_iteration) {
-        sample_i.value = rng.uniform<FloatType>();
+        sample_i.value = rng.uniform<Real>();
         sample_i.last_modification_iteration = last_large_step_iteration;
     }
 
     // Apply remaining sequence of mutations to _sample_
     sample_i.backup();
     if (large_step) {
-        sample_i.value = rng.uniform<FloatType>();
+        sample_i.value = rng.uniform<Real>();
     } else {
         const int64_t nSmall = current_iteration - sample_i.last_modification_iteration;
         // Apply _nSmall_ small step mutations to $\VEC{X}_i$
-        const FloatType effSigma = sigma * std::sqrt((FloatType)nSmall);
+        const Real effSigma = sigma * std::sqrt((Real)nSmall);
 
-        FloatType delta = sample_normal(rng.uniform<FloatType>(), 0, effSigma);
+        Real delta = sample_normal(rng.uniform<Real>(), 0, effSigma);
         if (is_inf(delta)) {
             // when random value is 1 or -1, delta evaluated to INF (because of erfinv())
             delta = 0;
@@ -34,7 +34,7 @@ void MLTSampler::ensure_ready(const int index) {
 
         sample_i.value += delta;
         sample_i.value -= std::floor(sample_i.value);
-        sample_i.value = clamp<FloatType>(sample_i.value, 0, OneMinusEpsilon);
+        sample_i.value = clamp<Real>(sample_i.value, 0, OneMinusEpsilon);
     }
 
     sample_i.last_modification_iteration = current_iteration;
@@ -43,7 +43,7 @@ void MLTSampler::ensure_ready(const int index) {
 PBRT_CPU_GPU
 void MLTSampler::start_iteration() {
     current_iteration++;
-    large_step = rng.uniform<FloatType>() < large_step_probability;
+    large_step = rng.uniform<Real>() < large_step_probability;
 }
 
 PBRT_CPU_GPU
@@ -71,7 +71,7 @@ void MLTSampler::start_stream(int index) {
 }
 
 PBRT_CPU_GPU
-FloatType MLTSampler::get_1d() {
+Real MLTSampler::get_1d() {
     const int index = get_next_index();
     ensure_ready(index);
     return samples[index].value;

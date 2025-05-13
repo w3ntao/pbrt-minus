@@ -10,7 +10,7 @@
 // TexCoord2D Definition
 struct TexCoord2D {
     Point2f st;
-    FloatType dsdx, dsdy, dtdx, dtdy;
+    Real dsdx, dsdy, dtdx, dtdy;
 };
 
 class CylindricalMapping {
@@ -29,7 +29,7 @@ class CylindricalMapping {
 
         Point3f pt = textureFromRender(ctx.p);
         // Compute texture coordinate differentials for cylinder $(u,v)$ mapping
-        FloatType x2y2 = sqr(pt.x) + sqr(pt.y);
+        Real x2y2 = sqr(pt.x) + sqr(pt.y);
         Vector3f dsdp = Vector3f(-pt.y, pt.x, 0) / (2 * PI * x2y2), dtdp = Vector3f(0, 0, 1);
 
         auto dpdx = textureFromRender(ctx.dpdx);
@@ -51,7 +51,7 @@ class CylindricalMapping {
 class PlanarMapping {
   public:
     static const PlanarMapping *create(const Transform &texture_from_render, const Vector3f &vs,
-                                       const Vector3f &vt, FloatType ds, FloatType dt,
+                                       const Vector3f &vt, Real ds, Real dt,
                                        GPUMemoryAllocator &allocator) {
         auto planar_mapping = allocator.allocate<PlanarMapping>();
         planar_mapping->textureFromRender = texture_from_render;
@@ -85,7 +85,7 @@ class PlanarMapping {
   private:
     Transform textureFromRender;
     Vector3f vs, vt;
-    FloatType ds, dt;
+    Real ds, dt;
 };
 
 class SphericalMapping {
@@ -108,8 +108,8 @@ class SphericalMapping {
         const auto InvPi = 1.0 / PI;
         const auto Inv2Pi = 0.5 / PI;
 
-        FloatType x2y2 = sqr(pt.x) + sqr(pt.y);
-        FloatType sqrtx2y2 = std::sqrt(x2y2);
+        Real x2y2 = sqr(pt.x) + sqr(pt.y);
+        Real sqrtx2y2 = std::sqrt(x2y2);
         Vector3f dsdp = Vector3f(-pt.y, pt.x, 0) / (2 * PI * x2y2);
         Vector3f dtdp = 1 / (PI * (x2y2 + sqr(pt.z))) *
                         Vector3f(pt.x * pt.z / sqrtx2y2, pt.y * pt.z / sqrtx2y2, -sqrtx2y2);
@@ -117,10 +117,10 @@ class SphericalMapping {
         // Compute texture coordinate differentials for spherical mapping
         Vector3f dpdx = textureFromRender(ctx.dpdx);
         Vector3f dpdy = textureFromRender(ctx.dpdy);
-        FloatType dsdx = dsdp.dot(dpdx);
-        FloatType dsdy = dsdp.dot(dpdy);
-        FloatType dtdx = dtdp.dot(dpdx);
-        FloatType dtdy = dtdp.dot(dpdy);
+        Real dsdx = dsdp.dot(dpdx);
+        Real dsdy = dsdp.dot(dpdy);
+        Real dtdx = dtdp.dot(dpdx);
+        Real dtdy = dtdp.dot(dpdy);
 
         // Return $(s,t)$ texture coordinates and differentials based on spherical mapping
         auto vec = (pt - Point3f(0, 0, 0)).normalize();
@@ -136,7 +136,7 @@ class SphericalMapping {
 
 class UVMapping {
   public:
-    static const UVMapping *create(FloatType su, FloatType sv, FloatType du, FloatType dv,
+    static const UVMapping *create(Real su, Real sv, Real du, Real dv,
                                    GPUMemoryAllocator &allocator) {
         auto uv_mapping = allocator.allocate<UVMapping>();
         uv_mapping->init(su, sv, du, dv);
@@ -147,19 +147,19 @@ class UVMapping {
     PBRT_CPU_GPU
     TexCoord2D map(const TextureEvalContext &ctx) const {
         // Compute texture differentials for 2D $(u,v)$ mapping
-        FloatType dsdx = su * ctx.dudx;
-        FloatType dsdy = su * ctx.dudy;
-        FloatType dtdx = sv * ctx.dvdx;
-        FloatType dtdy = sv * ctx.dvdy;
+        Real dsdx = su * ctx.dudx;
+        Real dsdy = su * ctx.dudy;
+        Real dtdx = sv * ctx.dvdx;
+        Real dtdy = sv * ctx.dvdy;
 
         Point2f st(su * ctx.uv[0] + du, sv * ctx.uv[1] + dv);
         return TexCoord2D{st, dsdx, dsdy, dtdx, dtdy};
     }
 
   private:
-    FloatType su, sv, du, dv;
+    Real su, sv, du, dv;
 
-    void init(FloatType _su, FloatType _sv, FloatType _du, FloatType _dv) {
+    void init(Real _su, Real _sv, Real _du, Real _dv) {
         su = _su;
         sv = _sv;
         du = _du;

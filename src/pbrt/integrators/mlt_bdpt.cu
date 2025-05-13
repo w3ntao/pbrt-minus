@@ -16,13 +16,13 @@ constexpr size_t NUM_BOOT_STRAP = 1000000;
 
 struct MLTSample {
     BDPTPathSample path_sample;
-    FloatType weight;
-    FloatType sampling_density;
+    Real weight;
+    Real sampling_density;
 
     PBRT_CPU_GPU
     MLTSample(const Point2f &p_film, const SampledSpectrum &_radiance,
-              const SampledWavelengths &_lambda, const FloatType _weight,
-              const FloatType _sampling_density)
+              const SampledWavelengths &_lambda, const Real _weight,
+              const Real _sampling_density)
         : path_sample(BDPTPathSample(p_film, _radiance, _lambda)), weight(_weight),
           sampling_density(_sampling_density) {}
 };
@@ -221,7 +221,7 @@ __global__ void wavefront_render(MLTSample *mlt_samples, BDPTPathSample *path_sa
         mlt_samples[sample_idx + offset].sampling_density = 0;
     }
 
-    FloatType accept_prob = NAN;
+    Real accept_prob = NAN;
     if (current_c == 0 && proposed_c == 0) {
         accept_prob = 0.5;
 
@@ -235,10 +235,10 @@ __global__ void wavefront_render(MLTSample *mlt_samples, BDPTPathSample *path_sa
         mlt_samples[sample_idx] = MLTSample(current_path->p_film, current_path->radiance,
                                             current_path->lambda, 1.0 / current_c, 1);
     } else {
-        accept_prob = std::min<FloatType>(1.0, proposed_c / current_c);
+        accept_prob = std::min<Real>(1.0, proposed_c / current_c);
 
-        const FloatType proposed_path_weight = accept_prob / proposed_c;
-        const FloatType current_path_weight = (1 - accept_prob) / current_c;
+        const Real proposed_path_weight = accept_prob / proposed_c;
+        const Real current_path_weight = (1 - accept_prob) / current_c;
 
         mlt_samples[sample_idx + 0] =
             MLTSample(current_path->p_film, current_path->radiance, current_path->lambda,
@@ -248,7 +248,7 @@ __global__ void wavefront_render(MLTSample *mlt_samples, BDPTPathSample *path_sa
                       proposed_path_weight, accept_prob);
     }
 
-    if (rng->uniform<FloatType>() < accept_prob) {
+    if (rng->uniform<Real>() < accept_prob) {
         *current_path = proposed_path;
         mlt_sampler->accept();
 
@@ -285,7 +285,7 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, uint mutat
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     const auto brightness =
-        FloatType(config->max_depth + 1) / (num_bootstrap_paths * repeat) *
+        Real(config->max_depth + 1) / (num_bootstrap_paths * repeat) *
         std::accumulate(luminance_per_path, luminance_per_path + num_bootstrap_paths, 0.);
 
     if (brightness <= 0 || std::isnan(brightness) || std::isinf(brightness)) {
@@ -359,7 +359,7 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, uint mutat
             film->copy_to_frame_buffer(gl_helper.gpu_frame_buffer,
                                        brightness / mutations_per_pixel);
 
-            gl_helper.draw_frame(GLHelper::assemble_title(FloatType(pass + 1) / total_pass));
+            gl_helper.draw_frame(GLHelper::assemble_title(Real(pass + 1) / total_pass));
         }
     }
 

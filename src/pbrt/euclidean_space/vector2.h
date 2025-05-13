@@ -50,10 +50,10 @@ class Vector2 {
     }
 
     PBRT_CPU_GPU
-    FloatType length_squared() const {
+    Real length_squared() const {
         return x * x + y * y;
     }
 };
 
-using Vector2f = Vector2<FloatType>;
+using Vector2f = Vector2<Real>;
 using Vector2i = Vector2<int>;

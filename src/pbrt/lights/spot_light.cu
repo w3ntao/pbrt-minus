@@ -42,8 +42,8 @@ SpotLight *SpotLight::create(const Transform &renderFromLight,
     return spot_light;
 }
 
-void SpotLight::init(const Transform &renderFromLight, const Spectrum *Iemit, FloatType _scale,
-                     FloatType totalWidth, FloatType falloffStart) {
+void SpotLight::init(const Transform &renderFromLight, const Spectrum *Iemit, Real _scale,
+                     Real totalWidth, Real falloffStart) {
     this->light_type = LightType::delta_position;
     this->render_from_light = renderFromLight;
 
@@ -83,13 +83,13 @@ PBRT_CPU_GPU
 pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point2f u2,
                                                    SampledWavelengths &lambda) const {
     // Choose whether to sample spotlight center cone or falloff region
-    FloatType p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};
-    FloatType sectionPDF;
+    Real p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};
+    Real sectionPDF;
     int section = sample_discrete(p, 2, u2[0], &sectionPDF);
 
     // Sample chosen region of spotlight cone
     Vector3f wLight;
-    FloatType pdfDir;
+    Real pdfDir;
     if (section == 0) {
         // Sample spotlight center cone
         wLight = SampleUniformCone(u1, cosFalloffStart);
@@ -97,10 +97,10 @@ pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point
 
     } else {
         // Sample spotlight falloff region
-        FloatType cosTheta = SampleSmoothStep(u1[0], cosFalloffEnd, cosFalloffStart);
+        Real cosTheta = SampleSmoothStep(u1[0], cosFalloffEnd, cosFalloffStart);
 
-        FloatType sinTheta = safe_sqrt(1 - sqr(cosTheta));
-        FloatType phi = u1[1] * 2 * compute_pi();
+        Real sinTheta = safe_sqrt(1 - sqr(cosTheta));
+        Real phi = u1[1] * 2 * compute_pi();
         wLight = SphericalDirection(sinTheta, cosTheta, phi);
         pdfDir = SmoothStepPDF(cosTheta, cosFalloffEnd, cosFalloffStart) * sectionPDF /
                  (2 * compute_pi());
@@ -113,11 +113,11 @@ pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point
 }
 
 PBRT_CPU_GPU
-void SpotLight::pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const {
-    FloatType p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};
+void SpotLight::pdf_le(const Ray &ray, Real *pdfPos, Real *pdfDir) const {
+    Real p[2] = {1 - cosFalloffStart, (cosFalloffStart - cosFalloffEnd) / 2};
     *pdfPos = 0;
     // Find spotlight directional PDF based on $\cos \theta$
-    FloatType cosTheta = render_from_light.apply_inverse(ray.d).cos_theta();
+    Real cosTheta = render_from_light.apply_inverse(ray.d).cos_theta();
     if (cosTheta >= cosFalloffStart) {
         *pdfDir = UniformConePDF(cosFalloffStart) * p[0] / (p[0] + p[1]);
     } else {
@@ -127,7 +127,7 @@ void SpotLight::pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) con
 }
 
 PBRT_CPU_GPU
-FloatType SpotLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+Real SpotLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                             bool allow_incomplete_pdf) const {
     return 0.0;
 }

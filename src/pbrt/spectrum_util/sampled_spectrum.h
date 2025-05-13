@@ -17,7 +17,7 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    SampledSpectrum(const FloatType val) {
+    SampledSpectrum(const Real val) {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             values[idx] = val;
         }
@@ -45,7 +45,7 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    SampledSpectrum clamp(FloatType low, FloatType high) const {
+    SampledSpectrum clamp(Real low, Real high) const {
         SampledSpectrum result;
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             result[idx] = ::clamp(values[idx], low, high);
@@ -55,15 +55,15 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    FloatType y(const SampledWavelengths &lambda, const Spectrum *cie_y) const;
+    Real y(const SampledWavelengths &lambda, const Spectrum *cie_y) const;
 
     PBRT_CPU_GPU
-    FloatType operator[](uint8_t i) const {
+    Real operator[](uint8_t i) const {
         return values[i];
     }
 
     PBRT_CPU_GPU
-    FloatType &operator[](uint8_t i) {
+    Real &operator[](uint8_t i) {
         return values[i];
     }
 
@@ -108,7 +108,7 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    SampledSpectrum operator*(FloatType a) const {
+    SampledSpectrum operator*(Real a) const {
         SampledSpectrum product;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             product[i] = values[i] * a;
@@ -118,7 +118,7 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    friend SampledSpectrum operator*(FloatType a, const SampledSpectrum &s) {
+    friend SampledSpectrum operator*(Real a, const SampledSpectrum &s) {
         return s * a;
     }
 
@@ -128,7 +128,7 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    void operator*=(FloatType a) {
+    void operator*=(Real a) {
         *this = *this * a;
     }
 
@@ -143,7 +143,7 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    SampledSpectrum operator/(FloatType a) const {
+    SampledSpectrum operator/(Real a) const {
         SampledSpectrum quotient;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = values[i] / a;
@@ -158,7 +158,7 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    void operator/=(FloatType a) {
+    void operator/=(Real a) {
         *this = *this / a;
     }
 
@@ -201,8 +201,8 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    FloatType min_component_value() const {
-        FloatType m = values[0];
+    Real min_component_value() const {
+        Real m = values[0];
         for (uint i = 1; i < NSpectrumSamples; ++i) {
             m = std::min(m, values[i]);
         }
@@ -211,8 +211,8 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    FloatType max_component_value() const {
-        FloatType m = values[0];
+    Real max_component_value() const {
+        Real m = values[0];
         for (uint i = 1; i < NSpectrumSamples; ++i) {
             m = std::max(m, values[i]);
         }
@@ -220,8 +220,8 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
-    FloatType average() const {
-        FloatType sum = 0;
+    Real average() const {
+        Real sum = 0;
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             sum += values[i];
         }
@@ -247,5 +247,5 @@ class SampledSpectrum {
     }
 
   private:
-    FloatType values[NSpectrumSamples];
+    Real values[NSpectrumSamples];
 };

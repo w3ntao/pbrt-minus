@@ -69,7 +69,7 @@ pbrt::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleConte
 }
 
 PBRT_CPU_GPU
-FloatType DiffuseAreaLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+Real DiffuseAreaLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                                    bool allow_incomplete_pdf) const {
     // allow_incomplete_pdf = false
     ShapeSampleContext shapeCtx(ctx.pi, ctx.n, ctx.ns);
@@ -87,7 +87,7 @@ pbrt::optional<LightLeSample> DiffuseAreaLight::sample_le(Point2f u1, Point2f u2
 
     // Sample a cosine-weighted outgoing direction _w_ for area light
     Vector3f w;
-    FloatType pdfDir;
+    Real pdfDir;
 
     if (this->two_sided) {
         // Choose side of surface and sample cosine-weighted outgoing direction
@@ -121,8 +121,8 @@ pbrt::optional<LightLeSample> DiffuseAreaLight::sample_le(Point2f u1, Point2f u2
 }
 
 PBRT_CPU_GPU
-void DiffuseAreaLight::pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos,
-                              FloatType *pdfDir) const {
+void DiffuseAreaLight::pdf_le(const Interaction &intr, Vector3f w, Real *pdfPos,
+                              Real *pdfDir) const {
     *pdfPos = shape->pdf(intr);
     *pdfDir = this->two_sided ? (cosine_hemisphere_pdf(intr.n.abs_dot(w)) / 2)
                               : cosine_hemisphere_pdf(intr.n.dot(w));

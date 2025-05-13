@@ -44,17 +44,17 @@ struct LightBase {
 
 struct SampledLight {
     const Light *light;
-    FloatType p;
+    Real p;
 };
 
 struct LightLiSample {
     SampledSpectrum l;
     Vector3f wi;
-    FloatType pdf;
+    Real pdf;
     Interaction p_light;
 
     PBRT_CPU_GPU
-    LightLiSample(SampledSpectrum _l, Vector3f _wi, FloatType _pdf, Interaction _p_light)
+    LightLiSample(SampledSpectrum _l, Vector3f _wi, Real _pdf, Interaction _p_light)
         : l(_l), wi(_wi), pdf(_pdf), p_light(_p_light) {}
 };
 
@@ -85,11 +85,11 @@ struct LightLeSample {
     LightLeSample() : pdfPos(0), pdfDir(0) {}
 
     PBRT_CPU_GPU
-    LightLeSample(const SampledSpectrum &L, const Ray &ray, FloatType pdfPos, FloatType pdfDir)
+    LightLeSample(const SampledSpectrum &L, const Ray &ray, Real pdfPos, Real pdfDir)
         : L(L), ray(ray), pdfPos(pdfPos), pdfDir(pdfDir) {}
     PBRT_CPU_GPU
     LightLeSample(const SampledSpectrum &_L, const Ray &_ray, const Interaction &_intr,
-                  FloatType _pdfPos, FloatType _pdfDir)
+                  Real _pdfPos, Real _pdfDir)
         : L(_L), ray(_ray), intr(_intr), pdfPos(_pdfPos), pdfDir(_pdfDir) {
         if (DEBUG_MODE && this->intr->n != Normal3f(0, 0, 0)) {
             REPORT_FATAL_ERROR();
@@ -97,15 +97,15 @@ struct LightLeSample {
     }
 
     PBRT_CPU_GPU
-    FloatType abs_cos_theta(const Vector3f w) const {
+    Real abs_cos_theta(const Vector3f w) const {
         return intr ? intr->n.abs_dot(w) : 1;
     }
 
     SampledSpectrum L;
     Ray ray;
     pbrt::optional<Interaction> intr;
-    FloatType pdfPos;
-    FloatType pdfDir;
+    Real pdfPos;
+    Real pdfDir;
 };
 
 class Light {
@@ -160,19 +160,19 @@ class Light {
                                             SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+    Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf = false) const;
 
     PBRT_CPU_GPU
-    void pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos, FloatType *pdfDir) const;
+    void pdf_le(const Interaction &intr, Vector3f w, Real *pdfPos, Real *pdfDir) const;
 
     PBRT_CPU_GPU
-    void pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
+    void pdf_le(const Ray &ray, Real *pdfPos, Real *pdfDir) const;
 
     PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
-    void preprocess(const Bounds3<FloatType> &scene_bounds);
+    void preprocess(const Bounds3<Real> &scene_bounds);
 
     Type type;
 

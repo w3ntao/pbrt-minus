@@ -61,10 +61,10 @@ struct CameraTransform {
 // CameraSample Definition
 struct CameraSample {
     Point2f p_film;
-    FloatType filter_weight;
+    Real filter_weight;
 
     PBRT_CPU_GPU
-    CameraSample(const Point2f _p_film, FloatType _filter_weight)
+    CameraSample(const Point2f _p_film, Real _filter_weight)
         : p_film(_p_film), filter_weight(_filter_weight) {}
 };
 
@@ -73,13 +73,13 @@ struct CameraWiSample {
     // CameraWiSample Public Methods
     CameraWiSample() = default;
     PBRT_CPU_GPU
-    CameraWiSample(const SampledSpectrum &Wi, const Vector3f &wi, FloatType pdf, Point2f pRaster,
+    CameraWiSample(const SampledSpectrum &Wi, const Vector3f &wi, Real pdf, Point2f pRaster,
                    const Interaction &pRef, const Interaction &pLens)
         : Wi(Wi), wi(wi), pdf(pdf), pRaster(pRaster), pRef(pRef), pLens(pLens) {}
 
     SampledSpectrum Wi;
     Vector3f wi;
-    FloatType pdf;
+    Real pdf;
     Point2f pRaster;
     Interaction pRef, pLens;
 };
@@ -121,21 +121,21 @@ struct CameraBase {
 
         Normal3f nDownZ =
             Normal3f(DownZFromCamera(camera_transform.camera_from_render(n.to_vector3())));
-        FloatType d = nDownZ.z * pDownZ.z;
+        Real d = nDownZ.z * pDownZ.z;
 
         // Find intersection points for approximated camera differential rays
         Ray xRay(Point3f(0, 0, 0) + minPosDifferentialX, Vector3f(0, 0, 1) + minDirDifferentialX);
 
-        FloatType tx = -(nDownZ.dot(xRay.o.to_vector3()) - d) / nDownZ.dot(xRay.d);
+        Real tx = -(nDownZ.dot(xRay.o.to_vector3()) - d) / nDownZ.dot(xRay.d);
         Ray yRay(Point3f(0, 0, 0) + minPosDifferentialY, Vector3f(0, 0, 1) + minDirDifferentialY);
 
-        FloatType ty = -(nDownZ.dot(yRay.o.to_vector3()) - d) / nDownZ.dot(yRay.d);
+        Real ty = -(nDownZ.dot(yRay.o.to_vector3()) - d) / nDownZ.dot(yRay.d);
         Point3f px = xRay.at(tx);
         Point3f py = yRay.at(ty);
 
         // Estimate $\dpdx$ and $\dpdy$ in tangent plane at intersection point
-        FloatType sppScale =
-            std::max<FloatType>(0.125, 1.0 / std::sqrt((FloatType)samples_per_pixel));
+        Real sppScale =
+            std::max<Real>(0.125, 1.0 / std::sqrt((Real)samples_per_pixel));
 
         *dpdx = sppScale *
                 camera_transform.render_from_camera(DownZFromCamera.apply_inverse(px - pDownZ));
@@ -171,7 +171,7 @@ class Camera {
     }
 
     PBRT_CPU_GPU
-    void pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const;
+    void pdf_we(const Ray &ray, Real *pdfPos, Real *pdfDir) const;
 
     PBRT_CPU_GPU
     pbrt::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,

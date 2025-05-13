@@ -3,7 +3,7 @@
 #include <pbrt/spectrum_util/sampled_wavelengths.h>
 
 PBRT_CPU_GPU
-FloatType SampledSpectrum::y(const SampledWavelengths &lambda, const Spectrum *cie_y) const {
+Real SampledSpectrum::y(const SampledWavelengths &lambda, const Spectrum *cie_y) const {
     auto ys = cie_y->sample(lambda);
     auto pdf = lambda.pdf_as_sampled_spectrum();
 

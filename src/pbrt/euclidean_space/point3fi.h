@@ -19,7 +19,7 @@ class Point3fi : public Point3<Interval> {
     Point3fi(Interval x, Interval y, Interval z) : Point3<Interval>(x, y, z) {}
 
     PBRT_CPU_GPU
-    Point3fi(FloatType x, FloatType y, FloatType z)
+    Point3fi(Real x, Real y, Real z)
         : Point3<Interval>(Interval(x), Interval(y), Interval(z)) {}
 
     PBRT_CPU_GPU
@@ -64,7 +64,7 @@ class Point3fi : public Point3<Interval> {
         return {x - v.x, y - v.y, z - v.z};
     }
 
-    PBRT_CPU_GPU Point3fi operator/(FloatType divisor) const {
+    PBRT_CPU_GPU Point3fi operator/(Real divisor) const {
         return {x / divisor, y / divisor, z / divisor};
     }
 };

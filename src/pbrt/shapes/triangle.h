@@ -13,16 +13,16 @@ struct ShapeIntersection;
 class Triangle {
   public:
     struct TriangleIntersection {
-        FloatType b0, b1, b2;
-        FloatType t;
+        Real b0, b1, b2;
+        Real t;
 
         PBRT_CPU_GPU
-        TriangleIntersection(FloatType _b0, FloatType _b1, FloatType _b2, FloatType _t)
+        TriangleIntersection(Real _b0, Real _b1, Real _b2, Real _t)
             : b0(_b0), b1(_b1), b2(_b2), t(_t) {}
     };
 
     PBRT_CPU_GPU
-    static FloatType spherical_triangle_area(const Vector3f a, const Vector3f b, const Vector3f c) {
+    static Real spherical_triangle_area(const Vector3f a, const Vector3f b, const Vector3f c) {
         return std::abs(2.0 * std::atan2(a.dot(b.cross(c)), 1 + a.dot(b) + a.dot(c) + b.dot(c)));
     }
 
@@ -41,7 +41,7 @@ class Triangle {
     }
 
     PBRT_CPU_GPU
-    FloatType area() const {
+    Real area() const {
         Point3f p[3];
         get_points(p);
 
@@ -49,7 +49,7 @@ class Triangle {
     }
 
     PBRT_CPU_GPU
-    bool fast_intersect(const Ray &ray, FloatType t_max) const {
+    bool fast_intersect(const Ray &ray, Real t_max) const {
         Point3f points[3];
         get_points(points);
 
@@ -57,13 +57,13 @@ class Triangle {
     }
 
     PBRT_CPU_GPU
-    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, Real t_max) const;
 
     PBRT_CPU_GPU
-    FloatType pdf(const Interaction &in) const;
+    Real pdf(const Interaction &in) const;
 
     PBRT_CPU_GPU
-    FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
+    Real pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
     PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(Point2f u) const;
@@ -74,8 +74,8 @@ class Triangle {
   private:
     int triangle_idx;
     const TriangleMesh *mesh;
-    static constexpr FloatType MinSphericalSampleArea = 3e-4;
-    static constexpr FloatType MaxSphericalSampleArea = 6.22;
+    static constexpr Real MinSphericalSampleArea = 3e-4;
+    static constexpr Real MaxSphericalSampleArea = 6.22;
 
     PBRT_CPU_GPU
     void get_points(Point3f p[3]) const {
@@ -86,7 +86,7 @@ class Triangle {
     }
 
     PBRT_CPU_GPU
-    FloatType solid_angle(const Point3f p) const {
+    Real solid_angle(const Point3f p) const {
         // Get triangle vertices in _p0_, _p1_, and _p2_
         Point3f points[3];
         get_points(points);
@@ -97,7 +97,7 @@ class Triangle {
 
     PBRT_CPU_GPU
     pbrt::optional<Triangle::TriangleIntersection>
-    intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0, const Point3f &p1,
+    intersect_triangle(const Ray &ray, Real t_max, const Point3f &p0, const Point3f &p1,
                        const Point3f &p2) const;
 
     PBRT_CPU_GPU

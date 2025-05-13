@@ -5,9 +5,9 @@
 #include <pbrt/util/scattering.h>
 
 struct PhaseFunctionSample {
-    FloatType p;
+    Real p;
     Vector3f wi;
-    FloatType pdf;
+    Real pdf;
 };
 
 class HGPhaseFunction {
@@ -16,25 +16,25 @@ class HGPhaseFunction {
     HGPhaseFunction() {}
 
     PBRT_CPU_GPU
-    HGPhaseFunction(FloatType g) : g(g) {}
+    HGPhaseFunction(Real g) : g(g) {}
 
     PBRT_CPU_GPU
-    FloatType p(const Vector3f wo, const Vector3f wi) const {
+    Real p(const Vector3f wo, const Vector3f wi) const {
         return HenyeyGreenstein(wo.dot(wi), g);
     }
 
     PBRT_CPU_GPU
     pbrt::optional<PhaseFunctionSample> sample_p(Vector3f wo, Point2f u) const {
-        FloatType pdf;
+        Real pdf;
         Vector3f wi = SampleHenyeyGreenstein(wo, g, u, &pdf);
         return PhaseFunctionSample{pdf, wi, pdf};
     }
 
     PBRT_CPU_GPU
-    FloatType pdf(Vector3f wo, Vector3f wi) const {
+    Real pdf(Vector3f wo, Vector3f wi) const {
         return p(wo, wi);
     }
 
   private:
-    FloatType g;
+    Real g;
 };

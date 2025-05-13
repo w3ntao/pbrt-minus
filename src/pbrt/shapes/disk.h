@@ -16,7 +16,7 @@ class Disk {
                               const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    FloatType area() const {
+    Real area() const {
         return 0.5 * phi_max * (sqr(radius) - sqr(inner_radius));
     }
 
@@ -27,12 +27,12 @@ class Disk {
     }
 
     PBRT_CPU_GPU
-    bool fast_intersect(const Ray &ray, FloatType t_max = Infinity) const {
+    bool fast_intersect(const Ray &ray, Real t_max = Infinity) const {
         return basic_intersect(ray, t_max).has_value();
     }
 
     PBRT_CPU_GPU
-    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max = Infinity) const {
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, Real t_max = Infinity) const {
         auto isect = basic_intersect(ray, t_max);
         if (!isect) {
             return {};
@@ -43,7 +43,7 @@ class Disk {
     }
 
     PBRT_CPU_GPU
-    FloatType pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
+    Real pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
     PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(const Point2f &u) const;
@@ -58,13 +58,13 @@ class Disk {
     bool reverse_orientation;
     bool transform_wwapsHandedness;
 
-    FloatType height;
-    FloatType radius;
-    FloatType inner_radius;
-    FloatType phi_max;
+    Real height;
+    Real radius;
+    Real inner_radius;
+    Real phi_max;
 
     PBRT_CPU_GPU
-    pbrt::optional<QuadricIntersection> basic_intersect(const Ray &r, FloatType tMax) const;
+    pbrt::optional<QuadricIntersection> basic_intersect(const Ray &r, Real tMax) const;
 
     PBRT_CPU_GPU
     SurfaceInteraction interaction_from_intersection(const QuadricIntersection &isect,

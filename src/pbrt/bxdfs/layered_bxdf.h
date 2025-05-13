@@ -14,10 +14,10 @@ class LayeredBxDF {
     LayeredBxDF(){};
 
     PBRT_CPU_GPU
-    LayeredBxDF(TopBxDF top, BottomBxDF bottom, FloatType thickness, const SampledSpectrum &albedo,
-                FloatType g, int maxDepth, int nSamples)
+    LayeredBxDF(TopBxDF top, BottomBxDF bottom, Real thickness, const SampledSpectrum &albedo,
+                Real g, int maxDepth, int nSamples)
         : top(top), bottom(bottom),
-          thickness(std::max(thickness, std::numeric_limits<FloatType>::min())), g(g),
+          thickness(std::max(thickness, std::numeric_limits<Real>::min())), g(g),
           albedo(albedo), maxDepth(maxDepth), nSamples(nSamples) {}
 
     PBRT_CPU_GPU
@@ -78,7 +78,7 @@ class LayeredBxDF {
             nonExitInterface = &bottom;
         }
 
-        FloatType exitZ = (wo.same_hemisphere(wi) ^ enteredTop) ? 0 : thickness;
+        Real exitZ = (wo.same_hemisphere(wi) ^ enteredTop) ? 0 : thickness;
 
         // Account for reflection at the entrance interface
         if (wo.same_hemisphere(wi)) {
@@ -87,13 +87,13 @@ class LayeredBxDF {
 
         RNG rng(pbrt::hash(wo), pbrt::hash(wi));
         auto r = [&rng]() {
-            return std::min<FloatType>(rng.uniform<FloatType>(), OneMinusEpsilon);
+            return std::min<Real>(rng.uniform<Real>(), OneMinusEpsilon);
         };
 
         for (int s = 0; s < nSamples; ++s) {
             // Sample random walk through layers to estimate BSDF value
             // Sample transmission direction through entrance interface
-            FloatType uc = r();
+            Real uc = r();
             auto wos = enterInterface.sample_f(wo, uc, Point2f(r(), r()), mode,
                                                BxDFReflTransFlags::Transmission);
             if (!wos || !wos->f.is_positive() || wos->pdf == 0 || wos->wi.z == 0) {
@@ -114,7 +114,7 @@ class LayeredBxDF {
 
             SampledSpectrum beta = wos->f * wos->wi.abs_cos_theta() / wos->pdf;
 
-            FloatType z = enteredTop ? thickness : 0;
+            Real z = enteredTop ? thickness : 0;
             Vector3f w = wos->wi;
 
             HGPhaseFunction phase(g);
@@ -124,7 +124,7 @@ class LayeredBxDF {
 
                 // Possibly terminate layered BSDF random walk with Russian roulette
                 if (depth > 3 && beta.max_component_value() < 0.25f) {
-                    FloatType q = std::max<FloatType>(0, 1 - beta.max_component_value());
+                    Real q = std::max<Real>(0, 1 - beta.max_component_value());
                     if (r() < q)
                         break;
                     beta /= 1 - q;
@@ -137,9 +137,9 @@ class LayeredBxDF {
                     beta *= Tr(thickness, w);
                 } else {
                     // Sample medium scattering for layered BSDF evaluation
-                    FloatType sigma_t = 1;
-                    FloatType dz = SampleExponential(r(), sigma_t / std::abs(w.z));
-                    FloatType zp = w.z > 0 ? (z + dz) : (z - dz);
+                    Real sigma_t = 1;
+                    Real dz = SampleExponential(r(), sigma_t / std::abs(w.z));
+                    Real zp = w.z > 0 ? (z + dz) : (z - dz);
 
                     if (z == zp) {
                         continue;
@@ -148,7 +148,7 @@ class LayeredBxDF {
                     if (0 < zp && zp < thickness) {
                         // Handle scattering event in layered BSDF medium
                         // Account for scattering through _exitInterface_ using _wis_
-                        FloatType wt = 1;
+                        Real wt = 1;
                         if (!pbrt::is_specular(exitInterface.flags())) {
                             wt = power_heuristic(1, wis->pdf, 1, phase.pdf(-w, -wis->wi));
                         }
@@ -173,22 +173,22 @@ class LayeredBxDF {
                             // Account for scattering through _exitInterface_
                             SampledSpectrum fExit = exitInterface.f(-w, wi, mode);
                             if (fExit.is_positive()) {
-                                FloatType exitPDF = exitInterface.pdf(
+                                Real exitPDF = exitInterface.pdf(
                                     -w, wi, mode, BxDFReflTransFlags::Transmission);
-                                FloatType wt = power_heuristic(1, ps->pdf, 1, exitPDF);
+                                Real wt = power_heuristic(1, ps->pdf, 1, exitPDF);
                                 f += beta * Tr(zp - exitZ, ps->wi) * fExit * wt;
                             }
                         }
 
                         continue;
                     }
-                    z = clamp<FloatType>(zp, 0, thickness);
+                    z = clamp<Real>(zp, 0, thickness);
                 }
 
                 // Account for scattering at appropriate interface
                 if (z == exitZ) {
                     // Account for reflection at _exitInterface_
-                    FloatType uc = r();
+                    Real uc = r();
                     pbrt::optional<BSDFSample> bs = exitInterface.sample_f(
                         -w, uc, Point2f(r(), r()), mode, BxDFReflTransFlags::Reflection);
                     if (!bs || !bs->f.is_positive() || bs->pdf == 0 || bs->wi.z == 0) {
@@ -202,7 +202,7 @@ class LayeredBxDF {
                     // Account for scattering at _nonExitInterface_
                     if (!pbrt::is_specular(nonExitInterface.flags())) {
                         // Add NEE contribution along presampled _wis_ direction
-                        FloatType wt = 1;
+                        Real wt = 1;
                         if (!pbrt::is_specular(exitInterface.flags())) {
                             wt = power_heuristic(1, wis->pdf, 1,
                                                  nonExitInterface.pdf(-w, -wis->wi, mode));
@@ -213,7 +213,7 @@ class LayeredBxDF {
                              wis->pdf;
                     }
                     // Sample new direction using BSDF at _nonExitInterface_
-                    FloatType uc = r();
+                    Real uc = r();
                     Point2f u(r(), r());
                     pbrt::optional<BSDFSample> bs =
                         nonExitInterface.sample_f(-w, uc, u, mode, BxDFReflTransFlags::Reflection);
@@ -228,9 +228,9 @@ class LayeredBxDF {
                         // Add NEE contribution along direction from BSDF sample
                         SampledSpectrum fExit = exitInterface.f(-w, wi, mode);
                         if (fExit.is_positive()) {
-                            FloatType wt = 1;
+                            Real wt = 1;
                             if (!pbrt::is_specular(nonExitInterface.flags())) {
-                                FloatType exitPDF = exitInterface.pdf(
+                                Real exitPDF = exitInterface.pdf(
                                     -w, wi, mode, BxDFReflTransFlags::Transmission);
                                 wt = power_heuristic(1, bs->pdf, 1, exitPDF);
                             }
@@ -246,7 +246,7 @@ class LayeredBxDF {
 
     PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
-    sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
+    sample_f(Vector3f wo, Real uc, Point2f u, TransportMode mode,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         // Set _wo_ for layered BSDF sampling
         bool flipWi = false;
@@ -276,21 +276,21 @@ class LayeredBxDF {
 
         RNG rng(pbrt::hash(wo), pbrt::hash(uc, u));
         auto r = [&rng]() {
-            return std::min<FloatType>(rng.uniform<FloatType>(), OneMinusEpsilon);
+            return std::min<Real>(rng.uniform<Real>(), OneMinusEpsilon);
         };
 
         // Declare common variables for layered BSDF sampling
         SampledSpectrum f = bs->f * bs->wi.abs_cos_theta();
-        FloatType pdf = bs->pdf;
-        FloatType z = enteredTop ? thickness : 0;
+        Real pdf = bs->pdf;
+        Real z = enteredTop ? thickness : 0;
         HGPhaseFunction phase(g);
 
         for (int depth = 0; depth < maxDepth; ++depth) {
             // Follow random walk through layers to sample layered BSDF
             // Possibly terminate layered BSDF sampling with Russian Roulette
-            FloatType rrBeta = f.max_component_value() / pdf;
+            Real rrBeta = f.max_component_value() / pdf;
             if (depth > 3 && rrBeta < 0.25f) {
-                FloatType q = std::max<FloatType>(0, 1 - rrBeta);
+                Real q = std::max<Real>(0, 1 - rrBeta);
                 if (r() < q) {
                     return {};
                 }
@@ -303,9 +303,9 @@ class LayeredBxDF {
 
             if (albedo.is_positive()) {
                 // Sample potential scattering event in layered medium
-                FloatType sigma_t = 1;
-                FloatType dz = SampleExponential(r(), sigma_t / w.abs_cos_theta());
-                FloatType zp = w.z > 0 ? (z + dz) : (z - dz);
+                Real sigma_t = 1;
+                Real dz = SampleExponential(r(), sigma_t / w.abs_cos_theta());
+                Real zp = w.z > 0 ? (z + dz) : (z - dz);
                 if (zp == z) {
                     return {};
                 }
@@ -327,7 +327,7 @@ class LayeredBxDF {
                     continue;
                 }
 
-                z = clamp<FloatType>(zp, 0, thickness);
+                z = clamp<Real>(zp, 0, thickness);
 
             } else {
                 // Advance to the other layer interface
@@ -346,7 +346,7 @@ class LayeredBxDF {
             }
 
             // Sample interface BSDF to determine new path direction
-            FloatType uc = r();
+            Real uc = r();
             Point2f u(r(), r());
             pbrt::optional<BSDFSample> bs = interface.sample_f(-w, uc, u, mode);
             if (!bs || !bs->f.is_positive() || bs->pdf == 0 || bs->wi.z == 0) {
@@ -378,7 +378,7 @@ class LayeredBxDF {
     }
 
     PBRT_CPU_GPU
-    FloatType pdf(Vector3f wo, Vector3f wi, TransportMode mode,
+    Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         // Set _wo_ and _wi_ for layered BSDF evaluation
         if (twoSided && wo.z < 0) {
@@ -389,12 +389,12 @@ class LayeredBxDF {
         // Declare _RNG_ for layered PDF evaluation
         RNG rng(pbrt::hash(wi), pbrt::hash(wo));
         auto r = [&rng]() {
-            return std::min<FloatType>(rng.uniform<FloatType>(), OneMinusEpsilon);
+            return std::min<Real>(rng.uniform<Real>(), OneMinusEpsilon);
         };
 
         // Update _pdfSum_ for reflection at the entrance layer
         bool enteredTop = twoSided || wo.z > 0;
-        FloatType pdfSum = 0;
+        Real pdfSum = 0;
         if (wo.same_hemisphere(wi)) {
             auto reflFlag = BxDFReflTransFlags::Reflection;
             pdfSum += enteredTop ? nSamples * top.pdf(wo, wi, mode, reflFlag)
@@ -434,11 +434,11 @@ class LayeredBxDF {
                             else {
                                 // Compute MIS-weighted estimate of Equation
                                 // (\ref{eq:pdf-triple-canceled-one})
-                                FloatType rPDF = rInterface.pdf(-wos->wi, -wis->wi, mode);
-                                FloatType wt = power_heuristic(1, wis->pdf, 1, rPDF);
+                                Real rPDF = rInterface.pdf(-wos->wi, -wis->wi, mode);
+                                Real wt = power_heuristic(1, wis->pdf, 1, rPDF);
                                 pdfSum += wt * rPDF;
 
-                                FloatType tPDF = tInterface.pdf(-rs->wi, wi, mode);
+                                Real tPDF = tInterface.pdf(-rs->wi, wi, mode);
                                 wt = power_heuristic(1, rs->pdf, 1, tPDF);
                                 pdfSum += wt * tPDF;
                             }
@@ -457,7 +457,7 @@ class LayeredBxDF {
                     tiInterface = &top;
                 }
 
-                FloatType uc = r();
+                Real uc = r();
                 Point2f u(r(), r());
                 pbrt::optional<BSDFSample> wos = toInterface.sample_f(wo, uc, u, mode);
                 if (!wos || !wos->f.is_positive() || wos->pdf == 0 || wos->wi.z == 0 ||
@@ -491,8 +491,8 @@ class LayeredBxDF {
   private:
     // LayeredBxDF Private Methods
     PBRT_CPU_GPU
-    static FloatType Tr(FloatType dz, Vector3f w) {
-        if (std::abs(dz) <= std::numeric_limits<FloatType>::min()) {
+    static Real Tr(Real dz, Vector3f w) {
+        if (std::abs(dz) <= std::numeric_limits<Real>::min()) {
             return 1;
         }
 
@@ -502,7 +502,7 @@ class LayeredBxDF {
     // LayeredBxDF Private Members
     TopBxDF top;
     BottomBxDF bottom;
-    FloatType thickness, g;
+    Real thickness, g;
     SampledSpectrum albedo;
     int maxDepth, nSamples;
 };

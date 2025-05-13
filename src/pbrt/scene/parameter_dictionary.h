@@ -75,8 +75,8 @@ class ParameterDictionary {
         return integers.at(key);
     }
 
-    FloatType get_float(const std::string &key,
-                        const std::optional<FloatType> default_val = std::nullopt) const {
+    Real get_float(const std::string &key,
+                        const std::optional<Real> default_val = std::nullopt) const {
         if (floats.find(key) == floats.end()) {
             if (default_val.has_value()) {
                 return default_val.value();
@@ -192,11 +192,11 @@ class ParameterDictionary {
     const FloatTexture *get_float_texture_or_null(const std::string &key,
                                                   GPUMemoryAllocator &allocator) const;
 
-    const FloatTexture *get_float_texture(const std::string &key, FloatType default_val,
+    const FloatTexture *get_float_texture(const std::string &key, Real default_val,
                                           GPUMemoryAllocator &allocator) const;
 
     const FloatTexture *get_float_texture_with_default_val(const std::string &key,
-                                                           FloatType default_val,
+                                                           Real default_val,
                                                            GPUMemoryAllocator &allocator) const;
 
     const SpectrumTexture *get_spectrum_texture(const std::string &key, SpectrumType spectrum_type,
@@ -305,10 +305,10 @@ class ParameterDictionary {
     std::map<std::string, std::vector<Normal3f>> normals;
     std::map<std::string, Vector3f> vector3s;
     std::map<std::string, std::vector<int>> integers;
-    std::map<std::string, std::vector<FloatType>> floats;
+    std::map<std::string, std::vector<Real>> floats;
     std::map<std::string, std::vector<std::string>> strings;
     std::map<std::string, RGB> rgbs;
-    std::map<std::string, FloatType> blackbodies;
+    std::map<std::string, Real> blackbodies;
 
     std::map<std::string, const Spectrum *> spectra;
     std::map<std::string, std::string> textures_name;

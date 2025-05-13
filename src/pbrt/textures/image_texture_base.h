@@ -11,7 +11,7 @@ class Transform;
 class ImageTextureBase {
   protected:
     const TextureMapping2D *texture_mapping;
-    FloatType scale;
+    Real scale;
     bool invert;
     const MIPMap *mipmap;
 

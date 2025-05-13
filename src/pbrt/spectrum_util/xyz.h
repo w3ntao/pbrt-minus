@@ -7,10 +7,10 @@
 class XYZ {
   public:
     PBRT_CPU_GPU
-    XYZ(FloatType _x, FloatType _y, FloatType _z) : x(_x), y(_y), z(_z) {}
+    XYZ(Real _x, Real _y, Real _z) : x(_x), y(_y), z(_z) {}
 
     PBRT_CPU_GPU
-    static XYZ from_xyY(const Point2f &xy, FloatType Y = 1) {
+    static XYZ from_xyY(const Point2f &xy, Real Y = 1) {
         if (xy.y == 0) {
             return {0, 0, 0};
         }
@@ -29,7 +29,7 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    FloatType operator[](uint8_t idx) const {
+    Real operator[](uint8_t idx) const {
         switch (idx) {
         case 0: {
             return x;
@@ -46,7 +46,7 @@ class XYZ {
         return NAN;
     }
     PBRT_CPU_GPU
-    FloatType &operator[](uint8_t idx) {
+    Real &operator[](uint8_t idx) {
         switch (idx) {
         case 0: {
             return x;
@@ -89,12 +89,12 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    XYZ operator*(FloatType a) const {
+    XYZ operator*(Real a) const {
         return {a * x, a * y, a * z};
     }
 
     PBRT_CPU_GPU
-    friend XYZ operator*(FloatType a, const XYZ &s) {
+    friend XYZ operator*(Real a, const XYZ &s) {
         return s * a;
     }
 
@@ -111,7 +111,7 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    void operator*=(FloatType a) {
+    void operator*=(Real a) {
         *this = *this * a;
     }
 
@@ -121,7 +121,7 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    XYZ operator/(FloatType a) const {
+    XYZ operator/(Real a) const {
         return {x / a, y / a, z / a};
     }
 
@@ -131,7 +131,7 @@ class XYZ {
     }
 
     PBRT_CPU_GPU
-    void operator/=(FloatType a) {
+    void operator/=(Real a) {
         *this = *this / a;
     }
 
@@ -146,7 +146,7 @@ class XYZ {
     }
 
     // XYZ Public Members
-    FloatType x;
-    FloatType y;
-    FloatType z;
+    Real x;
+    Real y;
+    Real z;
 };

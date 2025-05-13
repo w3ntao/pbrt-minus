@@ -48,7 +48,7 @@ struct FilmSample {
 
 struct BDPTSample {
     Point2i p_pixel;
-    FloatType weight;
+    Real weight;
     SampledSpectrum l_path;
     SampledWavelengths lambda;
 };
@@ -100,8 +100,8 @@ struct Vertex {
     BSDF bsdf;
 
     bool delta;
-    FloatType pdfFwd;
-    FloatType pdfRev;
+    Real pdfFwd;
+    Real pdfRev;
 
     PBRT_CPU_GPU
     Vertex() : type(VertexType::camera), beta(NAN), delta(false), pdfFwd(0), pdfRev(0) {}
@@ -140,7 +140,7 @@ struct Vertex {
 
     PBRT_CPU_GPU
     static Vertex create_light(const EndpointInteraction &ei, const SampledSpectrum &beta,
-                               FloatType pdf) {
+                               Real pdf) {
         Vertex v(VertexType::light, ei, beta);
         v.pdfFwd = pdf;
         return v;
@@ -148,7 +148,7 @@ struct Vertex {
 
     PBRT_CPU_GPU
     static Vertex create_light(const Light *light, const Interaction &intr,
-                               const SampledSpectrum &Le, FloatType pdf) {
+                               const SampledSpectrum &Le, Real pdf) {
         Vertex v(VertexType::light, EndpointInteraction(light, intr), Le);
         v.pdfFwd = pdf;
         return v;
@@ -156,7 +156,7 @@ struct Vertex {
 
     PBRT_CPU_GPU
     static Vertex create_light(const Light *light, const Ray &ray, const SampledSpectrum &Le,
-                               FloatType pdf) {
+                               Real pdf) {
         Vertex v(VertexType::light, EndpointInteraction(light, ray), Le);
         v.pdfFwd = pdf;
         return v;
@@ -164,7 +164,7 @@ struct Vertex {
 
     PBRT_CPU_GPU
     static Vertex create_surface(const SurfaceInteraction &si, const BSDF &bsdf,
-                                 const SampledSpectrum &beta, FloatType pdf, const Vertex &prev) {
+                                 const SampledSpectrum &beta, Real pdf, const Vertex &prev) {
         Vertex v(si, bsdf, beta);
         v.pdfFwd = prev.convert_density(pdf, v);
         return v;
@@ -263,7 +263,7 @@ struct Vertex {
     }
 
     PBRT_CPU_GPU
-    FloatType convert_density(FloatType pdf, const Vertex &next) const {
+    Real convert_density(Real pdf, const Vertex &next) const {
         // Return solid angle density if _next_ is an infinite area light
         if (next.is_infinite_light()) {
             return pdf;
@@ -274,7 +274,7 @@ struct Vertex {
             return 0;
         }
 
-        FloatType invDist2 = 1 / w.squared_length();
+        Real invDist2 = 1 / w.squared_length();
         if (next.is_on_surface()) {
             pdf *= next.ng().abs_dot(w * std::sqrt(invDist2));
         }
@@ -283,10 +283,10 @@ struct Vertex {
     }
 
     PBRT_CPU_GPU
-    FloatType pdf_light(const IntegratorBase *integrator_base, const Vertex &v) const;
+    Real pdf_light(const IntegratorBase *integrator_base, const Vertex &v) const;
 
     PBRT_CPU_GPU
-    FloatType pdf(const IntegratorBase *integrator_base, const Vertex *prev,
+    Real pdf(const IntegratorBase *integrator_base, const Vertex *prev,
                   const Vertex &next) const;
 
     PBRT_CPU_GPU
@@ -294,7 +294,7 @@ struct Vertex {
                        const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    FloatType pdf_light_origin(const Light **infinite_lights, int num_infinite_lights,
+    Real pdf_light_origin(const Light **infinite_lights, int num_infinite_lights,
                                const Vertex &v, const PowerLightSampler *lightSampler);
 };
 
@@ -319,7 +319,7 @@ class BDPTIntegrator {
     static SampledSpectrum connect_bdpt(SampledWavelengths &lambda, Vertex *lightVertices,
                                         Vertex *cameraVertices, int s, int t, Sampler *sampler,
                                         pbrt::optional<Point2f> *pRaster, const BDPTConfig *config,
-                                        FloatType *misWeightPtr = nullptr);
+                                        Real *misWeightPtr = nullptr);
 
     PBRT_GPU
     static SampledSpectrum li(FilmSample *film_samples, int *film_sample_counter, const Ray &ray,

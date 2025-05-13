@@ -8,14 +8,14 @@ class GPUMemoryAllocator;
 
 class AliasTable {
   public:
-    static const AliasTable *create(const std::vector<FloatType> &values,
+    static const AliasTable *create(const std::vector<Real> &values,
                                     GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    cuda::std::pair<uint, FloatType> sample(const FloatType u0) const;
+    cuda::std::pair<uint, Real> sample(const Real u0) const;
 
     struct Bin {
-        FloatType p;
+        Real p;
         int first_idx;
         int second_idx;
 
@@ -33,10 +33,10 @@ class AliasTable {
         Bin() : p(NAN), first_idx(-1), second_idx(-1) {}
 
         PBRT_CPU_GPU
-        Bin(const FloatType _p, const int a) : p(_p), first_idx(a), second_idx(-1) {}
+        Bin(const Real _p, const int a) : p(_p), first_idx(a), second_idx(-1) {}
     };
 
     const Bin *bins;
-    const FloatType *pdfs;
+    const Real *pdfs;
     uint size;
 };

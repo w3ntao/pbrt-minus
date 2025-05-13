@@ -57,10 +57,10 @@ class Primitive {
     void record_material(std::map<std::string, uint> &counter) const;
 
     PBRT_CPU_GPU
-    bool fast_intersect(const Ray &ray, FloatType t_max) const;
+    bool fast_intersect(const Ray &ray, Real t_max) const;
 
     PBRT_CPU_GPU
-    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, FloatType t_max) const;
+    pbrt::optional<ShapeIntersection> intersect(const Ray &ray, Real t_max) const;
 
   private:
     Type type;

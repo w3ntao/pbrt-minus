@@ -12,7 +12,7 @@ class RGBColorSpace;
 
 struct Pixel {
     RGB rgb_sum;
-    FloatType weight_sum;
+    Real weight_sum;
     RGB rgb_splat;
 
     PBRT_CPU_GPU
@@ -42,11 +42,11 @@ class RGBFilm {
 
     PBRT_CPU_GPU
     void add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
-                    const SampledWavelengths &lambda, FloatType weight);
+                    const SampledWavelengths &lambda, Real weight);
 
     PBRT_CPU_GPU
     void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
-                    const SampledWavelengths &lambda, FloatType weight) {
+                    const SampledWavelengths &lambda, Real weight) {
         int pixel_index = p_film.y * resolution.x + p_film.x;
 
         add_sample(pixel_index, radiance_l, lambda, weight);
@@ -56,7 +56,7 @@ class RGBFilm {
                    const SampledWavelengths &lambda);
 
     PBRT_CPU_GPU
-    RGB get_pixel_rgb(const Point2i p, FloatType splat_scale = 1) const;
+    RGB get_pixel_rgb(const Point2i p, Real splat_scale = 1) const;
 
   private:
     Pixel *pixels;
@@ -66,7 +66,7 @@ class RGBFilm {
 
     const Filter *filter;
 
-    FloatType filter_integral;
+    Real filter_integral;
 
     SquareMatrix<3> output_rgb_from_sensor_rgb;
 

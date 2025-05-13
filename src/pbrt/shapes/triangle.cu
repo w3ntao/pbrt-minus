@@ -3,7 +3,7 @@
 #include <pbrt/shapes/triangle.h>
 
 PBRT_CPU_GPU
-pbrt::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, FloatType t_max) const {
+pbrt::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, Real t_max) const {
     Point3f points[3];
     get_points(points);
 
@@ -18,13 +18,13 @@ pbrt::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, FloatType 
 }
 
 PBRT_CPU_GPU
-FloatType Triangle::pdf(const Interaction &in) const {
+Real Triangle::pdf(const Interaction &in) const {
     return 1.0 / this->area();
 }
 
 PBRT_CPU_GPU
-FloatType Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
-    FloatType solidAngle = solid_angle(ctx.p());
+Real Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
+    Real solidAngle = solid_angle(ctx.p());
     // Return PDF based on uniform area sampling for challenging triangles
     if (solidAngle < MinSphericalSampleArea || solidAngle > MaxSphericalSampleArea) {
         // Intersect sample ray with shape geometry
@@ -36,7 +36,7 @@ FloatType Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const
         }
 
         // Compute PDF in solid angle measure from shape intersection point
-        FloatType pdf = (1 / area()) / (isect->interaction.n.abs_dot(-wi) /
+        Real pdf = (1 / area()) / (isect->interaction.n.abs_dot(-wi) /
                                         ctx.p().squared_distance(isect->interaction.p()));
 
         if (isinf(pdf)) {
@@ -46,7 +46,7 @@ FloatType Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const
         return pdf;
     }
 
-    FloatType pdf = 1 / solidAngle;
+    Real pdf = 1 / solidAngle;
     // Adjust PDF for warp product sampling of triangle $\cos\theta$ factor
     if (ctx.ns != Normal3f(0, 0, 0)) {
         // Get triangle vertices in _p0_, _p1_, and _p2_
@@ -69,10 +69,10 @@ FloatType Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const
         Point3f rp = ctx.p();
         Vector3f wi[3] = {(p0 - rp).normalize(), (p1 - rp).normalize(), (p2 - rp).normalize()};
 
-        FloatType w[4] = {std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[1])),
-                          std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[1])),
-                          std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[0])),
-                          std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[2]))};
+        Real w[4] = {std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
+                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
+                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[0])),
+                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[2]))};
 
         pdf *= bilinear_pdf(u, w);
     }
@@ -87,7 +87,7 @@ pbrt::optional<ShapeSample> Triangle::sample(Point2f u) const {
     const Point3f p1 = mesh->p[v[1]];
     const Point3f p2 = mesh->p[v[2]];
 
-    FloatType b[3];
+    Real b[3];
     sample_uniform_triangle(b, u);
     const Point3f p = b[0] * p0 + b[1] * p1 + b[2] * p2;
 
@@ -124,7 +124,7 @@ pbrt::optional<ShapeSample> Triangle::sample(Point2f u) const {
 
     return ShapeSample{
         .interaction = Interaction(Point3fi(p, pError), n, uvSample),
-        .pdf = FloatType(1.0) / area(),
+        .pdf = Real(1.0) / area(),
     };
 }
 
@@ -138,7 +138,7 @@ pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Poin
     const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
 
     // Use uniform area sampling for numerically unstable cases
-    FloatType solid_angle = this->solid_angle(ctx.p());
+    Real solid_angle = this->solid_angle(ctx.p());
 
     if (solid_angle < MinSphericalSampleArea || solid_angle > MaxSphericalSampleArea) {
         auto ss = sample(u);
@@ -161,22 +161,22 @@ pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Poin
 
     // Sample spherical triangle from reference point
     // Apply warp product sampling for cosine factor at reference point
-    FloatType pdf = 1.0;
+    Real pdf = 1.0;
     if (ctx.ns != Normal3f(0, 0, 0)) {
         // Compute $\cos\theta$-based weights _w_ at sample domain corners
         Point3f rp = ctx.p();
         Vector3f wi[3] = {(p0 - rp).normalize(), (p1 - rp).normalize(), (p2 - rp).normalize()};
 
-        FloatType w[4] = {std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[1])),
-                          std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[1])),
-                          std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[0])),
-                          std::max<FloatType>(0.01, ctx.ns.abs_dot(wi[2]))};
+        Real w[4] = {std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
+                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
+                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[0])),
+                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[2]))};
         u = sample_bilinear(u, w);
         pdf = bilinear_pdf(u, w);
     }
 
-    FloatType triPDF;
-    FloatType b[3];
+    Real triPDF;
+    Real b[3];
     sample_spherical_triangle(b, &triPDF, points, ctx.p(), u);
     if (triPDF == 0.0) {
         return {};
@@ -221,7 +221,7 @@ pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Poin
 
 PBRT_CPU_GPU
 pbrt::optional<Triangle::TriangleIntersection>
-Triangle::intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0, const Point3f &p1,
+Triangle::intersect_triangle(const Ray &ray, Real t_max, const Point3f &p0, const Point3f &p1,
                              const Point3f &p2) const {
     // Return no intersection if triangle is degenerate
     if ((p2 - p0).cross(p1 - p0).squared_length() == 0.0) {
@@ -247,9 +247,9 @@ Triangle::intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0,
     p2t = p2t.permute(permuted_idx);
 
     // Apply shear transformation to translated vertex positions
-    FloatType Sx = -d.x / d.z;
-    FloatType Sy = -d.y / d.z;
-    FloatType Sz = 1 / d.z;
+    Real Sx = -d.x / d.z;
+    Real Sy = -d.y / d.z;
+    Real Sz = 1 / d.z;
     p0t.x += Sx * p0t.z;
     p0t.y += Sy * p0t.z;
     p1t.x += Sx * p1t.z;
@@ -258,21 +258,21 @@ Triangle::intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0,
     p2t.y += Sy * p2t.z;
 
     // Compute edge function coefficients _e0_, _e1_, and _e2_
-    FloatType e0 = difference_of_products(p1t.x, p2t.y, p1t.y, p2t.x);
-    FloatType e1 = difference_of_products(p2t.x, p0t.y, p2t.y, p0t.x);
-    FloatType e2 = difference_of_products(p0t.x, p1t.y, p0t.y, p1t.x);
+    Real e0 = difference_of_products(p1t.x, p2t.y, p1t.y, p2t.x);
+    Real e1 = difference_of_products(p2t.x, p0t.y, p2t.y, p0t.x);
+    Real e2 = difference_of_products(p0t.x, p1t.y, p0t.y, p1t.x);
 
     // Fall back to double-precision test at triangle edges
-    if (sizeof(FloatType) == sizeof(float) && (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f)) {
+    if (sizeof(Real) == sizeof(float) && (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f)) {
         double p2txp1ty = (double)p2t.x * (double)p1t.y;
         double p2typ1tx = (double)p2t.y * (double)p1t.x;
-        e0 = (FloatType)(p2typ1tx - p2txp1ty);
+        e0 = (Real)(p2typ1tx - p2txp1ty);
         double p0txp2ty = (double)p0t.x * (double)p2t.y;
         double p0typ2tx = (double)p0t.y * (double)p2t.x;
-        e1 = (FloatType)(p0typ2tx - p0txp2ty);
+        e1 = (Real)(p0typ2tx - p0txp2ty);
         double p1txp0ty = (double)p1t.x * (double)p0t.y;
         double p1typ0tx = (double)p1t.y * (double)p0t.x;
-        e2 = (FloatType)(p1typ0tx - p1txp0ty);
+        e2 = (Real)(p1typ0tx - p1txp0ty);
     }
 
     // Perform triangle edge and determinant tests
@@ -280,7 +280,7 @@ Triangle::intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0,
         return {};
     }
 
-    FloatType det = e0 + e1 + e2;
+    Real det = e0 + e1 + e2;
     if (det == 0) {
         return {};
     }
@@ -289,7 +289,7 @@ Triangle::intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0,
     p0t.z *= Sz;
     p1t.z *= Sz;
     p2t.z *= Sz;
-    FloatType tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
+    Real tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
     if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
         return {};
     }
@@ -299,30 +299,30 @@ Triangle::intersect_triangle(const Ray &ray, FloatType t_max, const Point3f &p0,
     }
 
     // Compute barycentric coordinates and $t$ value for triangle intersection
-    FloatType invDet = 1 / det;
-    FloatType b0 = e0 * invDet, b1 = e1 * invDet, b2 = e2 * invDet;
-    FloatType t = tScaled * invDet;
+    Real invDet = 1 / det;
+    Real b0 = e0 * invDet, b1 = e1 * invDet, b2 = e2 * invDet;
+    Real t = tScaled * invDet;
 
     // Ensure that computed triangle $t$ is conservatively greater than zero
     // Compute $\delta_z$ term for triangle $t$ error bounds
     // FloatType maxZt = MaxComponentValue(Abs(Vector3f(p0t.z, p1t.z, p2t.z)));
 
-    FloatType maxZt = Vector3f(p0t.z, p1t.z, p2t.z).abs().max_component_value();
-    FloatType deltaZ = gamma(3) * maxZt;
+    Real maxZt = Vector3f(p0t.z, p1t.z, p2t.z).abs().max_component_value();
+    Real deltaZ = gamma(3) * maxZt;
 
     // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
-    FloatType maxXt = Vector3f(p0t.x, p1t.x, p2t.x).abs().max_component_value();
-    FloatType maxYt = Vector3f(p0t.y, p1t.y, p2t.y).abs().max_component_value();
+    Real maxXt = Vector3f(p0t.x, p1t.x, p2t.x).abs().max_component_value();
+    Real maxYt = Vector3f(p0t.y, p1t.y, p2t.y).abs().max_component_value();
 
-    FloatType deltaX = gamma(5) * (maxXt + maxZt);
-    FloatType deltaY = gamma(5) * (maxYt + maxZt);
+    Real deltaX = gamma(5) * (maxXt + maxZt);
+    Real deltaY = gamma(5) * (maxYt + maxZt);
 
     // Compute $\delta_e$ term for triangle $t$ error bounds
-    FloatType deltaE = 2 * (gamma(2) * maxXt * maxYt + deltaY * maxXt + deltaX * maxYt);
+    Real deltaE = 2 * (gamma(2) * maxXt * maxYt + deltaY * maxXt + deltaX * maxYt);
 
     // Compute $\delta_t$ term for triangle $t$ error bounds and check _t_
-    FloatType maxE = Vector3f(e0, e1, e2).abs().max_component_value();
-    FloatType deltaT =
+    Real maxE = Vector3f(e0, e1, e2).abs().max_component_value();
+    Real deltaT =
         3 * (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) * std::abs(invDet);
     if (t <= deltaT) {
         return {};
@@ -358,13 +358,13 @@ SurfaceInteraction Triangle::interaction_from_intersection(const TriangleInterse
     Vector2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
     Vector3f dp02 = p0 - p2;
     Vector3f dp12 = p1 - p2;
-    FloatType determinant = difference_of_products(duv02[0], duv12[1], duv02[1], duv12[0]);
+    Real determinant = difference_of_products(duv02[0], duv12[1], duv02[1], duv12[0]);
 
     Vector3f dpdu, dpdv;
     bool degenerateUV = std::abs(determinant) < 1e-9f;
     if (!degenerateUV) {
         // Compute triangle $\dpdu$ and $\dpdv$ via matrix inversion
-        FloatType invdet = 1 / determinant;
+        Real invdet = 1 / determinant;
         dpdu = difference_of_products(duv12[1], dp02, duv02[1], dp12) * invdet;
         dpdv = difference_of_products(duv02[0], dp12, duv12[0], dp02) * invdet;
     }

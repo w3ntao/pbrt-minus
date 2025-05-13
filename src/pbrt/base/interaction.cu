@@ -10,18 +10,18 @@ void SurfaceInteraction::compute_differentials(const Camera *camera, uint sample
 
     // Estimate screen-space change in $(u,v)$
     // Compute $\transpose{\XFORM{A}} \XFORM{A}$ and its determinant
-    FloatType ata00 = dpdu.dot(dpdu);
-    FloatType ata01 = dpdu.dot(dpdv);
-    FloatType ata11 = dpdv.dot(dpdv);
+    Real ata00 = dpdu.dot(dpdu);
+    Real ata01 = dpdu.dot(dpdv);
+    Real ata11 = dpdv.dot(dpdv);
 
-    FloatType invDet = 1.0 / difference_of_products(ata00, ata11, ata01, ata01);
+    Real invDet = 1.0 / difference_of_products(ata00, ata11, ata01, ata01);
     invDet = std::isfinite(invDet) ? invDet : 0.0;
 
     // Compute $\transpose{\XFORM{A}} \VEC{b}$ for $x$ and $y$
-    FloatType atb0x = dpdu.dot(dpdx);
-    FloatType atb1x = dpdv.dot(dpdx);
-    FloatType atb0y = dpdu.dot(dpdy);
-    FloatType atb1y = dpdv.dot(dpdy);
+    Real atb0x = dpdu.dot(dpdx);
+    Real atb1x = dpdv.dot(dpdx);
+    Real atb0y = dpdu.dot(dpdy);
+    Real atb1y = dpdv.dot(dpdy);
 
     // Compute $u$ and $v$ derivatives with respect to $x$ and $y$
     dudx = difference_of_products(ata11, atb0x, ata01, atb1x) * invDet;
@@ -30,10 +30,10 @@ void SurfaceInteraction::compute_differentials(const Camera *camera, uint sample
     dvdy = difference_of_products(ata00, atb1y, ata01, atb0y) * invDet;
 
     // Clamp derivatives of $u$ and $v$ to reasonable values
-    dudx = std::isfinite(dudx) ? clamp<FloatType>(dudx, -1e8f, 1e8f) : 0.0;
-    dvdx = std::isfinite(dvdx) ? clamp<FloatType>(dvdx, -1e8f, 1e8f) : 0.0;
-    dudy = std::isfinite(dudy) ? clamp<FloatType>(dudy, -1e8f, 1e8f) : 0.0;
-    dvdy = std::isfinite(dvdy) ? clamp<FloatType>(dvdy, -1e8f, 1e8f) : 0.0;
+    dudx = std::isfinite(dudx) ? clamp<Real>(dudx, -1e8f, 1e8f) : 0.0;
+    dvdx = std::isfinite(dvdx) ? clamp<Real>(dvdx, -1e8f, 1e8f) : 0.0;
+    dudy = std::isfinite(dudy) ? clamp<Real>(dudy, -1e8f, 1e8f) : 0.0;
+    dvdy = std::isfinite(dvdy) ? clamp<Real>(dvdy, -1e8f, 1e8f) : 0.0;
 }
 
 PBRT_CPU_GPU

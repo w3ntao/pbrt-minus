@@ -15,8 +15,8 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
-    SampledWavelengths(const FloatType _lambda[NSpectrumSamples],
-                       const FloatType _pdf[NSpectrumSamples]) {
+    SampledWavelengths(const Real _lambda[NSpectrumSamples],
+                       const Real _pdf[NSpectrumSamples]) {
         for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
             lambda[idx] = _lambda[idx];
             pdf[idx] = _pdf[idx];
@@ -60,13 +60,13 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
-    static SampledWavelengths sample_visible(FloatType _u) {
-        FloatType _lambda[NSpectrumSamples];
-        FloatType _pdf[NSpectrumSamples];
+    static SampledWavelengths sample_visible(Real _u) {
+        Real _lambda[NSpectrumSamples];
+        Real _pdf[NSpectrumSamples];
 
         for (uint i = 0; i < NSpectrumSamples; ++i) {
             // Compute _up_ for $i$th wavelength sample
-            FloatType u_prime = _u + FloatType(i) / NSpectrumSamples;
+            Real u_prime = _u + Real(i) / NSpectrumSamples;
             if (u_prime > 1) {
                 u_prime -= 1;
             }
@@ -98,12 +98,12 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
-    FloatType operator[](uint i) const {
+    Real operator[](uint i) const {
         return lambda[i];
     }
 
     PBRT_CPU_GPU
-    FloatType &operator[](uint i) {
+    Real &operator[](uint i) {
         return lambda[i];
     }
 
@@ -156,6 +156,6 @@ class SampledWavelengths {
     }
 
   private:
-    FloatType lambda[NSpectrumSamples];
-    FloatType pdf[NSpectrumSamples];
+    Real lambda[NSpectrumSamples];
+    Real pdf[NSpectrumSamples];
 };

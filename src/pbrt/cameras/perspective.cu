@@ -14,7 +14,7 @@ void PerspectiveCamera::init(const Point2i &resolution, const CameraTransform &c
 
     auto fov = parameters.get_float("fov", 90.0);
 
-    auto frame_aspect_ratio = FloatType(resolution.x) / FloatType(resolution.y);
+    auto frame_aspect_ratio = Real(resolution.x) / Real(resolution.y);
 
     auto screen_window =
         frame_aspect_ratio > 1.0
@@ -84,7 +84,7 @@ CameraRay PerspectiveCamera::generate_ray(const CameraSample &sample, Sampler *s
 }
 
 PBRT_CPU_GPU
-void PerspectiveCamera::pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const {
+void PerspectiveCamera::pdf_we(const Ray &ray, Real *pdfPos, Real *pdfDir) const {
     // Return zero PDF values if ray direction is not front-facing
     auto cosTheta =
         ray.d.dot(this->camera_base.camera_transform.render_from_camera(Vector3f(0, 0, 1)));
@@ -106,7 +106,7 @@ void PerspectiveCamera::pdf_we(const Ray &ray, FloatType *pdfPos, FloatType *pdf
     }
 
     // Compute lens area  and return perspective camera probabilities
-    FloatType lensArea = lens_radius != 0 ? (compute_pi() * sqr(lens_radius)) : 1;
+    Real lensArea = lens_radius != 0 ? (compute_pi() * sqr(lens_radius)) : 1;
     *pdfPos = 1 / lensArea;
     *pdfDir = 1 / (A * pbrt::pow<3>(cosTheta));
 }

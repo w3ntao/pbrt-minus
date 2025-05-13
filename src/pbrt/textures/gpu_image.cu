@@ -167,7 +167,7 @@ void GPUImage::init_pfm(const std::string &filename, GPUMemoryAllocator &allocat
     size_t num_pixels = width * height * 3;
 
     // Resize the image vector to hold the pixel data
-    std::vector<FloatType> image(num_pixels);
+    std::vector<Real> image(num_pixels);
 
     file.read(reinterpret_cast<char *>(image.data()), num_pixels * sizeof(float));
 

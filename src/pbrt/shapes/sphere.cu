@@ -23,8 +23,8 @@ const Sphere *Sphere::create(const Transform &render_from_object,
 }
 
 void Sphere::init(const Transform &_render_from_object, const Transform &_object_from_render,
-                  bool _reverse_orientation, FloatType _radius, FloatType _z_min, FloatType _z_max,
-                  FloatType _phi_max) {
+                  bool _reverse_orientation, Real _radius, Real _z_min, Real _z_max,
+                  Real _phi_max) {
     render_from_object = _render_from_object;
     object_from_render = _object_from_render;
     reverse_orientation = _reverse_orientation;
@@ -33,10 +33,10 @@ void Sphere::init(const Transform &_render_from_object, const Transform &_object
     z_min = clamp(std::min(_z_min, _z_max), -radius, radius);
     z_max = clamp(std::max(_z_min, _z_max), -radius, radius);
 
-    theta_z_min = std::acos(clamp<FloatType>(z_min / radius, -1, 1));
-    theta_z_max = std::acos(clamp<FloatType>(z_max / radius, -1, 1));
+    theta_z_min = std::acos(clamp<Real>(z_min / radius, -1, 1));
+    theta_z_max = std::acos(clamp<Real>(z_max / radius, -1, 1));
 
-    phi_max = degree_to_radian(clamp<FloatType>(_phi_max, 0, 360));
+    phi_max = degree_to_radian(clamp<Real>(_phi_max, 0, 360));
 }
 
 PBRT_CPU_GPU
@@ -46,8 +46,8 @@ Bounds3f Sphere::bounds() const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, FloatType tMax) const {
-    FloatType phi;
+pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, Real tMax) const {
+    Real phi;
     Point3f pHit;
     // Transform _Ray_ origin and direction to object space
     Point3fi oi = object_from_render(Point3fi(r.o));
@@ -73,7 +73,7 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, FloatT
     Interval rootDiscrim = discrim.sqrt();
     Interval q;
 
-    if ((FloatType)b < 0) {
+    if ((Real)b < 0) {
         q = -.5f * (b - rootDiscrim);
     } else {
         q = -.5f * (b + rootDiscrim);
@@ -100,7 +100,7 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, FloatT
     }
 
     // Compute sphere hit position and $\phi$
-    pHit = oi.to_point3f() + (FloatType)tShapeHit * di.to_vector3f();
+    pHit = oi.to_point3f() + (Real)tShapeHit * di.to_vector3f();
 
     // Refine sphere intersection point
     pHit *= radius / pHit.distance(Point3f(0, 0, 0));
@@ -127,7 +127,7 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, FloatT
 
         tShapeHit = t1;
         // Compute sphere hit position and $\phi$
-        pHit = oi.to_point3f() + (FloatType)tShapeHit * di.to_vector3f();
+        pHit = oi.to_point3f() + (Real)tShapeHit * di.to_vector3f();
 
         // Refine sphere intersection point
         pHit *= radius / pHit.distance(Point3f(0, 0, 0));
@@ -147,7 +147,7 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, FloatT
         }
     }
 
-    return QuadricIntersection{FloatType(tShapeHit), pHit, phi};
+    return QuadricIntersection{Real(tShapeHit), pHit, phi};
 }
 
 PBRT_CPU_GPU
@@ -168,8 +168,8 @@ pbrt::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
     }
 
     // Compute $(u, v)$ coordinates for sphere sample
-    FloatType theta = safe_acos(pObj.z / radius);
-    FloatType phi = std::atan2(pObj.y, pObj.x);
+    Real theta = safe_acos(pObj.z / radius);
+    Real phi = std::atan2(pObj.y, pObj.x);
     if (phi < 0) {
         phi += 2 * compute_pi();
     }
@@ -178,7 +178,7 @@ pbrt::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
 
     Point3fi pi = render_from_object(Point3fi(pObj, pObjError));
 
-    return ShapeSample{.interaction = Interaction(pi, n, uv), .pdf = FloatType(1) / area()};
+    return ShapeSample{.interaction = Interaction(pi, n, uv), .pdf = Real(1) / area()};
 }
 
 PBRT_CPU_GPU
@@ -209,15 +209,15 @@ pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, const 
 
     // Sample sphere uniformly inside subtended cone
     // Compute quantities related to the $\theta_\roman{max}$ for cone
-    FloatType sinThetaMax = radius / ctx.p().distance(pCenter);
+    Real sinThetaMax = radius / ctx.p().distance(pCenter);
 
-    FloatType sin2ThetaMax = sqr(sinThetaMax);
-    FloatType cosThetaMax = safe_sqrt(1 - sin2ThetaMax);
-    FloatType oneMinusCosThetaMax = 1 - cosThetaMax;
+    Real sin2ThetaMax = sqr(sinThetaMax);
+    Real cosThetaMax = safe_sqrt(1 - sin2ThetaMax);
+    Real oneMinusCosThetaMax = 1 - cosThetaMax;
 
     // Compute $\theta$ and $\phi$ values for sample in cone
-    FloatType cosTheta = (cosThetaMax - 1) * u[0] + 1;
-    FloatType sin2Theta = 1 - sqr(cosTheta);
+    Real cosTheta = (cosThetaMax - 1) * u[0] + 1;
+    Real sin2Theta = 1 - sqr(cosTheta);
     if (sin2ThetaMax < 0.00068523f /* sin^2(1.5 deg) */) {
         // Compute cone sample via Taylor series expansion for small angles
         sin2Theta = sin2ThetaMax * u[0];
@@ -226,12 +226,12 @@ pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, const 
     }
 
     // Compute angle $\alpha$ from center of sphere to sampled point on surface
-    FloatType cosAlpha =
+    Real cosAlpha =
         sin2Theta / sinThetaMax + cosTheta * safe_sqrt(1 - sin2Theta / sqr(sinThetaMax));
-    FloatType sinAlpha = safe_sqrt(1 - sqr(cosAlpha));
+    Real sinAlpha = safe_sqrt(1 - sqr(cosAlpha));
 
     // Compute surface normal and sampled point on sphere
-    FloatType phi = u[1] * 2 * compute_pi();
+    Real phi = u[1] * 2 * compute_pi();
     Vector3f w = SphericalDirection(sinAlpha, cosAlpha, phi);
 
     Frame samplingFrame = Frame::from_z((pCenter - ctx.p()).normalize());
@@ -250,8 +250,8 @@ pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, const 
     // Compute $(u,v)$ coordinates for sampled point on sphere
     Point3f pObj = object_from_render(p);
 
-    FloatType theta = safe_acos(pObj.z / radius);
-    FloatType spherePhi = std::atan2(pObj.y, pObj.x);
+    Real theta = safe_acos(pObj.z / radius);
+    Real spherePhi = std::atan2(pObj.y, pObj.x);
 
     if (spherePhi < 0) {
         spherePhi += 2 * compute_pi();
@@ -264,7 +264,7 @@ pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, const 
 }
 
 PBRT_CPU_GPU
-FloatType Sphere::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
+Real Sphere::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     Point3f pCenter = render_from_object(Point3f(0, 0, 0));
     Point3f pOrigin = ctx.offset_ray_origin(pCenter);
 
@@ -278,7 +278,7 @@ FloatType Sphere::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
         }
 
         // Compute PDF in solid angle measure from shape intersection point
-        FloatType pdf = (1.0 / area()) / (isect->interaction.n.abs_dot(-wi) /
+        Real pdf = (1.0 / area()) / (isect->interaction.n.abs_dot(-wi) /
                                           ctx.p().squared_distance(isect->interaction.p()));
 
         if (isinf(pdf)) {
@@ -289,9 +289,9 @@ FloatType Sphere::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     }
 
     // Compute general solid angle sphere PDF
-    FloatType sin2ThetaMax = radius * radius / ctx.p().squared_distance(pCenter);
-    FloatType cosThetaMax = safe_sqrt(1 - sin2ThetaMax);
-    FloatType oneMinusCosThetaMax = 1 - cosThetaMax;
+    Real sin2ThetaMax = radius * radius / ctx.p().squared_distance(pCenter);
+    Real cosThetaMax = safe_sqrt(1 - sin2ThetaMax);
+    Real oneMinusCosThetaMax = 1 - cosThetaMax;
 
     // Compute more accurate _oneMinusCosThetaMax_ for small solid angle
     if (sin2ThetaMax < 0.00068523f /* sin^2(1.5 deg) */) {

@@ -18,10 +18,10 @@ struct TextureEvalContext {
     Normal3f n;
     Point2f uv;
 
-    FloatType dudx = 0;
-    FloatType dudy = 0;
-    FloatType dvdx = 0;
-    FloatType dvdy = 0;
+    Real dudx = 0;
+    Real dudy = 0;
+    Real dvdx = 0;
+    Real dvdy = 0;
 
     int faceIndex = 0;
 

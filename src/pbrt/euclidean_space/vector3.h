@@ -84,7 +84,7 @@ class Vector3 {
     }
 
     PBRT_CPU_GPU
-    void operator*=(FloatType v) {
+    void operator*=(Real v) {
         x *= v;
         y *= v;
         z *= v;
@@ -159,9 +159,9 @@ class Vector3 {
     }
 
     PBRT_CPU_GPU void coordinate_system(Vector3 *v2, Vector3 *v3) const {
-        FloatType sign = std::copysign(1.0, z);
-        FloatType a = -1.0 / (sign + z);
-        FloatType b = x * y * a;
+        Real sign = std::copysign(1.0, z);
+        Real a = -1.0 / (sign + z);
+        Real b = x * y * a;
         *v2 = Vector3(1 + sign * sqr(x) * a, sign * b, -sign * x);
         *v3 = Vector3(b, sign + sqr(y) * a, -y);
     }
@@ -171,60 +171,60 @@ class Vector3 {
         return z * wp.z > 0;
     }
 
-    PBRT_CPU_GPU FloatType abs_cos_theta() const {
+    PBRT_CPU_GPU Real abs_cos_theta() const {
         return std::abs(z);
     }
 
     PBRT_CPU_GPU
-    FloatType cos_theta() const {
+    Real cos_theta() const {
         return z;
     }
 
     PBRT_CPU_GPU
-    FloatType cos2_theta() const {
+    Real cos2_theta() const {
         return sqr(z);
     }
 
     PBRT_CPU_GPU
-    FloatType sin2_theta() const {
-        return std::max<FloatType>(0.0, 1.0 - cos2_theta());
+    Real sin2_theta() const {
+        return std::max<Real>(0.0, 1.0 - cos2_theta());
     }
 
     PBRT_CPU_GPU
-    FloatType sin_theta() const {
+    Real sin_theta() const {
         return std::sqrt(sin2_theta());
     }
 
     PBRT_CPU_GPU
-    FloatType tan_theta() const {
+    Real tan_theta() const {
         return sin_theta() / cos_theta();
     }
 
     PBRT_CPU_GPU
-    FloatType tan2_theta() const {
+    Real tan2_theta() const {
         return sin2_theta() / cos2_theta();
     }
 
     PBRT_CPU_GPU
-    FloatType cos_phi() const {
-        FloatType sinTheta = sin_theta();
-        return (sinTheta == 0) ? 1 : clamp<FloatType>(x / sinTheta, -1, 1);
+    Real cos_phi() const {
+        Real sinTheta = sin_theta();
+        return (sinTheta == 0) ? 1 : clamp<Real>(x / sinTheta, -1, 1);
     }
 
     PBRT_CPU_GPU
-    FloatType sin_phi() const {
-        FloatType sinTheta = sin_theta();
-        return (sinTheta == 0) ? 0 : clamp<FloatType>(y / sinTheta, -1, 1);
+    Real sin_phi() const {
+        Real sinTheta = sin_theta();
+        return (sinTheta == 0) ? 0 : clamp<Real>(y / sinTheta, -1, 1);
     }
 
     PBRT_CPU_GPU
-    FloatType spherical_theta() const {
+    Real spherical_theta() const {
         return safe_acos(z);
     }
 
     PBRT_CPU_GPU
-    FloatType spherical_phi() const {
-        FloatType p = std::atan2(y, x);
+    Real spherical_phi() const {
+        Real p = std::atan2(y, x);
         return (p < 0) ? (p + 2 * compute_pi()) : p;
     }
 
@@ -238,20 +238,20 @@ class Vector3 {
     }
 };
 
-using Vector3f = Vector3<FloatType>;
+using Vector3f = Vector3<Real>;
 
-PBRT_CPU_GPU inline Vector3f FMA(FloatType a, const Vector3f &b, const Vector3f &c) {
+PBRT_CPU_GPU inline Vector3f FMA(Real a, const Vector3f &b, const Vector3f &c) {
     return {FMA(a, b.x, c.x), FMA(a, b.y, c.y), FMA(a, b.z, c.z)};
 }
 
-PBRT_CPU_GPU inline Vector3f FMA(const Vector3f &a, FloatType b, const Vector3f &c) {
+PBRT_CPU_GPU inline Vector3f FMA(const Vector3f &a, Real b, const Vector3f &c) {
     return FMA(b, a, c);
 }
 
 // Equivalent to std::acos(Dot(a, b)), but more numerically stable.
 // via http://www.plunk.org/~hatch/rightway.html
 template <typename T>
-PBRT_CPU_GPU inline FloatType angle_between(Vector3<T> v1, Vector3<T> v2) {
+PBRT_CPU_GPU inline Real angle_between(Vector3<T> v1, Vector3<T> v2) {
     if (v1.dot(v2) < 0) {
         return compute_pi() - 2 * safe_asin((v1 + v2).length() / 2);
     } else {
@@ -265,8 +265,8 @@ PBRT_CPU_GPU inline Vector3<T> gram_schmidt(Vector3<T> v, Vector3<T> w) {
 }
 
 PBRT_CPU_GPU
-static Vector3f SphericalDirection(FloatType sinTheta, FloatType cosTheta, FloatType phi) {
-    return Vector3f(clamp<FloatType>(sinTheta, -1, 1) * std::cos(phi),
-                    clamp<FloatType>(sinTheta, -1, 1) * std::sin(phi),
-                    clamp<FloatType>(cosTheta, -1, 1));
+static Vector3f SphericalDirection(Real sinTheta, Real cosTheta, Real phi) {
+    return Vector3f(clamp<Real>(sinTheta, -1, 1) * std::cos(phi),
+                    clamp<Real>(sinTheta, -1, 1) * std::sin(phi),
+                    clamp<Real>(cosTheta, -1, 1));
 }

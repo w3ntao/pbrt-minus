@@ -3,15 +3,15 @@
 #include <pbrt/textures/spectrum_checkerboard_texture.h>
 
 PBRT_CPU_GPU
-static FloatType checkerboard(const TextureEvalContext &ctx, const TextureMapping2D *map2D,
+static Real checkerboard(const TextureEvalContext &ctx, const TextureMapping2D *map2D,
                               const TextureMapping3D *map3D) {
     // Define 1D checkerboard filtered integral functions
-    auto d = [](FloatType x) {
-        FloatType y = x / 2 - std::floor(x / 2) - 0.5f;
+    auto d = [](Real x) {
+        Real y = x / 2 - std::floor(x / 2) - 0.5f;
         return x / 2 + y * (1 - 2 * std::abs(y));
     };
 
-    auto bf = [&](FloatType x, FloatType r) -> FloatType {
+    auto bf = [&](Real x, Real r) -> Real {
         if (std::floor(x - r) == std::floor(x + r))
             return 1 - 2 * (int(std::floor(x)) & 1);
         return (d(x + r) - 2 * d(x) + d(x - r)) / sqr(r);

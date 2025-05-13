@@ -7,11 +7,11 @@
 #include <pbrt/spectra/rgb_illuminant_spectrum.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 
-std::vector<FloatType> read_spectrum_file(const std::string &filename) {
+std::vector<Real> read_spectrum_file(const std::string &filename) {
     std::string token;
     std::ifstream file(filename);
 
-    std::vector<FloatType> values;
+    std::vector<Real> values;
 
     while (std::getline(file, token)) {
         std::istringstream line(token);
@@ -164,7 +164,7 @@ ParameterDictionary::ParameterDictionary(
             }
 
             // build PiecewiseLinearSpectrum from Interleaved data
-            std::vector<FloatType> floats;
+            std::vector<Real> floats;
             for (const auto &x : spectrum_arg_list) {
                 floats.push_back(stod(x));
             }
@@ -252,7 +252,7 @@ ParameterDictionary::get_float_texture_or_null(const std::string &key,
 }
 
 const FloatTexture *ParameterDictionary::get_float_texture(const std::string &key,
-                                                           FloatType default_val,
+                                                           Real default_val,
                                                            GPUMemoryAllocator &allocator) const {
     auto texture = get_float_texture_or_null(key, allocator);
     if (texture != nullptr) {
@@ -263,7 +263,7 @@ const FloatTexture *ParameterDictionary::get_float_texture(const std::string &ke
 }
 
 const FloatTexture *ParameterDictionary::get_float_texture_with_default_val(
-    const std::string &key, FloatType default_val, GPUMemoryAllocator &allocator) const {
+    const std::string &key, Real default_val, GPUMemoryAllocator &allocator) const {
     auto texture = get_float_texture_or_null(key, allocator);
     if (texture) {
         return texture;

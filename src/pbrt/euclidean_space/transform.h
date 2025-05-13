@@ -22,7 +22,7 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    explicit Transform(const FloatType values[16]) {
+    explicit Transform(const Real values[16]) {
         for (uint y = 0; y < 4; ++y) {
             for (uint x = 0; x < 4; ++x) {
                 auto idx = y * 4 + x;
@@ -34,7 +34,7 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    explicit Transform(const FloatType values[4][4]) {
+    explicit Transform(const Real values[4][4]) {
         for (uint y = 0; y < 4; ++y) {
             for (uint x = 0; x < 4; ++x) {
                 m[y][x] = values[y][x];
@@ -58,7 +58,7 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    static Transform rotate(FloatType angle, FloatType x, FloatType y, FloatType z) {
+    static Transform rotate(Real angle, Real x, Real y, Real z) {
         auto sin_theta = std::sin(degree_to_radian(angle));
         auto cos_theta = std::cos(degree_to_radian(angle));
         auto axis = Vector3f(x, y, z).normalize();
@@ -88,33 +88,33 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    static Transform scale(FloatType x, FloatType y, FloatType z) {
-        FloatType data_m[4][4] = {
+    static Transform scale(Real x, Real y, Real z) {
+        Real data_m[4][4] = {
             {x, 0, 0, 0},
             {0, y, 0, 0},
             {0, 0, z, 0},
             {0, 0, 0, 1},
         };
 
-        FloatType data_m_inv[4][4] = {
-            {FloatType(1.0) / x, 0, 0, 0},
-            {0, FloatType(1.0) / y, 0, 0},
-            {0, 0, FloatType(1.0) / z, 0},
+        Real data_m_inv[4][4] = {
+            {Real(1.0) / x, 0, 0, 0},
+            {0, Real(1.0) / y, 0, 0},
+            {0, 0, Real(1.0) / z, 0},
             {0, 0, 0, 1},
         };
 
         return Transform(SquareMatrix(data_m), SquareMatrix(data_m_inv));
     }
 
-    PBRT_CPU_GPU static Transform translate(FloatType x, FloatType y, FloatType z) {
-        const FloatType data_m[4][4] = {
+    PBRT_CPU_GPU static Transform translate(Real x, Real y, Real z) {
+        const Real data_m[4][4] = {
             {1, 0, 0, x},
             {0, 1, 0, y},
             {0, 0, 1, z},
             {0, 0, 0, 1},
         };
 
-        const FloatType data_inv_m[4][4] = {
+        const Real data_inv_m[4][4] = {
             {1, 0, 0, -x},
             {0, 1, 0, -y},
             {0, 0, 1, -z},
@@ -125,8 +125,8 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    static Transform perspective(FloatType fov, FloatType z_near, FloatType z_far) {
-        FloatType data_persp[4][4] = {
+    static Transform perspective(Real fov, Real z_near, Real z_far) {
+        Real data_persp[4][4] = {
             {1.0, 0.0, 0.0, 0.0},
             {0.0, 1.0, 0.0, 0.0},
             {0.0, 0.0, z_far / (z_far - z_near), -z_far * z_near / (z_far - z_near)},
@@ -142,7 +142,7 @@ class Transform {
     PBRT_CPU_GPU
     static Transform rotate_from_to(const Vector3f from, const Vector3f to) {
         // Compute intermediate vector for vector reflection
-        const FloatType threshold = 0.72;
+        const Real threshold = 0.72;
         Vector3f refl;
         if (std::abs(from.x) < threshold && std::abs(to.x) < threshold) {
             refl = Vector3f(1, 0, 0);
@@ -265,9 +265,9 @@ class Transform {
     }
 
     PBRT_CPU_GPU Vector3fi operator()(const Vector3fi &v) const {
-        FloatType x = FloatType(v.x);
-        FloatType y = FloatType(v.y);
-        FloatType z = FloatType(v.z);
+        Real x = Real(v.x);
+        Real y = Real(v.y);
+        Real z = Real(v.z);
         Vector3f vOutError;
         if (v.is_exact()) {
             vOutError.x =
@@ -292,9 +292,9 @@ class Transform {
                 gamma(3) * (std::abs(m[2][0] * x) + std::abs(m[2][1] * y) + std::abs(m[2][2] * z));
         }
 
-        FloatType xp = m[0][0] * x + m[0][1] * y + m[0][2] * z;
-        FloatType yp = m[1][0] * x + m[1][1] * y + m[1][2] * z;
-        FloatType zp = m[2][0] * x + m[2][1] * y + m[2][2] * z;
+        Real xp = m[0][0] * x + m[0][1] * y + m[0][2] * z;
+        Real yp = m[1][0] * x + m[1][1] * y + m[1][2] * z;
+        Real zp = m[2][0] * x + m[2][1] * y + m[2][2] * z;
 
         return Vector3fi(Vector3f(xp, yp, zp), vOutError);
     }
@@ -307,9 +307,9 @@ class Transform {
     }
 
     PBRT_CPU_GPU Normal3f operator()(const Normal3f &n) const {
-        FloatType x = n.x;
-        FloatType y = n.y;
-        FloatType z = n.z;
+        Real x = n.x;
+        Real y = n.y;
+        Real z = n.z;
 
         return Normal3f(inv_m[0][0] * x + inv_m[1][0] * y + inv_m[2][0] * z,
                         inv_m[0][1] * x + inv_m[1][1] * y + inv_m[2][1] * z,
@@ -317,7 +317,7 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    Ray operator()(const Ray &r, FloatType *tMax = nullptr) const;
+    Ray operator()(const Ray &r, Real *tMax = nullptr) const;
 
     PBRT_CPU_GPU
     Bounds3f operator()(const Bounds3f &bounds) const {
@@ -380,10 +380,10 @@ class Transform {
         auto z = p.z.midpoint();
 
         // Compute transformed coordinates from point _pt_
-        FloatType xp = (inv_m[0][0] * x + inv_m[0][1] * y) + (inv_m[0][2] * z + inv_m[0][3]);
-        FloatType yp = (inv_m[1][0] * x + inv_m[1][1] * y) + (inv_m[1][2] * z + inv_m[1][3]);
-        FloatType zp = (inv_m[2][0] * x + inv_m[2][1] * y) + (inv_m[2][2] * z + inv_m[2][3]);
-        FloatType wp = (inv_m[3][0] * x + inv_m[3][1] * y) + (inv_m[3][2] * z + inv_m[3][3]);
+        Real xp = (inv_m[0][0] * x + inv_m[0][1] * y) + (inv_m[0][2] * z + inv_m[0][3]);
+        Real yp = (inv_m[1][0] * x + inv_m[1][1] * y) + (inv_m[1][2] * z + inv_m[1][3]);
+        Real zp = (inv_m[2][0] * x + inv_m[2][1] * y) + (inv_m[2][2] * z + inv_m[2][3]);
+        Real wp = (inv_m[3][0] * x + inv_m[3][1] * y) + (inv_m[3][2] * z + inv_m[3][3]);
 
         // Compute absolute error for transformed point
         Vector3f pOutError;
@@ -421,7 +421,7 @@ class Transform {
     }
 
     PBRT_CPU_GPU
-    Ray apply_inverse(const Ray &r, FloatType *tMax) const;
+    Ray apply_inverse(const Ray &r, Real *tMax) const;
 
     friend std::ostream &operator<<(std::ostream &stream, const Transform &transform) {
         stream << "Transform -- m: ";

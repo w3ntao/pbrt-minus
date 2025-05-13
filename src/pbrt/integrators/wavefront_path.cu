@@ -22,7 +22,7 @@ struct FrameBuffer {
     uint sample_idx;
     SampledSpectrum radiance;
     SampledWavelengths lambda;
-    FloatType weight;
+    Real weight;
 
     // to help sorting
     PBRT_CPU_GPU
@@ -43,8 +43,8 @@ struct MISParameter {
     bool specular_bounce = true;
     bool any_non_specular_bounces = false;
 
-    FloatType pdf_bsdf;
-    FloatType eta_scale;
+    Real pdf_bsdf;
+    Real eta_scale;
     LightSampleContext prev_interaction_light_sample_ctx;
 
     PBRT_CPU_GPU
@@ -124,7 +124,7 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
 
         SampledSpectrum russian_roulette_beta = beta * eta_scale;
         if (russian_roulette_beta.max_component_value() < 1) {
-            auto q = clamp<FloatType>(1 - russian_roulette_beta.max_component_value(), 0, 0.95);
+            auto q = clamp<Real>(1 - russian_roulette_beta.max_component_value(), 0, 0.95);
             if (u < q) {
                 beta = SampledSpectrum(0.0);
                 should_terminate_path = true;
@@ -145,10 +145,10 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
-                    FloatType pdf_light =
+                    Real pdf_light =
                         base->light_sampler->pmf(prev_interaction_light_sample_ctx, light) *
                         light->pdf_li(prev_interaction_light_sample_ctx, ray.d, true);
-                    FloatType weight_bsdf = power_heuristic(1, pdf_bsdf, 1, pdf_light);
+                    Real weight_bsdf = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
                     L += beta * weight_bsdf * Le;
                 }
@@ -176,10 +176,10 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
             // Compute MIS weight for area light
             auto area_light = isect.area_light;
 
-            FloatType pdf_light =
+            Real pdf_light =
                 base->light_sampler->pmf(prev_interaction_light_sample_ctx, area_light) *
                 area_light->pdf_li(prev_interaction_light_sample_ctx, ray.d);
-            FloatType weight_light = power_heuristic(1, pdf_bsdf, 1, pdf_light);
+            Real weight_light = power_heuristic(1, pdf_bsdf, 1, pdf_light);
 
             path_state->L[path_idx] += beta * weight_light * Le;
         }
@@ -362,7 +362,7 @@ void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *path_state) 
 
     // Sample BSDF to get new path direction
     Vector3f wo = -ray.d;
-    FloatType u = sampler->get_1d();
+    Real u = sampler->get_1d();
     auto bs = path_state->bsdf[path_idx].sample_f(wo, u, sampler->get_2d());
     if (!bs) {
         path_state->beta[path_idx] = SampledSpectrum(0.0);
@@ -530,7 +530,7 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
     }
 
     // Choose a light source for the direct lighting calculation
-    FloatType u = sampler->get_1d();
+    Real u = sampler->get_1d();
     auto sampled_light = base->light_sampler->sample(ctx, u);
 
     Point2f uLight = sampler->get_2d();
@@ -555,14 +555,14 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
     }
 
     // Return light's contribution to reflected radiance
-    FloatType pdf_light = sampled_light->p * ls->pdf;
+    Real pdf_light = sampled_light->p * ls->pdf;
     if (pbrt::is_delta_light(light->get_light_type())) {
         return ls->l * f / pdf_light;
     }
 
     // for non delta light
-    FloatType pdf_bsdf = bsdf->pdf(wo, wi);
-    FloatType weight_light = power_heuristic(1, pdf_light, 1, pdf_bsdf);
+    Real pdf_bsdf = bsdf->pdf(wo, wi);
+    Real weight_light = power_heuristic(1, pdf_light, 1, pdf_bsdf);
 
     return weight_light * ls->l * f / pdf_light;
 }
@@ -632,7 +632,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
                     std::min<uint>(path_state.global_path_counter / num_pixels, samples_per_pixel);
 
                 gl_helper.draw_frame(
-                    GLHelper::assemble_title(FloatType(current_sample_idx) / samples_per_pixel));
+                    GLHelper::assemble_title(Real(current_sample_idx) / samples_per_pixel));
             }
         }
 

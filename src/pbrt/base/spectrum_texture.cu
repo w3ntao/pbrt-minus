@@ -70,7 +70,7 @@ SpectrumTexture::create(const std::string &texture_type, const SpectrumType spec
 }
 
 const SpectrumTexture *
-SpectrumTexture::create_constant_float_val_texture(FloatType val, GPUMemoryAllocator &allocator) {
+SpectrumTexture::create_constant_float_val_texture(Real val, GPUMemoryAllocator &allocator) {
     auto spectrum_constant_texture = allocator.allocate<SpectrumConstantTexture>();
     auto spectrum_texture = allocator.allocate<SpectrumTexture>();
 

@@ -109,7 +109,7 @@ class GLHelper {
         }
     }
 
-    static std::string assemble_title(const FloatType progress_percentage) {
+    static std::string assemble_title(const Real progress_percentage) {
         std::stringstream stream;
         stream << std::fixed << std::setprecision(1) << (progress_percentage * 100.0);
         return stream.str() + "%";

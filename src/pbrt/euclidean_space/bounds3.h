@@ -78,7 +78,7 @@ class Bounds3 {
         }
 
         REPORT_FATAL_ERROR();
-        const auto float_nan = std::numeric_limits<FloatType>::quiet_NaN();
+        const auto float_nan = std::numeric_limits<Real>::quiet_NaN();
         return Point3(float_nan, float_nan, float_nan);
     }
 
@@ -139,13 +139,13 @@ class Bounds3 {
     }
 
     PBRT_CPU_GPU
-    void bounding_sphere(Point3<T> *center, FloatType *radius) const {
+    void bounding_sphere(Point3<T> *center, Real *radius) const {
         *center = (p_min + p_max) / 2;
         *radius = inside(*center, *this) ? (*center - p_max).length() : 0.0;
     }
 
     PBRT_CPU_GPU
-    bool fast_intersect(const Ray &ray, FloatType ray_t_max, const Vector3f &inv_dir,
+    bool fast_intersect(const Ray &ray, Real ray_t_max, const Vector3f &inv_dir,
                         const int dir_is_neg[3]) const {
         // Check for ray intersection against $x$ and $y$ slabs
 
@@ -203,4 +203,4 @@ class Bounds3 {
     }
 };
 
-using Bounds3f = Bounds3<FloatType>;
+using Bounds3f = Bounds3<Real>;

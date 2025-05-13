@@ -447,12 +447,12 @@ void SceneBuilder::parse_concat_transform(const std::vector<Token> &tokens) {
         REPORT_FATAL_ERROR();
     }
 
-    std::vector<FloatType> data(16);
+    std::vector<Real> data(16);
     for (uint idx = 0; idx < tokens[1].values.size(); idx++) {
         data[idx] = stod(tokens[1].values[idx]);
     }
 
-    FloatType transform_data[4][4];
+    Real transform_data[4][4];
     for (uint y = 0; y < 4; y++) {
         for (uint x = 0; x < 4; x++) {
             transform_data[y][x] = data[y * 4 + x];
@@ -478,7 +478,7 @@ void SceneBuilder::parse_lookat(const std::vector<Token> &tokens) {
         throw std::runtime_error("expect Keyword(LookAt)");
     }
 
-    std::vector<FloatType> data;
+    std::vector<Real> data;
     for (int idx = 1; idx < tokens.size(); idx++) {
         data.push_back(tokens[idx].to_float());
     }
@@ -535,7 +535,7 @@ void SceneBuilder::parse_rotate(const std::vector<Token> &tokens) {
         REPORT_FATAL_ERROR();
     }
 
-    std::vector<FloatType> data;
+    std::vector<Real> data;
     for (int idx = 1; idx < tokens.size(); idx++) {
         data.push_back(tokens[idx].to_float());
     }
@@ -549,7 +549,7 @@ void SceneBuilder::parse_scale(const std::vector<Token> &tokens) {
         REPORT_FATAL_ERROR();
     }
 
-    std::vector<FloatType> data;
+    std::vector<Real> data;
     for (int idx = 1; idx < tokens.size(); idx++) {
         data.push_back(tokens[idx].to_float());
     }
@@ -663,12 +663,12 @@ void SceneBuilder::parse_transform(const std::vector<Token> &tokens) {
         REPORT_FATAL_ERROR();
     }
 
-    std::vector<FloatType> data(16);
+    std::vector<Real> data(16);
     for (uint idx = 0; idx < tokens[1].values.size(); idx++) {
         data[idx] = stod(tokens[1].values[idx]);
     }
 
-    FloatType transform_data[4][4];
+    Real transform_data[4][4];
     for (uint y = 0; y < 4; y++) {
         for (uint x = 0; x < 4; x++) {
             transform_data[y][x] = data[y * 4 + x];
@@ -681,7 +681,7 @@ void SceneBuilder::parse_transform(const std::vector<Token> &tokens) {
 }
 
 void SceneBuilder::parse_translate(const std::vector<Token> &tokens) {
-    std::vector<FloatType> data;
+    std::vector<Real> data;
     for (int idx = 1; idx < tokens.size(); idx++) {
         data.push_back(tokens[idx].to_float());
     }
@@ -698,7 +698,7 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
                         function_name = __func__] {
         const auto current = std::chrono::system_clock::now();
 
-        const std::chrono::duration<FloatType> duration{current - last_time_check};
+        const std::chrono::duration<Real> duration{current - last_time_check};
 
         const auto time_in_second = duration.count();
         if (time_in_second > 5) {
@@ -850,7 +850,7 @@ void SceneBuilder::parse_file(const std::string &_filename) {
     const auto all_tokens = parse_pbrt_into_token(_filename);
     parse_tokens(all_tokens);
 
-    const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
+    const std::chrono::duration<Real> duration{std::chrono::system_clock::now() - start};
 
     const auto time_in_seconds = duration.count();
     if (time_in_seconds > 10) {
@@ -1007,7 +1007,7 @@ void SceneBuilder::render() const {
         REPORT_FATAL_ERROR();
     }
 
-    const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
+    const std::chrono::duration<Real> duration{std::chrono::system_clock::now() - start};
 
     std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count()
               << " seconds\n"

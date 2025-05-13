@@ -18,7 +18,7 @@ class MitchellFilter {
     }
 
     PBRT_CPU_GPU
-    FloatType get_integral() const {
+    Real get_integral() const {
         return radius.x * radius.y / 4;
     }
 
@@ -28,19 +28,19 @@ class MitchellFilter {
     }
 
     PBRT_CPU_GPU
-    FloatType evaluate(const Point2f p) const {
+    Real evaluate(const Point2f p) const {
         return mitchell_1d(2 * p.x / radius.x) * mitchell_1d(2 * p.y / radius.y);
     }
 
   private:
     Vector2f radius;
-    FloatType b, c;
+    Real b, c;
     const FilterSampler *sampler;
 
     PBRT_CPU_GPU
-    FloatType mitchell_1d(FloatType x) const;
+    Real mitchell_1d(Real x) const;
 
-    void init(const Vector2f &_radius, FloatType _b, FloatType _c) {
+    void init(const Vector2f &_radius, Real _b, Real _c) {
         radius = _radius;
         b = _b;
         c = _c;

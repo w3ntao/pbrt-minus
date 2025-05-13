@@ -62,7 +62,7 @@ SampledSpectrum BSDF::f(const Vector3f &woRender, const Vector3f &wiRender,
 }
 
 PBRT_CPU_GPU
-pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, FloatType u, const Point2f &u2,
+pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, Real u, const Point2f &u2,
                                           TransportMode mode,
                                           BxDFReflTransFlags sample_flags) const {
     if (bxdf.has_type_null()) {
@@ -85,7 +85,7 @@ pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, FloatType u
 }
 
 PBRT_CPU_GPU
-FloatType BSDF::pdf(const Vector3f &woRender, const Vector3f &wiRender, TransportMode mode,
+Real BSDF::pdf(const Vector3f &woRender, const Vector3f &wiRender, TransportMode mode,
                     BxDFReflTransFlags sampleFlags) const {
     Vector3f wo = render_to_local(woRender);
     Vector3f wi = render_to_local(wiRender);

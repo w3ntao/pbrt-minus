@@ -27,7 +27,7 @@ class UniformInfiniteLight : public LightBase {
                                             SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    FloatType pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+    Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                      bool allow_incomplete_pdf) const;
 
     PBRT_CPU_GPU
@@ -39,9 +39,9 @@ class UniformInfiniteLight : public LightBase {
 
   private:
     const Spectrum *Lemit;
-    FloatType scale;
+    Real scale;
     Point3f sceneCenter;
-    FloatType sceneRadius;
+    Real sceneRadius;
 
-    void init(const Transform &renderFromLight, const Spectrum *_Lemit, FloatType _scale);
+    void init(const Transform &renderFromLight, const Spectrum *_Lemit, Real _scale);
 };

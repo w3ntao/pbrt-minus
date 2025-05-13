@@ -11,14 +11,14 @@ class GPUMemoryAllocator;
 
 class Distribution2D {
   public:
-    static const Distribution2D *create(const std::vector<std::vector<FloatType>> &data,
+    static const Distribution2D *create(const std::vector<std::vector<Real>> &data,
                                         GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    cuda::std::pair<Point2f, FloatType> sample(const Point2f &uv) const;
+    cuda::std::pair<Point2f, Real> sample(const Point2f &uv) const;
 
     PBRT_CPU_GPU
-    FloatType get_pdf(const Point2f &u) const;
+    Real get_pdf(const Point2f &u) const;
 
   private:
     Point2i dimension;
@@ -26,5 +26,5 @@ class Distribution2D {
     Distribution1D *dimension_y_distribution_list;
     const AliasTable *dimension_x_distribution;
 
-    void build(const std::vector<std::vector<FloatType>> &data, GPUMemoryAllocator &allocator);
+    void build(const std::vector<std::vector<Real>> &data, GPUMemoryAllocator &allocator);
 };

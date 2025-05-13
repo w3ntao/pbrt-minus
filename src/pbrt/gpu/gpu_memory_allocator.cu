@@ -10,6 +10,6 @@ std::string GPUMemoryAllocator::get_allocated_memory_size() const {
     }
 
     std::stringstream stream;
-    stream << std::fixed << std::setprecision(1) << (FloatType(size_in_mb) / 1024);
+    stream << std::fixed << std::setprecision(1) << (Real(size_in_mb) / 1024);
     return stream.str() + " GB";
 }

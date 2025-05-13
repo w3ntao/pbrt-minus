@@ -39,7 +39,7 @@ class Sampler {
     PBRT_CPU_GPU
     uint get_samples_per_pixel() const;
 
-    PBRT_CPU_GPU FloatType get_1d();
+    PBRT_CPU_GPU Real get_1d();
 
     PBRT_CPU_GPU Point2f get_2d();
 

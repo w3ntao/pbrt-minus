@@ -221,7 +221,7 @@ pbrt::optional<LightLeSample> Light::sample_le(Point2f u1, Point2f u2,
 }
 
 PBRT_CPU_GPU
-FloatType Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
+Real Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
                         bool allow_incomplete_pdf) const {
     switch (type) {
     case Type::diffuse_area_light: {
@@ -247,8 +247,8 @@ FloatType Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
 }
 
 PBRT_CPU_GPU
-void Light::pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos,
-                   FloatType *pdfDir) const {
+void Light::pdf_le(const Interaction &intr, Vector3f w, Real *pdfPos,
+                   Real *pdfDir) const {
     if (type == Type::diffuse_area_light) {
         return static_cast<const DiffuseAreaLight *>(ptr)->pdf_le(intr, w, pdfPos, pdfDir);
     }
@@ -258,7 +258,7 @@ void Light::pdf_le(const Interaction &intr, Vector3f w, FloatType *pdfPos,
 }
 
 PBRT_CPU_GPU
-void Light::pdf_le(const Ray &ray, FloatType *pdfPos, FloatType *pdfDir) const {
+void Light::pdf_le(const Ray &ray, Real *pdfPos, Real *pdfDir) const {
     switch (type) {
     case Type::spot_light: {
         return static_cast<const SpotLight *>(ptr)->pdf_le(ray, pdfPos, pdfDir);
@@ -296,7 +296,7 @@ SampledSpectrum Light::phi(const SampledWavelengths &lambda) const {
     return {};
 }
 
-void Light::preprocess(const Bounds3<FloatType> &scene_bounds) {
+void Light::preprocess(const Bounds3<Real> &scene_bounds) {
     switch (type) {
     case Type::diffuse_area_light: {
         // do nothing

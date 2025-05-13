@@ -15,15 +15,15 @@ class FloatConstantTexture {
         return texture;
     }
 
-    void init(FloatType _value) {
+    void init(Real _value) {
         value = _value;
     }
 
     PBRT_CPU_GPU
-    FloatType evaluate(const TextureEvalContext &ctx) const {
+    Real evaluate(const TextureEvalContext &ctx) const {
         return value;
     }
 
   private:
-    FloatType value;
+    Real value;
 };

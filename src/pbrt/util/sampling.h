@@ -9,22 +9,22 @@
 #include <pbrt/util/math.h>
 
 PBRT_CPU_GPU
-inline FloatType cosine_hemisphere_pdf(FloatType cos_theta) {
+inline Real cosine_hemisphere_pdf(Real cos_theta) {
     return cos_theta / compute_pi();
 }
 
 PBRT_CPU_GPU
-inline FloatType sample_linear(FloatType u, FloatType a, FloatType b) {
+inline Real sample_linear(Real u, Real a, Real b) {
     if (u == 0 && a == 0) {
         return 0;
     }
-    FloatType x = u * (a + b) / (a + std::sqrt(pbrt::lerp(u, sqr(a), sqr(b))));
+    Real x = u * (a + b) / (a + std::sqrt(pbrt::lerp(u, sqr(a), sqr(b))));
     return std::min(x, OneMinusEpsilon);
 }
 
 PBRT_CPU_GPU
-inline int sample_discrete(const FloatType *weights, uint num_weights, FloatType u,
-                           FloatType *pmf = nullptr, FloatType *uRemapped = nullptr) {
+inline int sample_discrete(const Real *weights, uint num_weights, Real u,
+                           Real *pmf = nullptr, Real *uRemapped = nullptr) {
     // Handle empty _weights_ for discrete sampling
     if (num_weights == 0) {
         if (pmf != nullptr) {
@@ -34,20 +34,20 @@ inline int sample_discrete(const FloatType *weights, uint num_weights, FloatType
     }
 
     // Compute sum of _weights_
-    FloatType sumWeights = 0;
+    Real sumWeights = 0;
     for (uint idx = 0; idx < num_weights; ++idx) {
         sumWeights += weights[idx];
     }
 
     // Compute rescaled $u'$ sample
-    FloatType up = u * sumWeights;
+    Real up = u * sumWeights;
     if (up == sumWeights) {
         up = next_float_down(up);
     }
 
     // Find offset in _weights_ corresponding to $u'$
     int offset = 0;
-    FloatType sum = 0;
+    Real sum = 0;
     while (sum + weights[offset] <= up) {
         sum += weights[offset++];
     }
@@ -64,8 +64,8 @@ inline int sample_discrete(const FloatType *weights, uint num_weights, FloatType
 }
 
 PBRT_CPU_GPU
-inline FloatType sample_tent(FloatType u, FloatType r) {
-    const FloatType weigits[2] = {0.5, 0.5};
+inline Real sample_tent(Real u, Real r) {
+    const Real weigits[2] = {0.5, 0.5};
 
     if (sample_discrete(weigits, 2, u, nullptr, &u) == 0) {
         return -r + r * sample_linear(u, 0, 1);
@@ -75,14 +75,14 @@ inline FloatType sample_tent(FloatType u, FloatType r) {
 }
 
 PBRT_CPU_GPU
-inline FloatType sample_normal(FloatType u, FloatType mu = 0, FloatType sigma = 1) {
+inline Real sample_normal(Real u, Real mu = 0, Real sigma = 1) {
     // for GPU code there is a non-zero probability it returns INF (from ErfInv())
 
     return mu + Sqrt2 * sigma * erf_inv(2 * u - 1);
 }
 
 PBRT_CPU_GPU
-inline Point2f sample_bilinear(Point2f u, const FloatType w[4]) {
+inline Point2f sample_bilinear(Point2f u, const Real w[4]) {
     Point2f p;
     // Sample $y$ for bilinear marginal distribution
     p.y = sample_linear(u[1], w[0] + w[1], w[2] + w[3]);
@@ -94,7 +94,7 @@ inline Point2f sample_bilinear(Point2f u, const FloatType w[4]) {
 }
 
 PBRT_CPU_GPU
-inline FloatType bilinear_pdf(Point2f p, const FloatType w[4]) {
+inline Real bilinear_pdf(Point2f p, const Real w[4]) {
     if (p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) {
         return 0;
     }
@@ -112,22 +112,22 @@ inline FloatType bilinear_pdf(Point2f p, const FloatType w[4]) {
 PBRT_CPU_GPU
 inline Point2f sample_uniform_disk_concentric(Point2f u) {
     // Map _u_ to $[-1,1]^2$ and handle degeneracy at the origin
-    const auto u_offset = FloatType(2.0) * u - Vector2f(1.0, 1.0);
+    const auto u_offset = Real(2.0) * u - Vector2f(1.0, 1.0);
     if (u_offset == Point2f(0.0, 0.0)) {
         return Point2f(0.0, 0.0);
     }
 
     // Apply concentric mapping to point
-    FloatType r = NAN;
-    FloatType theta = NAN;
-    FloatType pi_over_4 = compute_pi() / 4.0;
+    Real r = NAN;
+    Real theta = NAN;
+    Real pi_over_4 = compute_pi() / 4.0;
 
     if (abs(u_offset.x) > abs(u_offset.y)) {
         r = u_offset.x;
         theta = pi_over_4 * (u_offset.y / u_offset.x);
     } else {
         r = u_offset.y;
-        FloatType pi_over_2 = compute_pi() / 2.0;
+        Real pi_over_2 = compute_pi() / 2.0;
         theta = pi_over_2 - pi_over_4 * (u_offset.x / u_offset.y);
     }
 
@@ -136,14 +136,14 @@ inline Point2f sample_uniform_disk_concentric(Point2f u) {
 
 PBRT_CPU_GPU
 inline Point2f sample_uniform_disk_polar(const Point2f u) {
-    FloatType r = std::sqrt(u[0]);
-    FloatType theta = 2 * compute_pi() * u[1];
+    Real r = std::sqrt(u[0]);
+    Real theta = 2 * compute_pi() * u[1];
     return {r * std::cos(theta), r * std::sin(theta)};
 }
 
 PBRT_CPU_GPU
-inline void sample_uniform_triangle(FloatType out[3], const Point2f u) {
-    FloatType b0, b1;
+inline void sample_uniform_triangle(Real out[3], const Point2f u) {
+    Real b0, b1;
 
     if (u[0] < u[1]) {
         b0 = u[0] / 2;
@@ -159,7 +159,7 @@ inline void sample_uniform_triangle(FloatType out[3], const Point2f u) {
 }
 
 PBRT_CPU_GPU
-static void sample_spherical_triangle(FloatType out[3], FloatType *pdf, const Point3f v[3],
+static void sample_spherical_triangle(Real out[3], Real *pdf, const Point3f v[3],
                                       const Point3f p, const Point2f u) {
     if (pdf) {
         *pdf = 0.0;
@@ -187,43 +187,43 @@ static void sample_spherical_triangle(FloatType out[3], FloatType *pdf, const Po
     n_ca = n_ca.normalize();
 
     // Find angles $\alpha$, $\beta$, and $\gamma$ at spherical triangle vertices
-    FloatType alpha = angle_between(n_ab, -n_ca);
-    FloatType beta = angle_between(n_bc, -n_ab);
-    FloatType gamma = angle_between(n_ca, -n_bc);
+    Real alpha = angle_between(n_ab, -n_ca);
+    Real beta = angle_between(n_bc, -n_ab);
+    Real gamma = angle_between(n_ca, -n_bc);
 
     const auto PI = compute_pi();
 
     // Uniformly sample triangle area $A$ to compute $A'$
-    FloatType A_pi = alpha + beta + gamma;
-    FloatType Ap_pi = pbrt::lerp(u[0], PI, A_pi);
+    Real A_pi = alpha + beta + gamma;
+    Real Ap_pi = pbrt::lerp(u[0], PI, A_pi);
     if (pdf) {
-        FloatType A = A_pi - PI;
+        Real A = A_pi - PI;
         *pdf = (A <= 0) ? 0 : 1 / A;
     }
 
     // Find $\cos\beta'$ for point along _b_ for sampled area
-    FloatType cosAlpha = std::cos(alpha), sinAlpha = std::sin(alpha);
-    FloatType sinPhi = std::sin(Ap_pi) * cosAlpha - std::cos(Ap_pi) * sinAlpha;
-    FloatType cosPhi = std::cos(Ap_pi) * cosAlpha + std::sin(Ap_pi) * sinAlpha;
-    FloatType k1 = cosPhi + cosAlpha;
-    FloatType k2 = sinPhi - sinAlpha * a.dot(b) /* cos c */;
-    FloatType cosBp = (k2 + (difference_of_products(k2, cosPhi, k1, sinPhi)) * cosAlpha) /
+    Real cosAlpha = std::cos(alpha), sinAlpha = std::sin(alpha);
+    Real sinPhi = std::sin(Ap_pi) * cosAlpha - std::cos(Ap_pi) * sinAlpha;
+    Real cosPhi = std::cos(Ap_pi) * cosAlpha + std::sin(Ap_pi) * sinAlpha;
+    Real k1 = cosPhi + cosAlpha;
+    Real k2 = sinPhi - sinAlpha * a.dot(b) /* cos c */;
+    Real cosBp = (k2 + (difference_of_products(k2, cosPhi, k1, sinPhi)) * cosAlpha) /
                       ((sum_of_products(k2, sinPhi, k1, cosPhi)) * sinAlpha);
 
-    cosBp = clamp<FloatType>(cosBp, -1, 1);
+    cosBp = clamp<Real>(cosBp, -1, 1);
 
     // Sample $c'$ along the arc between $b'$ and $a$
-    FloatType sinBp = safe_sqrt(1 - sqr(cosBp));
+    Real sinBp = safe_sqrt(1 - sqr(cosBp));
     Vector3f cp = cosBp * a + sinBp * gram_schmidt(c, a).normalize();
 
     // Compute sampled spherical triangle direction and return barycentrics
-    FloatType cosTheta = 1 - u[1] * (1 - cp.dot(b));
-    FloatType sinTheta = safe_sqrt(1 - sqr(cosTheta));
+    Real cosTheta = 1 - u[1] * (1 - cp.dot(b));
+    Real sinTheta = safe_sqrt(1 - sqr(cosTheta));
     Vector3f w = cosTheta * b + sinTheta * gram_schmidt(cp, b).normalize();
     // Find barycentric coordinates for sampled direction _w_
     Vector3f e1 = v[1] - v[0], e2 = v[2] - v[0];
     Vector3f s1 = w.cross(e2);
-    FloatType divisor = s1.dot(e1);
+    Real divisor = s1.dot(e1);
     if (divisor == 0) {
         // This happens with triangles that cover (nearly) the whole
         // hemisphere.
@@ -234,14 +234,14 @@ static void sample_spherical_triangle(FloatType out[3], FloatType *pdf, const Po
         return;
     }
 
-    FloatType invDivisor = 1 / divisor;
+    Real invDivisor = 1 / divisor;
     Vector3f s = p - v[0];
-    FloatType b1 = s.dot(s1) * invDivisor;
-    FloatType b2 = w.dot(s.cross(e1)) * invDivisor;
+    Real b1 = s.dot(s1) * invDivisor;
+    Real b2 = w.dot(s.cross(e1)) * invDivisor;
 
     // Return clamped barycentrics for sampled direction
-    b1 = clamp<FloatType>(b1, 0, 1);
-    b2 = clamp<FloatType>(b2, 0, 1);
+    b1 = clamp<Real>(b1, 0, 1);
+    b2 = clamp<Real>(b2, 0, 1);
     if (b1 + b2 > 1) {
         b1 /= b1 + b2;
         b2 /= b1 + b2;
@@ -254,16 +254,16 @@ static void sample_spherical_triangle(FloatType out[3], FloatType *pdf, const Po
 
 PBRT_CPU_GPU
 inline Vector3f sample_uniform_sphere(Point2f u) {
-    FloatType z = 1 - 2 * u[0];
-    FloatType r = safe_sqrt(1 - sqr(z));
+    Real z = 1 - 2 * u[0];
+    Real r = safe_sqrt(1 - sqr(z));
 
-    FloatType phi = 2 * compute_pi() * u[1];
+    Real phi = 2 * compute_pi() * u[1];
 
     return {r * std::cos(phi), r * std::sin(phi), z};
 }
 
 PBRT_CPU_GPU
-inline FloatType uniform_sphere_pdf() {
+inline Real uniform_sphere_pdf() {
     return 1.0 / (4.0 * compute_pi());
 }
 
@@ -276,21 +276,21 @@ inline Vector3f sample_cosine_hemisphere(Point2f u) {
 }
 
 PBRT_CPU_GPU
-inline Vector3f SampleUniformCone(Point2f u, FloatType cosThetaMax) {
-    FloatType cosTheta = (1 - u[0]) + u[0] * cosThetaMax;
-    FloatType sinTheta = safe_sqrt(1 - sqr(cosTheta));
+inline Vector3f SampleUniformCone(Point2f u, Real cosThetaMax) {
+    Real cosTheta = (1 - u[0]) + u[0] * cosThetaMax;
+    Real sinTheta = safe_sqrt(1 - sqr(cosTheta));
 
-    FloatType phi = u[1] * 2 * compute_pi();
+    Real phi = u[1] * 2 * compute_pi();
     return SphericalDirection(sinTheta, cosTheta, phi);
 }
 
 PBRT_CPU_GPU
-inline FloatType UniformConePDF(FloatType cosThetaMax) {
+inline Real UniformConePDF(Real cosThetaMax) {
     return 1.0 / (2.0 * compute_pi() * (1.0 - cosThetaMax));
 }
 
 PBRT_CPU_GPU
-inline FloatType visible_wavelengths_pdf(FloatType lambda) {
+inline Real visible_wavelengths_pdf(Real lambda) {
     if (lambda < LAMBDA_MIN || lambda > LAMBDA_MAX) {
         return 0;
     }
@@ -299,19 +299,19 @@ inline FloatType visible_wavelengths_pdf(FloatType lambda) {
 }
 
 PBRT_CPU_GPU
-inline FloatType sample_visible_wavelengths(FloatType u) {
+inline Real sample_visible_wavelengths(Real u) {
     return 538 - 138.888889f * std::atanh(0.85691062f - 1.82750197f * u);
 }
 
 PBRT_CPU_GPU
-inline FloatType SampleExponential(FloatType u, FloatType a) {
+inline Real SampleExponential(Real u, Real a) {
     return -std::log(1 - u) / a;
 }
 
 PBRT_CPU_GPU
-inline FloatType power_heuristic(int nf, FloatType fPdf, int ng, FloatType gPdf) {
-    FloatType f = nf * fPdf;
-    FloatType g = ng * gPdf;
+inline Real power_heuristic(int nf, Real fPdf, int ng, Real gPdf) {
+    Real f = nf * fPdf;
+    Real g = ng * gPdf;
 
     if (is_inf(sqr(f))) {
         return 1;
@@ -321,7 +321,7 @@ inline FloatType power_heuristic(int nf, FloatType fPdf, int ng, FloatType gPdf)
 }
 
 PBRT_CPU_GPU
-inline FloatType SmoothStepPDF(FloatType x, FloatType a, FloatType b) {
+inline Real SmoothStepPDF(Real x, Real a, Real b) {
     if (x < a || x > b) {
         return 0;
     }
@@ -330,18 +330,18 @@ inline FloatType SmoothStepPDF(FloatType x, FloatType a, FloatType b) {
 }
 
 PBRT_CPU_GPU
-inline FloatType SampleSmoothStep(FloatType u, FloatType a, FloatType b) {
-    auto cdfMinusU = [=](FloatType x) -> cuda::std::pair<FloatType, FloatType> {
-        FloatType t = (x - a) / (b - a);
-        FloatType P = 2 * pbrt::pow<3>(t) - pbrt::pow<4>(t);
-        FloatType PDeriv = SmoothStepPDF(x, a, b);
+inline Real SampleSmoothStep(Real u, Real a, Real b) {
+    auto cdfMinusU = [=](Real x) -> cuda::std::pair<Real, Real> {
+        Real t = (x - a) / (b - a);
+        Real P = 2 * pbrt::pow<3>(t) - pbrt::pow<4>(t);
+        Real PDeriv = SmoothStepPDF(x, a, b);
         return {P - u, PDeriv};
     };
     return NewtonBisection(a, b, cdfMinusU);
 }
 
 PBRT_CPU_GPU
-Vector3f SampleHenyeyGreenstein(Vector3f wo, FloatType g, Point2f u, FloatType *pdf);
+Vector3f SampleHenyeyGreenstein(Vector3f wo, Real g, Point2f u, Real *pdf);
 
 PBRT_CPU_GPU
 // Via Jim Arvo's SphTri.C

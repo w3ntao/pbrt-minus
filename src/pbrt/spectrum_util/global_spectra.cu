@@ -50,7 +50,7 @@ const GlobalSpectra *GlobalSpectra::create(RGBtoSpectrumData::Gamut gamut,
         REPORT_FATAL_ERROR();
     }
 
-    const std::chrono::duration<FloatType> duration{std::chrono::system_clock::now() - start};
+    const std::chrono::duration<Real> duration{std::chrono::system_clock::now() - start};
     std::cout << std::fixed << std::setprecision(1) << "spectra computing took " << duration.count()
               << " seconds.\n"
               << std::flush;

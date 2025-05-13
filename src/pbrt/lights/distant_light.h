@@ -28,7 +28,7 @@ class DistantLight : public LightBase {
 
   private:
     const Spectrum *l_emit;
-    FloatType scale;
+    Real scale;
     Point3f scene_center;
-    FloatType scene_radius;
+    Real scene_radius;
 };

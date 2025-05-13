@@ -122,7 +122,7 @@ class Token {
         return !(*this == t);
     }
 
-    FloatType to_float() const {
+    Real to_float() const {
         if (type != TokenType::Number) {
             throw std::runtime_error("you should only invoke it with type Number.");
         }
@@ -130,8 +130,8 @@ class Token {
         return stod(values[0]);
     }
 
-    std::vector<FloatType> to_floats() const {
-        std::vector<FloatType> floats(values.size());
+    std::vector<Real> to_floats() const {
+        std::vector<Real> floats(values.size());
         for (int idx = 0; idx < values.size(); idx++) {
             floats[idx] = stod(values[idx]);
         }

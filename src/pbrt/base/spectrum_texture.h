@@ -35,7 +35,7 @@ class SpectrumTexture {
            const Transform &render_from_texture, const RGBColorSpace *color_space,
            const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
-    static const SpectrumTexture *create_constant_float_val_texture(FloatType val,
+    static const SpectrumTexture *create_constant_float_val_texture(Real val,
                                                                     GPUMemoryAllocator &allocator);
 
     static const SpectrumTexture *create_constant_texture(const Spectrum *spectrum,

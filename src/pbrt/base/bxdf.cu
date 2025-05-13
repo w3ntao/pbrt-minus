@@ -137,7 +137,7 @@ SampledSpectrum BxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u, TransportMode mode,
+pbrt::optional<BSDFSample> BxDF::sample_f(Vector3f wo, Real uc, Point2f u, TransportMode mode,
                                           BxDFReflTransFlags sampleFlags) const {
     switch (type) {
     case Type::coated_conductor: {
@@ -170,7 +170,7 @@ pbrt::optional<BSDFSample> BxDF::sample_f(Vector3f wo, FloatType uc, Point2f u, 
 }
 
 PBRT_CPU_GPU
-FloatType BxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
+Real BxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
                     BxDFReflTransFlags sampleFlags) const {
     switch (type) {
     case Type::coated_conductor: {

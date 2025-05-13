@@ -47,7 +47,7 @@ class MLTBDPTIntegrator {
                       Vertex *light_vertices) const;
 
     PBRT_CPU_GPU
-    FloatType compute_luminance(const SampledSpectrum &radiance,
+    Real compute_luminance(const SampledSpectrum &radiance,
                                 const SampledWavelengths &lambda) const {
         return radiance.y(lambda, cie_y);
     }

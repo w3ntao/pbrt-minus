@@ -135,12 +135,12 @@ class Point3 {
     }
 
     PBRT_CPU_GPU
-    FloatType squared_distance(const Point3<T> &p) const {
+    Real squared_distance(const Point3<T> &p) const {
         return sqr(x - p.x) + sqr(y - p.y) + sqr(z - p.z);
     }
 
     PBRT_CPU_GPU
-    FloatType distance(const Point3<T> &p) const {
+    Real distance(const Point3<T> &p) const {
         return std::sqrt(this->squared_distance(p));
     }
 
@@ -150,4 +150,4 @@ class Point3 {
     }
 };
 
-using Point3f = Point3<FloatType>;
+using Point3f = Point3<Real>;
