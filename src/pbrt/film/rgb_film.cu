@@ -1,6 +1,6 @@
 #include <pbrt/base/filter.h>
-#include <pbrt/films/pixel_sensor.h>
-#include <pbrt/films/rgb_film.h>
+#include <pbrt/film/pixel_sensor.h>
+#include <pbrt/film/rgb_film.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>

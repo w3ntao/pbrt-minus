@@ -8,7 +8,7 @@
 #include <pbrt/base/primitive.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/base/shape.h>
-#include <pbrt/films/grey_scale_film.h>
+#include <pbrt/film/grey_scale_film.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/integrators/mlt_bdpt.h>
 #include <pbrt/integrators/mlt_path.h>

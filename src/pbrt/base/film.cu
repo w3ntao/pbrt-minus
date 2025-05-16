@@ -1,6 +1,6 @@
 #include <ext/lodepng/lodepng.h>
 #include <pbrt/base/film.h>
-#include <pbrt/films/rgb_film.h>
+#include <pbrt/film/rgb_film.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <vector>

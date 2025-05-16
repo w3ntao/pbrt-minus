@@ -81,8 +81,8 @@ add_executable(${PROJ_NAME}
         src/pbrt/euclidean_space/squared_matrix.cu
         src/pbrt/euclidean_space/transform.cu
 
-        src/pbrt/films/grey_scale_film.cu
-        src/pbrt/films/rgb_film.cu
+        src/pbrt/film/grey_scale_film.cu
+        src/pbrt/film/rgb_film.cu
 
         src/pbrt/filters/box.cu
         src/pbrt/filters/mitchell.cu

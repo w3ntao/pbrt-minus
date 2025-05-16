@@ -1,6 +1,6 @@
 #include <ext/lodepng/lodepng.h>
 #include <pbrt/base/filter.h>
-#include <pbrt/films/grey_scale_film.h>
+#include <pbrt/film/grey_scale_film.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <pbrt/spectrum_util/rgb.h>
 #include <pbrt/util/math.h>
