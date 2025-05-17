@@ -2,6 +2,7 @@
 #include <pbrt/base/interaction.h>
 #include <pbrt/base/light.h>
 #include <pbrt/base/material.h>
+#include <pbrt/cameras/perspective.h>
 
 PBRT_CPU_GPU
 void SurfaceInteraction::compute_differentials(const Camera *camera, uint samples_per_pixel) {

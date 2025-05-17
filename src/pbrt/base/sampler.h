@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pbrt/base/camera.h>
+#include <pbrt/cameras/camera_base.h>
 #include <pbrt/euclidean_space/point2.h>
 
 class Filter;

@@ -3,6 +3,7 @@
 #include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/sampler.h>
+#include <pbrt/cameras/perspective.h>
 #include <pbrt/film/grey_scale_film.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gui/gl_helper.h>
@@ -21,8 +22,7 @@ struct MLTSample {
 
     PBRT_CPU_GPU
     MLTSample(const Point2f &p_film, const SampledSpectrum &_radiance,
-              const SampledWavelengths &_lambda, const Real _weight,
-              const Real _sampling_density)
+              const SampledWavelengths &_lambda, const Real _weight, const Real _sampling_density)
         : path_sample(BDPTPathSample(p_film, _radiance, _lambda)), weight(_weight),
           sampling_density(_sampling_density) {}
 };
@@ -224,12 +224,10 @@ __global__ void wavefront_render(MLTSample *mlt_samples, BDPTPathSample *path_sa
     Real accept_prob = NAN;
     if (current_c == 0 && proposed_c == 0) {
         accept_prob = 0.5;
-
     } else if (current_c == 0) {
         accept_prob = 1;
         mlt_samples[sample_idx] = MLTSample(proposed_path.p_film, proposed_path.radiance,
                                             proposed_path.lambda, 1.0 / proposed_c, 1);
-
     } else if (proposed_c == 0) {
         accept_prob = 0;
         mlt_samples[sample_idx] = MLTSample(current_path->p_film, current_path->radiance,
@@ -251,7 +249,6 @@ __global__ void wavefront_render(MLTSample *mlt_samples, BDPTPathSample *path_sa
     if (rng->uniform<Real>() < accept_prob) {
         *current_path = proposed_path;
         mlt_sampler->accept();
-
     } else {
         mlt_sampler->reject();
     }

@@ -1,8 +1,7 @@
 #include <pbrt/filters/gaussian.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/util/math.h>
-
-#include <pbrt/gpu/gpu_memory_allocator.h>
 
 PBRT_CPU_GPU inline Real gaussian(Real x, Real mu = 0, Real sigma = 1) {
     return 1 / std::sqrt(2 * compute_pi() * sigma * sigma) *
@@ -10,8 +9,7 @@ PBRT_CPU_GPU inline Real gaussian(Real x, Real mu = 0, Real sigma = 1) {
 }
 
 PBRT_CPU_GPU
-inline Real gaussian_integral(Real x0, Real x1, Real mu = 0,
-                                   Real sigma = 1) {
+inline Real gaussian_integral(Real x0, Real x1, Real mu = 0, Real sigma = 1) {
     Real sigmaRoot2 = sigma * Real(Sqrt2);
     return 0.5f * (std::erf((mu - x0) / sigmaRoot2) - std::erf((mu - x1) / sigmaRoot2));
 }

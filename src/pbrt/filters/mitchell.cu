@@ -1,6 +1,5 @@
 #include <pbrt/base/filter.h>
 #include <pbrt/filters/mitchell.h>
-
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
 

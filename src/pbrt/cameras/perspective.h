@@ -1,16 +1,16 @@
 #pragma once
 
-#include <pbrt/base/camera.h>
-#include <pbrt/euclidean_space/bounds2.h>
-#include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/cameras/camera_base.h>
 
 class Film;
-class FIlter;
+class Filter;
+class ParameterDictionary;
 
 class PerspectiveCamera {
   public:
-    void init(const Point2i &resolution, const CameraTransform &camera_transform, const Film *_film,
-              const Filter *filter, const ParameterDictionary &parameters);
+    PerspectiveCamera(const Point2i &resolution, const CameraTransform &camera_transform,
+                      const Film *_film, const Filter *filter,
+                      const ParameterDictionary &parameters);
 
     PBRT_CPU_GPU
     CameraRay generate_ray(const CameraSample &sample, Sampler *sampler) const;
@@ -25,7 +25,12 @@ class PerspectiveCamera {
 
     PBRT_CPU_GPU
     pbrt::optional<CameraWiSample> sample_wi(const Interaction &ref, const Point2f u,
-                                                  SampledWavelengths &lambda) const;
+                                             SampledWavelengths &lambda) const;
+
+    PBRT_CPU_GPU
+    const CameraBase *get_camerabase() const {
+        return &camera_base;
+    }
 
   private:
     Transform raster_from_screen;

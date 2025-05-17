@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pbrt/gpu/macro.h>
+#include <pbrt/util/optional.h>
 
 class Camera;
 class Filter;

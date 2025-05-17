@@ -1,4 +1,5 @@
 #include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/light.h>
@@ -190,7 +191,6 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
     path_state->path_length[path_idx] += 1;
 
     switch (isect.material->get_material_type()) {
-
     case Material::Type::conductor: {
         queues->conductor_material->append_path(path_idx);
         return;

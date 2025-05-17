@@ -1,4 +1,5 @@
 #include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
 #include <pbrt/base/filter.h>
 #include <pbrt/base/float_texture.h>
@@ -6,7 +7,6 @@
 #include <pbrt/base/material.h>
 #include <pbrt/base/megakernel_integrator.h>
 #include <pbrt/base/primitive.h>
-#include <pbrt/base/sampler.h>
 #include <pbrt/base/shape.h>
 #include <pbrt/film/grey_scale_film.h>
 #include <pbrt/integrators/bdpt.h>
@@ -428,7 +428,6 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
     }
 
     if (keyword == "MakeNamedMedium" || keyword == "MediumInterface") {
-
         static std::set<std::string> unimplemented_keywords;
         if (unimplemented_keywords.find(keyword) == unimplemented_keywords.end()) {
             unimplemented_keywords.insert(keyword);
@@ -872,19 +871,14 @@ void SceneBuilder::preprocess() {
 
     if (bdpt_integrator != nullptr) {
         printf("Integrator: (wavefront) bdpt\n");
-
     } else if (mlt_bdpt_integrator != nullptr) {
         printf("Integrator: (wavefront) mlt-bdpt\n");
-
     } else if (mlt_path_integrator != nullptr) {
         printf("Integrator: (wavefront) mlt-path\n");
-
     } else if (wavefront_path_integrator != nullptr) {
         printf("Integrator: (wavefront) path\n");
-
     } else if (megakernel_integrator != nullptr) {
         printf("Integrator: (megakernel) %s\n", megakernel_integrator->get_name().c_str());
-
     } else {
         REPORT_FATAL_ERROR();
     }
@@ -958,7 +952,6 @@ void SceneBuilder::render() const {
         bdpt_integrator->render(film, spp, preview);
 
         film->write_to_png(output_filename, splat_scale);
-
     } else if (mlt_bdpt_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
                   << " with MLT-BDPT\n"
@@ -970,7 +963,6 @@ void SceneBuilder::render() const {
         film->write_to_png(output_filename, brightness / spp);
 
         heatmap.write_to_png("heatmap-" + output_filename);
-
     } else if (mlt_path_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
                   << " with MLT-path\n"
@@ -983,7 +975,6 @@ void SceneBuilder::render() const {
         film->write_to_png(output_filename, brightness / spp);
 
         heatmap.write_to_png("heatmap-" + output_filename);
-
     } else if (wavefront_path_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
                   << " with wavefront-path\n"
@@ -992,7 +983,6 @@ void SceneBuilder::render() const {
         wavefront_path_integrator->render(film, preview);
 
         film->write_to_png(output_filename);
-
     } else if (megakernel_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
                   << " with " + megakernel_integrator->get_name() << "\n"
@@ -1002,7 +992,6 @@ void SceneBuilder::render() const {
                                       integrator_base, preview);
 
         film->write_to_png(output_filename);
-
     } else {
         REPORT_FATAL_ERROR();
     }

@@ -1,4 +1,5 @@
 #include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/interaction.h>
@@ -17,7 +18,7 @@ constexpr size_t NUM_SAMPLERS = 64 * 1024;
 
 PBRT_CPU_GPU
 Real infinite_light_density(const Light **infinite_lights, int num_infinite_lights,
-                                 const PowerLightSampler *lightSampler, const Vector3f w) {
+                            const PowerLightSampler *lightSampler, const Vector3f w) {
     Real pdf = 0;
     for (auto idx = 0; idx < num_infinite_lights; ++idx) {
         auto light = infinite_lights[idx];
@@ -76,7 +77,7 @@ Real Vertex::pdf_light(const IntegratorBase *integrator_base, const Vertex &v) c
 
 PBRT_CPU_GPU
 Real Vertex::pdf(const IntegratorBase *integrator_base, const Vertex *prev,
-                      const Vertex &next) const {
+                 const Vertex &next) const {
     if (type == VertexType::light) {
         return pdf_light(integrator_base, next);
     }
@@ -157,7 +158,7 @@ SampledSpectrum Vertex::Le(const Light **infinite_lights, int num_infinite_light
 
 PBRT_CPU_GPU
 Real Vertex::pdf_light_origin(const Light **infinite_lights, int num_infinite_lights,
-                                   const Vertex &v, const PowerLightSampler *lightSampler) {
+                              const Vertex &v, const PowerLightSampler *lightSampler) {
     Vector3f w = v.p() - p();
     if (w.squared_length() == 0) {
         return 0.0;
@@ -258,7 +259,7 @@ SampledSpectrum G(const IntegratorBase *integrator_base, const Vertex &v0, const
 
 PBRT_CPU_GPU
 Real mis_weight(const IntegratorBase *integrator_base, Vertex *lightVertices,
-                     Vertex *cameraVertices, Vertex &sampled, int s, int t) {
+                Vertex *cameraVertices, Vertex &sampled, int s, int t) {
     if (s + t == 2) {
         return 1;
     }
@@ -549,7 +550,6 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
                       cameraVertices[t - 2], lambda) *
                 pt.beta;
         }
-
     } else if (t == 1) {
         // Sample a point on the camera and connect it to the light subpath
         const Vertex &qs = lightVertices[s - 1];
@@ -570,7 +570,6 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
                 }
             }
         }
-
     } else if (s == 1) {
         // Sample a point on a light and connect it to the camera subpath
         const Vertex &pt = cameraVertices[t - 1];
@@ -619,7 +618,6 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
                 }
             }
         }
-
     } else {
         // Handle all other bidirectional connection cases
         const Vertex &qs = lightVertices[s - 1], &pt = cameraVertices[t - 1];
@@ -634,9 +632,9 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
     }
 
     // Compute MIS weight for connection strategy
-    Real misWeight =
-        L.is_positive() ? mis_weight(integrator_base, lightVertices, cameraVertices, sampled, s, t)
-                        : 0.0;
+    Real misWeight = L.is_positive()
+                         ? mis_weight(integrator_base, lightVertices, cameraVertices, sampled, s, t)
+                         : 0.0;
 
     L *= misWeight;
     if (misWeightPtr != nullptr) {

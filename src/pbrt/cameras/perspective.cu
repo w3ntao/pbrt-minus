@@ -2,11 +2,12 @@
 #include <pbrt/base/filter.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/cameras/perspective.h>
+#include <pbrt/scene/parameter_dictionary.h>
 
-void PerspectiveCamera::init(const Point2i &resolution, const CameraTransform &camera_transform,
-                             const Film *_film, const Filter *filter,
-                             const ParameterDictionary &parameters) {
-    this->film = _film;
+PerspectiveCamera::PerspectiveCamera(const Point2i &resolution,
+                                     const CameraTransform &camera_transform, const Film *_film,
+                                     const Filter *filter, const ParameterDictionary &parameters) {
+    film = _film;
     camera_base.init(resolution, camera_transform);
 
     focal_distance = parameters.get_float("focaldistance", 1e6);
@@ -144,9 +145,8 @@ SampledSpectrum PerspectiveCamera::we(const Ray &ray, SampledWavelengths &lambda
 }
 
 PBRT_CPU_GPU
-pbrt::optional<CameraWiSample> PerspectiveCamera::sample_wi(const Interaction &ref,
-                                                                 const Point2f u,
-                                                                 SampledWavelengths &lambda) const {
+pbrt::optional<CameraWiSample> PerspectiveCamera::sample_wi(const Interaction &ref, const Point2f u,
+                                                            SampledWavelengths &lambda) const {
     // Uniformly sample a lens interaction _lensIntr_
     Point2f pLens = lens_radius * sample_uniform_disk_concentric(u);
     auto pLensRender =
