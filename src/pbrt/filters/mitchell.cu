@@ -1,4 +1,5 @@
 #include <pbrt/base/filter.h>
+#include <pbrt/filters/filter_sampler.h>
 #include <pbrt/filters/mitchell.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
@@ -19,6 +20,11 @@ MitchellFilter *MitchellFilter::create(const ParameterDictionary &parameters,
 
 void MitchellFilter::init_sampler(const Filter *filter, GPUMemoryAllocator &allocator) {
     sampler = FilterSampler::create(filter, allocator);
+}
+
+PBRT_CPU_GPU
+FilterSample MitchellFilter::sample(const Point2f u) const {
+    return sampler->sample(u);
 }
 
 PBRT_CPU_GPU

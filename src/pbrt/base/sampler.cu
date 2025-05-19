@@ -1,5 +1,6 @@
 #include <pbrt/base/filter.h>
 #include <pbrt/base/sampler.h>
+#include <pbrt/filters/filter_sampler.h>
 #include <pbrt/samplers/independent.h>
 #include <pbrt/samplers/mlt.h>
 #include <pbrt/samplers/stratified.h>

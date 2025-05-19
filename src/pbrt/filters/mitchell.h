@@ -1,9 +1,10 @@
 #pragma once
 
-#include <pbrt/base/filter.h>
-
+class Filter;
+class FilterSampler;
 class GPUMemoryAllocator;
 class ParameterDictionary;
+struct FilterSample;
 
 class MitchellFilter {
   public:
@@ -23,9 +24,7 @@ class MitchellFilter {
     }
 
     PBRT_CPU_GPU
-    FilterSample sample(const Point2f u) const {
-        return sampler->sample(u);
-    }
+    FilterSample sample(const Point2f u) const;
 
     PBRT_CPU_GPU
     Real evaluate(const Point2f p) const {

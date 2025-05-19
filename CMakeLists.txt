@@ -88,6 +88,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/filters/mitchell.cu
         src/pbrt/filters/gaussian.cu
         src/pbrt/filters/triangle.cu
+        src/pbrt/filters/filter_sampler.cu
 
         src/pbrt/gpu/gpu_memory_allocator.cu
 

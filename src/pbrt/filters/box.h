@@ -1,10 +1,11 @@
 #pragma once
 
-#include <pbrt/base/filter.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/util/math.h>
 
 class GPUMemoryAllocator;
+class ParameterDictionary;
+struct FilterSample;
 
 class BoxFilter {
   public:
@@ -24,10 +25,7 @@ class BoxFilter {
     }
 
     PBRT_CPU_GPU
-    FilterSample sample(const Point2f u) const {
-        Point2f p(pbrt::lerp(u[0], -radius.x, radius.x), pbrt::lerp(u[1], -radius.y, radius.y));
-        return FilterSample(p, 1.0);
-    }
+    FilterSample sample(const Point2f u) const;
 
     PBRT_CPU_GPU
     Vector2f get_radius() const {

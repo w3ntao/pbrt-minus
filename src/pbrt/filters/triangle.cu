@@ -1,3 +1,4 @@
+#include <pbrt/filters/filter_sampler.h>
 #include <pbrt/filters/triangle.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>

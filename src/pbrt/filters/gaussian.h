@@ -1,9 +1,12 @@
 #pragma once
 
-#include <pbrt/base/filter.h>
+#include <pbrt/euclidean_space/point2.h>
 
+class Filter;
+class FilterSampler;
 class GPUMemoryAllocator;
 class ParameterDictionary;
+struct FilterSample;
 
 class GaussianFilter {
   public:
