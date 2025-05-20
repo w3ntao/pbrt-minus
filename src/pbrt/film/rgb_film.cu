@@ -15,12 +15,14 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     pixels[idx].init_zero();
 }
 
-RGBFilm *RGBFilm::create(const Filter *filter, const ParameterDictionary &parameters,
-                         GPUMemoryAllocator &allocator) {
+RGBFilm::RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
+                 GPUMemoryAllocator &allocator)
+    : filter(_filter), filter_integral(_filter->get_integral()), sensor(nullptr) {
     auto resolution_x = parameters.get_integer("xresolution");
     auto resolution_y = parameters.get_integer("yresolution");
 
-    auto film_resolution = Point2i(resolution_x, resolution_y);
+    resolution = Point2i(resolution_x, resolution_y);
+    pixel_bound = Bounds2i(Point2i(0, 0), Point2i(resolution.x, resolution.y));
 
     Real iso = 100;
     Real white_balance_val = 0.0;
@@ -30,42 +32,23 @@ RGBFilm *RGBFilm::create(const Filter *filter, const ParameterDictionary &parame
     auto d_illum = Spectrum::create_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val,
                                           CIE_S0, CIE_S1, CIE_S2, CIE_S_lambda, allocator);
 
-    auto sensor = allocator.allocate<PixelSensor>();
-
-    sensor->init_cie_1931(parameters.global_spectra->cie_xyz,
-                          parameters.global_spectra->rgb_color_space,
-                          white_balance_val == 0 ? nullptr : d_illum, imaging_ratio);
-
-    auto gpu_pixels = allocator.allocate<Pixel>(film_resolution.x * film_resolution.y);
-
-    {
-        uint threads = 1024;
-        uint blocks = divide_and_ceil(uint(film_resolution.x * film_resolution.y), threads);
-
-        init_pixels<<<blocks, threads>>>(gpu_pixels, film_resolution);
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    }
-
-    auto rgb_film = allocator.allocate<RGBFilm>();
-    rgb_film->init(gpu_pixels, filter, sensor, film_resolution,
-                   parameters.global_spectra->rgb_color_space);
-
-    return rgb_film;
-}
-
-void RGBFilm::init(Pixel *_pixels, const Filter *_filter, const PixelSensor *_sensor,
-                   const Point2i &_resolution, const RGBColorSpace *rgb_color_space) {
-    pixels = _pixels;
-    filter = _filter;
+    auto _sensor = allocator.allocate<PixelSensor>();
+    _sensor->init_cie_1931(parameters.global_spectra->cie_xyz,
+                           parameters.global_spectra->rgb_color_space,
+                           white_balance_val == 0 ? nullptr : d_illum, imaging_ratio);
     sensor = _sensor;
-    resolution = _resolution;
 
-    pixel_bound = Bounds2i(Point2i(0, 0), Point2i(_resolution.x, _resolution.y));
+    pixels = allocator.allocate<Pixel>(resolution.x * resolution.y);
 
-    output_rgb_from_sensor_rgb = rgb_color_space->rgb_from_xyz * sensor->xyz_from_sensor_rgb;
+    uint threads = 1024;
+    uint blocks = divide_and_ceil(uint(resolution.x * resolution.y), threads);
 
-    filter_integral = _filter->get_integral();
+    init_pixels<<<blocks, threads>>>(pixels, resolution);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    output_rgb_from_sensor_rgb =
+        parameters.global_spectra->rgb_color_space->rgb_from_xyz * sensor->xyz_from_sensor_rgb;
 }
 
 PBRT_CPU_GPU

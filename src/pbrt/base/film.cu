@@ -1,106 +1,14 @@
 #include <ext/lodepng/lodepng.h>
 #include <pbrt/base/film.h>
-#include <pbrt/film/rgb_film.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <vector>
 
 Film *Film::create_rgb_film(const Filter *filter, const ParameterDictionary &parameters,
                             GPUMemoryAllocator &allocator) {
-    auto rgb_film = RGBFilm::create(filter, parameters, allocator);
-
     auto film = allocator.allocate<Film>();
-    film->init(rgb_film);
-
+    *film = RGBFilm(filter, parameters, allocator);
     return film;
-}
-
-void Film::init(RGBFilm *rgb_film) {
-    ptr = rgb_film;
-    type = Type::rgb;
-}
-
-PBRT_CPU_GPU
-Point2i Film::get_resolution() const {
-    switch (type) {
-    case Type::rgb: {
-        return static_cast<const RGBFilm *>(ptr)->get_resolution();
-    }
-    }
-
-    REPORT_FATAL_ERROR();
-    return {};
-}
-
-PBRT_CPU_GPU
-const Filter *Film::get_filter() const {
-    switch (type) {
-    case Type::rgb: {
-        return static_cast<const RGBFilm *>(ptr)->get_filter();
-    }
-    }
-
-    REPORT_FATAL_ERROR();
-    return nullptr;
-}
-
-PBRT_CPU_GPU
-Bounds2f Film::sample_bounds() const {
-    switch (type) {
-    case Type::rgb: {
-        return static_cast<const RGBFilm *>(ptr)->sample_bounds();
-    }
-    }
-
-    REPORT_FATAL_ERROR();
-    return {};
-}
-
-PBRT_CPU_GPU
-void Film::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
-                      const SampledWavelengths &lambda, Real weight) {
-    switch (type) {
-    case Type::rgb: {
-        return static_cast<RGBFilm *>(ptr)->add_sample(pixel_index, radiance_l, lambda, weight);
-    }
-    }
-
-    REPORT_FATAL_ERROR();
-}
-
-PBRT_CPU_GPU
-void Film::add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
-                      const SampledWavelengths &lambda, Real weight) {
-    switch (type) {
-    case Type::rgb: {
-        return static_cast<RGBFilm *>(ptr)->add_sample(p_film, radiance_l, lambda, weight);
-    }
-    }
-
-    REPORT_FATAL_ERROR();
-}
-
-void Film::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                     const SampledWavelengths &lambda) {
-    switch (type) {
-    case Type::rgb: {
-        return static_cast<RGBFilm *>(ptr)->add_splat(p_film, radiance_l, lambda);
-    }
-    }
-
-    REPORT_FATAL_ERROR();
-}
-
-PBRT_CPU_GPU
-RGB Film::get_pixel_rgb(const Point2i &p, Real splat_scale) const {
-    switch (type) {
-    case Type::rgb: {
-        return static_cast<RGBFilm *>(ptr)->get_pixel_rgb(p, splat_scale);
-    }
-    }
-
-    REPORT_FATAL_ERROR();
-    return {};
 }
 
 __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint width, uint height,

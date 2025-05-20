@@ -1,5 +1,6 @@
 #pragma once
 
+#include <pbrt/euclidean_space/bounds2.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/euclidean_space/squared_matrix.h>
 #include <pbrt/spectrum_util/rgb.h>
@@ -9,6 +10,8 @@ class GPUMemoryAllocator;
 class ParameterDictionary;
 class PixelSensor;
 class RGBColorSpace;
+class SampledSpectrum;
+class SampledWavelengths;
 
 struct Pixel {
     RGB rgb_sum;
@@ -26,8 +29,8 @@ struct Pixel {
 
 class RGBFilm {
   public:
-    static RGBFilm *create(const Filter *filter, const ParameterDictionary &parameters,
-                           GPUMemoryAllocator &allocator);
+    RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
+            GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Point2i get_resolution() const {
@@ -69,7 +72,4 @@ class RGBFilm {
     Real filter_integral;
 
     SquareMatrix<3> output_rgb_from_sensor_rgb;
-
-    void init(Pixel *_pixels, const Filter *_filter, const PixelSensor *_sensor,
-              const Point2i &_resolution, const RGBColorSpace *rgb_color_space);
 };
