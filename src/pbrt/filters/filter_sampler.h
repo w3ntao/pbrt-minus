@@ -19,9 +19,9 @@ struct FilterSample {
 
 class FilterSampler {
   public:
-    static const FilterSampler *create(const Filter *filter, GPUMemoryAllocator &allocator);
+    static const FilterSampler *create(const Filter &filter, GPUMemoryAllocator &allocator);
 
-    void init(const Filter *filter, GPUMemoryAllocator &allocator);
+    void init(const Filter &filter, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     FilterSample sample(Point2f u) const {

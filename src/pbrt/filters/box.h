@@ -3,16 +3,12 @@
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/util/math.h>
 
-class GPUMemoryAllocator;
 class ParameterDictionary;
 struct FilterSample;
 
 class BoxFilter {
   public:
-    static const BoxFilter *create(const ParameterDictionary &parameters,
-                                   GPUMemoryAllocator &allocator);
-
-    BoxFilter() : radius(Vector2f(0.5, 0.5)) {}
+    BoxFilter(const ParameterDictionary &parameters);
 
     PBRT_CPU_GPU
     Real get_integral() const {

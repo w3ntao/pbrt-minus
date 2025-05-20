@@ -16,21 +16,18 @@ inline Real gaussian_integral(Real x0, Real x1, Real mu = 0, Real sigma = 1) {
     return 0.5f * (std::erf((mu - x0) / sigmaRoot2) - std::erf((mu - x1) / sigmaRoot2));
 }
 
-GaussianFilter *GaussianFilter::create(const ParameterDictionary &parameters,
-                                       GPUMemoryAllocator &allocator) {
+GaussianFilter::GaussianFilter(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator)
+    : radius(NAN, NAN), sampler(nullptr) {
     auto xw = parameters.get_float("xradius", 1.5f);
     auto yw = parameters.get_float("yradius", 1.5f);
-    auto sigma = parameters.get_float("sigma", 0.5f);
 
-    auto gaussian_filter = allocator.allocate<GaussianFilter>();
+    radius = Vector2f(xw, yw);
+    sigma = parameters.get_float("sigma", 0.5f);
 
-    gaussian_filter->init(Vector2f(xw, yw), sigma);
+    expX = gaussian(radius.x, 0, sigma);
+    expY = gaussian(radius.y, 0, sigma);
 
-    return gaussian_filter;
-}
-
-void GaussianFilter::init_sampler(const Filter *filter, GPUMemoryAllocator &allocator) {
-    sampler = FilterSampler::create(filter, allocator);
+    sampler = FilterSampler::create(*this, allocator);
 }
 
 void GaussianFilter::init(const Vector2f &_radius, Real _sigma) {

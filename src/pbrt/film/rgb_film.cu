@@ -1,11 +1,10 @@
 #include <pbrt/base/filter.h>
 #include <pbrt/film/pixel_sensor.h>
 #include <pbrt/film/rgb_film.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>
-
-#include <pbrt/gpu/gpu_memory_allocator.h>
 
 static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
     uint idx = threadIdx.x + blockIdx.x * blockDim.x;

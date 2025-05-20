@@ -4,8 +4,6 @@
 #include <pbrt/euclidean_space/point2.h>
 #include <vector>
 
-class Filter;
-
 class GreyScaleFilm {
   public:
     GreyScaleFilm(const Point2i &_resolution)

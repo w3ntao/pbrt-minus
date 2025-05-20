@@ -10,8 +10,7 @@ struct FilterSample;
 
 class TriangleFilter {
   public:
-    static const TriangleFilter *create(const ParameterDictionary &parameters,
-                                        GPUMemoryAllocator &allocator);
+    TriangleFilter(const ParameterDictionary &parameters);
 
     PBRT_CPU_GPU
     Vector2f get_radius() const {

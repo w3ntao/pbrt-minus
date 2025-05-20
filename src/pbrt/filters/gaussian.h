@@ -2,7 +2,6 @@
 
 #include <pbrt/euclidean_space/point2.h>
 
-class Filter;
 class FilterSampler;
 class GPUMemoryAllocator;
 class ParameterDictionary;
@@ -10,10 +9,7 @@ struct FilterSample;
 
 class GaussianFilter {
   public:
-    static GaussianFilter *create(const ParameterDictionary &parameters,
-                                  GPUMemoryAllocator &allocator);
-
-    void init_sampler(const Filter *filter, GPUMemoryAllocator &allocator);
+    GaussianFilter(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU Vector2f get_radius() const {
         return radius;

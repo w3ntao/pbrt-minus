@@ -1,6 +1,5 @@
 #pragma once
 
-class Filter;
 class FilterSampler;
 class GPUMemoryAllocator;
 class ParameterDictionary;
@@ -8,10 +7,7 @@ struct FilterSample;
 
 class MitchellFilter {
   public:
-    static MitchellFilter *create(const ParameterDictionary &parameters,
-                                  GPUMemoryAllocator &allocator);
-
-    void init_sampler(const Filter *filter, GPUMemoryAllocator &allocator);
+    MitchellFilter(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Vector2f get_radius() const {
@@ -38,12 +34,4 @@ class MitchellFilter {
 
     PBRT_CPU_GPU
     Real mitchell_1d(Real x) const;
-
-    void init(const Vector2f &_radius, Real _b, Real _c) {
-        radius = _radius;
-        b = _b;
-        c = _c;
-
-        sampler = nullptr;
-    }
 };

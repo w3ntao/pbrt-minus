@@ -1,18 +1,10 @@
 #include <pbrt/filters/box.h>
 #include <pbrt/filters/filter_sampler.h>
-#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
 
-const BoxFilter *BoxFilter::create(const ParameterDictionary &parameters,
-                                   GPUMemoryAllocator &allocator) {
-    auto xw = parameters.get_float("xradius", 0.5f);
-    auto yw = parameters.get_float("yradius", 0.5f);
-
-    auto box_filter = allocator.allocate<BoxFilter>();
-
-    box_filter->radius = Vector2f(xw, yw);
-
-    return box_filter;
+BoxFilter::BoxFilter(const ParameterDictionary &parameters) : radius(NAN, NAN) {
+    radius.x = parameters.get_float("xradius", 0.5f);
+    radius.y = parameters.get_float("yradius", 0.5f);
 }
 
 PBRT_CPU_GPU

@@ -4,22 +4,16 @@
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
 
-MitchellFilter *MitchellFilter::create(const ParameterDictionary &parameters,
-                                       GPUMemoryAllocator &allocator) {
-    auto mitchell_filter = allocator.allocate<MitchellFilter>();
-
+MitchellFilter::MitchellFilter(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator)
+    : radius(NAN, NAN), sampler(nullptr) {
     auto xw = parameters.get_float("xradius", 2.f);
     auto yw = parameters.get_float("yradius", 2.f);
-    auto b = parameters.get_float("B", 1.f / 3.f);
-    auto c = parameters.get_float("C", 1.f / 3.f);
+    radius = Vector2f(xw, yw);
 
-    mitchell_filter->init(Vector2f(xw, yw), b, c);
+    b = parameters.get_float("B", 1.f / 3.f);
+    c = parameters.get_float("C", 1.f / 3.f);
 
-    return mitchell_filter;
-}
-
-void MitchellFilter::init_sampler(const Filter *filter, GPUMemoryAllocator &allocator) {
-    sampler = FilterSampler::create(filter, allocator);
+    sampler = FilterSampler::create(*this, allocator);
 }
 
 PBRT_CPU_GPU
