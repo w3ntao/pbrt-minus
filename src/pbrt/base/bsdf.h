@@ -37,16 +37,11 @@ class BSDF {
 
     PBRT_CPU_GPU
     Real pdf(const Vector3f &woRender, const Vector3f &wiRender,
-                  TransportMode mode = TransportMode::Radiance,
-                  BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
+             TransportMode mode = TransportMode::Radiance,
+             BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 
     PBRT_CPU_GPU BxDFFlags flags() const {
         return bxdf.flags();
-    }
-
-    PBRT_CPU_GPU
-    bool has_null_bxdf() const {
-        return bxdf.has_type_null();
     }
 
   private:

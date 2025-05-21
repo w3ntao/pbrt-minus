@@ -50,7 +50,6 @@ add_executable(${PROJ_NAME}
         src/pbrt/main.cu
 
         src/pbrt/base/bsdf.cu
-        src/pbrt/base/bxdf.cu
         src/pbrt/base/camera.cu
         src/pbrt/base/film.cu
         src/pbrt/base/filter.cu

@@ -4,33 +4,35 @@
 PBRT_CPU_GPU
 void BSDF::init_bxdf(const Material *material, SampledWavelengths &lambda,
                      const MaterialEvalContext &material_eval_context) {
+    // TODO: rewrite get_x_bsdf()
+
     switch (material->get_material_type()) {
     case Material::Type::coated_conductor: {
-        bxdf.init(material->get_coated_conductor_bsdf(material_eval_context, lambda));
+        bxdf = material->get_coated_conductor_bsdf(material_eval_context, lambda);
         return;
     }
     case Material::Type::coated_diffuse: {
-        bxdf.init(material->get_coated_diffuse_bsdf(material_eval_context, lambda));
+        bxdf = material->get_coated_diffuse_bsdf(material_eval_context, lambda);
         return;
     }
 
     case Material::Type::conductor: {
-        bxdf.init(material->get_conductor_bsdf(material_eval_context, lambda));
+        bxdf = material->get_conductor_bsdf(material_eval_context, lambda);
         return;
     }
 
     case Material::Type::dielectric: {
-        bxdf.init(material->get_dielectric_bsdf(material_eval_context, lambda));
+        bxdf = material->get_dielectric_bsdf(material_eval_context, lambda);
         return;
     }
 
     case Material::Type::diffuse: {
-        bxdf.init(material->get_diffuse_bsdf(material_eval_context, lambda));
+        bxdf = material->get_diffuse_bsdf(material_eval_context, lambda);
         return;
     }
 
     case Material::Type::diffuse_transmission: {
-        bxdf.init(material->get_diffuse_transmission_bsdf(material_eval_context, lambda));
+        bxdf = material->get_diffuse_transmission_bsdf(material_eval_context, lambda);
         return;
     }
 
@@ -65,10 +67,6 @@ PBRT_CPU_GPU
 pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, Real u, const Point2f &u2,
                                           TransportMode mode,
                                           BxDFReflTransFlags sample_flags) const {
-    if (bxdf.has_type_null()) {
-        REPORT_FATAL_ERROR();
-    }
-
     const auto wo = render_to_local(wo_render);
 
     if (wo.z == 0 || !(bxdf.flags() & sample_flags)) {
@@ -86,7 +84,7 @@ pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, Real u, con
 
 PBRT_CPU_GPU
 Real BSDF::pdf(const Vector3f &woRender, const Vector3f &wiRender, TransportMode mode,
-                    BxDFReflTransFlags sampleFlags) const {
+               BxDFReflTransFlags sampleFlags) const {
     Vector3f wo = render_to_local(woRender);
     Vector3f wi = render_to_local(wiRender);
 
