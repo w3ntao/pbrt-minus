@@ -86,7 +86,7 @@ class WavefrontPathIntegrator {
         [[nodiscard]] std::vector<SingleQueue *> get_all_queues() const {
             auto all_queues = std::vector({new_paths, rays});
 
-            for (const auto material_type : Material::get_all_material_type()) {
+            for (const auto material_type : Material::get_basic_material_types()) {
                 all_queues.push_back(get_material_queue(material_type));
             }
 

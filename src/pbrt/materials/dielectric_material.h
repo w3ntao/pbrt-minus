@@ -1,6 +1,5 @@
 #pragma once
 
-#include <pbrt/base/bsdf.h>
 #include <pbrt/gpu/macro.h>
 
 class DielectricBxDF;
@@ -14,17 +13,17 @@ class SpectrumTexture;
 
 class DielectricMaterial {
   public:
-    void init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
+    DielectricMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
                                        SampledWavelengths &lambda) const;
 
   private:
-    const FloatTexture *uRoughness;
-    const FloatTexture *vRoughness;
+    const FloatTexture *uRoughness = nullptr;
+    const FloatTexture *vRoughness = nullptr;
 
-    const Spectrum *eta;
+    const Spectrum *eta = nullptr;
 
-    bool remapRoughness;
+    bool remapRoughness = true;
 };

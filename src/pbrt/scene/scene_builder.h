@@ -12,7 +12,6 @@
 
 class BDPTIntegrator;
 class Film;
-class GlobalSpectra;
 class MegakernelIntegrator;
 class MLTBDPTIntegrator;
 class MLTPathIntegrator;
@@ -20,6 +19,7 @@ class Primitive;
 class Renderer;
 class WavefrontPathIntegrator;
 struct IntegratorBase;
+struct GlobalSpectra;
 
 struct AreaLightEntity {
     std::string name;

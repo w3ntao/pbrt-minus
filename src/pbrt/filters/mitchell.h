@@ -29,8 +29,9 @@ class MitchellFilter {
 
   private:
     Vector2f radius;
-    Real b, c;
-    const FilterSampler *sampler;
+    Real b = NAN;
+    Real c = NAN;
+    const FilterSampler *sampler = nullptr;
 
     PBRT_CPU_GPU
     Real mitchell_1d(Real x) const;

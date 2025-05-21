@@ -1,23 +1,12 @@
 #include <pbrt/base/float_texture.h>
-#include <pbrt/base/material.h>
-#include <pbrt/base/spectrum.h>
+#include <pbrt/base/spectrum_texture.h>
+#include <pbrt/bxdfs/coated_diffuse_bxdf.h>
 #include <pbrt/materials/coated_diffuse_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
-#include <pbrt/textures/spectrum_constant_texture.h>
 
-void CoatedDiffuseMaterial::init(const ParameterDictionary &parameters,
-                                 GPUMemoryAllocator &allocator) {
-    reflectance = nullptr;
-    albedo = nullptr;
-
-    u_roughness = nullptr;
-    v_roughness = nullptr;
-    thickness = nullptr;
-    g = nullptr;
-
-    eta = nullptr;
-
+CoatedDiffuseMaterial::CoatedDiffuseMaterial(const ParameterDictionary &parameters,
+                                             GPUMemoryAllocator &allocator) {
     reflectance = parameters.get_spectrum_texture("reflectance", SpectrumType::Albedo, allocator);
     if (!reflectance) {
         reflectance = SpectrumTexture::create_constant_float_val_texture(0.5, allocator);

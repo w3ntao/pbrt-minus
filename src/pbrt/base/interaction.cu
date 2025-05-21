@@ -2,6 +2,7 @@
 #include <pbrt/base/interaction.h>
 #include <pbrt/base/light.h>
 #include <pbrt/base/material.h>
+#include <pbrt/base/texture_eval_context.h>
 #include <pbrt/cameras/perspective.h>
 
 PBRT_CPU_GPU

@@ -8,6 +8,7 @@
 #include <pbrt/base/megakernel_integrator.h>
 #include <pbrt/base/primitive.h>
 #include <pbrt/base/shape.h>
+#include <pbrt/base/spectrum_texture.h>
 #include <pbrt/film/grey_scale_film.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/integrators/mlt_bdpt.h>
@@ -900,7 +901,7 @@ void SceneBuilder::preprocess() {
         total_material_size += _num;
     }
 
-    printf("total material: %zu\n", material_type_counter.size());
+    printf("total materials: %zu\n", material_type_counter.size());
     for (const auto &[name, num] : material_type_counter) {
         printf("    %s: %d (%.2f%)\n", name.c_str(), num,
                static_cast<double>(num) / total_material_size * 100);

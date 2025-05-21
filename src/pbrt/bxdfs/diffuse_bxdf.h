@@ -1,6 +1,8 @@
 #pragma once
 
+#include <pbrt/base/bxdf_util.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/util/optional.h>
 #include <pbrt/util/sampling.h>
 
 class DiffuseBxDF {
@@ -62,7 +64,7 @@ class DiffuseBxDF {
 
     PBRT_CPU_GPU
     Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
-                  BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
+             BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         if (!(sampleFlags & BxDFReflTransFlags::Reflection) || !wo.same_hemisphere(wi)) {
             return 0;
         }

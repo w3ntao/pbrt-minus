@@ -1,17 +1,13 @@
 #include <pbrt/base/float_texture.h>
-#include <pbrt/base/material.h>
 #include <pbrt/base/spectrum.h>
 #include <pbrt/bxdfs/dielectric_bxdf.h>
 #include <pbrt/materials/dielectric_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/textures/float_constant_texture.h>
 
-void DielectricMaterial::init(const ParameterDictionary &parameters,
-                              GPUMemoryAllocator &allocator) {
-    eta = nullptr;
-
-    auto key_eta = "eta";
-    if (parameters.has_floats(key_eta)) {
+DielectricMaterial::DielectricMaterial(const ParameterDictionary &parameters,
+                                       GPUMemoryAllocator &allocator) {
+    if (const auto key_eta = "eta"; parameters.has_floats(key_eta)) {
         eta = Spectrum::create_constant_spectrum(parameters.get_float(key_eta), allocator);
     } else {
         eta = parameters.get_spectrum(key_eta, SpectrumType::Unbounded, allocator);

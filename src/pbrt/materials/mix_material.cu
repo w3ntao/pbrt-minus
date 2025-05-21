@@ -3,14 +3,14 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/util/hash.h>
 
-void MixMaterial::init(const ParameterDictionary &parameters) {
+MixMaterial::MixMaterial(const ParameterDictionary &parameters) {
     amount = parameters.get_float("amount", 0.5);
 
     if (amount <= 0.0 || amount >= 1.0) {
         REPORT_FATAL_ERROR();
     }
 
-    auto str_materials = parameters.get_strings("materials");
+    const auto str_materials = parameters.get_strings("materials");
     materials[0] = parameters.get_material(str_materials[0]);
     materials[1] = parameters.get_material(str_materials[1]);
 }
@@ -21,6 +21,6 @@ const Material *MixMaterial::get_material(const SurfaceInteraction *si) const {
         REPORT_FATAL_ERROR();
     }
 
-    auto u = pbrt::hash_float(si->pi, si->wo, materials[0], materials[1]);
+    const auto u = pbrt::hash_float(si->pi, si->wo, materials[0], materials[1]);
     return u < amount ? materials[0] : materials[1];
 }

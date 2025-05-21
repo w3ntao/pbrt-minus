@@ -1,19 +1,20 @@
 #pragma once
 
-#include <pbrt/base/material.h>
 #include <pbrt/gpu/macro.h>
-#include <vector>
 
+class Material;
 class ParameterDictionary;
+class SurfaceInteraction;
 
 class MixMaterial {
   public:
-    void init(const ParameterDictionary &parameters);
+    MixMaterial(const ParameterDictionary &parameters);
 
+    // TODO: rewrite get_material to take in a hashed float rather than SurfaceInteraction
     PBRT_CPU_GPU
     const Material *get_material(const SurfaceInteraction *si) const;
 
   private:
-    Real amount;
+    Real amount = 0.5;
     const Material *materials[2];
 };

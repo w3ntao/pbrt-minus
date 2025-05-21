@@ -643,7 +643,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
-        for (const auto material_type : Material::get_all_material_type()) {
+        for (const auto material_type : Material::get_basic_material_types()) {
             evaluate_material(material_type);
         }
     }

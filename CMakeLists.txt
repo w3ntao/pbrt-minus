@@ -22,9 +22,9 @@ option(PBRT_FLOAT_AS_DOUBLE "use 64-bit floats" OFF)
 
 if (PBRT_FLOAT_AS_DOUBLE)
     list(APPEND PBRT_DEFINITIONS "PBRT_FLOAT_AS_DOUBLE")
-    message(STATUS "PBRT Float type: double")
+    message(STATUS "PBRT Float type: double (64 bit)")
 else ()
-    message(STATUS "PBRT Float type: float")
+    message(STATUS "PBRT Float type: float (32 bit)")
 endif ()
 
 add_subdirectory("src/ext")

@@ -2,12 +2,12 @@
 
 #include <pbrt/base/light.h>
 
-class GlobalSpectra;
 class GPUMemoryAllocator;
 class ParameterDictionary;
 class RGBColorSpace;
 class Spectrum;
 class Shape;
+struct GlobalSpectra;
 
 class DiffuseAreaLight : public LightBase {
   public:
@@ -23,8 +23,7 @@ class DiffuseAreaLight : public LightBase {
                                             SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
-                     bool allow_incomplete_pdf) const;
+    Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi, bool allow_incomplete_pdf) const;
 
     PBRT_CPU_GPU
     pbrt::optional<LightLeSample> sample_le(Point2f u1, Point2f u2,

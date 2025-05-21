@@ -62,14 +62,14 @@ class RGBFilm {
     RGB get_pixel_rgb(const Point2i p, Real splat_scale = 1) const;
 
   private:
-    Pixel *pixels;
-    const PixelSensor *sensor;
-    Point2i resolution;
+    Pixel *pixels = nullptr;
+    const PixelSensor *sensor = nullptr;
+    Point2i resolution = {0, 0};
     Bounds2i pixel_bound;
 
-    const Filter *filter;
+    const Filter *filter = nullptr;
 
-    Real filter_integral;
+    Real filter_integral = NAN;
 
     SquareMatrix<3> output_rgb_from_sensor_rgb;
 };

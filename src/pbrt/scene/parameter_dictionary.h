@@ -12,12 +12,12 @@
 #include <vector>
 
 class FloatTexture;
-class GlobalSpectra;
 class GPUMemoryAllocator;
 class Material;
 class Spectrum;
 class SpectrumTexture;
 class Token;
+struct GlobalSpectra;
 
 class ParameterDictionary {
   public:
@@ -76,7 +76,7 @@ class ParameterDictionary {
     }
 
     Real get_float(const std::string &key,
-                        const std::optional<Real> default_val = std::nullopt) const {
+                   const std::optional<Real> default_val = std::nullopt) const {
         if (floats.find(key) == floats.end()) {
             if (default_val.has_value()) {
                 return default_val.value();
@@ -195,8 +195,7 @@ class ParameterDictionary {
     const FloatTexture *get_float_texture(const std::string &key, Real default_val,
                                           GPUMemoryAllocator &allocator) const;
 
-    const FloatTexture *get_float_texture_with_default_val(const std::string &key,
-                                                           Real default_val,
+    const FloatTexture *get_float_texture_with_default_val(const std::string &key, Real default_val,
                                                            GPUMemoryAllocator &allocator) const;
 
     const SpectrumTexture *get_spectrum_texture(const std::string &key, SpectrumType spectrum_type,

@@ -9,7 +9,6 @@ class Bounds3;
 
 class DiffuseAreaLight;
 class DistantLight;
-class GlobalSpectra;
 class GPUMemoryAllocator;
 class ImageInfiniteLight;
 class Light;
@@ -17,6 +16,7 @@ class Shape;
 class SpotLight;
 class ParameterDictionary;
 class UniformInfiniteLight;
+struct GlobalSpectra;
 
 enum class LightType {
     delta_position,

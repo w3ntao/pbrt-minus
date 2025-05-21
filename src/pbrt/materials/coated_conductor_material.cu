@@ -1,5 +1,4 @@
 #include <pbrt/base/float_texture.h>
-#include <pbrt/base/material.h>
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/bxdfs/coated_conductor_bxdf.h>
 #include <pbrt/materials/coated_conductor_material.h>
@@ -22,8 +21,8 @@ const FloatTexture *build_float_texture(const std::string &primary_key,
     return texture;
 }
 
-void CoatedConductorMaterial::init(const ParameterDictionary &parameters,
-                                   GPUMemoryAllocator &allocator) {
+CoatedConductorMaterial::CoatedConductorMaterial(const ParameterDictionary &parameters,
+                                                 GPUMemoryAllocator &allocator) {
     interfaceURoughness = build_float_texture("interface.uroughness", "interface.roughness", 0.0,
                                               parameters, allocator);
 

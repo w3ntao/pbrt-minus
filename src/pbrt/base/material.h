@@ -1,22 +1,26 @@
 #pragma once
 
-#include <pbrt/base/bsdf.h>
-#include <pbrt/base/spectrum_texture.h>
-#include <pbrt/gpu/macro.h>
-#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <cuda/std/variant>
+#include <pbrt/materials/coated_conductor_material.h>
+#include <pbrt/materials/coated_diffuse_material.h>
+#include <pbrt/materials/conductor_material.h>
+#include <pbrt/materials/dielectric_material.h>
+#include <pbrt/materials/diffuse_material.h>
+#include <pbrt/materials/diffuse_transmission_material.h>
+#include <pbrt/materials/mix_material.h>
 
-class CoatedConductorMaterial;
-class CoatedDiffuseMaterial;
-class ConductorMaterial;
-class DielectricMaterial;
-class DiffuseMaterial;
-class DiffuseTransmissionMaterial;
 class GPUMemoryAllocator;
-class MixMaterial;
-
 class ParameterDictionary;
 
-class Material {
+namespace HIDDEN {
+using MaterialVariants = cuda::std::variant<CoatedConductorMaterial, CoatedDiffuseMaterial,
+                                            ConductorMaterial, DielectricMaterial, DiffuseMaterial,
+                                            DiffuseTransmissionMaterial, MixMaterial>;
+}
+
+class Material : public HIDDEN::MaterialVariants {
+    using HIDDEN::MaterialVariants::MaterialVariants;
+
   public:
     enum class Type {
         coated_conductor,
@@ -28,15 +32,15 @@ class Material {
         mix,
     };
 
-    static std::string material_type_to_string(Type type);
-
-    static std::vector<Type> get_all_material_type() {
-        // consider only evaluable material (excluding mix)
+    static std::vector<Type> get_basic_material_types() {
+        // consider only directly evaluable material for wavefront path tracing (excluding mix)
         return {
             Type::coated_conductor, Type::coated_diffuse, Type::conductor,
             Type::dielectric,       Type::diffuse,        Type::diffuse_transmission,
         };
     }
+
+    static std::string material_type_to_string(Type type);
 
     static const Material *create(const std::string &type_of_material,
                                   const ParameterDictionary &parameters,
@@ -47,7 +51,35 @@ class Material {
 
     PBRT_CPU_GPU
     Type get_material_type() const {
-        return type;
+        if (is_of_type<CoatedConductorMaterial>()) {
+            return Type::coated_conductor;
+        }
+
+        if (is_of_type<CoatedDiffuseMaterial>()) {
+            return Type::coated_diffuse;
+        }
+
+        if (is_of_type<ConductorMaterial>()) {
+            return Type::conductor;
+        }
+
+        if (is_of_type<DiffuseMaterial>()) {
+            return Type::diffuse;
+        }
+
+        if (is_of_type<DiffuseTransmissionMaterial>()) {
+            return Type::diffuse_transmission;
+        }
+
+        if (is_of_type<DielectricMaterial>()) {
+            return Type::dielectric;
+        }
+
+        if (is_of_type<MixMaterial>()) {
+            return Type::mix;
+        }
+
+        REPORT_FATAL_ERROR();
     }
 
     PBRT_CPU_GPU
@@ -60,7 +92,6 @@ class Material {
     PBRT_CPU_GPU
     CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
                                               SampledWavelengths &lambda) const;
-
     PBRT_CPU_GPU
     ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,
                                      SampledWavelengths &lambda) const;
@@ -77,20 +108,16 @@ class Material {
                                                           SampledWavelengths &lambda) const;
 
   private:
-    const void *ptr;
-    Type type;
+    // TODO: delete is_of_type()
+    template <typename MaterialType>
+    PBRT_CPU_GPU bool is_of_type() const {
+        const auto variant_ptr = static_cast<const HIDDEN::MaterialVariants *>(this);
+        return cuda::std::holds_alternative<MaterialType>(*variant_ptr);
+    }
 
-    void init(const CoatedConductorMaterial *coated_conductor_material);
-
-    void init(const CoatedDiffuseMaterial *coated_diffuse_material);
-
-    void init(const ConductorMaterial *conductor_material);
-
-    void init(const DielectricMaterial *dielectric_material);
-
-    void init(const DiffuseMaterial *diffuse_material);
-
-    void init(const DiffuseTransmissionMaterial *diffuse_transmission_material);
-
-    void init(const MixMaterial *mix_material);
+    // TODO: delete convert()
+    template <typename MaterialType>
+    PBRT_CPU_GPU MaterialType convert() const {
+        return cuda::std::get<MaterialType>(*this);
+    }
 };

@@ -1,13 +1,12 @@
 #include <pbrt/base/float_texture.h>
-#include <pbrt/base/material.h>
-#include <pbrt/base/spectrum.h>
+#include <pbrt/base/spectrum_texture.h>
 #include <pbrt/bxdfs/conductor_bxdf.h>
 #include <pbrt/materials/conductor_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
-#include <pbrt/spectrum_util/sampled_spectrum.h>
 
-void ConductorMaterial::init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
+ConductorMaterial::ConductorMaterial(const ParameterDictionary &parameters,
+                                     GPUMemoryAllocator &allocator) {
     eta = parameters.get_spectrum_texture("eta", SpectrumType::Unbounded, allocator);
     k = parameters.get_spectrum_texture("k", SpectrumType::Unbounded, allocator);
     reflectance = parameters.get_spectrum_texture("reflectance", SpectrumType::Albedo, allocator);
@@ -32,19 +31,19 @@ void ConductorMaterial::init(const ParameterDictionary &parameters, GPUMemoryAll
         }
     }
 
-    u_roughness = parameters.get_float_texture_or_null("uroughness", allocator);
-    if (!u_roughness) {
-        u_roughness = parameters.get_float_texture("roughness", 0.0, allocator);
+    uRoughness = parameters.get_float_texture_or_null("uroughness", allocator);
+    if (!uRoughness) {
+        uRoughness = parameters.get_float_texture("roughness", 0.0, allocator);
     }
 
-    v_roughness = parameters.get_float_texture_or_null("vroughness", allocator);
-    if (!v_roughness) {
-        v_roughness = parameters.get_float_texture("roughness", 0.0, allocator);
+    vRoughness = parameters.get_float_texture_or_null("vroughness", allocator);
+    if (!vRoughness) {
+        vRoughness = parameters.get_float_texture("roughness", 0.0, allocator);
     }
 
-    remap_roughness = parameters.get_bool("remaproughness", true);
+    remapRoughness = parameters.get_bool("remaproughness", true);
 
-    if (!u_roughness || !v_roughness) {
+    if (!uRoughness || !vRoughness) {
         REPORT_FATAL_ERROR();
     }
 }
@@ -52,10 +51,10 @@ void ConductorMaterial::init(const ParameterDictionary &parameters, GPUMemoryAll
 PBRT_CPU_GPU
 ConductorBxDF ConductorMaterial::get_conductor_bsdf(const MaterialEvalContext &ctx,
                                                     SampledWavelengths &lambda) const {
-    auto uRough = u_roughness->evaluate(ctx);
-    auto vRough = v_roughness->evaluate(ctx);
+    auto uRough = uRoughness->evaluate(ctx);
+    auto vRough = vRoughness->evaluate(ctx);
 
-    if (remap_roughness) {
+    if (remapRoughness) {
         uRough = TrowbridgeReitzDistribution::RoughnessToAlpha(uRough);
         vRough = TrowbridgeReitzDistribution::RoughnessToAlpha(vRough);
     }

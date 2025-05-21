@@ -28,6 +28,9 @@ class GaussianFilter {
     void init(const Vector2f &_radius, Real _sigma = 0.5f);
 
     Vector2f radius;
-    Real sigma, expX, expY;
-    const FilterSampler *sampler;
+    Real sigma = NAN;
+    Real expX = NAN;
+    Real expY = NAN;
+
+    const FilterSampler *sampler = nullptr;
 };

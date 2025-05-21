@@ -1,34 +1,33 @@
 #pragma once
 
-#include <pbrt/bxdfs/coated_diffuse_bxdf.h>
-
+class CoatedDiffuseBxDF;
 class FloatTexture;
 class GPUMemoryAllocator;
-class MaterialEvalContext;
 class Spectrum;
 class SpectrumTexture;
 class ParameterDictionary;
+struct MaterialEvalContext;
 
 class CoatedDiffuseMaterial {
   public:
-    void init(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
+    CoatedDiffuseMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
                                               SampledWavelengths &lambda) const;
 
   private:
-    const SpectrumTexture *reflectance;
-    const SpectrumTexture *albedo;
+    const SpectrumTexture *reflectance = nullptr;
+    const SpectrumTexture *albedo = nullptr;
 
-    const FloatTexture *u_roughness;
-    const FloatTexture *v_roughness;
-    const FloatTexture *thickness;
-    const FloatTexture *g;
+    const FloatTexture *u_roughness = nullptr;
+    const FloatTexture *v_roughness = nullptr;
+    const FloatTexture *thickness = nullptr;
+    const FloatTexture *g = nullptr;
 
-    const Spectrum *eta;
+    const Spectrum *eta = nullptr;
 
-    bool remapRoughness;
-    uint maxDepth;
-    uint nSamples;
+    bool remapRoughness = true;
+    uint maxDepth = 10;
+    uint nSamples = 1;
 };
