@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pbrt/base/bxdf_util.h>
+#include <pbrt/bxdfs/bxdf_util.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/util/optional.h>
 #include <pbrt/util/scattering.h>
@@ -31,8 +31,7 @@ class ConductorBxDF {
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;
 
     PBRT_CPU_GPU
-    Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
-                  BxDFReflTransFlags sample_flags) const;
+    Real pdf(Vector3f wo, Vector3f wi, TransportMode mode, BxDFReflTransFlags sample_flags) const;
 
     PBRT_CPU_GPU
     void regularize() {

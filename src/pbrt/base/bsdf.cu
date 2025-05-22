@@ -4,50 +4,7 @@
 PBRT_CPU_GPU
 void BSDF::init_bxdf(const Material *material, SampledWavelengths &lambda,
                      const MaterialEvalContext &material_eval_context) {
-    // TODO: rewrite get_x_bsdf()
-
-    switch (material->get_material_type()) {
-    case Material::Type::coated_conductor: {
-        bxdf = material->get_coated_conductor_bsdf(material_eval_context, lambda);
-        return;
-    }
-    case Material::Type::coated_diffuse: {
-        bxdf = material->get_coated_diffuse_bsdf(material_eval_context, lambda);
-        return;
-    }
-
-    case Material::Type::conductor: {
-        bxdf = material->get_conductor_bsdf(material_eval_context, lambda);
-        return;
-    }
-
-    case Material::Type::dielectric: {
-        bxdf = material->get_dielectric_bsdf(material_eval_context, lambda);
-        return;
-    }
-
-    case Material::Type::diffuse: {
-        bxdf = material->get_diffuse_bsdf(material_eval_context, lambda);
-        return;
-    }
-
-    case Material::Type::diffuse_transmission: {
-        bxdf = material->get_diffuse_transmission_bsdf(material_eval_context, lambda);
-        return;
-    }
-
-    case Material::Type::mix: {
-        printf("\nyou should not see MixMaterial here\n\n");
-        REPORT_FATAL_ERROR();
-    }
-
-    default: {
-        printf("\n%s(): there is a Material type not implemented\n");
-        REPORT_FATAL_ERROR();
-    }
-    }
-
-    REPORT_FATAL_ERROR();
+    bxdf = material->get_bxdf(material_eval_context, lambda);
 }
 
 PBRT_CPU_GPU

@@ -1,3 +1,4 @@
+#include <pbrt/base/bxdf.h>
 #include <pbrt/base/float_texture.h>
 #include <pbrt/base/spectrum.h>
 #include <pbrt/bxdfs/dielectric_bxdf.h>
@@ -37,8 +38,8 @@ DielectricMaterial::DielectricMaterial(const ParameterDictionary &parameters,
 }
 
 PBRT_CPU_GPU
-DielectricBxDF DielectricMaterial::get_dielectric_bsdf(const MaterialEvalContext &ctx,
-                                                       SampledWavelengths &lambda) const {
+BxDF DielectricMaterial::get_bxdf(const MaterialEvalContext &ctx,
+                                             SampledWavelengths &lambda) const {
     // Compute index of refraction for dielectric material
     Real sampled_eta = (*eta)(lambda[0]);
     if (!eta->is_constant_spectrum()) {

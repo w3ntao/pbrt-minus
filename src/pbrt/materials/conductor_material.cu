@@ -1,3 +1,4 @@
+#include <pbrt/base/bxdf.h>
 #include <pbrt/base/float_texture.h>
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/bxdfs/conductor_bxdf.h>
@@ -49,8 +50,7 @@ ConductorMaterial::ConductorMaterial(const ParameterDictionary &parameters,
 }
 
 PBRT_CPU_GPU
-ConductorBxDF ConductorMaterial::get_conductor_bsdf(const MaterialEvalContext &ctx,
-                                                    SampledWavelengths &lambda) const {
+BxDF ConductorMaterial::get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const {
     auto uRough = uRoughness->evaluate(ctx);
     auto vRough = vRoughness->evaluate(ctx);
 

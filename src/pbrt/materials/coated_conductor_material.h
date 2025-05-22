@@ -2,7 +2,7 @@
 
 #include <pbrt/gpu/macro.h>
 
-class CoatedConductorBxDF;
+class BxDF;
 class FloatTexture;
 class GPUMemoryAllocator;
 class ParameterDictionary;
@@ -16,8 +16,7 @@ class CoatedConductorMaterial {
     CoatedConductorMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    CoatedConductorBxDF get_coated_conductor_bsdf(const MaterialEvalContext &ctx,
-                                                  SampledWavelengths &lambda) const;
+    BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:
     const FloatTexture *interfaceURoughness = nullptr;

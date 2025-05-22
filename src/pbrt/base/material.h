@@ -86,36 +86,17 @@ class Material : public HIDDEN::MaterialVariants {
     const Material *get_mix_material(const SurfaceInteraction *si) const;
 
     PBRT_CPU_GPU
-    CoatedConductorBxDF get_coated_conductor_bsdf(const MaterialEvalContext &ctx,
-                                                  SampledWavelengths &lambda) const;
-
-    PBRT_CPU_GPU
-    CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
-                                              SampledWavelengths &lambda) const;
-    PBRT_CPU_GPU
-    ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,
-                                     SampledWavelengths &lambda) const;
-
-    PBRT_CPU_GPU
-    DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
-                                       SampledWavelengths &lambda) const;
-
-    PBRT_CPU_GPU
-    DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
-
-    PBRT_CPU_GPU
-    DiffuseTransmissionBxDF get_diffuse_transmission_bsdf(const MaterialEvalContext &ctx,
-                                                          SampledWavelengths &lambda) const;
+    BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const {
+        return cuda::std::visit([&](auto &x) { return x.get_bxdf(ctx, lambda); }, *this);
+    }
 
   private:
-    // TODO: delete is_of_type()
     template <typename MaterialType>
     PBRT_CPU_GPU bool is_of_type() const {
         const auto variant_ptr = static_cast<const HIDDEN::MaterialVariants *>(this);
         return cuda::std::holds_alternative<MaterialType>(*variant_ptr);
     }
 
-    // TODO: delete convert()
     template <typename MaterialType>
     PBRT_CPU_GPU MaterialType convert() const {
         return cuda::std::get<MaterialType>(*this);

@@ -1,3 +1,4 @@
+#include <pbrt/base/bxdf.h>
 #include <pbrt/base/float_texture.h>
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/bxdfs/coated_conductor_bxdf.h>
@@ -89,9 +90,8 @@ CoatedConductorMaterial::CoatedConductorMaterial(const ParameterDictionary &para
 }
 
 PBRT_CPU_GPU
-CoatedConductorBxDF
-CoatedConductorMaterial::get_coated_conductor_bsdf(const MaterialEvalContext &ctx,
-                                                   SampledWavelengths &lambda) const {
+BxDF CoatedConductorMaterial::get_bxdf(const MaterialEvalContext &ctx,
+                                                        SampledWavelengths &lambda) const {
     auto iurough = interfaceURoughness->evaluate(ctx);
     auto ivrough = interfaceVRoughness->evaluate(ctx);
     if (remapRoughness) {

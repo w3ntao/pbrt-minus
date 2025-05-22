@@ -1,3 +1,4 @@
+#include <pbrt/base/bxdf.h>
 #include <pbrt/base/float_texture.h>
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/bxdfs/coated_diffuse_bxdf.h>
@@ -50,8 +51,8 @@ CoatedDiffuseMaterial::CoatedDiffuseMaterial(const ParameterDictionary &paramete
 }
 
 PBRT_CPU_GPU
-CoatedDiffuseBxDF CoatedDiffuseMaterial::get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
-                                                                 SampledWavelengths &lambda) const {
+BxDF CoatedDiffuseMaterial::get_bxdf(const MaterialEvalContext &ctx,
+                                     SampledWavelengths &lambda) const {
 
     // Initialize diffuse component of plastic material
     SampledSpectrum r = reflectance->evaluate(ctx, lambda).clamp(0, 1);

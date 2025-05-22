@@ -2,7 +2,7 @@
 
 #include <pbrt/gpu/macro.h>
 
-class DielectricBxDF;
+class BxDF;
 class FloatTexture;
 class GPUMemoryAllocator;
 class MaterialEvalContext;
@@ -16,8 +16,7 @@ class DielectricMaterial {
     DielectricMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    DielectricBxDF get_dielectric_bsdf(const MaterialEvalContext &ctx,
-                                       SampledWavelengths &lambda) const;
+    BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:
     const FloatTexture *uRoughness = nullptr;

@@ -24,3 +24,9 @@ const Material *MixMaterial::get_material(const SurfaceInteraction *si) const {
     const auto u = pbrt::hash_float(si->pi, si->wo, materials[0], materials[1]);
     return u < amount ? materials[0] : materials[1];
 }
+
+PBRT_CPU_GPU
+BxDF MixMaterial::get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const {
+    REPORT_FATAL_ERROR();
+    return BxDF();
+}

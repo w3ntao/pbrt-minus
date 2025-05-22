@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pbrt/base/bxdf_util.h>
+#include <pbrt/bxdfs/bxdf_util.h>
 #include <pbrt/gpu/macro.h>
 #include <pbrt/util/optional.h>
 #include <pbrt/util/scattering.h>
@@ -31,7 +31,7 @@ class DielectricBxDF {
 
     PBRT_CPU_GPU
     Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
-                  BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
+             BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;
 
     PBRT_CPU_GPU
     void regularize() {

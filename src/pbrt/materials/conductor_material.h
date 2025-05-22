@@ -2,7 +2,7 @@
 
 #include <pbrt/gpu/macro.h>
 
-class ConductorBxDF;
+class BxDF;
 class FloatTexture;
 class GPUMemoryAllocator;
 class SampledWavelengths;
@@ -15,8 +15,7 @@ class ConductorMaterial {
     ConductorMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    ConductorBxDF get_conductor_bsdf(const MaterialEvalContext &ctx,
-                                     SampledWavelengths &lambda) const;
+    BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:
     const SpectrumTexture *eta = nullptr;

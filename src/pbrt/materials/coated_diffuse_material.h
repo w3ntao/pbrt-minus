@@ -1,6 +1,6 @@
 #pragma once
 
-class CoatedDiffuseBxDF;
+class BxDF;
 class FloatTexture;
 class GPUMemoryAllocator;
 class Spectrum;
@@ -13,8 +13,7 @@ class CoatedDiffuseMaterial {
     CoatedDiffuseMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    CoatedDiffuseBxDF get_coated_diffuse_bsdf(const MaterialEvalContext &ctx,
-                                              SampledWavelengths &lambda) const;
+    BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:
     const SpectrumTexture *reflectance = nullptr;

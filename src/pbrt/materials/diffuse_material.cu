@@ -1,3 +1,4 @@
+#include <pbrt/base/bxdf.h>
 #include <pbrt/base/spectrum.h>
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/bxdfs/diffuse_bxdf.h>
@@ -16,8 +17,8 @@ DiffuseMaterial::DiffuseMaterial(const ParameterDictionary &parameters,
 }
 
 PBRT_CPU_GPU
-DiffuseBxDF DiffuseMaterial::get_diffuse_bsdf(const MaterialEvalContext &ctx,
-                                              SampledWavelengths &lambda) const {
+BxDF DiffuseMaterial::get_bxdf(const MaterialEvalContext &ctx,
+                                       SampledWavelengths &lambda) const {
     const auto r = reflectance->evaluate(ctx, lambda).clamp(0.0, 1.0);
 
     return DiffuseBxDF(r);

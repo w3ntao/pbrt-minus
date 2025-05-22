@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pbrt/base/bxdf_util.h>
+#include <pbrt/bxdfs/bxdf_util.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/util/optional.h>
 
@@ -60,7 +60,7 @@ class DiffuseTransmissionBxDF {
 
     PBRT_CPU_GPU
     Real pdf(const Vector3f &wo, const Vector3f &wi, const TransportMode mode,
-                  BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
+             BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         // Compute reflection and transmission probabilities for diffuse BSDF
         auto pr = R.max_component_value();
         auto pt = T.max_component_value();

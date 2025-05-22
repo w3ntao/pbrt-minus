@@ -1,3 +1,4 @@
+#include <pbrt/base/bxdf.h>
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/bxdfs/diffuse_transmission_bxdf.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
@@ -21,9 +22,8 @@ DiffuseTransmissionMaterial::DiffuseTransmissionMaterial(const ParameterDictiona
 }
 
 PBRT_CPU_GPU
-DiffuseTransmissionBxDF
-DiffuseTransmissionMaterial::get_diffuse_transmission_bsdf(const MaterialEvalContext &ctx,
-                                                           SampledWavelengths &lambda) const {
+BxDF DiffuseTransmissionMaterial::get_bxdf(const MaterialEvalContext &ctx,
+                                           SampledWavelengths &lambda) const {
     const auto r = (scale * reflectance->evaluate(ctx, lambda)).clamp(0, 1);
     const auto t = (scale * transmittance->evaluate(ctx, lambda)).clamp(0, 1);
 

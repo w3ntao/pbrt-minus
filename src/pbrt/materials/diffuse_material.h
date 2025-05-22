@@ -1,6 +1,6 @@
 #pragma once
 
-class DiffuseBxDF;
+class BxDF;
 class GPUMemoryAllocator;
 class ParameterDictionary;
 class RGBColorSpace;
@@ -15,7 +15,7 @@ class DiffuseMaterial {
     DiffuseMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    DiffuseBxDF get_diffuse_bsdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
+    BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:
     const SpectrumTexture *reflectance = nullptr;
