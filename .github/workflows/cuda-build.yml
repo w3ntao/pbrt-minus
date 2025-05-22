@@ -21,7 +21,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest ] # namely ubuntu 24.04
         # cuda: [ '12.1.0', '12.2.0', '12.3.0', '12.4.0', '12.5.0', '12.6.0' ]
-        cuda: [ '12.5.0', '12.6.0' ]
+        cuda: [ '12.6.0', '12.8.0' ]
         # all available versions:
         # https://github.com/Jimver/cuda-toolkit/blob/master/src/links/linux-links.ts
         float_config: [" -DPBRT_FLOAT_AS_DOUBLE=off", " -DPBRT_FLOAT_AS_DOUBLE=on"]
@@ -30,7 +30,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: jimver/cuda-toolkit@v0.2.19
+    - uses: jimver/cuda-toolkit@v0.2.23
       id: cuda-toolkit
       with:
         cuda: ${{ matrix.cuda }}

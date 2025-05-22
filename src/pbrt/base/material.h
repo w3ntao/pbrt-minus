@@ -9,9 +9,6 @@
 #include <pbrt/materials/diffuse_transmission_material.h>
 #include <pbrt/materials/mix_material.h>
 
-class GPUMemoryAllocator;
-class ParameterDictionary;
-
 namespace HIDDEN {
 using MaterialVariants = cuda::std::variant<CoatedConductorMaterial, CoatedDiffuseMaterial,
                                             ConductorMaterial, DielectricMaterial, DiffuseMaterial,
