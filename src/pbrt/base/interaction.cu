@@ -42,7 +42,8 @@ PBRT_CPU_GPU
 void SurfaceInteraction::set_intersection_properties(const Material *_material,
                                                      const Light *_area_light) {
     if (_material->get_material_type() == Material::Type::mix) {
-        material = _material->get_mix_material(this);
+        const auto u = pbrt::hash_float(pi, wo);
+        material = _material->get_material_from_mix_material(u);
     } else {
         material = _material;
     }

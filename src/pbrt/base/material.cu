@@ -75,10 +75,6 @@ const Material *Material::create_diffuse_material(const SpectrumTexture *texture
 }
 
 PBRT_CPU_GPU
-const Material *Material::get_mix_material(const SurfaceInteraction *si) const {
-    if (!is_of_type<MixMaterial>()) {
-        REPORT_FATAL_ERROR();
-    }
-
-    return convert<MixMaterial>().get_material(si);
+const Material *Material::get_material_from_mix_material(const Real u) const {
+    return cuda::std::get<MixMaterial>(*this).get_material(u);
 }

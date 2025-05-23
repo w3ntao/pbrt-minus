@@ -1,7 +1,7 @@
-#include <pbrt/base/interaction.h>
+#include <pbrt/base/bxdf.h>
+#include <pbrt/base/texture_eval_context.h>
 #include <pbrt/materials/mix_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
-#include <pbrt/util/hash.h>
 
 MixMaterial::MixMaterial(const ParameterDictionary &parameters) {
     amount = parameters.get_float("amount", 0.5);
@@ -16,12 +16,7 @@ MixMaterial::MixMaterial(const ParameterDictionary &parameters) {
 }
 
 PBRT_CPU_GPU
-const Material *MixMaterial::get_material(const SurfaceInteraction *si) const {
-    if (DEBUG_MODE && (si->pi.has_nan() || si->wo.has_nan())) {
-        REPORT_FATAL_ERROR();
-    }
-
-    const auto u = pbrt::hash_float(si->pi, si->wo, materials[0], materials[1]);
+const Material *MixMaterial::get_material(const Real u) const {
     return u < amount ? materials[0] : materials[1];
 }
 

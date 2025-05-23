@@ -80,7 +80,7 @@ class Material : public HIDDEN::MaterialVariants {
     }
 
     PBRT_CPU_GPU
-    const Material *get_mix_material(const SurfaceInteraction *si) const;
+    const Material *get_material_from_mix_material(const Real u) const;
 
     PBRT_CPU_GPU
     BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const {
@@ -92,10 +92,5 @@ class Material : public HIDDEN::MaterialVariants {
     PBRT_CPU_GPU bool is_of_type() const {
         const auto variant_ptr = static_cast<const HIDDEN::MaterialVariants *>(this);
         return cuda::std::holds_alternative<MaterialType>(*variant_ptr);
-    }
-
-    template <typename MaterialType>
-    PBRT_CPU_GPU MaterialType convert() const {
-        return cuda::std::get<MaterialType>(*this);
     }
 };
