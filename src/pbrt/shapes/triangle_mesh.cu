@@ -83,7 +83,8 @@ TriangleMesh::build_triangles(const Transform &render_from_object, const bool re
     }
 
     auto mesh = allocator.allocate<TriangleMesh>();
-    mesh->init(reverse_orientation, gpu_indices, indices.size(), gpu_points, gpu_normals, gpu_uv);
+    *mesh = TriangleMesh(reverse_orientation, gpu_indices, indices.size(), gpu_points, gpu_normals,
+                         gpu_uv);
 
     uint num_triangles = mesh->triangles_num;
 

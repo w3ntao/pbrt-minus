@@ -9,7 +9,7 @@ class TransformedPrimitive {
     PBRT_CPU_GPU
     void init(const Primitive *_primitive, const Transform _render_from_primitive) {
         primitive = _primitive;
-        render_from_pritimive = _render_from_primitive;
+        render_from_primitive = _render_from_primitive;
     }
 
     PBRT_CPU_GPU
@@ -30,6 +30,6 @@ class TransformedPrimitive {
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, Real t_max) const;
 
   private:
-    Transform render_from_pritimive;
+    Transform render_from_primitive;
     const Primitive *primitive;
 };

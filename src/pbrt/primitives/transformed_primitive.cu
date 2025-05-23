@@ -8,12 +8,12 @@ const Material *TransformedPrimitive::get_material() const {
 
 PBRT_CPU_GPU
 Bounds3f TransformedPrimitive::bounds() const {
-    return render_from_pritimive(primitive->bounds());
+    return render_from_primitive(primitive->bounds());
 }
 
 PBRT_CPU_GPU
 bool TransformedPrimitive::fast_intersect(const Ray &ray, Real t_max) const {
-    auto inverse_ray = render_from_pritimive.apply_inverse(ray, &t_max);
+    auto inverse_ray = render_from_primitive.apply_inverse(ray, &t_max);
     return primitive->fast_intersect(inverse_ray, t_max);
 }
 
@@ -21,7 +21,7 @@ PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> TransformedPrimitive::intersect(const Ray &ray,
                                                                        Real t_max) const {
     // Transform ray to primitive-space and intersect with primitive
-    auto inverse_ray = render_from_pritimive.apply_inverse(ray, &t_max);
+    auto inverse_ray = render_from_primitive.apply_inverse(ray, &t_max);
 
     auto si = primitive->intersect(inverse_ray, t_max);
     if (!si) {
@@ -29,6 +29,6 @@ pbrt::optional<ShapeIntersection> TransformedPrimitive::intersect(const Ray &ray
     }
 
     // Return transformed instance's intersection information
-    si->interaction = render_from_pritimive(si->interaction);
+    si->interaction = render_from_primitive(si->interaction);
     return si;
 }
