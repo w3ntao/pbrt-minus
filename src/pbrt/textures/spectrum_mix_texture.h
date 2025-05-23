@@ -4,13 +4,12 @@
 
 class FloatTexture;
 class SpectrumTexture;
-class TextureEvalContext;
+struct TextureEvalContext;
 
 class SpectrumMixTexture {
   public:
-    static const SpectrumMixTexture *create(const ParameterDictionary &parameters,
-                                            SpectrumType spectrum_type,
-                                            GPUMemoryAllocator &allocator);
+    SpectrumMixTexture(const ParameterDictionary &parameters, SpectrumType spectrum_type,
+                       GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     SampledSpectrum evaluate(const TextureEvalContext &ctx, const SampledWavelengths &lambda) const;

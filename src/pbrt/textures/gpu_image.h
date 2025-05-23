@@ -90,7 +90,7 @@ class GPUImage {
   private:
     Point2i resolution;
 
-    const RGB *pixels;
+    const RGB *pixels = nullptr;
 
     void init_exr(const std::string &filename, GPUMemoryAllocator &allocator);
 

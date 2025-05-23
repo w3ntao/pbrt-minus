@@ -23,10 +23,53 @@ constexpr Real MachineEpsilon = std::numeric_limits<Real>::epsilon() * 0.5;
 constexpr Real ShadowEpsilon = 0.0001;
 
 namespace pbrt {
+template <typename T>
+PBRT_CPU_GPU inline void swap(T &a, T &b) {
+    T tmp = std::move(a);
+    a = std::move(b);
+    b = std::move(tmp);
+}
+
+PBRT_CPU_GPU inline float copysign(float mag, float sign) {
+#ifdef PBRT_IS_GPU_CODE
+    return ::copysignf(mag, sign);
+#else
+    return std::copysign(mag, sign);
+#endif
+}
+
+PBRT_CPU_GPU inline double copysign(double mag, double sign) {
+#ifdef PBRT_IS_GPU_CODE
+    return ::copysign(mag, sign);
+#else
+    return std::copysign(mag, sign);
+#endif
+}
+
+template <int n>
+PBRT_CPU_GPU constexpr float pow(float v) {
+    if constexpr (n < 0) {
+        return 1 / pow<-n>(v);
+    }
+
+    float n2 = pow<n / 2>(v);
+    return n2 * n2 * pow < n & 1 > (v);
+}
+
+template <>
+PBRT_CPU_GPU constexpr float pow<1>(float v) {
+    return v;
+}
+template <>
+PBRT_CPU_GPU constexpr float pow<0>(float v) {
+    return 1;
+}
+
 PBRT_CPU_GPU
 constexpr Real lerp(Real x, Real a, Real b) {
     return (1 - x) * a + x * b;
 }
+
 } // namespace pbrt
 
 PBRT_CPU_GPU
@@ -175,8 +218,8 @@ inline Real smooth_step(Real x, Real a, Real b) {
 }
 
 template <typename Func>
-PBRT_CPU_GPU inline Real NewtonBisection(Real x0, Real x1, Func f,
-                                              Real xEps = 1e-6f, Real fEps = 1e-6f) {
+PBRT_CPU_GPU inline Real NewtonBisection(Real x0, Real x1, Func f, Real xEps = 1e-6f,
+                                         Real fEps = 1e-6f) {
     // Check function endpoints for roots
     Real fx0 = f(x0).first;
     Real fx1 = f(x1).first;
@@ -234,8 +277,7 @@ inline Real erf_inv(Real a) {
 #else
     // https://stackoverflow.com/a/49743348
     Real p;
-    Real t =
-        std::log(std::max<Real>(std::fma(a, -a, 1), std::numeric_limits<Real>::min()));
+    Real t = std::log(std::max<Real>(std::fma(a, -a, 1), std::numeric_limits<Real>::min()));
 
     if (std::abs(t) > 6.125f) {              // maximum ulp error = 2.35793
         p = 3.03697567e-10f;                 //  0x1.4deb44p-32

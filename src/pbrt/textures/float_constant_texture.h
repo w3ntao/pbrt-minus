@@ -1,7 +1,5 @@
 #pragma once
 
-// TODO: move implementation to .cu file
-#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
 
 struct TextureEvalContext;

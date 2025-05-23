@@ -1,29 +1,33 @@
 #pragma once
 
-#include <pbrt/base/spectrum.h>
-#include <pbrt/textures/texture_mapping_2d.h>
-#include <pbrt/textures/texture_mapping_3d.h>
+#include <pbrt/gpu/macro.h>
 
+enum class SpectrumType;
+class GPUMemoryAllocator;
 class ParameterDictionary;
+class SampledSpectrum;
+class SampledWavelengths;
 class SpectrumTexture;
 class Transform;
+struct TextureEvalContext;
+struct TextureMapping2D;
+struct TextureMapping3D;
 
 class SpectrumCheckerboardTexture {
   public:
-    static const SpectrumCheckerboardTexture *create(const Transform &renderFromTexture,
-                                                     SpectrumType spectrumType,
-                                                     const ParameterDictionary &parameters,
-                                                     GPUMemoryAllocator &allocator);
+    SpectrumCheckerboardTexture(const Transform &renderFromTexture, SpectrumType spectrumType,
+                                const ParameterDictionary &parameters,
+                                GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     SampledSpectrum evaluate(const TextureEvalContext &ctx, const SampledWavelengths &lambda) const;
 
   private:
-    const TextureMapping2D *map2D;
-    const TextureMapping3D *map3D;
+    const TextureMapping2D *map2D = nullptr;
+    const TextureMapping3D *map3D = nullptr;
 
-    const SpectrumTexture *tex0;
-    const SpectrumTexture *tex1;
+    const SpectrumTexture *tex0 = nullptr;
+    const SpectrumTexture *tex1 = nullptr;
 
     void init(const TextureMapping2D *_map2D, const TextureMapping3D *_map3D,
               const SpectrumTexture *_tex1, const SpectrumTexture *_tex2) {

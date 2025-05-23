@@ -2,7 +2,6 @@
 #include <pbrt/euclidean_space/frame.h>
 #include <pbrt/util/math.h>
 #include <pbrt/util/sampling.h>
-#include <pbrt/util/util.h>
 
 PBRT_CPU_GPU
 Vector3f SampleHenyeyGreenstein(Vector3f wo, Real g, Point2f u, Real *pdf) {
@@ -89,8 +88,7 @@ Point2f InvertSphericalTriangleSample(const Point3f v[3], const Point3f &p, cons
 
         n_cpb = n_cpb.normalize();
         n_acp = n_acp.normalize();
-        Real Ap =
-            alpha + angle_between(n_ab, n_cpb) + angle_between(n_acp, -n_cpb) - compute_pi();
+        Real Ap = alpha + angle_between(n_ab, n_cpb) + angle_between(n_acp, -n_cpb) - compute_pi();
 
         // Compute sample _u0_ that gives the area $A'$
         Real A = alpha + beta + gamma - compute_pi();

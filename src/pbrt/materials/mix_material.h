@@ -4,6 +4,7 @@
 
 class BxDF;
 class Material;
+class MaterialEvalContext;
 class ParameterDictionary;
 
 class MixMaterial {

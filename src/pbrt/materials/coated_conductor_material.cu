@@ -1,9 +1,9 @@
 #include <pbrt/base/bxdf.h>
 #include <pbrt/base/float_texture.h>
 #include <pbrt/base/spectrum_texture.h>
-#include <pbrt/bxdfs/coated_conductor_bxdf.h>
 #include <pbrt/materials/coated_conductor_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/textures/texture_eval_context.h>
 
 const FloatTexture *build_float_texture(const std::string &primary_key,
                                         const std::string &secondary_key, Real val,
@@ -91,7 +91,7 @@ CoatedConductorMaterial::CoatedConductorMaterial(const ParameterDictionary &para
 
 PBRT_CPU_GPU
 BxDF CoatedConductorMaterial::get_bxdf(const MaterialEvalContext &ctx,
-                                                        SampledWavelengths &lambda) const {
+                                       SampledWavelengths &lambda) const {
     auto iurough = interfaceURoughness->evaluate(ctx);
     auto ivrough = interfaceVRoughness->evaluate(ctx);
     if (remapRoughness) {

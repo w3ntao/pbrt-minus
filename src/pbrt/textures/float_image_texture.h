@@ -1,6 +1,8 @@
 #pragma once
 
 #include <pbrt/textures/image_texture_base.h>
+#include <pbrt/textures/mipmap.h>
+#include <pbrt/textures/texture_mapping_2d.h>
 
 class FloatImageTexture : ImageTextureBase {
   public:

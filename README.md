@@ -32,9 +32,8 @@ Setting up for other distros should be similar.
 
 ### Windows
 
-It's recommended to build with [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install).
-
-[CUDA on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html#getting-started-with-cuda-on-wsl) might help set up CUDA.
+* It's recommended to build with [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install).
+* [CUDA on WSL 2](https://docs.nvidia.com/cuda/wsl-user-guide/#getting-started-with-cuda-on-wsl-2) might help set up CUDA.
 
 
 ## build and render

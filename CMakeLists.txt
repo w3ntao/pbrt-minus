@@ -64,7 +64,6 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/shape.cu
         src/pbrt/base/spectrum.cu
         src/pbrt/base/spectrum_texture.cu
-        src/pbrt/base/texture_eval_context.cu
 
         src/pbrt/accelerator/hlbvh.cu
 
@@ -140,9 +139,11 @@ add_executable(${PROJ_NAME}
         src/pbrt/spectrum_util/rgb_to_spectrum_data.cu
         src/pbrt/spectrum_util/sampled_spectrum.cu
 
+        src/pbrt/textures/texture_eval_context.cu
         src/pbrt/textures/float_scaled_texture.cu
         src/pbrt/textures/gpu_image.cu
         src/pbrt/textures/image_texture_base.cu
+        src/pbrt/textures/mipmap.cu
         src/pbrt/textures/spectrum_checkerboard_texture.cu
         src/pbrt/textures/spectrum_constant_texture.cu
         src/pbrt/textures/spectrum_direction_mix_texture.cu

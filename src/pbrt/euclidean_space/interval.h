@@ -1,9 +1,8 @@
 #pragma once
 
-#include <pbrt/util/math.h>
-#include <pbrt/util/bit_arithmetic.h>
-#include <pbrt/util/util.h>
 #include <algorithm>
+#include <pbrt/util/bit_arithmetic.h>
+#include <pbrt/util/math.h>
 
 class Interval {
   public:
@@ -99,9 +98,9 @@ class Interval {
     PBRT_CPU_GPU
     Interval operator*(Interval i) const {
         Real lp[4] = {mul_round_down(low, i.low), mul_round_down(high, i.low),
-                           mul_round_down(low, i.high), mul_round_down(high, i.high)};
+                      mul_round_down(low, i.high), mul_round_down(high, i.high)};
         Real hp[4] = {mul_round_up(low, i.low), mul_round_up(high, i.low),
-                           mul_round_up(low, i.high), mul_round_up(high, i.high)};
+                      mul_round_up(low, i.high), mul_round_up(high, i.high)};
         return {std::min({lp[0], lp[1], lp[2], lp[3]}), std::max({hp[0], hp[1], hp[2], hp[3]})};
     }
 
@@ -115,9 +114,9 @@ class Interval {
         }
 
         Real lowQuot[4] = {div_round_down(low, i.low), div_round_down(high, i.low),
-                                div_round_down(low, i.high), div_round_down(high, i.high)};
+                           div_round_down(low, i.high), div_round_down(high, i.high)};
         Real highQuot[4] = {div_round_up(low, i.low), div_round_up(high, i.low),
-                                 div_round_up(low, i.high), div_round_up(high, i.high)};
+                            div_round_up(low, i.high), div_round_up(high, i.high)};
         return {std::min({lowQuot[0], lowQuot[1], lowQuot[2], lowQuot[3]}),
                 std::max({highQuot[0], highQuot[1], highQuot[2], highQuot[3]})};
     }

@@ -1,10 +1,8 @@
 #include <pbrt/base/bxdf.h>
 #include <pbrt/base/float_texture.h>
-#include <pbrt/base/spectrum.h>
-#include <pbrt/bxdfs/dielectric_bxdf.h>
 #include <pbrt/materials/dielectric_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
-#include <pbrt/textures/float_constant_texture.h>
+#include <pbrt/textures/texture_eval_context.h>
 
 DielectricMaterial::DielectricMaterial(const ParameterDictionary &parameters,
                                        GPUMemoryAllocator &allocator) {
@@ -39,7 +37,7 @@ DielectricMaterial::DielectricMaterial(const ParameterDictionary &parameters,
 
 PBRT_CPU_GPU
 BxDF DielectricMaterial::get_bxdf(const MaterialEvalContext &ctx,
-                                             SampledWavelengths &lambda) const {
+                                  SampledWavelengths &lambda) const {
     // Compute index of refraction for dielectric material
     Real sampled_eta = (*eta)(lambda[0]);
     if (!eta->is_constant_spectrum()) {

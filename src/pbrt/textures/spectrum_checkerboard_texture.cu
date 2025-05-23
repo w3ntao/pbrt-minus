@@ -1,10 +1,11 @@
-#include <pbrt/base/spectrum_texture.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/textures/spectrum_checkerboard_texture.h>
+#include <pbrt/textures/texture_mapping_2d.h>
+#include <pbrt/textures/texture_mapping_3d.h>
 
 PBRT_CPU_GPU
 static Real checkerboard(const TextureEvalContext &ctx, const TextureMapping2D *map2D,
-                              const TextureMapping3D *map3D) {
+                         const TextureMapping3D *map3D) {
     // Define 1D checkerboard filtered integral functions
     auto d = [](Real x) {
         Real y = x / 2 - std::floor(x / 2) - 0.5f;
@@ -31,10 +32,10 @@ static Real checkerboard(const TextureEvalContext &ctx, const TextureMapping2D *
     return NAN;
 }
 
-const SpectrumCheckerboardTexture *
-SpectrumCheckerboardTexture::create(const Transform &renderFromTexture, SpectrumType spectrumType,
-                                    const ParameterDictionary &parameters,
-                                    GPUMemoryAllocator &allocator) {
+SpectrumCheckerboardTexture::SpectrumCheckerboardTexture(const Transform &renderFromTexture,
+                                                         SpectrumType spectrumType,
+                                                         const ParameterDictionary &parameters,
+                                                         GPUMemoryAllocator &allocator) {
     const auto dimension = parameters.get_integer("dimension", 2);
     if (dimension != 2 && dimension != 3) {
         REPORT_FATAL_ERROR();
@@ -53,18 +54,15 @@ SpectrumCheckerboardTexture::create(const Transform &renderFromTexture, Spectrum
         tex2 = SpectrumTexture::create_constant_texture(one, allocator);
     }
 
-    auto checkerboard_texture = allocator.allocate<SpectrumCheckerboardTexture>();
     if (dimension == 2) {
         auto map2D = TextureMapping2D::create(renderFromTexture, parameters, allocator);
-        checkerboard_texture->init(map2D, nullptr, tex1, tex2);
+        init(map2D, nullptr, tex1, tex2);
 
-        return checkerboard_texture;
+        return;
     }
 
     std::cerr << "\nERROR: dimension 3 is not implemented yet\n";
     REPORT_FATAL_ERROR();
-
-    return nullptr;
 }
 
 PBRT_CPU_GPU

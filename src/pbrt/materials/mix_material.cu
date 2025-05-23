@@ -1,5 +1,4 @@
 #include <pbrt/base/bxdf.h>
-#include <pbrt/base/texture_eval_context.h>
 #include <pbrt/materials/mix_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
 

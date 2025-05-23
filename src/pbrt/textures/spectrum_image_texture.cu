@@ -1,31 +1,7 @@
-#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/spectra/rgb_albedo_spectrum.h>
+#include <pbrt/textures/mipmap.h>
 #include <pbrt/textures/spectrum_image_texture.h>
-
-// TODO: delete me after rewriting SpectrumTexture
-
-/*
-const SpectrumImageTexture *SpectrumImageTexture::create(SpectrumType spectrum_type,
-                                                         const Transform &render_from_object,
-                                                         const RGBColorSpace *_color_space,
-                                                         const ParameterDictionary &parameters,
-                                                         GPUMemoryAllocator &allocator) {
-    auto texture = allocator.allocate<SpectrumImageTexture>();
-
-    texture->init(spectrum_type, render_from_object, parameters, _color_space, allocator);
-
-    return texture;
-}
-
-void SpectrumImageTexture::init(SpectrumType _spectrum_type, const Transform &render_from_object,
-                                const ParameterDictionary &parameters,
-                                const RGBColorSpace *_color_space, GPUMemoryAllocator &allocator) {
-    spectrum_type = _spectrum_type;
-    color_space = _color_space;
-
-    *this = ImageTextureBase(render_from_object, parameters, parameters, allocator);
-}
-*/
+#include <pbrt/textures/texture_mapping_2d.h>
 
 SpectrumImageTexture::SpectrumImageTexture(SpectrumType _spectrum_type,
                                            const Transform &render_from_object,

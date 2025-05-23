@@ -1,10 +1,10 @@
 #include <pbrt/base/bxdf.h>
-#include <pbrt/base/spectrum.h>
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/bxdfs/diffuse_bxdf.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/materials/diffuse_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/textures/texture_eval_context.h>
 
 DiffuseMaterial::DiffuseMaterial(const SpectrumTexture *_reflectance) : reflectance(_reflectance) {}
 
@@ -17,8 +17,7 @@ DiffuseMaterial::DiffuseMaterial(const ParameterDictionary &parameters,
 }
 
 PBRT_CPU_GPU
-BxDF DiffuseMaterial::get_bxdf(const MaterialEvalContext &ctx,
-                                       SampledWavelengths &lambda) const {
+BxDF DiffuseMaterial::get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const {
     const auto r = reflectance->evaluate(ctx, lambda).clamp(0.0, 1.0);
 
     return DiffuseBxDF(r);

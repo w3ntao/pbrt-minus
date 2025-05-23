@@ -4,7 +4,6 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/shapes/sphere.h>
 #include <pbrt/util/sampling.h>
-#include <pbrt/util/util.h>
 
 const Sphere *Sphere::create(const Transform &render_from_object,
                              const Transform &object_from_render, bool reverse_orientation,
@@ -279,7 +278,7 @@ Real Sphere::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
 
         // Compute PDF in solid angle measure from shape intersection point
         Real pdf = (1.0 / area()) / (isect->interaction.n.abs_dot(-wi) /
-                                          ctx.p().squared_distance(isect->interaction.p()));
+                                     ctx.p().squared_distance(isect->interaction.p()));
 
         if (isinf(pdf)) {
             pdf = 0;

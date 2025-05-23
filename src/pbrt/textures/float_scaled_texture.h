@@ -15,6 +15,6 @@ class FloatScaledTexture {
     Real evaluate(const TextureEvalContext &ctx) const;
 
   private:
-    const FloatTexture *texture;
-    const FloatTexture *scale;
+    const FloatTexture *texture = nullptr;
+    const FloatTexture *scale = nullptr;
 };

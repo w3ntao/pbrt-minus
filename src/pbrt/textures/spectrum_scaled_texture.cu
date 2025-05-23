@@ -2,10 +2,10 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/textures/spectrum_scaled_texture.h>
 
-void SpectrumScaledTexture::init(SpectrumType spectrum_type, const ParameterDictionary &parameters,
-                                 GPUMemoryAllocator &allocator) {
+SpectrumScaledTexture::SpectrumScaledTexture(SpectrumType spectrum_type,
+                                             const ParameterDictionary &parameters,
+                                             GPUMemoryAllocator &allocator) {
     texture = parameters.get_spectrum_texture("tex", spectrum_type, allocator);
-
     scale = parameters.get_float("scale", 1.0);
 }
 

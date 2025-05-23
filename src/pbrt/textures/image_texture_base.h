@@ -1,19 +1,20 @@
 #pragma once
 
-#include <pbrt/textures/mipmap.h>
-#include <pbrt/textures/texture_mapping_2d.h>
+#include <pbrt/gpu/macro.h>
 
 class GPUMemoryAllocator;
 class MIPMap;
 class Transform;
+class ParameterDictionary;
+struct TextureMapping2D;
 
-// ImageTextureBase Definition
 class ImageTextureBase {
   protected:
     const TextureMapping2D *texture_mapping = nullptr;
+    const MIPMap *mipmap = nullptr;
+
     Real scale = NAN;
     bool invert = false;
-    const MIPMap *mipmap = nullptr;
 
     ImageTextureBase(const Transform &render_from_object, const ParameterDictionary &parameters,
                      GPUMemoryAllocator &allocator);

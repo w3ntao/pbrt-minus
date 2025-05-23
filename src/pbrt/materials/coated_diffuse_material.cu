@@ -1,10 +1,10 @@
 #include <pbrt/base/bxdf.h>
 #include <pbrt/base/float_texture.h>
 #include <pbrt/base/spectrum_texture.h>
-#include <pbrt/bxdfs/coated_diffuse_bxdf.h>
 #include <pbrt/materials/coated_diffuse_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/textures/texture_eval_context.h>
 
 CoatedDiffuseMaterial::CoatedDiffuseMaterial(const ParameterDictionary &parameters,
                                              GPUMemoryAllocator &allocator) {

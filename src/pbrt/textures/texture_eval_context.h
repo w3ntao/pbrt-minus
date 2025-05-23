@@ -8,7 +8,7 @@ class Interaction;
 class SurfaceInteraction;
 
 struct TextureEvalContext {
-    Point3f p;
+    Point3f p = Point3f(NAN, NAN, NAN);
     Vector3f dpdx;
     Vector3f dpdy;
 

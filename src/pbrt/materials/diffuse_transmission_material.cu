@@ -1,9 +1,9 @@
 #include <pbrt/base/bxdf.h>
 #include <pbrt/base/spectrum_texture.h>
-#include <pbrt/bxdfs/diffuse_transmission_bxdf.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/materials/diffuse_transmission_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/textures/texture_eval_context.h>
 
 DiffuseTransmissionMaterial::DiffuseTransmissionMaterial(const ParameterDictionary &parameters,
                                                          GPUMemoryAllocator &allocator) {
