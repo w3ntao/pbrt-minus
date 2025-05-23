@@ -7,11 +7,22 @@ class GPUMemoryAllocator;
 
 class SpectrumImageTexture : ImageTextureBase {
   public:
+    SpectrumImageTexture(SpectrumType _spectrum_type, const Transform &render_from_object,
+                         const RGBColorSpace *_color_space, const ParameterDictionary &parameters,
+                         GPUMemoryAllocator &allocator);
+
+    // TODO: delete me after rewriting SpectrumTexture
+    /*
     static const SpectrumImageTexture *create(SpectrumType spectrum_type,
                                               const Transform &render_from_object,
                                               const RGBColorSpace *_color_space,
                                               const ParameterDictionary &parameters,
                                               GPUMemoryAllocator &allocator);
+
+    void init(SpectrumType _spectrum_type, const Transform &render_from_object,
+              const ParameterDictionary &parameters, const RGBColorSpace *_color_space,
+              GPUMemoryAllocator &allocator);
+    */
 
     PBRT_CPU_GPU
     SampledSpectrum evaluate(const TextureEvalContext &ctx, const SampledWavelengths &lambda) const;
@@ -19,8 +30,4 @@ class SpectrumImageTexture : ImageTextureBase {
   private:
     SpectrumType spectrum_type;
     const RGBColorSpace *color_space;
-
-    void init(SpectrumType _spectrum_type, const Transform &render_from_object,
-              const ParameterDictionary &parameters, const RGBColorSpace *_color_space,
-              GPUMemoryAllocator &allocator);
 };

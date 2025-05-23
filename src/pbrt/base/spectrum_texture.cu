@@ -42,9 +42,18 @@ SpectrumTexture::create(const std::string &texture_type, const SpectrumType spec
     }
 
     if (texture_type == "imagemap") {
+        /*
         auto image_texture = SpectrumImageTexture::create(spectrum_type, render_from_texture,
                                                           color_space, parameters, allocator);
         spectrum_texture->init(image_texture);
+
+        *spectrum_texture = SpectrumImageTexture(spectrum_type, render_from_texture, color_space,
+                                                 parameters, allocator);
+        */
+
+        REPORT_FATAL_ERROR();
+        // TODO: implement std::variant for SpectrumTexture
+
         return spectrum_texture;
     }
 

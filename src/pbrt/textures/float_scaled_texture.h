@@ -5,12 +5,11 @@
 class FloatTexture;
 class GPUMemoryAllocator;
 class ParameterDictionary;
-class TextureEvalContext;
+struct TextureEvalContext;
 
 class FloatScaledTexture {
   public:
-    static const FloatScaledTexture *create(const ParameterDictionary &parameters,
-                                            GPUMemoryAllocator &allocator);
+    FloatScaledTexture(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Real evaluate(const TextureEvalContext &ctx) const;

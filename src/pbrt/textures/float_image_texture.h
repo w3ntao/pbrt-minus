@@ -1,19 +1,12 @@
 #pragma once
 
-#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/textures/image_texture_base.h>
 
 class FloatImageTexture : ImageTextureBase {
   public:
-    static const FloatImageTexture *create(const Transform &render_from_object,
-                                           const ParameterDictionary &parameters,
-                                           GPUMemoryAllocator &allocator) {
-        auto float_image_texture = allocator.allocate<FloatImageTexture>();
-
-        float_image_texture->init_image_texture_base(render_from_object, parameters, allocator);
-
-        return float_image_texture;
-    }
+    FloatImageTexture(const Transform &render_from_object, const ParameterDictionary &parameters,
+                      GPUMemoryAllocator &allocator)
+        : ImageTextureBase(render_from_object, parameters, allocator) {}
 
     PBRT_CPU_GPU
     Real evaluate(const TextureEvalContext &ctx) const {

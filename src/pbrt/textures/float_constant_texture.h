@@ -1,22 +1,17 @@
 #pragma once
 
-#include <pbrt/base/spectrum_texture.h>
+// TODO: move implementation to .cu file
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
 
+struct TextureEvalContext;
+
 class FloatConstantTexture {
   public:
-    static const FloatConstantTexture *create(const ParameterDictionary &parameters,
-                                              GPUMemoryAllocator &allocator) {
-        auto texture = allocator.allocate<FloatConstantTexture>();
+    FloatConstantTexture(const Real _value) : value(_value) {}
 
-        texture->init(parameters.get_float("value", 1.0));
-
-        return texture;
-    }
-
-    void init(Real _value) {
-        value = _value;
+    FloatConstantTexture(const ParameterDictionary &parameters) {
+        value = parameters.get_float("value", 1.0);
     }
 
     PBRT_CPU_GPU
@@ -25,5 +20,5 @@ class FloatConstantTexture {
     }
 
   private:
-    Real value;
+    Real value = NAN;
 };
