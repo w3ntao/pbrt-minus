@@ -91,6 +91,7 @@ class SurfaceInteraction : public Interaction {
 
     const Material *material;
     const Light *area_light;
+
     PBRT_CPU_GPU
     SurfaceInteraction()
         : Interaction(Point3fi(NAN, NAN, NAN), Normal3f(0, 0, 0), Point2f(NAN, NAN),
