@@ -7,9 +7,7 @@
 class IndependentSampler {
   public:
     PBRT_CPU_GPU
-    void init(uint _samples_per_pixel) {
-        samples_per_pixel = _samples_per_pixel;
-    }
+    IndependentSampler(uint _samples_per_pixel) : samples_per_pixel(_samples_per_pixel) {}
 
     PBRT_CPU_GPU
     void start_pixel_sample(const uint pixel_idx, const uint sample_idx, const uint dimension) {
@@ -36,5 +34,5 @@ class IndependentSampler {
 
   private:
     RNG rng;
-    uint samples_per_pixel;
+    uint samples_per_pixel = 0;
 };

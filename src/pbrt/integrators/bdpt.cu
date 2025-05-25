@@ -186,30 +186,6 @@ Real Vertex::pdf_light_origin(const Light **infinite_lights, int num_infinite_li
     return pdfPos * pdfChoice;
 }
 
-static __global__ void gpu_init_stratified_samplers(Sampler *samplers,
-                                                    StratifiedSampler *stratified_samplers,
-                                                    uint samples_per_dimension, uint num) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= num) {
-        return;
-    }
-
-    stratified_samplers[worker_idx].init(samples_per_dimension);
-
-    samplers[worker_idx].init(&stratified_samplers[worker_idx]);
-}
-
-static __global__ void gpu_init_independent_samplers(Sampler *samplers,
-                                                     IndependentSampler *independent_samplers,
-                                                     uint num) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= num) {
-        return;
-    }
-
-    samplers[worker_idx].init(&independent_samplers[worker_idx]);
-}
-
 template <typename Type>
 class ScopedAssignment {
   public:
@@ -649,10 +625,6 @@ BDPTIntegrator *BDPTIntegrator::create(int samples_per_pixel, const std::string 
                                        const IntegratorBase *integrator_base,
                                        GPUMemoryAllocator &allocator) {
     auto bdpt_integrator = allocator.allocate<BDPTIntegrator>();
-    auto samplers = allocator.allocate<Sampler>(NUM_SAMPLERS);
-
-    bdpt_integrator->samplers = samplers;
-
     auto config = allocator.allocate<BDPTConfig>();
 
     config->base = integrator_base;
@@ -662,27 +634,8 @@ BDPTIntegrator *BDPTIntegrator::create(int samples_per_pixel, const std::string 
 
     bdpt_integrator->config = config;
 
-    constexpr uint threads = 1024;
-    uint blocks = divide_and_ceil<uint>(NUM_SAMPLERS, threads);
-
-    if (sampler_type == "independent") {
-        auto independent_samplers = allocator.allocate<IndependentSampler>(NUM_SAMPLERS);
-
-        gpu_init_independent_samplers<<<blocks, threads>>>(samplers, independent_samplers,
-                                                           NUM_SAMPLERS);
-    } else if (sampler_type == "stratified") {
-        const uint samples_per_dimension = std::sqrt(samples_per_pixel);
-        if (samples_per_dimension * samples_per_dimension != samples_per_pixel) {
-            REPORT_FATAL_ERROR();
-        }
-
-        auto stratified_samplers = allocator.allocate<StratifiedSampler>(NUM_SAMPLERS);
-
-        gpu_init_stratified_samplers<<<blocks, threads>>>(samplers, stratified_samplers,
-                                                          samples_per_dimension, NUM_SAMPLERS);
-    } else {
-        REPORT_FATAL_ERROR();
-    }
+    bdpt_integrator->samplers =
+        Sampler::create_samplers(sampler_type, samples_per_pixel, NUM_SAMPLERS, allocator);
 
     return bdpt_integrator;
 }

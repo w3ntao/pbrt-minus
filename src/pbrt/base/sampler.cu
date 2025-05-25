@@ -1,83 +1,47 @@
 #include <pbrt/base/filter.h>
 #include <pbrt/base/sampler.h>
+#include <pbrt/cameras/camera_base.h>
 #include <pbrt/filters/filter_sampler.h>
 #include <pbrt/samplers/independent.h>
 #include <pbrt/samplers/mlt.h>
 #include <pbrt/samplers/stratified.h>
 
-static __global__ void init_independent_samplers(IndependentSampler *samplers,
-                                                 uint samples_per_pixel, uint num) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= num) {
-        return;
-    }
-
-    samplers[idx].init(samples_per_pixel);
-}
-
-static __global__ void init_stratified_samplers(StratifiedSampler *samplers,
-                                                uint samples_per_dimension, uint num) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= num) {
-        return;
-    }
-
-    samplers[idx].init(samples_per_dimension);
-}
-
-template <typename T>
-static __global__ void init_samplers(Sampler *samplers, T *_samplers, uint length) {
+template <typename TypeOfSampler>
+static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers,
+                                     uint samples_per_pixel, uint size) {
     const uint idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (idx >= length) {
+    if (idx >= size) {
         return;
     }
-
+    _samplers[idx] = TypeOfSampler(samples_per_pixel);
     samplers[idx].init(&_samplers[idx]);
 }
 
-Sampler *Sampler::create_samplers_for_each_pixels(const std::string &sampler_type,
-                                                  const uint samples_per_pixel,
-                                                  const uint total_pixel_num,
-                                                  GPUMemoryAllocator &allocator) {
+Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
+                                  const uint samples_per_pixel, const uint size,
+                                  GPUMemoryAllocator &allocator) {
     constexpr uint threads = 1024;
-    const uint blocks = divide_and_ceil(total_pixel_num, threads);
+    const uint blocks = divide_and_ceil(size, threads);
 
-    auto samplers = allocator.allocate<Sampler>(total_pixel_num);
+    auto samplers = allocator.allocate<Sampler>(size);
 
-    if (sampler_type == "independent") {
-        auto independent_samplers = allocator.allocate<IndependentSampler>(total_pixel_num);
+    auto sampler_type = parse_sampler_type(string_sampler_type);
 
-        init_independent_samplers<<<blocks, threads>>>(independent_samplers, samples_per_pixel,
-                                                       total_pixel_num);
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-        init_samplers<<<blocks, threads>>>(samplers, independent_samplers, total_pixel_num);
+    if (sampler_type == Type::independent) {
+        auto independent_samplers = allocator.allocate<IndependentSampler>(size);
+        init_samplers<<<blocks, threads>>>(samplers, independent_samplers, samples_per_pixel, size);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         return samplers;
     }
 
-    if (sampler_type == "stratified") {
-        if (sqr(std::sqrt(samples_per_pixel)) != samples_per_pixel) {
-            REPORT_FATAL_ERROR();
-        }
-
-        auto samples_per_dimension = uint(std::sqrt(samples_per_pixel));
-        // samples_per_pixel = samples_per_dimension * samples_per_dimension;
-
-        auto stratified_samplers = allocator.allocate<StratifiedSampler>(total_pixel_num);
-
-        init_stratified_samplers<<<blocks, threads>>>(stratified_samplers, samples_per_dimension,
-                                                      total_pixel_num);
+    if (sampler_type == Type::stratified) {
+        auto stratified_samplers = allocator.allocate<StratifiedSampler>(size);
+        init_samplers<<<blocks, threads>>>(samplers, stratified_samplers, samples_per_pixel, size);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        init_samplers<<<blocks, threads>>>(samplers, stratified_samplers, total_pixel_num);
-
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         return samplers;
     }
 
@@ -122,8 +86,7 @@ void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension
     }
 
     case Type::mlt: {
-        printf("\nERROR: you should never invoke %s() for MLT sampler\n", __func__);
-        REPORT_FATAL_ERROR();
+        static_cast<MLTSampler *>(ptr)->start_pixel_sample(pixel_idx, sample_idx, dimension);
         return;
     }
 

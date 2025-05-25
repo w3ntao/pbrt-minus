@@ -56,6 +56,7 @@ class SceneBuilder {
         throw std::runtime_error("get_dirname() fails");
     }
 
+    std::string sampler_type = "stratified"; // TODO: read this from PBRT file
     std::optional<int> samples_per_pixel;
     std::optional<std::string> integrator_name;
     bool preview = false;

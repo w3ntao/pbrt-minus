@@ -95,7 +95,13 @@ class MLTSampler {
     }
 
     PBRT_CPU_GPU
-    int get_samples_per_pixel() const {
+    void start_pixel_sample(uint, uint, uint) {
+        printf("\nERROR: you should never invoke %s() for MLT sampler\n", __func__);
+        REPORT_FATAL_ERROR();
+    }
+
+    PBRT_CPU_GPU
+    uint get_samples_per_pixel() const {
         return mutations_per_pixel;
     }
 

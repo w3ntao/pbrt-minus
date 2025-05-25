@@ -58,30 +58,6 @@ struct MISParameter {
     }
 };
 
-static __global__ void gpu_init_independent_samplers(Sampler *samplers,
-                                                     IndependentSampler *independent_samplers,
-                                                     uint num) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= num) {
-        return;
-    }
-
-    samplers[worker_idx].init(&independent_samplers[worker_idx]);
-}
-
-static __global__ void gpu_init_stratified_samplers(Sampler *samplers,
-                                                    StratifiedSampler *stratified_samplers,
-                                                    uint samples_per_dimension, uint num) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= num) {
-        return;
-    }
-
-    stratified_samplers[worker_idx].init(samples_per_dimension);
-
-    samplers[worker_idx].init(&stratified_samplers[worker_idx]);
-}
-
 static __global__ void gpu_init_path_state(WavefrontPathIntegrator::PathState *path_state) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= PATH_POOL_SIZE) {
@@ -438,34 +414,9 @@ void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Po
 
     bsdf = allocator.allocate<BSDF>(PATH_POOL_SIZE);
     mis_parameters = allocator.allocate<MISParameter>(PATH_POOL_SIZE);
-    samplers = allocator.allocate<Sampler>(PATH_POOL_SIZE);
+    samplers = Sampler::create_samplers(sampler_type, samples_per_pixel, PATH_POOL_SIZE, allocator);
 
     constexpr uint threads = 1024;
-    uint blocks = divide_and_ceil<uint>(PATH_POOL_SIZE, threads);
-
-    if (sampler_type == "stratified") {
-        const auto samples_per_dimension = static_cast<int>(std::sqrt(samples_per_pixel));
-        if (samples_per_dimension * samples_per_dimension != samples_per_pixel) {
-            REPORT_FATAL_ERROR();
-        }
-
-        auto stratified_samplers = allocator.allocate<StratifiedSampler>(PATH_POOL_SIZE);
-
-        gpu_init_stratified_samplers<<<blocks, threads>>>(samplers, stratified_samplers,
-                                                          samples_per_dimension, PATH_POOL_SIZE);
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    } else if (sampler_type == "independent") {
-        auto independent_samplers = allocator.allocate<IndependentSampler>(PATH_POOL_SIZE);
-
-        gpu_init_independent_samplers<<<blocks, threads>>>(samplers, independent_samplers,
-                                                           PATH_POOL_SIZE);
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    } else {
-        REPORT_FATAL_ERROR();
-    }
-
     gpu_init_path_state<<<PATH_POOL_SIZE, threads>>>(this);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());

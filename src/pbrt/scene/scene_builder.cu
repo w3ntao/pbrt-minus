@@ -250,12 +250,9 @@ void SceneBuilder::build_integrator() {
         samples_per_pixel = 4;
     }
 
-    const std::string sampler_type = "stratified";
-    // const std::string sampler_type = "independent";
-
     if (sampler_type == "stratified" && integrator_name->find("mlt") == std::string::npos) {
         // MLT integrator ues it's own sampler
-        const auto sqrt_val = int(std::sqrt(samples_per_pixel.value()));
+        const auto sqrt_val = static_cast<int>(std::sqrt(samples_per_pixel.value()));
         samples_per_pixel = sqr(sqrt_val);
     }
 
@@ -933,9 +930,6 @@ void SceneBuilder::render() const {
     }
 
     const auto film_resolution = film->get_resolution();
-
-    std::string sampler_type = "stratified";
-    // TODO: configure sampler_type
 
     auto start = std::chrono::system_clock::now();
 
