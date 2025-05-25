@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cuda/std/detail/libcxx/include/variant>
+#include <cuda/std/variant>
 #include <pbrt/film/rgb_film.h>
 
 namespace HIDDEN {

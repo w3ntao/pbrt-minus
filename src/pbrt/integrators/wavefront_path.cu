@@ -9,12 +9,8 @@
 #include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
-#include <pbrt/samplers/independent.h>
-#include <pbrt/samplers/stratified.h>
 #include <pbrt/scene/parameter_dictionary.h>
-#include <pbrt/spectrum_util/sampled_spectrum.h>
-#include <pbrt/spectrum_util/sampled_wavelengths.h>
-#include <pbrt/util/math.h>
+#include <pbrt/util/timer.h>
 
 constexpr uint PATH_POOL_SIZE = 1 * 1024 * 1024;
 
@@ -519,7 +515,7 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
 }
 
 void WavefrontPathIntegrator::render(Film *film, const bool preview) {
-    printf("wavefront: path pool size: %u\n", PATH_POOL_SIZE);
+    printf("wavefront pathtracing: path pool size: %u\n", PATH_POOL_SIZE);
 
     const auto image_resolution = this->path_state.image_resolution;
 
@@ -549,11 +545,14 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         REPORT_FATAL_ERROR();
     }
 
+    auto timer = Timer();
     while (queues.rays->counter > 0) {
         ray_cast<<<divide_and_ceil(queues.rays->counter, threads), threads>>>(&path_state, &queues,
                                                                               base);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+        timer.stop("0 ray_cast()");
 
         // clear all queues before control stage
         for (auto _queue : queues.get_all_queues()) {
@@ -566,10 +565,16 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
+        timer.stop("1 control_logic()");
+
         if (queues.frame_buffer_counter > 0) {
             // sort to make film writing deterministic
+            // TODO: for veach-mis,             sort_fb() takes 30%, write_fb() takes 15%
+            // TODO: for materialball-sequence, sort_fb() takes 9%,  write_fb() takes 6%
+            // TODO: rewrite sort-and-write with ping pong buffer and async thread?
             std::sort(queues.frame_buffer_queue + 0,
                       queues.frame_buffer_queue + queues.frame_buffer_counter, std::less{});
+            timer.stop("2 sort_frame_buffer()");
 
             write_frame_buffer<<<divide_and_ceil(queues.frame_buffer_counter, threads), threads>>>(
                 film, &queues);
@@ -585,6 +590,8 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
                 gl_helper.draw_frame(
                     GLHelper::assemble_title(Real(current_sample_idx) / samples_per_pixel));
             }
+
+            timer.stop("3 write_frame_buffer()");
         }
 
         if (queues.new_paths->counter > 0) {
@@ -594,8 +601,16 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
+        timer.stop("4 generate_new_path()");
+
         for (const auto material_type : Material::get_basic_material_types()) {
             evaluate_material(material_type);
         }
+
+        timer.stop("5 evaluate_material()");
     }
+
+    printf("wavefront pathtracing benchmark:\n");
+    timer.print();
+    printf("\n");
 }
