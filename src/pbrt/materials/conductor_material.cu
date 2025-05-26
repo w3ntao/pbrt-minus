@@ -3,8 +3,15 @@
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/materials/conductor_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
-#include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/textures/texture_eval_context.h>
+
+const ConductorMaterial *ConductorMaterial::create(const ParameterDictionary &parameters,
+                                                   GPUMemoryAllocator &allocator) {
+    auto conductor_material = allocator.allocate<ConductorMaterial>();
+    *conductor_material = ConductorMaterial(parameters, allocator);
+
+    return conductor_material;
+}
 
 ConductorMaterial::ConductorMaterial(const ParameterDictionary &parameters,
                                      GPUMemoryAllocator &allocator) {

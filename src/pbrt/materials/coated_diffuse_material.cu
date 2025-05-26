@@ -3,8 +3,15 @@
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/materials/coated_diffuse_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
-#include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/textures/texture_eval_context.h>
+
+const CoatedDiffuseMaterial *CoatedDiffuseMaterial::create(const ParameterDictionary &parameters,
+                                                           GPUMemoryAllocator &allocator) {
+    auto coated_diffuse_material = allocator.allocate<CoatedDiffuseMaterial>();
+    *coated_diffuse_material = CoatedDiffuseMaterial(parameters, allocator);
+
+    return coated_diffuse_material;
+}
 
 CoatedDiffuseMaterial::CoatedDiffuseMaterial(const ParameterDictionary &parameters,
                                              GPUMemoryAllocator &allocator) {

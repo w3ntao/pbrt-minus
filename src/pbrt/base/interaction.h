@@ -11,7 +11,6 @@ class BSDF;
 class Camera;
 class Light;
 class Material;
-class Sampler;
 class SampledWavelengths;
 
 class Interaction {

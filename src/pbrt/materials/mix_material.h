@@ -9,7 +9,8 @@ class ParameterDictionary;
 
 class MixMaterial {
   public:
-    MixMaterial(const ParameterDictionary &parameters);
+    static const MixMaterial *create(const ParameterDictionary &parameters,
+                                     GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     const Material *get_material(const Real u) const;
@@ -19,5 +20,7 @@ class MixMaterial {
 
   private:
     Real amount = 0.5;
-    const Material *materials[2];
+    const Material *materials[2] = {nullptr, nullptr};
+
+    MixMaterial(const ParameterDictionary &parameters);
 };

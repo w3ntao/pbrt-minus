@@ -13,7 +13,8 @@ class SpectrumTexture;
 
 class DielectricMaterial {
   public:
-    DielectricMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
+    static const DielectricMaterial *create(const ParameterDictionary &parameters,
+                                            GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
@@ -25,4 +26,6 @@ class DielectricMaterial {
     const Spectrum *eta = nullptr;
 
     bool remapRoughness = true;
+
+    DielectricMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 };

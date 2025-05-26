@@ -1,23 +1,18 @@
 #pragma once
 
-#include <cuda/std/variant>
-#include <pbrt/materials/coated_conductor_material.h>
-#include <pbrt/materials/coated_diffuse_material.h>
-#include <pbrt/materials/conductor_material.h>
-#include <pbrt/materials/dielectric_material.h>
-#include <pbrt/materials/diffuse_material.h>
-#include <pbrt/materials/diffuse_transmission_material.h>
-#include <pbrt/materials/mix_material.h>
+class CoatedConductorMaterial;
+class CoatedDiffuseMaterial;
+class ConductorMaterial;
+class DielectricMaterial;
+class DiffuseMaterial;
+class DiffuseTransmissionMaterial;
+class MixMaterial;
 
-namespace HIDDEN {
-using MaterialVariants = cuda::std::variant<CoatedConductorMaterial, CoatedDiffuseMaterial,
-                                            ConductorMaterial, DielectricMaterial, DiffuseMaterial,
-                                            DiffuseTransmissionMaterial, MixMaterial>;
-}
+class GPUMemoryAllocator;
+class ParameterDictionary;
+class SpectrumTexture;
 
-class Material : public HIDDEN::MaterialVariants {
-    using HIDDEN::MaterialVariants::MaterialVariants;
-
+class Material {
   public:
     enum class Type {
         coated_conductor,
@@ -48,49 +43,30 @@ class Material : public HIDDEN::MaterialVariants {
 
     PBRT_CPU_GPU
     Type get_material_type() const {
-        if (is_of_type<CoatedConductorMaterial>()) {
-            return Type::coated_conductor;
-        }
-
-        if (is_of_type<CoatedDiffuseMaterial>()) {
-            return Type::coated_diffuse;
-        }
-
-        if (is_of_type<ConductorMaterial>()) {
-            return Type::conductor;
-        }
-
-        if (is_of_type<DiffuseMaterial>()) {
-            return Type::diffuse;
-        }
-
-        if (is_of_type<DiffuseTransmissionMaterial>()) {
-            return Type::diffuse_transmission;
-        }
-
-        if (is_of_type<DielectricMaterial>()) {
-            return Type::dielectric;
-        }
-
-        if (is_of_type<MixMaterial>()) {
-            return Type::mix;
-        }
-
-        REPORT_FATAL_ERROR();
+        return type;
     }
 
     PBRT_CPU_GPU
     const Material *get_material_from_mix_material(const Real u) const;
 
     PBRT_CPU_GPU
-    BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const {
-        return cuda::std::visit([&](auto &x) { return x.get_bxdf(ctx, lambda); }, *this);
-    }
+    BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:
-    template <typename MaterialType>
-    PBRT_CPU_GPU bool is_of_type() const {
-        const auto variant_ptr = static_cast<const HIDDEN::MaterialVariants *>(this);
-        return cuda::std::holds_alternative<MaterialType>(*variant_ptr);
-    }
+    const void *ptr = nullptr;
+    Type type = Type::diffuse;
+
+    void init(const CoatedConductorMaterial *coated_conductor_material);
+
+    void init(const CoatedDiffuseMaterial *coated_diffuse_material);
+
+    void init(const ConductorMaterial *conductor_material);
+
+    void init(const DielectricMaterial *dielectric_material);
+
+    void init(const DiffuseMaterial *diffuse_material);
+
+    void init(const DiffuseTransmissionMaterial *diffuse_transmission_material);
+
+    void init(const MixMaterial *mix_material);
 };

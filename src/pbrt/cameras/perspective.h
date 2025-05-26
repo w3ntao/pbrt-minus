@@ -5,6 +5,7 @@
 class Film;
 class Filter;
 class ParameterDictionary;
+class Sampler;
 
 class PerspectiveCamera {
   public:
