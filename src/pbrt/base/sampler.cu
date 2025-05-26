@@ -2,10 +2,8 @@
 #include <pbrt/base/sampler.h>
 #include <pbrt/cameras/camera_base.h>
 #include <pbrt/filters/filter_sampler.h>
-#include <pbrt/samplers/independent.h>
-#include <pbrt/samplers/mlt.h>
-#include <pbrt/samplers/stratified.h>
 
+/*
 template <typename TypeOfSampler>
 static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers,
                                      uint samples_per_pixel, uint size) {
@@ -13,8 +11,30 @@ static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers
     if (idx >= size) {
         return;
     }
+
     _samplers[idx] = TypeOfSampler(samples_per_pixel);
     samplers[idx].init(&_samplers[idx]);
+}
+*/
+
+static __global__ void new_init_samplers(Sampler *samplers, Sampler::Type sampler_type,
+                                         uint samples_per_pixel, uint size) {
+    const uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= size) {
+        return;
+    }
+
+    if (sampler_type == Sampler::Type::independent) {
+        samplers[idx] = IndependentSampler(samples_per_pixel);
+        return;
+    }
+
+    if (sampler_type == Sampler::Type::stratified) {
+        samplers[idx] = StratifiedSampler(samples_per_pixel);
+        return;
+    }
+
+    REPORT_FATAL_ERROR();
 }
 
 Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
@@ -27,6 +47,13 @@ Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
 
     auto sampler_type = parse_sampler_type(string_sampler_type);
 
+    new_init_samplers<<<blocks, threads>>>(samplers, sampler_type, samples_per_pixel, blocks);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    return samplers;
+
+    /*
     if (sampler_type == Type::independent) {
         auto independent_samplers = allocator.allocate<IndependentSampler>(size);
         init_samplers<<<blocks, threads>>>(samplers, independent_samplers, samples_per_pixel, size);
@@ -47,8 +74,10 @@ Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
 
     REPORT_FATAL_ERROR();
     return nullptr;
+    */
 }
 
+/*
 PBRT_CPU_GPU
 void Sampler::init(IndependentSampler *independent_sampler) {
     type = Type::independent;
@@ -178,6 +207,7 @@ Point2f Sampler::get_pixel_2d() {
     REPORT_FATAL_ERROR();
     return Point2f(NAN, NAN);
 }
+*/
 
 PBRT_CPU_GPU
 CameraSample Sampler::get_camera_sample(const Point2i pPixel, const Filter *filter) {

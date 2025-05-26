@@ -83,7 +83,9 @@ MLTBDPTIntegrator *MLTBDPTIntegrator::create(const int mutations_per_pixel,
     for (uint idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
         integrator->mlt_samplers[idx].setup_config(mutations_per_pixel, sigma,
                                                    large_step_probability, 3);
-        integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
+        REPORT_FATAL_ERROR();
+        // TODO: implement me
+        // integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
     }
 
     integrator->film_dimension = base->camera->get_camerabase()->resolution;

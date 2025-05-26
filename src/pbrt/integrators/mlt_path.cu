@@ -3,15 +3,15 @@
 #include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/sampler.h>
+#include <pbrt/cameras/perspective.h>
 #include <pbrt/film/grey_scale_film.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/mlt_path.h>
+#include <pbrt/samplers/mlt.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
-#include <pbrt/samplers/mlt.h>
-#include <pbrt/cameras/perspective.h>
 
 constexpr size_t NUM_MLT_PATH_SAMPLERS = 64 * 1024;
 // large number of samplers: large number of shallow markov chains
@@ -23,16 +23,14 @@ struct MLTSample {
     Real weight;
 
     PBRT_CPU_GPU
-    MLTSample(const Point2f p_film, const SampledSpectrum&_radiance,
-              const SampledWavelengths&_lambda, const Real _weight,
-              const Real _sampling_density)
+    MLTSample(const Point2f p_film, const SampledSpectrum &_radiance,
+              const SampledWavelengths &_lambda, const Real _weight, const Real _sampling_density)
         : path_sample(PathSample(p_film, _radiance, _lambda)), weight(_weight),
-          sampling_density(_sampling_density) {
-    }
+          sampling_density(_sampling_density) {}
 };
 
-__global__ void build_bootstrap_samples(const uint num_paths_per_worker, double* luminance_per_path,
-                                        const MLTPathIntegrator* mlt_integrator) {
+__global__ void build_bootstrap_samples(const uint num_paths_per_worker, double *luminance_per_path,
+                                        const MLTPathIntegrator *mlt_integrator) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_PATH_SAMPLERS) {
         return;
@@ -50,14 +48,14 @@ __global__ void build_bootstrap_samples(const uint num_paths_per_worker, double*
         const auto path_sample = mlt_integrator->generate_path_sample(sampler);
 
         const auto illuminance =
-                mlt_integrator->compute_luminance(path_sample.radiance, path_sample.lambda);
+            mlt_integrator->compute_luminance(path_sample.radiance, path_sample.lambda);
 
         luminance_per_path[path_idx] = illuminance;
     }
 }
 
-__global__ void prepare_initial_state(PathSample* path_samples,
-                                      const MLTPathIntegrator* mlt_integrator) {
+__global__ void prepare_initial_state(PathSample *path_samples,
+                                      const MLTPathIntegrator *mlt_integrator) {
     // this implementation is different from PBRT-v4:
     // in terms of selecting the 0th path samples (after bootstrap), PBRT-v4 did an importance
     // sampling from bootstrap (so multiple sampler might choose the same paths) but pbrt-minus
@@ -78,9 +76,9 @@ __global__ void prepare_initial_state(PathSample* path_samples,
     path_samples[worker_idx] = mlt_integrator->generate_path_sample(sampler);
 }
 
-__global__ void wavefront_render(MLTSample* mlt_samples, const uint num_mutations,
-                                 PathSample* path_samples, const MLTPathIntegrator* mlt_integrator,
-                                 RNG* rngs) {
+__global__ void wavefront_render(MLTSample *mlt_samples, const uint num_mutations,
+                                 PathSample *path_samples, const MLTPathIntegrator *mlt_integrator,
+                                 RNG *rngs) {
     const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_mutations) {
         return;
@@ -97,9 +95,9 @@ __global__ void wavefront_render(MLTSample* mlt_samples, const uint num_mutation
     const auto current_path = &path_samples[worker_idx];
 
     const auto proposed_c =
-            mlt_integrator->compute_luminance(proposed_path.radiance, proposed_path.lambda);
+        mlt_integrator->compute_luminance(proposed_path.radiance, proposed_path.lambda);
     const auto current_c =
-            mlt_integrator->compute_luminance(current_path->radiance, current_path->lambda);
+        mlt_integrator->compute_luminance(current_path->radiance, current_path->lambda);
 
     const auto sample_idx = worker_idx * 2;
 
@@ -111,44 +109,40 @@ __global__ void wavefront_render(MLTSample* mlt_samples, const uint num_mutation
     Real accept_prob = NAN;
     if (current_c == 0 && proposed_c == 0) {
         accept_prob = 0.5;
-    }
-    else if (current_c == 0) {
+    } else if (current_c == 0) {
         accept_prob = 1;
         mlt_samples[sample_idx] = MLTSample(proposed_path.p_film, proposed_path.radiance,
                                             proposed_path.lambda, 1.0 / proposed_c, 1);
-    }
-    else if (proposed_c == 0) {
+    } else if (proposed_c == 0) {
         accept_prob = 0;
         mlt_samples[sample_idx] = MLTSample(current_path->p_film, current_path->radiance,
                                             current_path->lambda, 1.0 / current_c, 1);
-    }
-    else {
+    } else {
         accept_prob = std::min<Real>(1.0, proposed_c / current_c);
 
         const Real proposed_path_weight = accept_prob / proposed_c;
         const Real current_path_weight = (1 - accept_prob) / current_c;
 
         mlt_samples[sample_idx + 0] =
-                MLTSample(current_path->p_film, current_path->radiance, current_path->lambda,
-                          current_path_weight, 1 - accept_prob);
+            MLTSample(current_path->p_film, current_path->radiance, current_path->lambda,
+                      current_path_weight, 1 - accept_prob);
         mlt_samples[sample_idx + 1] =
-                MLTSample(proposed_path.p_film, proposed_path.radiance, proposed_path.lambda,
-                          proposed_path_weight, accept_prob);
+            MLTSample(proposed_path.p_film, proposed_path.radiance, proposed_path.lambda,
+                      proposed_path_weight, accept_prob);
     }
 
     if (rng->uniform<Real>() < accept_prob) {
         *current_path = proposed_path;
         mlt_sampler->accept();
-    }
-    else {
+    } else {
         mlt_sampler->reject();
     }
 }
 
-MLTPathIntegrator* MLTPathIntegrator::create(const int mutations_per_pixel,
-                                             const ParameterDictionary&parameters,
-                                             const IntegratorBase* base,
-                                             GPUMemoryAllocator&allocator) {
+MLTPathIntegrator *MLTPathIntegrator::create(const int mutations_per_pixel,
+                                             const ParameterDictionary &parameters,
+                                             const IntegratorBase *base,
+                                             GPUMemoryAllocator &allocator) {
     auto integrator = allocator.allocate<MLTPathIntegrator>();
 
     integrator->base = base;
@@ -161,7 +155,9 @@ MLTPathIntegrator* MLTPathIntegrator::create(const int mutations_per_pixel,
     for (uint idx = 0; idx < NUM_MLT_PATH_SAMPLERS; ++idx) {
         integrator->mlt_samplers[idx].setup_config(mutations_per_pixel, sigma,
                                                    large_step_probability, 1);
-        integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
+        REPORT_FATAL_ERROR();
+        // TODO: implement me
+        // integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
     }
 
     integrator->film_dimension = base->camera->get_camerabase()->resolution;
@@ -174,7 +170,7 @@ MLTPathIntegrator* MLTPathIntegrator::create(const int mutations_per_pixel,
 }
 
 PBRT_CPU_GPU
-PathSample MLTPathIntegrator::generate_path_sample(Sampler* sampler) const {
+PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
     const auto lu = sampler->get_1d();
     auto lambda = SampledWavelengths::sample_visible(lu);
 
@@ -185,17 +181,17 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler* sampler) const {
     const auto ray = base->camera->generate_ray(camera_sample, sampler);
 
     const auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_li(
-                              ray.ray, lambda, base, sampler, max_depth, regularize);
+                                           ray.ray, lambda, base, sampler, max_depth, regularize);
 
     return PathSample(p_film, radiance, lambda);
 }
 
-double MLTPathIntegrator::render(Film* film, GreyScaleFilm&heat_map,
+double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
                                  const uint mutations_per_pixel, const bool preview) {
     GPUMemoryAllocator local_allocator;
 
     const auto num_paths_per_worker =
-            divide_and_ceil<int>(film_dimension.x * film_dimension.y, NUM_MLT_PATH_SAMPLERS);
+        divide_and_ceil<int>(film_dimension.x * film_dimension.y, NUM_MLT_PATH_SAMPLERS);
 
     const auto num_bootstrap_paths = num_paths_per_worker * NUM_MLT_PATH_SAMPLERS;
 
@@ -213,12 +209,12 @@ double MLTPathIntegrator::render(Film* film, GreyScaleFilm&heat_map,
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     const double sum_luminance =
-            std::accumulate(luminance_per_path + 0, luminance_per_path + num_bootstrap_paths, 0.0);
+        std::accumulate(luminance_per_path + 0, luminance_per_path + num_bootstrap_paths, 0.0);
 
     const double brightness = sum_luminance / num_bootstrap_paths;
 
     const long long total_mutations =
-            static_cast<long long>(mutations_per_pixel) * film_dimension.x * film_dimension.y;
+        static_cast<long long>(mutations_per_pixel) * film_dimension.x * film_dimension.y;
 
     const auto total_pass = divide_and_ceil<long long>(total_mutations, NUM_MLT_PATH_SAMPLERS);
 
