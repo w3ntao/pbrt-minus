@@ -25,9 +25,7 @@ class GaussianFilter {
     FilterSample sample(Point2f u) const;
 
   private:
-    void init(const Vector2f &_radius, Real _sigma = 0.5f);
-
-    Vector2f radius;
+    Vector2f radius{NAN, NAN};
     Real sigma = NAN;
     Real expX = NAN;
     Real expY = NAN;

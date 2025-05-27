@@ -16,8 +16,8 @@ inline Real gaussian_integral(Real x0, Real x1, Real mu = 0, Real sigma = 1) {
     return 0.5f * (std::erf((mu - x0) / sigmaRoot2) - std::erf((mu - x1) / sigmaRoot2));
 }
 
-GaussianFilter::GaussianFilter(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator)
-    : radius(NAN, NAN), sampler(nullptr) {
+GaussianFilter::GaussianFilter(const ParameterDictionary &parameters,
+                               GPUMemoryAllocator &allocator) {
     auto xw = parameters.get_float("xradius", 1.5f);
     auto yw = parameters.get_float("yradius", 1.5f);
 
@@ -28,16 +28,6 @@ GaussianFilter::GaussianFilter(const ParameterDictionary &parameters, GPUMemoryA
     expY = gaussian(radius.y, 0, sigma);
 
     sampler = FilterSampler::create(*this, allocator);
-}
-
-void GaussianFilter::init(const Vector2f &_radius, Real _sigma) {
-    radius = _radius;
-    sigma = _sigma;
-
-    expX = gaussian(radius.x, 0, sigma);
-    expY = gaussian(radius.y, 0, sigma);
-
-    sampler = nullptr;
 }
 
 PBRT_CPU_GPU

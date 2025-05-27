@@ -7,7 +7,6 @@ class FloatImageTexture;
 class FloatScaledTexture;
 
 class GPUMemoryAllocator;
-
 class ParameterDictionary;
 class TextureEvalContext;
 class Transform;

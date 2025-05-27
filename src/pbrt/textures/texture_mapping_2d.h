@@ -70,20 +70,30 @@ class UVMapping {
     Real dv = NAN;
 };
 
-namespace HIDDEN {
-using TextureMapping2DVariants =
-    cuda::std::variant<CylindricalMapping, PlanarMapping, SphericalMapping, UVMapping>;
-}
-
-struct TextureMapping2D : public HIDDEN::TextureMapping2DVariants {
-    using HIDDEN::TextureMapping2DVariants::TextureMapping2DVariants;
+struct TextureMapping2D {
+    enum class Type {
+        cylindrical,
+        planar,
+        spherical,
+        uv,
+    };
 
     static const TextureMapping2D *create(const Transform &render_from_texture,
                                           const ParameterDictionary &parameters,
                                           GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    TexCoord2D map(const TextureEvalContext &ctx) const {
-        return cuda::std::visit([&](auto &x) { return x.map(ctx); }, *this);
-    }
+    TexCoord2D map(const TextureEvalContext &ctx) const;
+
+  private:
+    Type type;
+    const void *ptr = nullptr;
+
+    void init(const CylindricalMapping *cylindrical_mapping);
+
+    void init(const PlanarMapping *planar_mapping);
+
+    void init(const SphericalMapping *spherical_mapping);
+
+    void init(const UVMapping *uv_mapping);
 };
