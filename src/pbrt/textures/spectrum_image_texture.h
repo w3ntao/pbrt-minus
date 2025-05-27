@@ -1,8 +1,8 @@
 #pragma once
 
+#include <pbrt/base/spectrum.h>
 #include <pbrt/textures/image_texture_base.h>
 
-enum class SpectrumType;
 struct TextureEvalContext;
 
 class SpectrumImageTexture : ImageTextureBase {
@@ -16,5 +16,5 @@ class SpectrumImageTexture : ImageTextureBase {
 
   private:
     SpectrumType spectrum_type;
-    const RGBColorSpace *color_space;
+    const RGBColorSpace *color_space = nullptr;
 };

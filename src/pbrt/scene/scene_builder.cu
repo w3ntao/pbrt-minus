@@ -994,7 +994,7 @@ void SceneBuilder::render() const {
     const std::chrono::duration<Real> duration{std::chrono::system_clock::now() - start};
 
     std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count()
-              << " seconds\n"
+              << " sec\n"
               << std::flush;
 
     printf("GPU memory used: %s\n", allocator.get_allocated_memory_size().c_str());

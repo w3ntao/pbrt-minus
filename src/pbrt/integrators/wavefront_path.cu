@@ -552,7 +552,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        timer.stop("0 ray_cast()");
+        timer.stop("stage 0 ray_cast()");
 
         // clear all queues before control stage
         for (auto _queue : queues.get_all_queues()) {
@@ -565,7 +565,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        timer.stop("1 control_logic()");
+        timer.stop("stage 1 control_logic()");
 
         if (queues.frame_buffer_counter > 0) {
             // sort to make film writing deterministic
@@ -574,7 +574,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             // TODO: rewrite sort-and-write with ping pong buffer and async thread?
             std::sort(queues.frame_buffer_queue + 0,
                       queues.frame_buffer_queue + queues.frame_buffer_counter, std::less{});
-            timer.stop("2 sort_frame_buffer()");
+            timer.stop("stage 2 sort_frame_buffer()");
 
             write_frame_buffer<<<divide_and_ceil(queues.frame_buffer_counter, threads), threads>>>(
                 film, &queues);
@@ -591,7 +591,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
                     GLHelper::assemble_title(Real(current_sample_idx) / samples_per_pixel));
             }
 
-            timer.stop("3 write_frame_buffer()");
+            timer.stop("stage 3 write_frame_buffer()");
         }
 
         if (queues.new_paths->counter > 0) {
@@ -601,13 +601,13 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
-        timer.stop("4 generate_new_path()");
+        timer.stop("stage 4 generate_new_path()");
 
         for (const auto material_type : Material::get_basic_material_types()) {
             evaluate_material(material_type);
         }
 
-        timer.stop("5 evaluate_material()");
+        timer.stop("stage 5 evaluate_material()");
     }
 
     printf("wavefront pathtracing benchmark:\n");

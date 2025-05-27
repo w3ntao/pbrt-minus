@@ -31,7 +31,7 @@ class Timer {
     void print() const {
         const Real all_time = std::chrono::duration<Real>({click - time_zero}).count();
 
-        printf("total time: %.2f\n", all_time);
+        printf("total time: %.2f sec\n", all_time);
 
         Real examine_time = 0;
         for (auto const &[tag, value] : recorder) {

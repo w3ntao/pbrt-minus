@@ -1,12 +1,10 @@
 #pragma once
 
+#include <pbrt/base/spectrum.h>
 #include <pbrt/gpu/macro.h>
 
-enum class SpectrumType;
 class GPUMemoryAllocator;
 class ParameterDictionary;
-class SampledSpectrum;
-class SampledWavelengths;
 class SpectrumTexture;
 class Transform;
 struct TextureEvalContext;

@@ -35,6 +35,7 @@ class MLTSampler {
     RNG rng;
 
     PrimarySample samples[LENGTH];
+    // TODO: MLTSampler: rewrite samples array, big array ruin SIMD
 
     // MLTSampler Private Members
     int mutations_per_pixel;
