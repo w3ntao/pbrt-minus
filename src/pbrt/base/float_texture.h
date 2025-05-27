@@ -1,19 +1,25 @@
 #pragma once
 
-#include <cuda/std/variant>
-#include <pbrt/textures/float_constant_texture.h>
-#include <pbrt/textures/float_image_texture.h>
-#include <pbrt/textures/float_scaled_texture.h>
+#include <pbrt/gpu/macro.h>
 
-namespace HIDDEN {
-using FloatTextureVariants =
-    cuda::std::variant<FloatConstantTexture, FloatImageTexture, FloatScaledTexture>;
-}
+class FloatConstantTexture;
+class FloatImageTexture;
+class FloatScaledTexture;
 
-class FloatTexture : public HIDDEN::FloatTextureVariants {
-    using HIDDEN::FloatTextureVariants::FloatTextureVariants;
+class GPUMemoryAllocator;
 
+class ParameterDictionary;
+class TextureEvalContext;
+class Transform;
+
+class FloatTexture {
   public:
+    enum class Type {
+        constant,
+        image,
+        scale,
+    };
+
     static const FloatTexture *create(const std::string &texture_type,
                                       const Transform &render_from_object,
                                       const ParameterDictionary &parameters,
@@ -23,7 +29,15 @@ class FloatTexture : public HIDDEN::FloatTextureVariants {
                                                              GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    Real evaluate(const TextureEvalContext &ctx) const {
-        return cuda::std::visit([&](auto &x) { return x.evaluate(ctx); }, *this);
-    }
+    Real evaluate(const TextureEvalContext &ctx) const;
+
+  private:
+    Type type;
+    const void *ptr = nullptr;
+
+    void init(const FloatConstantTexture *float_constant_texture);
+
+    void init(const FloatImageTexture *float_image_texture);
+
+    void init(const FloatScaledTexture *float_scaled_texture);
 };

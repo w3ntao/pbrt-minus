@@ -53,8 +53,8 @@ class Material {
     BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:
+    Type type;
     const void *ptr = nullptr;
-    Type type = Type::diffuse;
 
     void init(const CoatedConductorMaterial *coated_conductor_material);
 
