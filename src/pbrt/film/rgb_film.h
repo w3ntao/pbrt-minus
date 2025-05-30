@@ -44,7 +44,7 @@ class RGBFilm {
     Bounds2f sample_bounds() const;
 
     PBRT_CPU_GPU
-    void add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
+    void add_sample(int pixel_index, const SampledSpectrum &radiance_l,
                     const SampledWavelengths &lambda, Real weight);
 
     PBRT_CPU_GPU

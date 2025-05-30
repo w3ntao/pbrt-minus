@@ -40,9 +40,9 @@ struct MLTSample {
           sampling_density(_sampling_density) {}
 };
 
-__global__ void build_bootstrap_samples(const uint num_paths_per_worker, double *luminance_per_path,
+__global__ void build_bootstrap_samples(const int num_paths_per_worker, double *luminance_per_path,
                                         const MLTPathIntegrator *mlt_integrator) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_PATH_SAMPLERS) {
         return;
     }
@@ -72,7 +72,7 @@ __global__ void prepare_initial_state(PathSample *path_samples,
     // sampling from bootstrap (so multiple sampler might choose the same paths) but pbrt-minus
     // initiated each sampler with different bootstrap
 
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_PATH_SAMPLERS) {
         return;
     }
@@ -87,10 +87,10 @@ __global__ void prepare_initial_state(PathSample *path_samples,
     path_samples[worker_idx] = mlt_integrator->generate_path_sample(sampler);
 }
 
-__global__ void wavefront_render(MLTSample *mlt_samples, const uint num_mutations,
+__global__ void wavefront_render(MLTSample *mlt_samples, const int num_mutations,
                                  PathSample *path_samples, const MLTPathIntegrator *mlt_integrator,
                                  RNG *rngs) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_mutations) {
         return;
     }
@@ -163,7 +163,7 @@ MLTPathIntegrator *MLTPathIntegrator::create(const int mutations_per_pixel,
     const auto large_step_probability = parameters.get_float("largestepprobability", 0.3);
     const auto sigma = parameters.get_float("sigma", 0.01);
 
-    for (uint idx = 0; idx < NUM_MLT_PATH_SAMPLERS; ++idx) {
+    for (int idx = 0; idx < NUM_MLT_PATH_SAMPLERS; ++idx) {
         integrator->mlt_samplers[idx].setup_config(mutations_per_pixel, sigma,
                                                    large_step_probability, 1);
         integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
@@ -196,7 +196,7 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
 }
 
 double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
-                                 const uint mutations_per_pixel, const bool preview) {
+                                 const int mutations_per_pixel, const bool preview) {
     GPUMemoryAllocator local_allocator;
 
     const auto num_paths_per_worker =
@@ -211,8 +211,8 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
     auto path_samples = local_allocator.allocate<PathSample>(NUM_MLT_PATH_SAMPLERS);
     auto luminance_per_path = local_allocator.allocate<double>(num_bootstrap_paths);
 
-    constexpr uint threads = 64;
-    const uint blocks = divide_and_ceil<uint>(NUM_MLT_PATH_SAMPLERS, threads);
+    constexpr int threads = 64;
+    const int blocks = divide_and_ceil<int>(NUM_MLT_PATH_SAMPLERS, threads);
     build_bootstrap_samples<<<blocks, threads>>>(num_paths_per_worker, luminance_per_path, this);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
@@ -246,7 +246,7 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
 
     auto rngs = local_allocator.allocate<RNG>(NUM_MLT_PATH_SAMPLERS);
 
-    for (uint idx = 0; idx < NUM_MLT_PATH_SAMPLERS; ++idx) {
+    for (int idx = 0; idx < NUM_MLT_PATH_SAMPLERS; ++idx) {
         rngs[idx].set_sequence(idx + NUM_MLT_PATH_SAMPLERS);
     }
 
@@ -255,8 +255,8 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     long long accumulate_samples = 0; // this is for debugging and verification
-    for (uint pass = 0; pass < total_pass; ++pass) {
-        const uint num_mutations = pass == total_pass - 1
+    for (int pass = 0; pass < total_pass; ++pass) {
+        const int num_mutations = pass == total_pass - 1
                                        ? total_mutations - (total_pass - 1) * NUM_MLT_PATH_SAMPLERS
                                        : NUM_MLT_PATH_SAMPLERS;
 
@@ -264,7 +264,7 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        for (uint idx = 0; idx < num_mutations * 2; ++idx) {
+        for (int idx = 0; idx < num_mutations * 2; ++idx) {
             accumulate_samples += 1;
             const auto path_sample = &mlt_samples[idx].path_sample;
             const auto p_film = path_sample->p_film;

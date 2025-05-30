@@ -34,36 +34,36 @@ class WavefrontPathIntegrator {
 
         pbrt::optional<ShapeIntersection> *shape_intersections;
 
-        uint *path_length;
+        int *path_length;
         bool *finished;
 
         BSDF *bsdf;
 
         MISParameter *mis_parameters;
 
-        uint *pixel_indices;
-        uint *sample_indices;
+        int *pixel_indices;
+        int *sample_indices;
 
         Point2i image_resolution;
 
         unsigned long long int global_path_counter;
         unsigned long long int total_path_num;
 
-        void create(uint samples_per_pixel, const Point2i &_resolution,
+        void create(int samples_per_pixel, const Point2i &_resolution,
                     const std::string &sampler_type, GPUMemoryAllocator &allocator);
 
         PBRT_CPU_GPU
-        void init_new_path(uint path_idx);
+        void init_new_path(int path_idx);
     };
 
     struct Queues {
         struct SingleQueue {
-            uint *queue_array;
-            uint counter;
+            int *queue_array;
+            int counter;
 
             PBRT_GPU
-            void append_path(const uint path_idx) {
-                const uint queue_idx = atomicAdd(&counter, 1);
+            void append_path(const int path_idx) {
+                const int queue_idx = atomicAdd(&counter, 1);
                 queue_array[queue_idx] = path_idx;
             }
         };
@@ -78,7 +78,7 @@ class WavefrontPathIntegrator {
         SingleQueue *diffuse_material;
         SingleQueue *diffuse_transmission_material;
 
-        uint frame_buffer_counter;
+        int frame_buffer_counter;
         FrameBuffer *frame_buffer_queue;
 
         void init(GPUMemoryAllocator &allocator);
@@ -128,7 +128,7 @@ class WavefrontPathIntegrator {
         static SingleQueue *build_new_queue(GPUMemoryAllocator &allocator);
     };
 
-    static WavefrontPathIntegrator *create(uint samples_per_pixel, const std::string &sampler_type,
+    static WavefrontPathIntegrator *create(int samples_per_pixel, const std::string &sampler_type,
                                            const ParameterDictionary &parameters,
                                            const IntegratorBase *base,
                                            GPUMemoryAllocator &allocator);
@@ -140,16 +140,16 @@ class WavefrontPathIntegrator {
     Queues queues;
 
     const IntegratorBase *base;
-    uint max_depth;
+    int max_depth;
     bool regularize;
-    uint samples_per_pixel;
+    int samples_per_pixel;
 
     PBRT_CPU_GPU
     SampledSpectrum sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
                               SampledWavelengths &lambda, Sampler *sampler) const;
 
     PBRT_CPU_GPU
-    void sample_bsdf(uint path_idx, PathState *path_state) const;
+    void sample_bsdf(int path_idx, PathState *path_state) const;
 
     void evaluate_material(const Material::Type material_type);
 };

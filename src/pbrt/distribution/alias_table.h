@@ -12,7 +12,7 @@ class AliasTable {
                                     GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    cuda::std::pair<uint, Real> sample(const Real u0) const;
+    cuda::std::pair<int, Real> sample(const Real u0) const;
 
     struct Bin {
         Real p;
@@ -38,5 +38,5 @@ class AliasTable {
 
     const Bin *bins;
     const Real *pdfs;
-    uint size;
+    int size;
 };

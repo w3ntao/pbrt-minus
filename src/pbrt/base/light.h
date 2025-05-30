@@ -121,7 +121,7 @@ class Light {
     static Light *create(const std::string &type_of_light, const Transform &render_from_light,
                          const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
-    static Light *create_diffuse_area_lights(const Shape *shapes, const uint num,
+    static Light *create_diffuse_area_lights(const Shape *shapes, const int num,
                                              const Transform &render_from_light,
                                              const ParameterDictionary &parameters,
                                              GPUMemoryAllocator &allocator);

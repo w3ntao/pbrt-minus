@@ -4,7 +4,7 @@
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/util/hash_map.h>
 
-const PowerLightSampler *PowerLightSampler::create(const Light **lights, const uint light_num,
+const PowerLightSampler *PowerLightSampler::create(const Light **lights, const int light_num,
                                                    GPUMemoryAllocator &allocator) {
     auto power_light_sampler = allocator.allocate<PowerLightSampler>();
 
@@ -19,7 +19,7 @@ const PowerLightSampler *PowerLightSampler::create(const Light **lights, const u
 
     std::vector<Real> lights_pmf(light_num);
     SampledWavelengths lambda = SampledWavelengths::sample_visible(0.5f);
-    for (uint idx = 0; idx < light_num; ++idx) {
+    for (int idx = 0; idx < light_num; ++idx) {
         auto light = lights[idx];
         auto phi = light->phi(lambda).safe_div(lambda.pdf_as_sampled_spectrum());
 

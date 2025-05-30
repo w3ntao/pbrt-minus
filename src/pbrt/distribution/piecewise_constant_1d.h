@@ -16,7 +16,7 @@ class PiecewiseConstant1D {
         return piecewise_constant_1D;
     }
 
-    void init(const Real *f, uint f_size, Real _min, Real _max,
+    void init(const Real *f, int f_size, Real _min, Real _max,
               GPUMemoryAllocator &allocator) {
         cdf = nullptr;
         func = nullptr;
@@ -27,7 +27,7 @@ class PiecewiseConstant1D {
 
         func = allocator.allocate<Real>(f_size);
 
-        for (uint idx = 0; idx < f_size; ++idx) {
+        for (int idx = 0; idx < f_size; ++idx) {
             func[idx] = std::abs(f[idx]);
         }
 
@@ -57,7 +57,7 @@ class PiecewiseConstant1D {
         return funcInt;
     }
 
-    PBRT_CPU_GPU uint size() const {
+    PBRT_CPU_GPU int size() const {
         return _size;
     }
 
@@ -87,7 +87,7 @@ class PiecewiseConstant1D {
     }
 
   private:
-    uint _size;
+    int _size;
 
     Real *func; // size = _size
     Real *cdf;  // size = _size + 1

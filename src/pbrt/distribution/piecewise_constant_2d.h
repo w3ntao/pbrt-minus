@@ -15,7 +15,7 @@ class PiecewiseConstant2D {
 
         pConditionalV = allocator.allocate<PiecewiseConstant1D>(nv);
 
-        for (uint v = 0; v < nv; ++v) {
+        for (int v = 0; v < nv; ++v) {
             // Compute conditional sampling distribution for $\tilde{v}$
             pConditionalV[v].init(func->get_values_ptr() + v * nu, nu, domain.p_min[0],
                                   domain.p_max[0], allocator);

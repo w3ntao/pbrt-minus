@@ -12,21 +12,21 @@ class ThreadPool;
 class HLBVH {
   public:
     struct MortonPrimitive {
-        uint primitive_idx;
+        int primitive_idx;
         uint32_t morton_code;
         Bounds3f bounds;
         Point3f centroid;
     };
 
     struct Treelet {
-        uint first_primitive_offset;
-        uint n_primitives;
+        int first_primitive_offset;
+        int n_primitives;
         Bounds3f bounds;
     };
 
     struct BottomBVHArgs {
-        uint build_node_idx;
-        uint left_child_idx;
+        int build_node_idx;
+        int left_child_idx;
         bool expand_leaf;
     };
 
@@ -34,18 +34,18 @@ class HLBVH {
         Bounds3f bounds;
 
         union {
-            uint first_primitive_idx; // for leaf node
-            uint left_child_idx;      // for interior node
+            int first_primitive_idx; // for leaf node
+            int left_child_idx;      // for interior node
         };
 
-        uint num_primitives;
+        int num_primitives;
         // 0 for interior node
         // otherwise for leaf node
 
         /*
         uint8_t:         0 - 255
         uint16_t:        0 - 65535
-        uint (uint32_t): 0 - 4294967295
+        int (int32_t):   0 - 2147483647
         */
 
         uint8_t axis;
@@ -56,7 +56,7 @@ class HLBVH {
         }
 
         PBRT_CPU_GPU
-        void init_leaf(uint _first_primitive_offset, uint _num_primitive, const Bounds3f &_bounds) {
+        void init_leaf(int _first_primitive_offset, int _num_primitive, const Bounds3f &_bounds) {
             first_primitive_idx = _first_primitive_offset;
             num_primitives = _num_primitive;
             bounds = _bounds;
@@ -64,7 +64,7 @@ class HLBVH {
         }
 
         PBRT_CPU_GPU
-        void init_interior(uint8_t _axis, uint _left_child_idx, const Bounds3f &_bounds) {
+        void init_interior(uint8_t _axis, int _left_child_idx, const Bounds3f &_bounds) {
             left_child_idx = _left_child_idx;
             num_primitives = 0;
 
@@ -86,7 +86,7 @@ class HLBVH {
     }
 
     PBRT_CPU_GPU
-    cuda::std::pair<const Primitive **, uint> get_primitives() const {
+    cuda::std::pair<const Primitive **, int> get_primitives() const {
         return {primitives, num_primtives};
     }
 
@@ -97,25 +97,24 @@ class HLBVH {
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, Real t_max) const;
 
     PBRT_GPU
-    void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length);
+    void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, int array_length);
 
   private:
     void build_bvh(const std::vector<const Primitive *> &gpu_primitives, const std::string &tag,
                    GPUMemoryAllocator &allocator);
 
-    uint build_top_bvh_for_treelets(const Treelet *treelets, uint num_dense_treelets,
-                                    ThreadPool &thread_pool);
+    int build_top_bvh_for_treelets(const Treelet *treelets, int num_dense_treelets,
+                                   ThreadPool &thread_pool);
 
-    void build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indices,
+    void build_upper_sah(int build_node_idx, std::vector<int> treelet_indices,
                          const Treelet *treelets, std::atomic_int &node_count,
                          ThreadPool &thread_pool, bool spawn);
 
     PBRT_GPU
-    uint partition_morton_primitives(uint start, uint end, uint8_t split_dimension,
-                                     Real split_val);
+    int partition_morton_primitives(int start, int end, uint8_t split_dimension, Real split_val);
 
     const Primitive **primitives;
-    uint num_primtives;
+    int num_primtives;
 
     MortonPrimitive *morton_primitives;
     BVHBuildNode *build_nodes;

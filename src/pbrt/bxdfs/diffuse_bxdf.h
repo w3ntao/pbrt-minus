@@ -10,14 +10,14 @@ class DiffuseBxDF {
     PBRT_CPU_GPU DiffuseBxDF() : r(SampledSpectrum(NAN)) {}
 
     PBRT_CPU_GPU DiffuseBxDF(const SampledSpectrum &_r) {
-        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
             r[idx] = _r[idx];
         }
     }
 
     PBRT_CPU_GPU
     void init(const SampledSpectrum &_r) {
-        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
             r[idx] = _r[idx];
         }
     }

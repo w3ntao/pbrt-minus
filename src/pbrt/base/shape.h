@@ -78,7 +78,7 @@ class Shape {
         triangle,
     };
 
-    static std::pair<const Shape *, uint>
+    static std::pair<const Shape *, int>
     create(const std::string &type_of_shape, const Transform &render_from_object,
            const Transform &object_from_render, bool reverse_orientation,
            const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);

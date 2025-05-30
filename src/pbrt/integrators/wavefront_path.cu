@@ -12,11 +12,11 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/util/timer.h>
 
-constexpr uint PATH_POOL_SIZE = 1 * 1024 * 1024;
+constexpr int PATH_POOL_SIZE = 1 * 1024 * 1024;
 
 struct FrameBuffer {
-    uint pixel_idx;
-    uint sample_idx;
+    int pixel_idx;
+    int sample_idx;
     SampledSpectrum radiance;
     SampledWavelengths lambda;
     Real weight;
@@ -55,7 +55,7 @@ struct MISParameter {
 };
 
 static __global__ void gpu_init_path_state(WavefrontPathIntegrator::PathState *path_state) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= PATH_POOL_SIZE) {
         return;
     }
@@ -64,9 +64,9 @@ static __global__ void gpu_init_path_state(WavefrontPathIntegrator::PathState *p
 }
 
 __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
-                              WavefrontPathIntegrator::Queues *queues, const uint max_depth,
+                              WavefrontPathIntegrator::Queues *queues, const int max_depth,
                               const IntegratorBase *base) {
-    const uint path_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int path_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (path_idx >= PATH_POOL_SIZE || path_state->finished[path_idx]) {
         return;
     }
@@ -110,7 +110,7 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
     if (should_terminate_path) {
         if (beta.is_positive()) {
             // sample infinite lights
-            for (uint idx = 0; idx < base->infinite_light_num; ++idx) {
+            for (int idx = 0; idx < base->infinite_light_num; ++idx) {
                 auto light = base->infinite_lights[idx];
                 auto Le = light->le(ray, lambda);
 
@@ -128,7 +128,7 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
             }
         }
 
-        const uint queue_idx = atomicAdd(&queues->frame_buffer_counter, 1);
+        const int queue_idx = atomicAdd(&queues->frame_buffer_counter, 1);
         queues->frame_buffer_queue[queue_idx] = FrameBuffer{
             .pixel_idx = path_state->pixel_indices[path_idx],
             .sample_idx = path_state->sample_indices[path_idx],
@@ -203,7 +203,7 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
 }
 
 __global__ void write_frame_buffer(Film *film, WavefrontPathIntegrator::Queues *queues) {
-    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= queues->frame_buffer_counter) {
         return;
     }
@@ -213,8 +213,8 @@ __global__ void write_frame_buffer(Film *film, WavefrontPathIntegrator::Queues *
         return;
     }
 
-    for (uint idx = queue_idx; idx < queues->frame_buffer_counter &&
-                               queues->frame_buffer_queue[idx].pixel_idx == pixel_idx;
+    for (int idx = queue_idx; idx < queues->frame_buffer_counter &&
+                              queues->frame_buffer_queue[idx].pixel_idx == pixel_idx;
          ++idx) {
         // make sure the same pixels are written by the same thread
         const auto &frame_buffer = queues->frame_buffer_queue[idx];
@@ -224,7 +224,7 @@ __global__ void write_frame_buffer(Film *film, WavefrontPathIntegrator::Queues *
 }
 
 __global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= PATH_POOL_SIZE) {
         return;
     }
@@ -235,12 +235,12 @@ __global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues) {
 __global__ void generate_new_path(WavefrontPathIntegrator::PathState *path_state,
                                   WavefrontPathIntegrator::Queues *queues,
                                   const IntegratorBase *base) {
-    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= queues->new_paths->counter) {
         return;
     }
 
-    const uint path_idx = queues->new_paths->queue_array[queue_idx];
+    const int path_idx = queues->new_paths->queue_array[queue_idx];
 
     const auto unique_path_id = atomicAdd(&path_state->global_path_counter, 1);
     if (unique_path_id >= path_state->total_path_num) {
@@ -248,11 +248,11 @@ __global__ void generate_new_path(WavefrontPathIntegrator::PathState *path_state
         return;
     }
 
-    const uint width = path_state->image_resolution.x;
-    const uint height = path_state->image_resolution.y;
+    const int width = path_state->image_resolution.x;
+    const int height = path_state->image_resolution.y;
 
-    const uint pixel_idx = unique_path_id % (width * height);
-    const uint sample_idx = unique_path_id / (width * height);
+    const int pixel_idx = unique_path_id % (width * height);
+    const int sample_idx = unique_path_id / (width * height);
 
     auto sampler = &path_state->samplers[path_idx];
 
@@ -278,14 +278,14 @@ __global__ void generate_new_path(WavefrontPathIntegrator::PathState *path_state
 
 __global__ void gpu_evaluate_material(WavefrontPathIntegrator::Queues::SingleQueue *material_queue,
                                       WavefrontPathIntegrator *integrator) {
-    const uint queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= material_queue->counter) {
         return;
     }
 
     auto path_state = &integrator->path_state;
 
-    const uint path_idx = material_queue->queue_array[queue_idx];
+    const int path_idx = material_queue->queue_array[queue_idx];
 
     auto &lambda = path_state->lambdas[path_idx];
 
@@ -303,12 +303,12 @@ __global__ void gpu_evaluate_material(WavefrontPathIntegrator::Queues::SingleQue
 
 __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
                          WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base) {
-    const uint ray_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int ray_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (ray_queue_idx >= queues->rays->counter) {
         return;
     }
 
-    const uint path_idx = queues->rays->queue_array[ray_queue_idx];
+    const int path_idx = queues->rays->queue_array[ray_queue_idx];
 
     const auto camera_ray = path_state->camera_rays[path_idx];
 
@@ -316,7 +316,7 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
 }
 
 PBRT_CPU_GPU
-void WavefrontPathIntegrator::sample_bsdf(uint path_idx, PathState *path_state) const {
+void WavefrontPathIntegrator::sample_bsdf(int path_idx, PathState *path_state) const {
     auto &isect = path_state->shape_intersections[path_idx]->interaction;
     auto &lambda = path_state->lambdas[path_idx];
 
@@ -363,7 +363,7 @@ void WavefrontPathIntegrator::evaluate_material(const Material::Type material_ty
         return;
     }
 
-    constexpr uint threads = 256;
+    constexpr int threads = 256;
     const auto blocks = divide_and_ceil(material_queue->counter, threads);
 
     gpu_evaluate_material<<<blocks, threads>>>(material_queue, this);
@@ -372,7 +372,7 @@ void WavefrontPathIntegrator::evaluate_material(const Material::Type material_ty
 }
 
 PBRT_CPU_GPU
-void WavefrontPathIntegrator::PathState::init_new_path(uint path_idx) {
+void WavefrontPathIntegrator::PathState::init_new_path(int path_idx) {
     finished[path_idx] = false;
     shape_intersections[path_idx].reset();
 
@@ -383,7 +383,7 @@ void WavefrontPathIntegrator::PathState::init_new_path(uint path_idx) {
     mis_parameters[path_idx].init();
 }
 
-void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Point2i &_resolution,
+void WavefrontPathIntegrator::PathState::create(int samples_per_pixel, const Point2i &_resolution,
                                                 const std::string &sampler_type,
                                                 GPUMemoryAllocator &allocator) {
     image_resolution = _resolution;
@@ -403,16 +403,16 @@ void WavefrontPathIntegrator::PathState::create(uint samples_per_pixel, const Po
     beta = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
     shape_intersections = allocator.allocate<pbrt::optional<ShapeIntersection>>(PATH_POOL_SIZE);
 
-    path_length = allocator.allocate<uint>(PATH_POOL_SIZE);
+    path_length = allocator.allocate<int>(PATH_POOL_SIZE);
     finished = allocator.allocate<bool>(PATH_POOL_SIZE);
-    pixel_indices = allocator.allocate<uint>(PATH_POOL_SIZE);
-    sample_indices = allocator.allocate<uint>(PATH_POOL_SIZE);
+    pixel_indices = allocator.allocate<int>(PATH_POOL_SIZE);
+    sample_indices = allocator.allocate<int>(PATH_POOL_SIZE);
 
     bsdf = allocator.allocate<BSDF>(PATH_POOL_SIZE);
     mis_parameters = allocator.allocate<MISParameter>(PATH_POOL_SIZE);
     samplers = Sampler::create_samplers(sampler_type, samples_per_pixel, PATH_POOL_SIZE, allocator);
 
-    constexpr uint threads = 1024;
+    constexpr int threads = 1024;
     gpu_init_path_state<<<PATH_POOL_SIZE, threads>>>(this);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
@@ -436,12 +436,12 @@ WavefrontPathIntegrator::Queues::SingleQueue *
 WavefrontPathIntegrator::Queues::build_new_queue(GPUMemoryAllocator &allocator) {
     auto queue = allocator.allocate<SingleQueue>(PATH_POOL_SIZE);
     queue->counter = 0;
-    queue->queue_array = allocator.allocate<uint>(PATH_POOL_SIZE);
+    queue->queue_array = allocator.allocate<int>(PATH_POOL_SIZE);
 
     return queue;
 }
 
-WavefrontPathIntegrator *WavefrontPathIntegrator::create(uint samples_per_pixel,
+WavefrontPathIntegrator *WavefrontPathIntegrator::create(int samples_per_pixel,
                                                          const std::string &sampler_type,
                                                          const ParameterDictionary &parameters,
                                                          const IntegratorBase *base,
@@ -526,7 +526,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         gl_helper.init("initializing", image_resolution);
     }
 
-    constexpr uint threads = 256;
+    constexpr int threads = 256;
 
     // generate new paths for the whole pool
     fill_new_path_queue<<<PATH_POOL_SIZE, threads>>>(&queues);
@@ -585,7 +585,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
                 film->copy_to_frame_buffer(gl_helper.gpu_frame_buffer);
 
                 const auto current_sample_idx =
-                    std::min<uint>(path_state.global_path_counter / num_pixels, samples_per_pixel);
+                    std::min<int>(path_state.global_path_counter / num_pixels, samples_per_pixel);
 
                 gl_helper.draw_frame(
                     GLHelper::assemble_title(Real(current_sample_idx) / samples_per_pixel));

@@ -52,7 +52,7 @@ class MLTSampler {
     void ensure_ready(int index);
 
     PBRT_CPU_GPU
-    void setup_config(const uint _mutation_per_pixel, const Real _sigma,
+    void setup_config(const int _mutation_per_pixel, const Real _sigma,
                       const Real _large_step_probability, const int _stream_count) {
         mutations_per_pixel = _mutation_per_pixel;
         sigma = _sigma;
@@ -95,7 +95,7 @@ class MLTSampler {
     }
 
     PBRT_CPU_GPU
-    uint get_samples_per_pixel() const {
+    int get_samples_per_pixel() const {
         return mutations_per_pixel;
     }
 

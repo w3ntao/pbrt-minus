@@ -23,7 +23,7 @@ inline Real sample_linear(Real u, Real a, Real b) {
 }
 
 PBRT_CPU_GPU
-inline int sample_discrete(const Real *weights, uint num_weights, Real u,
+inline int sample_discrete(const Real *weights, int num_weights, Real u,
                            Real *pmf = nullptr, Real *uRemapped = nullptr) {
     // Handle empty _weights_ for discrete sampling
     if (num_weights == 0) {
@@ -35,7 +35,7 @@ inline int sample_discrete(const Real *weights, uint num_weights, Real u,
 
     // Compute sum of _weights_
     Real sumWeights = 0;
-    for (uint idx = 0; idx < num_weights; ++idx) {
+    for (int idx = 0; idx < num_weights; ++idx) {
         sumWeights += weights[idx];
     }
 
@@ -227,7 +227,7 @@ static void sample_spherical_triangle(Real out[3], Real *pdf, const Point3f v[3]
     if (divisor == 0) {
         // This happens with triangles that cover (nearly) the whole
         // hemisphere.
-        for (uint idx = 0; idx < 3; ++idx) {
+        for (int idx = 0; idx < 3; ++idx) {
             out[idx] = 1.0 / 3.0;
         }
 

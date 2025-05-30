@@ -22,7 +22,7 @@ Real RGBIlluminantSpectrum::to_photometric(const Spectrum *cie_y) const {
 PBRT_CPU_GPU
 SampledSpectrum RGBIlluminantSpectrum::sample(const SampledWavelengths &lambda) const {
     SampledSpectrum s;
-    for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+    for (int idx = 0; idx < NSpectrumSamples; ++idx) {
         s[idx] = scale * rsp(lambda[idx]);
     }
 

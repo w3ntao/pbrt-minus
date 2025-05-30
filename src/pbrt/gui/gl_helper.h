@@ -34,10 +34,10 @@ class GLHelper {
         initialized = true;
 
         image_resolution = _image_resolution;
-        const uint num_pixels = _image_resolution.x * _image_resolution.y;
+        const int num_pixels = _image_resolution.x * _image_resolution.y;
 
         gpu_frame_buffer = allocator.allocate<uint8_t>(3 * num_pixels);
-        for (uint idx = 0; idx < num_pixels; ++idx) {
+        for (int idx = 0; idx < num_pixels; ++idx) {
             gpu_frame_buffer[idx * 3 + 0] = 0;
             gpu_frame_buffer[idx * 3 + 1] = 0;
             gpu_frame_buffer[idx * 3 + 2] = 0;
@@ -100,7 +100,7 @@ class GLHelper {
         glfwTerminate();
     }
 
-    void create_window(uint width, uint height, const std::string &window_initial_name) {
+    void create_window(int width, int height, const std::string &window_initial_name) {
         window = glfwCreateWindow(width, height, window_initial_name.c_str(), NULL, NULL);
         if (window == NULL) {
             std::cout << "ERROR: failed to create GLFW window" << std::endl;

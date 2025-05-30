@@ -26,7 +26,7 @@ class PiecewiseLinearSpectrum {
 
     PBRT_CPU_GPU
     void scale(Real scaling_factor) {
-        for (uint idx = 0; idx < size; ++idx) {
+        for (int idx = 0; idx < size; ++idx) {
             values[idx] = values[idx] * scaling_factor;
         }
     }
@@ -34,7 +34,7 @@ class PiecewiseLinearSpectrum {
   private:
     Real *lambdas;
     Real *values;
-    uint size;
+    int size;
 
     PBRT_CPU_GPU
     Real inner_product(const Spectrum *spectrum) const;

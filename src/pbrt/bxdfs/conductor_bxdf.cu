@@ -82,7 +82,7 @@ SampledSpectrum ConductorBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) c
 
 PBRT_CPU_GPU
 Real ConductorBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
-                             BxDFReflTransFlags sample_flags) const {
+                        BxDFReflTransFlags sample_flags) const {
     if (!(sample_flags & BxDFReflTransFlags::Reflection)) {
         return 0;
     }

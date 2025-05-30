@@ -52,7 +52,7 @@ const Spectrum *Spectrum::create_cie_d(Real temperature, const Real *cie_s0,
     std::vector<Real> cpu_cie_lambdas(nCIES);
     std::vector<Real> cpu_values(nCIES);
 
-    for (uint idx = 0; idx < nCIES; ++idx) {
+    for (int idx = 0; idx < nCIES; ++idx) {
         cpu_cie_lambdas.push_back(cie_lambda[idx]);
         cpu_values.push_back((cie_s0[idx] + cie_s1[idx] * M1 + cie_s2[idx] * M2) * 0.01);
     }

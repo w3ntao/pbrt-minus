@@ -71,11 +71,11 @@ cuda::std::pair<Point2f, Real> Distribution2D::sample(const Point2f &uv) const {
 PBRT_CPU_GPU
 Real Distribution2D::get_pdf(const Point2f &u) const {
     const auto first_dimension_index =
-        clamp<uint>(u.x * Real(dimension.x), 0, dimension.x - 1);
+        clamp<int>(u.x * Real(dimension.x), 0, dimension.x - 1);
     const auto first_dimension_pdf = dimension_x_distribution->pdfs[first_dimension_index];
 
     const auto second_dimension_index =
-        clamp<uint>(u.y * Real(dimension.y), 0, dimension.y - 1);
+        clamp<int>(u.y * Real(dimension.y), 0, dimension.y - 1);
     const auto second_dimension_pdf =
         dimension_y_distribution_list[first_dimension_index].get_pdf(second_dimension_index);
 

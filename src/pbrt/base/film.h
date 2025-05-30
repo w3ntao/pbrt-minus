@@ -30,7 +30,7 @@ class Film : public HIDDEN::FilmVariants {
     }
 
     PBRT_CPU_GPU
-    void add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
+    void add_sample(int pixel_index, const SampledSpectrum &radiance_l,
                     const SampledWavelengths &lambda, Real weight) {
         cuda::std::visit([&](auto &x) { x.add_sample(pixel_index, radiance_l, lambda, weight); },
                          *this);

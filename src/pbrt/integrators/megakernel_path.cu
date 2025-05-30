@@ -21,7 +21,7 @@ MegakernelPathIntegrator::create(const ParameterDictionary &parameters,
     return path_integrator;
 }
 
-void MegakernelPathIntegrator::init(const IntegratorBase *_base, uint _max_depth,
+void MegakernelPathIntegrator::init(const IntegratorBase *_base, int _max_depth,
                                     bool _regularize) {
     base = _base;
     max_depth = _max_depth;
@@ -32,13 +32,13 @@ PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
                                                       SampledWavelengths &lambda,
                                                       const IntegratorBase *base, Sampler *sampler,
-                                                      uint max_depth, bool regularize) {
+                                                      int max_depth, bool regularize) {
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
     bool specular_bounce = true;
     bool any_non_specular_bounces = false;
 
-    uint depth = 0;
+    int depth = 0;
     Real pdf_bsdf = NAN;
     Real eta_scale = 1.0;
     LightSampleContext prev_interaction_light_sample_ctx;
@@ -52,7 +52,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
         // Add emitted light at intersection point or from the environment
         if (!si) {
             // Incorporate emission from infinite lights for escaped ray
-            for (uint idx = 0; idx < base->infinite_light_num; ++idx) {
+            for (int idx = 0; idx < base->infinite_light_num; ++idx) {
                 auto light = base->infinite_lights[idx];
                 auto Le = light->le(ray, lambda);
 

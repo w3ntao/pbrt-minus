@@ -9,8 +9,8 @@
 class ThreadPool {
   public:
     ThreadPool() : quit(false), num_active_jobs(0) {
-        const uint num_threads = std::thread::hardware_concurrency();
-        for (uint i = 0; i < num_threads; ++i) {
+        const int num_threads = std::thread::hardware_concurrency();
+        for (int i = 0; i < num_threads; ++i) {
             threads.emplace_back([this] {
                 while (true) {
                     std::function<void()> next_job;
@@ -94,7 +94,7 @@ class ThreadPool {
   private:
     std::vector<std::thread> threads;
     std::queue<std::function<void()>> job_queue;
-    uint num_active_jobs;
+    int num_active_jobs;
     std::mutex mtx;
     std::condition_variable cv;
 

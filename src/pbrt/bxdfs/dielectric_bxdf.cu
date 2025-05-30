@@ -3,8 +3,8 @@
 
 PBRT_CPU_GPU
 pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, Real uc, Point2f u,
-                                                         TransportMode mode,
-                                                         BxDFReflTransFlags sample_flags) const {
+                                                    TransportMode mode,
+                                                    BxDFReflTransFlags sample_flags) const {
     if (eta == 1 || mfDistrib.effectively_smooth()) {
         // Sample perfect specular dielectric BSDF
         // FloatType R = FrDielectric(CosTheta(wo), eta), T = 1 - R;
@@ -125,7 +125,7 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
     Real cosTheta_i = wi.cos_theta();
 
     bool reflect = cosTheta_i * cosTheta_o > 0;
-    float etap = 1;
+    Real etap = 1.0;
     if (!reflect) {
         etap = cosTheta_o > 0 ? eta : (1 / eta);
     }
@@ -167,7 +167,7 @@ SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) 
 
 PBRT_CPU_GPU
 Real DielectricBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
-                              BxDFReflTransFlags sampleFlags) const {
+                         BxDFReflTransFlags sampleFlags) const {
     if (eta == 1 || mfDistrib.effectively_smooth()) {
         return 0;
     }
@@ -178,7 +178,7 @@ Real DielectricBxDF::pdf(Vector3f wo, Vector3f wi, TransportMode mode,
     Real cosTheta_i = wi.cos_theta();
 
     bool reflect = cosTheta_i * cosTheta_o > 0;
-    float etap = 1;
+    Real etap = 1;
     if (!reflect) {
         etap = cosTheta_o > 0 ? eta : (1 / eta);
     }

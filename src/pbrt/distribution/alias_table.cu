@@ -21,7 +21,7 @@ const AliasTable *AliasTable::create(const std::vector<Real> &values,
         auto gpu_bins = allocator.allocate<Bin>(size);
         auto gpu_pdfs = allocator.allocate<Real>(size);
 
-        for (uint idx = 0; idx < size; ++idx) {
+        for (int idx = 0; idx < size; ++idx) {
             gpu_bins[idx] = Bin(1.0, idx);
             gpu_pdfs[idx] = Real(idx) / size;
         }
@@ -35,7 +35,7 @@ const AliasTable *AliasTable::create(const std::vector<Real> &values,
     }
 
     auto gpu_pdfs = allocator.allocate<Real>(size);
-    for (uint idx = 0; idx < size; ++idx) {
+    for (int idx = 0; idx < size; ++idx) {
         bins_to_sort[idx] = Bin(values[idx] * size / value_sum, idx);
         gpu_pdfs[idx] = values[idx] / value_sum;
     }
@@ -76,7 +76,7 @@ const AliasTable *AliasTable::create(const std::vector<Real> &values,
 }
 
 PBRT_CPU_GPU
-cuda::std::pair<uint, Real> AliasTable::sample(const Real u0) const {
+cuda::std::pair<int, Real> AliasTable::sample(const Real u0) const {
     const auto idx = clamp<int>(u0 * double(size), 0, size - 1);
     if (bins[idx].second_idx < 0) {
         const auto sampled_idx = bins[idx].first_idx;

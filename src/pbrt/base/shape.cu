@@ -7,7 +7,7 @@
 #include <pbrt/shapes/tri_quad_mesh.h>
 #include <pbrt/shapes/triangle.h>
 
-std::pair<const Shape *, uint>
+std::pair<const Shape *, int>
 Shape::create(const std::string &type_of_shape, const Transform &render_from_object,
               const Transform &object_from_render, bool reverse_orientation,
               const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
@@ -41,7 +41,7 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
         }
 
         const Shape *shapes = nullptr;
-        uint num_shapes = 0;
+        int num_shapes = 0;
 
         if (!ply_mesh.triIndices.empty()) {
             const auto [ply_shapes, ply_shape_num] = TriangleMesh::build_triangles(

@@ -80,7 +80,7 @@ class Triangle {
     PBRT_CPU_GPU
     void get_points(Point3f p[3]) const {
         const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
-        for (uint idx = 0; idx < 3; ++idx) {
+        for (int idx = 0; idx < 3; ++idx) {
             p[idx] = mesh->p[v[idx]];
         }
     }

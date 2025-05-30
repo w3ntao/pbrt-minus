@@ -188,7 +188,7 @@ class SceneBuilder {
 
     void preprocess();
 
-    [[nodiscard]] std::map<std::string, uint> count_material_type() const;
+    [[nodiscard]] std::map<std::string, int> count_material_type() const;
 
     void render() const;
 

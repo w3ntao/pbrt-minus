@@ -28,8 +28,8 @@ class CoatedDiffuseMaterial {
     const Spectrum *eta = nullptr;
 
     bool remapRoughness = true;
-    uint maxDepth = 10;
-    uint nSamples = 1;
+    int maxDepth = 10;
+    int nSamples = 1;
 
     CoatedDiffuseMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 };

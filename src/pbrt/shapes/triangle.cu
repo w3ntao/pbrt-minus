@@ -106,7 +106,7 @@ pbrt::optional<ShapeSample> Triangle::sample(Point2f u) const {
 
     Point2f uv[3];
     if (mesh->uv) {
-        for (uint idx = 0; idx < 3; ++idx) {
+        for (int idx = 0; idx < 3; ++idx) {
             uv[idx] = mesh->uv[v[idx]];
         }
     } else {
@@ -346,7 +346,7 @@ SurfaceInteraction Triangle::interaction_from_intersection(const TriangleInterse
 
     Point2f uv[3];
     if (mesh->uv) {
-        for (uint idx = 0; idx < 3; ++idx) {
+        for (int idx = 0; idx < 3; ++idx) {
             uv[idx] = mesh->uv[v[idx]];
         }
     } else {

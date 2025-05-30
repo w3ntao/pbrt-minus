@@ -11,7 +11,7 @@ struct SampledLight;
 
 class PowerLightSampler {
   public:
-    static const PowerLightSampler *create(const Light **lights, const uint light_num,
+    static const PowerLightSampler *create(const Light **lights, const int light_num,
                                            GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
@@ -33,7 +33,7 @@ class PowerLightSampler {
         return pmf(light);
     }
 
-    uint light_num;
+    int light_num;
 
   private:
     const Light **lights;

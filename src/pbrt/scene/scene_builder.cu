@@ -24,8 +24,8 @@
 #include <pbrt/util/std_container.h>
 #include <set>
 
-uint next_keyword_position(const std::vector<Token> &tokens, uint start) {
-    for (uint idx = start + 1; idx < tokens.size(); ++idx) {
+int next_keyword_position(const std::vector<Token> &tokens, int start) {
+    for (int idx = start + 1; idx < tokens.size(); ++idx) {
         const auto type = tokens[idx].type;
         if (type == TokenType::Number || type == TokenType::String || type == TokenType::Variable ||
             type == TokenType::List) {
@@ -37,7 +37,7 @@ uint next_keyword_position(const std::vector<Token> &tokens, uint start) {
     return tokens.size();
 }
 
-std::map<std::string, uint> count_light_type(const std::vector<Light *> &gpu_lights) {
+std::map<std::string, int> count_light_type(const std::vector<Light *> &gpu_lights) {
     const std::map<Light::Type, std::string> lights_name = {
         {Light::Type::diffuse_area_light, "DiffuseAreaLight"},
         {Light::Type::distant_light, "DistantLight"},
@@ -46,7 +46,7 @@ std::map<std::string, uint> count_light_type(const std::vector<Light *> &gpu_lig
         {Light::Type::uniform_infinite_light, "UniformInfiniteLight"},
     };
 
-    std::map<std::string, uint> counter;
+    std::map<std::string, int> counter;
 
     for (const auto light : gpu_lights) {
         const auto type = light->type;
@@ -445,13 +445,13 @@ void SceneBuilder::parse_concat_transform(const std::vector<Token> &tokens) {
     }
 
     std::vector<Real> data(16);
-    for (uint idx = 0; idx < tokens[1].values.size(); idx++) {
+    for (int idx = 0; idx < tokens[1].values.size(); idx++) {
         data[idx] = stod(tokens[1].values[idx]);
     }
 
     Real transform_data[4][4];
-    for (uint y = 0; y < 4; y++) {
-        for (uint x = 0; x < 4; x++) {
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
             transform_data[y][x] = data[y * 4 + x];
         }
     }
@@ -586,11 +586,11 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
             shapes, graphics_state.material, num_shapes, allocator);
 
         if (active_instance_definition) {
-            for (uint idx = 0; idx < num_shapes; ++idx) {
+            for (int idx = 0; idx < num_shapes; ++idx) {
                 active_instance_definition->add_primitive(&simple_primitives[idx]);
             }
         } else {
-            for (uint idx = 0; idx < num_shapes; ++idx) {
+            for (int idx = 0; idx < num_shapes; ++idx) {
                 gpu_primitives.push_back(&simple_primitives[idx]);
             }
         }
@@ -612,7 +612,7 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     auto geometric_primitives = Primitive::create_geometric_primitives(
         shapes, graphics_state.material, diffuse_area_lights, num_shapes, allocator);
 
-    for (uint idx = 0; idx < num_shapes; ++idx) {
+    for (int idx = 0; idx < num_shapes; ++idx) {
         auto primitive_ptr = &geometric_primitives[idx];
         auto area_light_ptr = &diffuse_area_lights[idx];
 
@@ -661,13 +661,13 @@ void SceneBuilder::parse_transform(const std::vector<Token> &tokens) {
     }
 
     std::vector<Real> data(16);
-    for (uint idx = 0; idx < tokens[1].values.size(); idx++) {
+    for (int idx = 0; idx < tokens[1].values.size(); idx++) {
         data[idx] = stod(tokens[1].values[idx]);
     }
 
     Real transform_data[4][4];
-    for (uint y = 0; y < 4; y++) {
-        for (uint x = 0; x < 4; x++) {
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
             transform_data[y][x] = data[y * 4 + x];
         }
     }
@@ -687,8 +687,8 @@ void SceneBuilder::parse_translate(const std::vector<Token> &tokens) {
 }
 
 void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
-    uint token_idx = 0;
-    uint last_token_idx = 0;
+    int token_idx = 0;
+    int last_token_idx = 0;
     auto last_time_check = std::chrono::system_clock::now();
 
     auto report_time = [&token_idx, &last_token_idx, &last_time_check, &tokens,
@@ -707,7 +707,7 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
             printf("%sSceneBuilder::%s(): parsing token `%s` took %.1f seconds%s:\n",
                    FLAG_COLORFUL_PRINT_RED_START, function_name, keyword.c_str(), time_in_second,
                    FLAG_COLORFUL_PRINT_END);
-            for (uint idx = last_token_idx; idx < token_idx; ++idx) {
+            for (int idx = last_token_idx; idx < token_idx; ++idx) {
                 std::cout << tokens[idx] << "\n";
             }
         }
@@ -893,7 +893,7 @@ void SceneBuilder::preprocess() {
     printf("\n");
 
     const auto material_type_counter = count_material_type();
-    uint total_material_size = 0;
+    int total_material_size = 0;
     for (auto const &[_, _num] : material_type_counter) {
         total_material_size += _num;
     }
@@ -906,8 +906,8 @@ void SceneBuilder::preprocess() {
     printf("\n");
 }
 
-std::map<std::string, uint> SceneBuilder::count_material_type() const {
-    std::map<std::string, uint> counter;
+std::map<std::string, int> SceneBuilder::count_material_type() const {
+    std::map<std::string, int> counter;
 
     for (const auto primitive : gpu_primitives) {
         primitive->record_material(counter);

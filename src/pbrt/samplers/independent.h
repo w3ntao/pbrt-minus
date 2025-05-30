@@ -7,16 +7,16 @@
 class IndependentSampler {
   public:
     PBRT_CPU_GPU
-    IndependentSampler(uint _samples_per_pixel) : samples_per_pixel(_samples_per_pixel) {}
+    IndependentSampler(int _samples_per_pixel) : samples_per_pixel(_samples_per_pixel) {}
 
     PBRT_CPU_GPU
-    void start_pixel_sample(const uint pixel_idx, const uint sample_idx, const uint dimension) {
+    void start_pixel_sample(const int pixel_idx, const int sample_idx, const int dimension) {
         rng.set_sequence(pbrt::hash(pixel_idx));
         rng.advance(sample_idx * 65536ull + dimension);
     }
 
     PBRT_CPU_GPU
-    uint get_samples_per_pixel() const {
+    int get_samples_per_pixel() const {
         return samples_per_pixel;
     }
 
@@ -34,5 +34,5 @@ class IndependentSampler {
 
   private:
     RNG rng;
-    uint samples_per_pixel = 0;
+    int samples_per_pixel = 0;
 };

@@ -10,8 +10,8 @@
 #include <pbrt/spectrum_util/global_spectra.h>
 
 template <typename TypeOfLight>
-static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, uint num) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, int num) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
     }
@@ -62,17 +62,17 @@ Light *Light::create(const std::string &type_of_light, const Transform &render_f
     return nullptr;
 }
 
-Light *Light::create_diffuse_area_lights(const Shape *shapes, const uint num,
+Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num,
                                          const Transform &render_from_light,
                                          const ParameterDictionary &parameters,
                                          GPUMemoryAllocator &allocator) {
-    constexpr uint threads = 1024;
-    const uint blocks = divide_and_ceil(num, threads);
+    constexpr int threads = 1024;
+    const int blocks = divide_and_ceil(num, threads);
 
     auto diffuse_area_lights = allocator.allocate<DiffuseAreaLight>(num);
     auto lights = allocator.allocate<Light>(num);
 
-    for (uint idx = 0; idx < num; idx++) {
+    for (int idx = 0; idx < num; idx++) {
         diffuse_area_lights[idx].init(&shapes[idx], render_from_light, parameters, allocator);
     }
 

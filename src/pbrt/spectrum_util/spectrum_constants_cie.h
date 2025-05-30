@@ -3,15 +3,15 @@
 #include <pbrt/gpu/macro.h>
 #include <vector>
 
-constexpr uint LAMBDA_MIN = 360;
-constexpr uint LAMBDA_MAX = 830;
-constexpr uint LAMBDA_RANGE = LAMBDA_MAX - LAMBDA_MIN + 1;
+constexpr int LAMBDA_MIN = 360;
+constexpr int LAMBDA_MAX = 830;
+constexpr int LAMBDA_RANGE = LAMBDA_MAX - LAMBDA_MIN + 1;
 
-constexpr uint NSpectrumSamples = 4;
+constexpr int NSpectrumSamples = 4;
 
 constexpr Real CIE_Y_integral = 106.856895;
 
-constexpr uint NUM_CIE_SAMPLES = 471;
+constexpr int NUM_CIE_SAMPLES = 471;
 
 // clang-format off
 constexpr Real CIE_X_VALUE_CPU[NUM_CIE_SAMPLES] = {

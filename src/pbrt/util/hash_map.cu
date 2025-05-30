@@ -14,14 +14,14 @@ uint64_t hash(uint64_t k) {
     return k;
 }
 
-HashMap *HashMap::create(uint capacity, GPUMemoryAllocator &allocator) {
+HashMap *HashMap::create(int capacity, GPUMemoryAllocator &allocator) {
     auto hash_map = allocator.allocate<HashMap>();
     hash_map->items = allocator.allocate<KeyValue>(capacity);
 
     hash_map->size = 0;
     hash_map->capacity = capacity;
 
-    for (uint idx = 0; idx < capacity; ++idx) {
+    for (int idx = 0; idx < capacity; ++idx) {
         hash_map->items[idx].key = EMPTY_KEY;
     }
 
@@ -32,7 +32,7 @@ PBRT_CPU_GPU
 uint64_t HashMap::lookup(uint64_t key) const {
     uint64_t slot = hash(key) % capacity;
 
-    for (uint loop = 0; loop < capacity; ++loop) {
+    for (int loop = 0; loop < capacity; ++loop) {
         if (items[slot].key == key) {
             return items[slot].value;
         }

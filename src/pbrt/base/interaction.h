@@ -120,7 +120,7 @@ class SurfaceInteraction : public Interaction {
     }
 
     PBRT_CPU_GPU
-    void compute_differentials(const Camera *camera, uint samples_per_pixel);
+    void compute_differentials(const Camera *camera, int samples_per_pixel);
 
     PBRT_CPU_GPU
     void set_intersection_properties(const Material *_material, const Light *_area_light);
@@ -134,7 +134,7 @@ class SurfaceInteraction : public Interaction {
     SampledSpectrum le(Vector3f w, const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    BSDF get_bsdf(SampledWavelengths &lambda, const Camera *camera, uint samples_per_pixel);
+    BSDF get_bsdf(SampledWavelengths &lambda, const Camera *camera, int samples_per_pixel);
 };
 
 // ShapeIntersection Definition

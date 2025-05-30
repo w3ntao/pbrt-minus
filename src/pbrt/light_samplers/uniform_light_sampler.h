@@ -5,7 +5,7 @@
 
 class UniformLightSampler {
   public:
-    static const UniformLightSampler *create(const Light **lights, const uint light_num,
+    static const UniformLightSampler *create(const Light **lights, const int light_num,
                                              GPUMemoryAllocator &allocator) {
 
         auto uniform_light_sampler = allocator.allocate<UniformLightSampler>();
@@ -23,7 +23,7 @@ class UniformLightSampler {
         }
 
         const auto num_in_float = Real(light_num);
-        const uint light_idx = clamp<uint>(uint(u * num_in_float), 0, light_num - 1);
+        const int light_idx = clamp<int>(int(u * num_in_float), 0, light_num - 1);
         return SampledLight{.light = lights[light_idx], .p = Real(1.0 / num_in_float)};
     }
 
@@ -47,5 +47,5 @@ class UniformLightSampler {
 
   private:
     const Light **lights;
-    uint light_num;
+    int light_num;
 };

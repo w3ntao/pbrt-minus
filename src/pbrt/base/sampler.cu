@@ -8,8 +8,8 @@
 
 template <typename TypeOfSampler>
 static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers,
-                                     uint samples_per_pixel, uint size) {
-    const uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+                                     int samples_per_pixel, int size) {
+    const int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= size) {
         return;
     }
@@ -18,10 +18,10 @@ static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers
 }
 
 Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
-                                  const uint samples_per_pixel, const uint size,
+                                  const int samples_per_pixel, const int size,
                                   GPUMemoryAllocator &allocator) {
-    constexpr uint threads = 1024;
-    const uint blocks = divide_and_ceil(size, threads);
+    constexpr int threads = 1024;
+    const int blocks = divide_and_ceil(size, threads);
 
     auto samplers = allocator.allocate<Sampler>(size);
 
@@ -77,7 +77,7 @@ MLTSampler *Sampler::get_mlt_sampler() const {
 }
 
 PBRT_CPU_GPU
-void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension) {
+void Sampler::start_pixel_sample(int pixel_idx, int sample_idx, int dimension) {
     switch (type) {
     case Type::independent: {
         static_cast<IndependentSampler *>(ptr)->start_pixel_sample(pixel_idx, sample_idx,
@@ -101,7 +101,7 @@ void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension
 }
 
 PBRT_CPU_GPU
-uint Sampler::get_samples_per_pixel() const {
+int Sampler::get_samples_per_pixel() const {
     switch (type) {
     case Type::independent: {
         return static_cast<const IndependentSampler *>(ptr)->get_samples_per_pixel();

@@ -5,8 +5,8 @@
 
 template <typename T>
 static __global__ void gpu_transform(T *data, const Transform transform, bool reverse_orientation,
-                                     uint length) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+                                     int length) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= length) {
         return;
     }
@@ -18,7 +18,7 @@ static __global__ void gpu_transform(T *data, const Transform transform, bool re
 }
 
 static __global__ void init_triangles_from_mesh(Triangle *triangles, const TriangleMesh *mesh) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= mesh->triangles_num) {
         return;
     }
@@ -27,8 +27,8 @@ static __global__ void init_triangles_from_mesh(Triangle *triangles, const Trian
 }
 
 template <typename TypeOfShape>
-static __global__ void init_shapes(Shape *shapes, const TypeOfShape *concrete_shapes, uint num) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+static __global__ void init_shapes(Shape *shapes, const TypeOfShape *concrete_shapes, int num) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num) {
         return;
     }
@@ -36,7 +36,7 @@ static __global__ void init_shapes(Shape *shapes, const TypeOfShape *concrete_sh
     shapes[worker_idx].init(&concrete_shapes[worker_idx]);
 }
 
-std::pair<const Shape *, uint>
+std::pair<const Shape *, int>
 TriangleMesh::build_triangles(const Transform &render_from_object, const bool reverse_orientation,
                               const std::vector<Point3f> &points, const std::vector<int> &indices,
                               const std::vector<Normal3f> &normals, const std::vector<Point2f> &uv,
@@ -45,9 +45,9 @@ TriangleMesh::build_triangles(const Transform &render_from_object, const bool re
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
                                 cudaMemcpyHostToDevice));
 
-    constexpr uint threads = 1024;
+    constexpr int threads = 1024;
     {
-        const uint blocks = divide_and_ceil<uint>(points.size(), threads);
+        const int blocks = divide_and_ceil<int>(points.size(), threads);
         if (!render_from_object.is_identity()) {
             gpu_transform<<<blocks, threads>>>(gpu_points, render_from_object, false,
                                                points.size());
@@ -67,7 +67,7 @@ TriangleMesh::build_triangles(const Transform &render_from_object, const bool re
                                     cudaMemcpyHostToDevice));
 
         if (!render_from_object.is_identity() || reverse_orientation) {
-            const uint blocks = divide_and_ceil<uint>(normals.size(), threads);
+            const int blocks = divide_and_ceil<int>(normals.size(), threads);
             gpu_transform<<<blocks, threads>>>(gpu_normals, render_from_object, reverse_orientation,
                                                normals.size());
             CHECK_CUDA_ERROR(cudaGetLastError());
@@ -86,14 +86,14 @@ TriangleMesh::build_triangles(const Transform &render_from_object, const bool re
     *mesh = TriangleMesh(reverse_orientation, gpu_indices, indices.size(), gpu_points, gpu_normals,
                          gpu_uv);
 
-    uint num_triangles = mesh->triangles_num;
+    int num_triangles = mesh->triangles_num;
 
     auto triangles = allocator.allocate<Triangle>(num_triangles);
 
     auto shapes = allocator.allocate<Shape>(num_triangles);
 
     {
-        const uint blocks = divide_and_ceil(num_triangles, threads);
+        const int blocks = divide_and_ceil(num_triangles, threads);
         init_triangles_from_mesh<<<blocks, threads>>>(triangles, mesh);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());

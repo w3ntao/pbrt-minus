@@ -13,19 +13,19 @@
 #include <thread>
 
 PBRT_CPU_GPU
-static void evaluate_pixel_sample(Film *film, const Point2i p_pixel, const uint samples_per_pixel,
+static void evaluate_pixel_sample(Film *film, const Point2i p_pixel, const int samples_per_pixel,
                                   Sampler *samplers, const MegakernelIntegrator *integrator,
                                   const IntegratorBase *integrator_base) {
     auto resolution = film->get_resolution();
     int width = resolution.x;
-    const uint pixel_index = p_pixel.y * width + p_pixel.x;
+    const int pixel_index = p_pixel.y * width + p_pixel.x;
 
     auto local_sampler = &samplers[pixel_index];
 
     auto camera = integrator_base->camera;
     auto filter = integrator_base->filter;
 
-    for (uint i = 0; i < samples_per_pixel; ++i) {
+    for (int i = 0; i < samples_per_pixel; ++i) {
         local_sampler->start_pixel_sample(pixel_index, i, 0);
         auto camera_sample = local_sampler->get_camera_sample(p_pixel, filter);
         auto lu = local_sampler->get_1d();
@@ -44,7 +44,7 @@ static void evaluate_pixel_sample(Film *film, const Point2i p_pixel, const uint 
 }
 
 __global__ static void megakernel_render(Film *film, uint8_t *gpu_frame_buffer, int *counter,
-                                         const uint samples_per_pixel, Sampler *samplers,
+                                         const int samples_per_pixel, Sampler *samplers,
                                          const MegakernelIntegrator *integrator,
                                          const IntegratorBase *integrator_base) {
     const auto resolution = film->get_resolution();
@@ -155,7 +155,7 @@ SampledSpectrum MegakernelIntegrator::li(const Ray &ray, SampledWavelengths &lam
 }
 
 void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
-                                  const uint samples_per_pixel,
+                                  const int samples_per_pixel,
                                   const IntegratorBase *integrator_base, const bool preview) const {
     const auto film_resolution = integrator_base->camera->get_camerabase()->resolution;
     const auto num_pixels = film_resolution.x * film_resolution.y;
@@ -164,8 +164,8 @@ void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
 
     auto samplers = Sampler::create_samplers(sampler_type, samples_per_pixel,
                                                              num_pixels, local_allocator);
-    constexpr uint thread_width = 16;
-    constexpr uint thread_height = 16;
+    constexpr int thread_width = 16;
+    constexpr int thread_height = 16;
 
     GLHelper gl_helper;
     int *counter = nullptr;
@@ -176,8 +176,8 @@ void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
         *counter = 0;
     }
 
-    dim3 blocks(divide_and_ceil(uint(film_resolution.x), thread_width),
-                divide_and_ceil(uint(film_resolution.y), thread_height));
+    dim3 blocks(divide_and_ceil(int(film_resolution.x), thread_width),
+                divide_and_ceil(int(film_resolution.y), thread_height));
     dim3 threads(thread_width, thread_height);
     megakernel_render<<<blocks, threads>>>(film, gl_helper.gpu_frame_buffer, counter,
                                            samples_per_pixel, samplers, this, integrator_base);

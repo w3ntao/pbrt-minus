@@ -8,8 +8,8 @@ struct FilmSample;
 struct BDPTConfig {
     const IntegratorBase *base;
 
-    uint max_depth;
-    uint film_sample_size;
+    int max_depth;
+    int film_sample_size;
 
     bool regularize;
 };
@@ -256,7 +256,7 @@ class BDPTIntegrator {
                                   const IntegratorBase *integrator_base,
                                   GPUMemoryAllocator &allocator);
 
-    void render(Film *film, uint samples_per_pixel, bool preview);
+    void render(Film *film, int samples_per_pixel, bool preview);
 
     PBRT_CPU_GPU
     static int generate_camera_subpath(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler,

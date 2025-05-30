@@ -18,7 +18,7 @@ class MLTPathIntegrator {
     static MLTPathIntegrator *create(int mutations_per_pixel, const ParameterDictionary &parameters,
                                      const IntegratorBase *base, GPUMemoryAllocator &allocator);
 
-    double render(Film *film, GreyScaleFilm &heat_map, uint mutations_per_pixel, bool preview);
+    double render(Film *film, GreyScaleFilm &heat_map, int mutations_per_pixel, bool preview);
 
     PBRT_CPU_GPU
     Real compute_luminance(const SampledSpectrum &radiance,
@@ -35,7 +35,7 @@ class MLTPathIntegrator {
     Sampler *samplers;
     MLTSampler *mlt_samplers;
 
-    uint max_depth;
+    int max_depth;
     bool regularize;
 
     const Spectrum *cie_y;

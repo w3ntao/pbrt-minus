@@ -41,7 +41,7 @@ class MLTBDPTIntegrator {
     static MLTBDPTIntegrator *create(int mutations_per_pixel, const ParameterDictionary &parameters,
                                      const IntegratorBase *base, GPUMemoryAllocator &allocator);
 
-    double render(Film *film, GreyScaleFilm &heat_map, uint mutations_per_pixel, bool preview);
+    double render(Film *film, GreyScaleFilm &heat_map, int mutations_per_pixel, bool preview);
 
     PBRT_GPU
     BDPTPathSample li(int depth, Sampler *sampler, Vertex *camera_vertices,

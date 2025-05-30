@@ -181,7 +181,7 @@ void init_tables(RGBtoSpectrumBuffer *data, Gamut gamut) {
     }
     }
 
-    for (uint i = 0; i < CIE_FINE_SAMPLES; ++i) {
+    for (int i = 0; i < CIE_FINE_SAMPLES; ++i) {
         double lambda = CIE_LAMBDA_MIN + i * h;
 
         double xyz[3] = {cie_interp(cie_x, lambda), cie_interp(cie_y, lambda),

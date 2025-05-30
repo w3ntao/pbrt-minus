@@ -5,7 +5,7 @@
 #include <pbrt/textures/texture_eval_context.h>
 
 PBRT_CPU_GPU
-void SurfaceInteraction::compute_differentials(const Camera *camera, uint samples_per_pixel) {
+void SurfaceInteraction::compute_differentials(const Camera *camera, int samples_per_pixel) {
     // different with PBRT-v4: ignore the DifferentialRay
     camera->approximate_dp_dxy(p(), n, samples_per_pixel, &dpdx, &dpdy);
 
@@ -78,7 +78,7 @@ void SurfaceInteraction::set_shading_geometry(const Normal3f &ns, const Vector3f
 
 PBRT_CPU_GPU
 BSDF SurfaceInteraction::get_bsdf(SampledWavelengths &lambda, const Camera *camera,
-                                  uint samples_per_pixel) {
+                                  int samples_per_pixel) {
     compute_differentials(camera, samples_per_pixel);
 
     auto material_eval_context = MaterialEvalContext(*this);

@@ -15,10 +15,10 @@ class Distribution1D {
     void build(const std::vector<Real> &values, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    cuda::std::pair<uint, Real> sample(Real u) const;
+    cuda::std::pair<int, Real> sample(Real u) const;
 
     PBRT_CPU_GPU
-    Real get_pdf(uint idx) const;
+    Real get_pdf(int idx) const;
 
   private:
     const AliasTable *alias_table;

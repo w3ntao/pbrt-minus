@@ -34,8 +34,8 @@ class Sampler {
         return Type::independent;
     }
 
-    static Sampler *create_samplers(const std::string &string_sampler_type, uint samples_per_pixel,
-                                    uint size, GPUMemoryAllocator &allocator);
+    static Sampler *create_samplers(const std::string &string_sampler_type, int samples_per_pixel,
+                                    int size, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     void init(IndependentSampler *independent_sampler);
@@ -50,10 +50,10 @@ class Sampler {
     MLTSampler *get_mlt_sampler() const;
 
     PBRT_CPU_GPU
-    void start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension);
+    void start_pixel_sample(int pixel_idx, int sample_idx, int dimension);
 
     PBRT_CPU_GPU
-    uint get_samples_per_pixel() const;
+    int get_samples_per_pixel() const;
 
     PBRT_CPU_GPU
     Real get_1d();

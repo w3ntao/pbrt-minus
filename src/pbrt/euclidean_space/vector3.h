@@ -100,7 +100,7 @@ class Vector3 {
         *this = *this / divisor;
     }
 
-    PBRT_CPU_GPU uint max_component_index() const {
+    PBRT_CPU_GPU int max_component_index() const {
         return (x > y) ? ((x > z) ? 0 : 2) : ((y > z) ? 1 : 2);
     }
 

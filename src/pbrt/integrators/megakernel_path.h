@@ -14,11 +14,11 @@ class MegakernelPathIntegrator {
                                                   const IntegratorBase *integrator_base,
                                                   GPUMemoryAllocator &allocator);
 
-    void init(const IntegratorBase *_base, uint _max_depth, bool _regularize);
+    void init(const IntegratorBase *_base, int _max_depth, bool _regularize);
 
     PBRT_CPU_GPU
     static SampledSpectrum evaluate_li(const Ray &primary_ray, SampledWavelengths &lambda,
-                                       const IntegratorBase *base, Sampler *sampler, uint max_depth,
+                                       const IntegratorBase *base, Sampler *sampler, int max_depth,
                                        bool regularize);
 
     PBRT_CPU_GPU
@@ -31,6 +31,6 @@ class MegakernelPathIntegrator {
 
   private:
     const IntegratorBase *base;
-    uint max_depth;
+    int max_depth;
     bool regularize;
 };

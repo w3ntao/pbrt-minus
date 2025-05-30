@@ -8,8 +8,8 @@
 
 static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives,
                                               const Shape *shapes, const Material *material,
-                                              uint num) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+                                              int num) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= num) {
         return;
     }
@@ -19,8 +19,8 @@ static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives
 
 static __global__ void init_geometric_primitives(GeometricPrimitive *geometric_primitives,
                                                  const Shape *shapes, const Material *material,
-                                                 const Light *diffuse_area_lights, uint num) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+                                                 const Light *diffuse_area_lights, int num) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= num) {
         return;
     }
@@ -32,8 +32,8 @@ static __global__ void init_transformed_primitives(Primitive *primitives,
                                                    TransformedPrimitive *transformed_primitives,
                                                    const Primitive *base_primitives,
                                                    const Transform render_from_primitive,
-                                                   uint num) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+                                                   int num) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= num) {
         return;
     }
@@ -44,8 +44,8 @@ static __global__ void init_transformed_primitives(Primitive *primitives,
 
 template <typename TypeOfPrimitive>
 static __global__ void init_primitives(Primitive *primitives, TypeOfPrimitive *_primitives,
-                                       uint num) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+                                       int num) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= num) {
         return;
     }
@@ -55,10 +55,10 @@ static __global__ void init_primitives(Primitive *primitives, TypeOfPrimitive *_
 
 const Primitive *Primitive::create_geometric_primitives(const Shape *shapes,
                                                         const Material *material,
-                                                        const Light *diffuse_area_light, uint num,
+                                                        const Light *diffuse_area_light, int num,
                                                         GPUMemoryAllocator &allocator) {
-    constexpr uint threads = 1024;
-    const uint blocks = divide_and_ceil(num, threads);
+    constexpr int threads = 1024;
+    const int blocks = divide_and_ceil(num, threads);
 
     auto geometric_primitives = allocator.allocate<GeometricPrimitive>(num);
 
@@ -77,9 +77,9 @@ const Primitive *Primitive::create_geometric_primitives(const Shape *shapes,
 }
 
 const Primitive *Primitive::create_simple_primitives(const Shape *shapes, const Material *material,
-                                                     uint num, GPUMemoryAllocator &allocator) {
-    constexpr uint threads = 1024;
-    const uint blocks = divide_and_ceil(num, threads);
+                                                     int num, GPUMemoryAllocator &allocator) {
+    constexpr int threads = 1024;
+    const int blocks = divide_and_ceil(num, threads);
 
     auto simple_primitives = allocator.allocate<SimplePrimitive>(num);
 
@@ -98,9 +98,9 @@ const Primitive *Primitive::create_simple_primitives(const Shape *shapes, const 
 
 const Primitive *Primitive::create_transformed_primitives(const Primitive *base_primitives,
                                                           const Transform &render_from_primitive,
-                                                          uint num, GPUMemoryAllocator &allocator) {
-    const uint threads = 1024;
-    const uint blocks = divide_and_ceil(num, threads);
+                                                          int num, GPUMemoryAllocator &allocator) {
+    const int threads = 1024;
+    const int blocks = divide_and_ceil(num, threads);
 
     auto transformed_primitives = allocator.allocate<TransformedPrimitive>(num);
 
@@ -185,8 +185,8 @@ Bounds3f Primitive::bounds() const {
     return {};
 }
 
-void Primitive::record_material(std::map<std::string, uint> &counter) const {
-    const auto count_material = [](const Material *material, std::map<std::string, uint> &counter) {
+void Primitive::record_material(std::map<std::string, int> &counter) const {
+    const auto count_material = [](const Material *material, std::map<std::string, int> &counter) {
         const auto name = Material::material_type_to_string(material->get_material_type());
 
         if (counter.find(name) == counter.end()) {
@@ -223,7 +223,7 @@ void Primitive::record_material(std::map<std::string, uint> &counter) const {
         const auto primitives = result.first;
         const auto num = result.second;
 
-        for (uint idx = 0; idx < num; idx++) {
+        for (int idx = 0; idx < num; idx++) {
             primitives[idx]->record_material(counter);
         }
 

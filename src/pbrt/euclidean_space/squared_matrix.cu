@@ -40,7 +40,7 @@ PBRT_CPU_GPU Real SquareMatrix<4>::determinant() const {
            difference_of_products(s5, c0, s4, c1);
 }
 
-template <uint N>
+template <int N>
 PBRT_CPU_GPU Real SquareMatrix<N>::determinant() const {
     printf("determinant() not implemented for SquareMatrix<%d>\n", N);
 
@@ -150,7 +150,7 @@ Via: https://github.com/google/ion/blob/master/ion/math/matrixutils.cc,
     return SquareMatrix(inv);
 }
 
-template <uint N>
+template <int N>
 PBRT_CPU_GPU SquareMatrix<N> SquareMatrix<N>::inverse() const {
     printf("inverse() not implemented for SquareMatrix<%u>\n", N);
     REPORT_FATAL_ERROR();

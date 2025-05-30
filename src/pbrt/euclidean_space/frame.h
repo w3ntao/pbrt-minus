@@ -10,7 +10,7 @@ class Frame {
 
     PBRT_CPU_GPU
     Frame() {
-        for (uint idx = 0; idx < 3; idx++) {
+        for (int idx = 0; idx < 3; idx++) {
             x[idx] = NAN;
             y[idx] = NAN;
             z[idx] = NAN;

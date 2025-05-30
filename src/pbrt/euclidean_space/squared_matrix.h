@@ -4,7 +4,7 @@
 #include <pbrt/util/compensated_float.h>
 #include <iomanip>
 
-template <uint N>
+template <int N>
 class SquareMatrix {
   public:
     PBRT_CPU_GPU SquareMatrix() {
@@ -61,9 +61,9 @@ class SquareMatrix {
     }
 
     PBRT_CPU_GPU void print() const {
-        for (uint x = 0; x < N; x++) {
+        for (int x = 0; x < N; x++) {
             printf("[ ");
-            for (uint y = 0; y < N; y++) {
+            for (int y = 0; y < N; y++) {
                 printf("%f, ", val[x][y]);
             }
             printf("]\n");
@@ -87,11 +87,11 @@ class SquareMatrix {
         return !(*this == matrix);
     }
 
-    PBRT_CPU_GPU const Real *operator[](uint i) const {
+    PBRT_CPU_GPU const Real *operator[](int i) const {
         return val[i];
     }
 
-    PBRT_CPU_GPU Real *operator[](uint i) {
+    PBRT_CPU_GPU Real *operator[](int i) {
         return val[i];
     }
 

@@ -6,8 +6,7 @@
 
 PerspectiveCamera::PerspectiveCamera(const Point2i &resolution,
                                      const CameraTransform &camera_transform, const Film *_film,
-                                     const Filter *filter,
-                                     const ParameterDictionary &parameters) {
+                                     const Filter *filter, const ParameterDictionary &parameters) {
     film = _film;
     camera_base.init(resolution, camera_transform);
 

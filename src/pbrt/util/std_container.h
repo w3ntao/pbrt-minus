@@ -3,7 +3,7 @@
 #include <vector>
 
 template <typename T>
-std::vector<T> sub_vector(const std::vector<T> &vec, uint start, uint end) {
+std::vector<T> sub_vector(const std::vector<T> &vec, int start, int end) {
     if (start >= vec.size()) {
         return {};
     }
@@ -12,7 +12,7 @@ std::vector<T> sub_vector(const std::vector<T> &vec, uint start, uint end) {
 }
 
 template <typename T>
-std::vector<T> sub_vector(const std::vector<T> &vec, uint start) {
+std::vector<T> sub_vector(const std::vector<T> &vec, int start) {
     if (start >= vec.size()) {
         return {};
     }

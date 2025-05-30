@@ -11,21 +11,21 @@ class SampledSpectrum {
   public:
     PBRT_CPU_GPU
     SampledSpectrum() {
-        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
             values[idx] = 0;
         }
     }
 
     PBRT_CPU_GPU
     SampledSpectrum(const Real val) {
-        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
             values[idx] = val;
         }
     }
 
     PBRT_CPU_GPU
     bool has_nan() const {
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             if (isnan(values[i]) || isinf(values[i])) {
                 return true;
             }
@@ -37,7 +37,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     SampledSpectrum sqrt() const {
         SampledSpectrum result;
-        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
             result[idx] = std::sqrt(values[idx]);
         }
 
@@ -47,7 +47,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     SampledSpectrum clamp(Real low, Real high) const {
         SampledSpectrum result;
-        for (uint idx = 0; idx < NSpectrumSamples; ++idx) {
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
             result[idx] = ::clamp(values[idx], low, high);
         }
 
@@ -70,7 +70,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     SampledSpectrum operator+(const SampledSpectrum &s) const {
         SampledSpectrum sum;
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             sum[i] = values[i] + s.values[i];
         }
 
@@ -85,7 +85,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     SampledSpectrum operator-(const SampledSpectrum &s) const {
         SampledSpectrum difference;
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             difference[i] = values[i] - s.values[i];
         }
 
@@ -100,7 +100,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     SampledSpectrum operator*(const SampledSpectrum &s) const {
         SampledSpectrum product;
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             product[i] = values[i] * s.values[i];
         }
 
@@ -110,7 +110,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     SampledSpectrum operator*(Real a) const {
         SampledSpectrum product;
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             product[i] = values[i] * a;
         }
 
@@ -135,7 +135,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     SampledSpectrum operator/(const SampledSpectrum &s) const {
         SampledSpectrum quotient;
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = values[i] / s.values[i];
         }
 
@@ -145,7 +145,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     SampledSpectrum operator/(Real a) const {
         SampledSpectrum quotient;
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = values[i] / a;
         }
 
@@ -166,7 +166,7 @@ class SampledSpectrum {
     SampledSpectrum operator-() const {
         SampledSpectrum result;
 
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             result[i] = -values[i];
         }
 
@@ -175,7 +175,7 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     bool operator==(const SampledSpectrum &s) const {
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             if (values[i] != s.values[i]) {
                 return false;
             }
@@ -191,7 +191,7 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU
     bool is_positive() const {
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             if (values[i] > 0) {
                 return true;
             }
@@ -203,7 +203,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     Real min_component_value() const {
         Real m = values[0];
-        for (uint i = 1; i < NSpectrumSamples; ++i) {
+        for (int i = 1; i < NSpectrumSamples; ++i) {
             m = std::min(m, values[i]);
         }
 
@@ -213,7 +213,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     Real max_component_value() const {
         Real m = values[0];
-        for (uint i = 1; i < NSpectrumSamples; ++i) {
+        for (int i = 1; i < NSpectrumSamples; ++i) {
             m = std::max(m, values[i]);
         }
         return m;
@@ -222,7 +222,7 @@ class SampledSpectrum {
     PBRT_CPU_GPU
     Real average() const {
         Real sum = 0;
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             sum += values[i];
         }
 
@@ -231,7 +231,7 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU void print() const {
         printf("[ ");
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             printf("%f, ", values[i]);
         }
         printf("]\n");
@@ -239,7 +239,7 @@ class SampledSpectrum {
 
     PBRT_CPU_GPU SampledSpectrum safe_div(const SampledSpectrum &divisor) const {
         SampledSpectrum quotient;
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             quotient[i] = divisor[i] == 0.0 ? 0.0 : values[i] / divisor[i];
         }
 

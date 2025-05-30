@@ -32,7 +32,7 @@ __global__ void build_bootstrap_samples(double *luminance_per_path, const int re
                                         Vertex *global_camera_vertices,
                                         Vertex *global_light_vertices,
                                         const MLTBDPTIntegrator *mlt_bdpt_integrator) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_SAMPLERS) {
         return;
     }
@@ -81,7 +81,7 @@ MLTBDPTIntegrator *MLTBDPTIntegrator::create(const int mutations_per_pixel,
     const auto large_step_probability = parameters.get_float("largestepprobability", 0.3);
     const auto sigma = parameters.get_float("sigma", 0.01);
 
-    for (uint idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
+    for (int idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
         integrator->mlt_samplers[idx].setup_config(mutations_per_pixel, sigma,
                                                    large_step_probability, 3);
         integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
@@ -157,7 +157,7 @@ __global__ void prepare_initial_state(BDPTPathSample *path_samples, Vertex *glob
     // sampling from bootstrap (so multiple sampler might choose the same paths) but pbrt-minus
     // initiated each sampler with different bootstrap
 
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_MLT_SAMPLERS) {
         return;
     }
@@ -182,10 +182,10 @@ __global__ void prepare_initial_state(BDPTPathSample *path_samples, Vertex *glob
 }
 
 __global__ void wavefront_render(MLTSample *mlt_samples, BDPTPathSample *path_samples,
-                                 const uint num_mutations, Vertex *global_camera_vertices,
+                                 const int num_mutations, Vertex *global_camera_vertices,
                                  Vertex *global_light_vertices, RNG *rngs,
                                  const MLTBDPTIntegrator *mlt_bdpt_integrator) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_mutations) {
         return;
     }
@@ -255,14 +255,14 @@ __global__ void wavefront_render(MLTSample *mlt_samples, BDPTPathSample *path_sa
     }
 }
 
-double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, uint mutations_per_pixel,
+double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, int mutations_per_pixel,
                                  bool preview) {
     GPUMemoryAllocator local_allocator;
 
     const auto num_bootstrap_paths = NUM_MLT_SAMPLERS * (config->max_depth + 1);
 
     auto luminance_per_path = local_allocator.allocate<double>(num_bootstrap_paths);
-    for (uint idx = 0; idx < num_bootstrap_paths; ++idx) {
+    for (int idx = 0; idx < num_bootstrap_paths; ++idx) {
         luminance_per_path[idx] = 0;
     }
 
@@ -275,8 +275,8 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, uint mutat
         divide_and_ceil<int>(NUM_BOOT_STRAP, NUM_MLT_SAMPLERS * (config->max_depth + 1));
     // to make sure at least 1 million bootstrap samples recorded
 
-    constexpr uint threads = 64;
-    const uint blocks = divide_and_ceil<uint>(NUM_MLT_SAMPLERS, threads);
+    constexpr int threads = 64;
+    const int blocks = divide_and_ceil<int>(NUM_MLT_SAMPLERS, threads);
     build_bootstrap_samples<<<blocks, threads>>>(luminance_per_path, repeat, global_camera_vertices,
                                                  global_light_vertices, this);
     CHECK_CUDA_ERROR(cudaGetLastError());
@@ -302,7 +302,7 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, uint mutat
     printf("    brightness: %.6f\n", brightness);
 
     auto rngs = local_allocator.allocate<RNG>(NUM_MLT_SAMPLERS);
-    for (uint idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
+    for (int idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
         rngs[idx].set_sequence(idx + NUM_MLT_SAMPLERS);
     }
 
@@ -321,8 +321,8 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, uint mutat
     }
 
     long long accumulate_samples = 0; // this is for debugging and verification
-    for (uint pass = 0; pass < total_pass; ++pass) {
-        const uint num_mutations = pass == total_pass - 1
+    for (int pass = 0; pass < total_pass; ++pass) {
+        const int num_mutations = pass == total_pass - 1
                                        ? total_mutations - (total_pass - 1) * NUM_MLT_SAMPLERS
                                        : NUM_MLT_SAMPLERS;
 
@@ -332,7 +332,7 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, uint mutat
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        for (uint idx = 0; idx < num_mutations * 2; ++idx) {
+        for (int idx = 0; idx < num_mutations * 2; ++idx) {
             accumulate_samples += 1;
 
             const auto path_sample = &mlt_samples[idx].path_sample;

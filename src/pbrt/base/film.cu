@@ -11,7 +11,7 @@ Film *Film::create_rgb_film(const Filter *filter, const ParameterDictionary &par
     return film;
 }
 
-__global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint width, uint height,
+__global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, int width, int height,
                             Real splat_scale) {
     const auto x = blockIdx.x * blockDim.x + threadIdx.x;
     const auto y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -41,11 +41,11 @@ __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, uint wi
 void Film::copy_to_frame_buffer(uint8_t *gpu_frame_buffer, Real splat_scale) const {
     const auto image_resolution = this->get_resolution();
 
-    constexpr uint thread_width = 16;
-    constexpr uint thread_height = 16;
+    constexpr int thread_width = 16;
+    constexpr int thread_height = 16;
 
-    dim3 blocks(divide_and_ceil(uint(image_resolution.x), thread_width),
-                divide_and_ceil(uint(image_resolution.y), thread_height));
+    dim3 blocks(divide_and_ceil(int(image_resolution.x), thread_width),
+                divide_and_ceil(int(image_resolution.y), thread_height));
     dim3 threads(thread_width, thread_height);
 
     copy_pixels<<<blocks, threads>>>(gpu_frame_buffer, this, image_resolution.x, image_resolution.y,
@@ -63,11 +63,11 @@ void Film::write_to_png(const std::string &filename, Real splat_scale) const {
     SRGBColorEncoding srgb_encoding;
     std::vector<unsigned char> png_pixels(width * height * 4);
 
-    uint nan_pixels = 0;
+    int nan_pixels = 0;
 
-    for (uint y = 0; y < height; y++) {
-        for (uint x = 0; x < width; x++) {
-            uint index = y * width + x;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int index = y * width + x;
             auto rgb = get_pixel_rgb(Point2i(x, y), splat_scale);
             if (rgb.has_nan()) {
                 nan_pixels += 1;

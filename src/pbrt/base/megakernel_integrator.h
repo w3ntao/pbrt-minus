@@ -51,7 +51,7 @@ class MegakernelIntegrator {
     PBRT_CPU_GPU
     SampledSpectrum li(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
-    void render(Film *film, const std::string &sampler_type, uint samples_per_pixel,
+    void render(Film *film, const std::string &sampler_type, int samples_per_pixel,
                 const IntegratorBase *integrator_base, bool preview) const;
 
   private:

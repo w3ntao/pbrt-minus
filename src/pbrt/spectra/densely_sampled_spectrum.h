@@ -15,16 +15,16 @@ class DenselySampledSpectrum {
     void init_from_spectrum(const Spectrum *spectrum);
 
     template <typename F>
-    PBRT_CPU_GPU void init_with_sample_function(F func, uint lambda_min = LAMBDA_MIN,
-                                                uint lambda_max = LAMBDA_MAX) {
-        for (uint lambda = lambda_min; lambda <= lambda_max; ++lambda) {
+    PBRT_CPU_GPU void init_with_sample_function(F func, int lambda_min = LAMBDA_MIN,
+                                                int lambda_max = LAMBDA_MAX) {
+        for (int lambda = lambda_min; lambda <= lambda_max; ++lambda) {
             values[lambda - lambda_min] = func(lambda);
         }
     }
 
     PBRT_CPU_GPU
     bool operator==(const DenselySampledSpectrum &_spectrum) const {
-        for (uint i = 0; i < LAMBDA_RANGE; ++i) {
+        for (int i = 0; i < LAMBDA_RANGE; ++i) {
             if (values[i] != _spectrum.values[i]) {
                 return false;
             }
@@ -49,7 +49,7 @@ class DenselySampledSpectrum {
     SampledSpectrum sample(const SampledWavelengths &lambda) const {
         SampledSpectrum sampled_values;
 
-        for (uint i = 0; i < NSpectrumSamples; ++i) {
+        for (int i = 0; i < NSpectrumSamples; ++i) {
             int floor = std::floor(lambda[i]);
             int ceil = std::ceil(lambda[i]);
             if (floor < LAMBDA_MIN || ceil > LAMBDA_MAX) {
@@ -65,7 +65,7 @@ class DenselySampledSpectrum {
 
     PBRT_CPU_GPU
     void scale(Real s) {
-        for (uint i = 0; i < LAMBDA_RANGE; ++i) {
+        for (int i = 0; i < LAMBDA_RANGE; ++i) {
             values[i] = values[i] * s;
         }
     }

@@ -104,7 +104,7 @@ struct CameraBase {
     }
 
     PBRT_CPU_GPU
-    void approximate_dp_dxy(const Point3f p, const Normal3f n, const uint samples_per_pixel,
+    void approximate_dp_dxy(const Point3f p, const Normal3f n, const int samples_per_pixel,
                             Vector3f *dpdx, Vector3f *dpdy) const {
         auto p_camera = camera_transform.camera_from_render(p);
         auto DownZFromCamera =

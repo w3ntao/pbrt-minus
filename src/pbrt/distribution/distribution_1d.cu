@@ -15,11 +15,11 @@ void Distribution1D::build(const std::vector<Real> &values, GPUMemoryAllocator &
 }
 
 PBRT_CPU_GPU
-cuda::std::pair<uint, Real> Distribution1D::sample(const Real u) const {
+cuda::std::pair<int, Real> Distribution1D::sample(const Real u) const {
     return alias_table->sample(u);
 }
 
 PBRT_CPU_GPU
-Real Distribution1D::get_pdf(const uint idx) const {
+Real Distribution1D::get_pdf(const int idx) const {
     return alias_table->pdfs[idx];
 }

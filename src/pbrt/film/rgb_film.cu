@@ -7,7 +7,7 @@
 #include <pbrt/spectrum_util/rgb_color_space.h>
 
 static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
-    uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= dimension.x * dimension.y) {
         return;
     }
@@ -40,8 +40,8 @@ RGBFilm::RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
 
     pixels = allocator.allocate<Pixel>(resolution.x * resolution.y);
 
-    uint threads = 1024;
-    uint blocks = divide_and_ceil(uint(resolution.x * resolution.y), threads);
+    int threads = 1024;
+    int blocks = divide_and_ceil(int(resolution.x * resolution.y), threads);
 
     init_pixels<<<blocks, threads>>>(pixels, resolution);
     CHECK_CUDA_ERROR(cudaGetLastError());
@@ -65,7 +65,7 @@ Bounds2f RGBFilm::sample_bounds() const {
 }
 
 PBRT_CPU_GPU
-void RGBFilm::add_sample(uint pixel_index, const SampledSpectrum &radiance_l,
+void RGBFilm::add_sample(int pixel_index, const SampledSpectrum &radiance_l,
                          const SampledWavelengths &lambda, Real weight) {
     if (weight == 0) {
         return;

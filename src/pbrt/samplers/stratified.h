@@ -8,20 +8,20 @@
 class StratifiedSampler {
   public:
     PBRT_CPU_GPU
-    StratifiedSampler(uint samples_per_pixel)
-        : samples_per_dimension(static_cast<uint>(std::sqrt(samples_per_pixel))) {
+    StratifiedSampler(int samples_per_pixel)
+        : samples_per_dimension(static_cast<int>(std::sqrt(samples_per_pixel))) {
         if (sqr(samples_per_dimension) != samples_per_pixel) {
             REPORT_FATAL_ERROR();
         }
     }
 
     PBRT_CPU_GPU
-    uint get_samples_per_pixel() const {
+    int get_samples_per_pixel() const {
         return samples_per_dimension * samples_per_dimension;
     }
 
     PBRT_CPU_GPU
-    void start_pixel_sample(const uint _pixel_idx, const uint _sample_idx, const uint _dimension) {
+    void start_pixel_sample(const int _pixel_idx, const int _sample_idx, const int _dimension) {
         pixel_idx = _pixel_idx;
         sample_idx = _sample_idx;
         dimension = _dimension;
@@ -61,10 +61,10 @@ class StratifiedSampler {
     }
 
   private:
-    uint samples_per_dimension;
+    int samples_per_dimension;
 
     RNG rng;
-    uint pixel_idx = 0;
-    uint sample_idx = 0;
-    uint dimension = 0;
+    int pixel_idx = 0;
+    int sample_idx = 0;
+    int dimension = 0;
 };

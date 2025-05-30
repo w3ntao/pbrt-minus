@@ -51,7 +51,7 @@ Point2i remap_pixel_coord(const Point2i p, const Point2i resolution, WrapMode2D 
 
     auto coord = p;
 
-    for (uint c = 0; c < 2; c++) {
+    for (int c = 0; c < 2; c++) {
         if (coord[c] >= 0 && coord[c] < resolution[c]) {
             continue;
         }
@@ -116,7 +116,7 @@ void GPUImage::init_exr(const std::string &filename, GPUMemoryAllocator &allocat
 
     auto gpu_pixels = allocator.allocate<RGB>(width * height);
 
-    for (uint idx = 0; idx < width * height; ++idx) {
+    for (int idx = 0; idx < width * height; ++idx) {
         auto r = out[idx * 4 + 0];
         auto g = out[idx * 4 + 1];
         auto b = out[idx * 4 + 2];
@@ -181,8 +181,8 @@ void GPUImage::init_pfm(const std::string &filename, GPUMemoryAllocator &allocat
     }
 
     auto gpu_pixels = allocator.allocate<RGB>(width * height);
-    for (uint x = 0; x < width; ++x) {
-        for (uint y = 0; y < height; ++y) {
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
             const auto pfm_idx = (width - 1 - y) * width + x;
             const auto image_idx = y * width + x;
 
@@ -214,9 +214,9 @@ void GPUImage::init_png(const std::string &filename, GPUMemoryAllocator &allocat
     auto gpu_pixels = allocator.allocate<RGB>(width * height);
 
     SRGBColorEncoding encoding;
-    for (uint x = 0; x < width; ++x) {
-        for (uint y = 0; y < height; ++y) {
-            uint idx = y * width + x;
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            int idx = y * width + x;
 
             const auto r = rgba_pixels[idx * 4 + 0];
             const auto g = rgba_pixels[idx * 4 + 1];
@@ -250,7 +250,7 @@ void GPUImage::init_tga(const std::string &filename, GPUMemoryAllocator &allocat
 
     SRGBColorEncoding encoding;
     auto gpu_pixels = allocator.allocate<RGB>(width * height);
-    for (uint idx = 0; idx < width * height; ++idx) {
+    for (int idx = 0; idx < width * height; ++idx) {
         const auto r = img[idx * channels + 0];
         const auto g = img[idx * channels + 1];
         const auto b = img[idx * channels + 2];

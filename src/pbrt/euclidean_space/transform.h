@@ -23,8 +23,8 @@ class Transform {
 
     PBRT_CPU_GPU
     explicit Transform(const Real values[16]) {
-        for (uint y = 0; y < 4; ++y) {
-            for (uint x = 0; x < 4; ++x) {
+        for (int y = 0; y < 4; ++y) {
+            for (int x = 0; x < 4; ++x) {
                 auto idx = y * 4 + x;
                 m[y][x] = values[idx];
             }
@@ -35,8 +35,8 @@ class Transform {
 
     PBRT_CPU_GPU
     explicit Transform(const Real values[4][4]) {
-        for (uint y = 0; y < 4; ++y) {
-            for (uint x = 0; x < 4; ++x) {
+        for (int y = 0; y < 4; ++y) {
+            for (int x = 0; x < 4; ++x) {
                 m[y][x] = values[y][x];
             }
         }
@@ -207,8 +207,8 @@ class Transform {
 
     bool swaps_handedness() const {
         SquareMatrix<3> s;
-        for (uint x = 0; x < 3; ++x) {
-            for (uint y = 0; y < 3; ++y) {
+        for (int x = 0; x < 3; ++x) {
+            for (int y = 0; y < 3; ++y) {
                 s[x][y] = m[x][y];
             }
         }
@@ -326,13 +326,13 @@ class Transform {
         // https://stackoverflow.com/a/58630206
 
         auto transformed_bounds = Bounds3f ::empty();
-        for (uint idx = 0; idx < 3; ++idx) {
+        for (int idx = 0; idx < 3; ++idx) {
             transformed_bounds.p_min[idx] = m[idx][3];
         }
         transformed_bounds.p_max = transformed_bounds.p_min;
 
-        for (uint i = 0; i < 3; ++i) {
-            for (uint k = 0; k < 3; ++k) {
+        for (int i = 0; i < 3; ++i) {
+            for (int k = 0; k < 3; ++k) {
                 auto a = m[i][k] * bounds.p_min[k];
                 auto b = m[i][k] * bounds.p_max[k];
 

@@ -50,7 +50,7 @@ void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<Real> &sam
         REPORT_FATAL_ERROR();
     }
 
-    uint n = samples.size() / 2;
+    int n = samples.size() / 2;
     std::vector<Real> cpu_lambdas, cpu_values;
 
     // Extend samples to cover range of visible wavelengths if needed.

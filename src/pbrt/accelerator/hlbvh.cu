@@ -4,13 +4,13 @@
 #include <pbrt/util/stack.h>
 #include <pbrt/util/thread_pool.h>
 
-constexpr uint STACK_SIZE = 128;
+constexpr int STACK_SIZE = 128;
 
-constexpr uint TREELET_MORTON_BITS_PER_DIMENSION = 10;
-constexpr uint BIT_LENGTH_OF_TREELET_MASK = 21;
-constexpr uint MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_OF_TREELET_MASK;
+constexpr int TREELET_MORTON_BITS_PER_DIMENSION = 10;
+constexpr int BIT_LENGTH_OF_TREELET_MASK = 21;
+constexpr int MASK_OFFSET_BIT = TREELET_MORTON_BITS_PER_DIMENSION * 3 - BIT_LENGTH_OF_TREELET_MASK;
 
-constexpr uint MAX_TREELET_NUM = 1 << BIT_LENGTH_OF_TREELET_MASK;
+constexpr int MAX_TREELET_NUM = 1 << BIT_LENGTH_OF_TREELET_MASK;
 /*
  total treelets:        ->    splits for each dimension:
  2 ^ 12 = 4096                2 ^ 4  = 16
@@ -24,7 +24,7 @@ constexpr uint MAX_TREELET_NUM = 1 << BIT_LENGTH_OF_TREELET_MASK;
 
 constexpr uint32_t TREELET_MASK = (MAX_TREELET_NUM - 1) << MASK_OFFSET_BIT;
 
-constexpr uint MAX_PRIMITIVES_NUM_IN_LEAF = 1;
+constexpr int MAX_PRIMITIVES_NUM_IN_LEAF = 1;
 
 [[maybe_unused]] static void _validate_treelet_num() {
     static_assert(BIT_LENGTH_OF_TREELET_MASK > 0 && BIT_LENGTH_OF_TREELET_MASK < 32);
@@ -33,10 +33,10 @@ constexpr uint MAX_PRIMITIVES_NUM_IN_LEAF = 1;
 
 constexpr int MORTON_SCALE = 1 << TREELET_MORTON_BITS_PER_DIMENSION;
 
-constexpr uint NUM_BUCKETS = 24;
+constexpr int NUM_BUCKETS = 24;
 
 PBRT_CPU_GPU
-uint morton_code_to_treelet_idx(const uint morton_code) {
+int morton_code_to_treelet_idx(const int morton_code) {
     const auto masked_morton_code = morton_code & TREELET_MASK;
 
     return masked_morton_code >>
@@ -44,8 +44,8 @@ uint morton_code_to_treelet_idx(const uint morton_code) {
 }
 
 template <typename T>
-__global__ void init_array(T *array, const T val, const uint length) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+__global__ void init_array(T *array, const T val, const int length) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= length) {
         return;
     }
@@ -54,46 +54,45 @@ __global__ void init_array(T *array, const T val, const uint length) {
 }
 
 __global__ void sort_morton_primitives(HLBVH::MortonPrimitive *out,
-                                       const HLBVH::MortonPrimitive *in, uint *counter,
-                                       const uint *offset, const uint num_primitives) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+                                       const HLBVH::MortonPrimitive *in, int *counter,
+                                       const int *offset, const int num_primitives) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_primitives) {
         return;
     }
 
     const auto primitive = &in[worker_idx];
-    const uint treelet_idx = morton_code_to_treelet_idx(primitive->morton_code);
+    const int treelet_idx = morton_code_to_treelet_idx(primitive->morton_code);
 
-    const uint sorted_idx = atomicAdd(&counter[treelet_idx], 1) + offset[treelet_idx];
+    const int sorted_idx = atomicAdd(&counter[treelet_idx], 1) + offset[treelet_idx];
     out[sorted_idx] = *primitive;
 }
 
-__global__ void count_primitives_for_treelets(uint *counter,
+__global__ void count_primitives_for_treelets(int *counter,
                                               const HLBVH::MortonPrimitive *morton_primitives,
-                                              const uint num_primitives) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+                                              const int num_primitives) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_primitives) {
         return;
     }
 
-    const uint morton_code = morton_primitives[worker_idx].morton_code;
-    const uint treelet_idx = morton_code_to_treelet_idx(morton_code);
+    const int morton_code = morton_primitives[worker_idx].morton_code;
+    const int treelet_idx = morton_code_to_treelet_idx(morton_code);
     atomicAdd(&counter[treelet_idx], 1);
 }
 
 __global__ void compute_treelet_bounds(HLBVH::Treelet *treelets,
                                        const HLBVH::MortonPrimitive *morton_primitives) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= MAX_TREELET_NUM) {
         return;
     }
 
-    const uint start = treelets[worker_idx].first_primitive_offset;
-    const uint end =
-        treelets[worker_idx].first_primitive_offset + treelets[worker_idx].n_primitives;
+    const int start = treelets[worker_idx].first_primitive_offset;
+    const int end = treelets[worker_idx].first_primitive_offset + treelets[worker_idx].n_primitives;
 
     Bounds3f bounds;
-    for (uint primitive_idx = start; primitive_idx < end; ++primitive_idx) {
+    for (int primitive_idx = start; primitive_idx < end; ++primitive_idx) {
         bounds += morton_primitives[primitive_idx].bounds;
     }
 
@@ -101,8 +100,8 @@ __global__ void compute_treelet_bounds(HLBVH::Treelet *treelets,
 }
 
 __global__ void hlbvh_init_morton_primitives(HLBVH::MortonPrimitive *morton_primitives,
-                                             const Primitive **primitives, uint num_primitives) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+                                             const Primitive **primitives, int num_primitives) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_primitives) {
         return;
     }
@@ -116,20 +115,20 @@ __global__ void hlbvh_init_morton_primitives(HLBVH::MortonPrimitive *morton_prim
 }
 
 __global__ void hlbvh_init_treelets(HLBVH::Treelet *treelets) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (worker_idx >= MAX_TREELET_NUM) {
         return;
     }
 
-    treelets[worker_idx].first_primitive_offset = std::numeric_limits<uint>::max();
+    treelets[worker_idx].first_primitive_offset = std::numeric_limits<int>::max();
     treelets[worker_idx].n_primitives = 0;
 }
 
 __global__ void hlbvh_compute_morton_code(HLBVH::MortonPrimitive *morton_primitives,
-                                          uint num_total_primitives,
+                                          int num_total_primitives,
                                           const Bounds3f bounds_of_centroids) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= num_total_primitives) {
         return;
     }
@@ -142,21 +141,21 @@ __global__ void hlbvh_compute_morton_code(HLBVH::MortonPrimitive *morton_primiti
         uint32_t(scaled_offset.x), uint32_t(scaled_offset.y), uint32_t(scaled_offset.z));
 }
 
-__global__ void hlbvh_build_bottom_bvh(const HLBVH::BottomBVHArgs *bvh_args_array,
-                                       uint array_length, HLBVH *bvh) {
+__global__ void hlbvh_build_bottom_bvh(const HLBVH::BottomBVHArgs *bvh_args_array, int array_length,
+                                       HLBVH *bvh) {
     bvh->build_bottom_bvh(bvh_args_array, array_length);
 }
 
 __global__ void init_bvh_args(HLBVH::BottomBVHArgs *bvh_args_array,
-                              const HLBVH::BVHBuildNode *bvh_build_nodes, uint *shared_offset,
-                              const uint start, const uint end) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    const uint total_jobs = end - start;
+                              const HLBVH::BVHBuildNode *bvh_build_nodes, int *shared_offset,
+                              const int start, const int end) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int total_jobs = end - start;
     if (worker_idx >= total_jobs) {
         return;
     }
 
-    const uint build_node_idx = worker_idx + start;
+    const int build_node_idx = worker_idx + start;
     const auto &node = bvh_build_nodes[build_node_idx];
 
     if (!node.is_leaf() || node.num_primitives <= MAX_PRIMITIVES_NUM_IN_LEAF) {
@@ -192,7 +191,7 @@ bool HLBVH::fast_intersect(const Ray &ray, Real t_max) const {
         int(inv_dir.z < 0.0),
     };
 
-    Stack<uint, STACK_SIZE> nodes_to_visit;
+    Stack<int, STACK_SIZE> nodes_to_visit;
     nodes_to_visit.push(0);
     while (true) {
         if (nodes_to_visit.empty()) {
@@ -206,9 +205,9 @@ bool HLBVH::fast_intersect(const Ray &ray, Real t_max) const {
         }
 
         if (node.is_leaf()) {
-            for (uint morton_idx = node.first_primitive_idx;
+            for (int morton_idx = node.first_primitive_idx;
                  morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
-                const uint primitive_idx = morton_primitives[morton_idx].primitive_idx;
+                const int primitive_idx = morton_primitives[morton_idx].primitive_idx;
                 auto const primitive = primitives[primitive_idx];
 
                 if (primitive->fast_intersect(ray, t_max)) {
@@ -247,7 +246,7 @@ pbrt::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray, Real t_max) c
         int(inv_dir.z < 0.0),
     };
 
-    Stack<uint, STACK_SIZE> nodes_to_visit;
+    Stack<int, STACK_SIZE> nodes_to_visit;
     nodes_to_visit.push(0);
 
     while (true) {
@@ -262,9 +261,9 @@ pbrt::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray, Real t_max) c
         }
 
         if (node.is_leaf()) {
-            for (uint morton_idx = node.first_primitive_idx;
+            for (int morton_idx = node.first_primitive_idx;
                  morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
-                const uint primitive_idx = morton_primitives[morton_idx].primitive_idx;
+                const int primitive_idx = morton_primitives[morton_idx].primitive_idx;
                 auto const primitive = primitives[primitive_idx];
 
                 auto intersection = primitive->intersect(ray, best_t);
@@ -291,8 +290,8 @@ pbrt::optional<ShapeIntersection> HLBVH::intersect(const Ray &ray, Real t_max) c
 };
 
 PBRT_GPU
-void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_length) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, int array_length) {
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= array_length) {
         return;
     }
@@ -304,11 +303,11 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
     }
 
     const auto &node = build_nodes[args.build_node_idx];
-    uint left_child_idx = args.left_child_idx + 0;
-    uint right_child_idx = args.left_child_idx + 1;
+    int left_child_idx = args.left_child_idx + 0;
+    int right_child_idx = args.left_child_idx + 1;
 
     Bounds3f bounds_of_centroid;
-    for (uint morton_idx = node.first_primitive_idx;
+    for (int morton_idx = node.first_primitive_idx;
          morton_idx < node.first_primitive_idx + node.num_primitives; morton_idx++) {
         bounds_of_centroid += morton_primitives[morton_idx].centroid;
     }
@@ -316,9 +315,9 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
     auto split_dimension = bounds_of_centroid.max_dimension();
     auto split_val = bounds_of_centroid.centroid()[split_dimension];
 
-    uint mid_idx = partition_morton_primitives(node.first_primitive_idx,
-                                               node.first_primitive_idx + node.num_primitives,
-                                               split_dimension, split_val);
+    int mid_idx = partition_morton_primitives(node.first_primitive_idx,
+                                              node.first_primitive_idx + node.num_primitives,
+                                              split_dimension, split_val);
 
     if (DEBUG_MODE) {
         bool kill_thread = false;
@@ -330,7 +329,7 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
             kill_thread = true;
         }
 
-        for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
+        for (int morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
             if (morton_primitives[morton_idx].centroid[split_dimension] >= split_val) {
                 printf("ERROR in partitioning (1st half) at node[%u], idx: %u\n",
                        args.build_node_idx, morton_idx);
@@ -338,7 +337,7 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
             }
         }
 
-        for (uint morton_idx = mid_idx; morton_idx < node.first_primitive_idx + node.num_primitives;
+        for (int morton_idx = mid_idx; morton_idx < node.first_primitive_idx + node.num_primitives;
              morton_idx++) {
             if (morton_primitives[morton_idx].centroid[split_dimension] < split_val) {
                 printf("ERROR in partitioning (2nd half) at node[%u], idx: %u\n",
@@ -364,12 +363,12 @@ void HLBVH::build_bottom_bvh(const BottomBVHArgs *bvh_args_array, uint array_len
     }
 
     Bounds3f left_bounds;
-    for (uint morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
+    for (int morton_idx = node.first_primitive_idx; morton_idx < mid_idx; morton_idx++) {
         left_bounds += morton_primitives[morton_idx].bounds;
     }
 
     Bounds3f right_bounds;
-    for (uint morton_idx = mid_idx; morton_idx < node.first_primitive_idx + node.num_primitives;
+    for (int morton_idx = mid_idx; morton_idx < node.first_primitive_idx + node.num_primitives;
          morton_idx++) {
         right_bounds += morton_primitives[morton_idx].bounds;
     }
@@ -406,9 +405,9 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
     CHECK_CUDA_ERROR(cudaMemcpy(primitives, gpu_primitives.data(),
                                 sizeof(Primitive *) * num_primtives, cudaMemcpyHostToDevice));
 
-    constexpr uint threads = 1024;
+    constexpr int threads = 1024;
     {
-        const uint blocks = divide_and_ceil(num_primtives, threads);
+        const int blocks = divide_and_ceil(num_primtives, threads);
         hlbvh_init_morton_primitives<<<blocks, threads>>>(morton_primitives, primitives,
                                                           num_primtives);
         CHECK_CUDA_ERROR(cudaGetLastError());
@@ -416,14 +415,14 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
     }
 
     {
-        const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
+        const int blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
         hlbvh_init_treelets<<<blocks, threads>>>(sparse_treelets);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     Bounds3f bounds_of_primitives_centroids;
-    for (uint idx = 0; idx < num_primtives; idx++) {
+    for (int idx = 0; idx < num_primtives; idx++) {
         bounds_of_primitives_centroids += morton_primitives[idx].bounds.centroid();
     }
     auto max_dim = bounds_of_primitives_centroids.max_dimension();
@@ -432,7 +431,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
                   2;
     auto adjusted_p_min = bounds_of_primitives_centroids.p_min;
     auto adjusted_p_max = bounds_of_primitives_centroids.p_max;
-    for (uint dim = 0; dim < 3; ++dim) {
+    for (int dim = 0; dim < 3; ++dim) {
         if (dim == max_dim) {
             continue;
         }
@@ -444,49 +443,49 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
     // after adjusting bounds, all treelets grids are of the same size
 
     {
-        const uint blocks = divide_and_ceil(num_primtives, threads);
+        const int blocks = divide_and_ceil(num_primtives, threads);
         hlbvh_compute_morton_code<<<blocks, threads>>>(morton_primitives, num_primtives,
                                                        bounds_of_primitives_centroids);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
-    auto primitives_counter = local_allocator.allocate<uint>(MAX_TREELET_NUM);
-    auto primitives_indices_offset = local_allocator.allocate<uint>(MAX_TREELET_NUM);
+    auto primitives_counter = local_allocator.allocate<int>(MAX_TREELET_NUM);
+    auto primitives_indices_offset = local_allocator.allocate<int>(MAX_TREELET_NUM);
 
     {
-        const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
+        const int blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
 
-        init_array<<<blocks, threads>>>(primitives_counter, uint(0), MAX_TREELET_NUM);
-        init_array<<<blocks, threads>>>(primitives_indices_offset, uint(0), MAX_TREELET_NUM);
+        init_array<<<blocks, threads>>>(primitives_counter, int(0), MAX_TREELET_NUM);
+        init_array<<<blocks, threads>>>(primitives_indices_offset, int(0), MAX_TREELET_NUM);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     {
-        const uint blocks = divide_and_ceil(num_primtives, threads);
+        const int blocks = divide_and_ceil(num_primtives, threads);
         count_primitives_for_treelets<<<blocks, threads>>>(primitives_counter, morton_primitives,
                                                            num_primtives);
 
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
-    for (uint idx = 1; idx < MAX_TREELET_NUM; ++idx) {
+    for (int idx = 1; idx < MAX_TREELET_NUM; ++idx) {
         primitives_indices_offset[idx] =
             primitives_indices_offset[idx - 1] + primitives_counter[idx - 1];
     }
 
     {
-        const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
+        const int blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
 
-        init_array<<<blocks, threads>>>(primitives_counter, uint(0), MAX_TREELET_NUM);
+        init_array<<<blocks, threads>>>(primitives_counter, int(0), MAX_TREELET_NUM);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
     auto buffer_morton_primitives = local_allocator.allocate<MortonPrimitive>(num_primtives);
     {
-        const uint blocks = divide_and_ceil(num_primtives, threads);
+        const int blocks = divide_and_ceil(num_primtives, threads);
         sort_morton_primitives<<<blocks, threads>>>(buffer_morton_primitives, morton_primitives,
                                                     primitives_counter, primitives_indices_offset,
                                                     num_primtives);
@@ -497,7 +496,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
     CHECK_CUDA_ERROR(cudaMemcpy(morton_primitives, buffer_morton_primitives,
                                 sizeof(MortonPrimitive) * num_primtives, cudaMemcpyDeviceToDevice));
 
-    for (uint treelet_idx = 0; treelet_idx < MAX_TREELET_NUM; ++treelet_idx) {
+    for (int treelet_idx = 0; treelet_idx < MAX_TREELET_NUM; ++treelet_idx) {
         sparse_treelets[treelet_idx].first_primitive_offset =
             primitives_indices_offset[treelet_idx];
         sparse_treelets[treelet_idx].n_primitives = primitives_counter[treelet_idx];
@@ -505,18 +504,18 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
     }
     {
         // compute bounds
-        const uint blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
+        const int blocks = divide_and_ceil(MAX_TREELET_NUM, threads);
         compute_treelet_bounds<<<blocks, threads>>>(sparse_treelets, morton_primitives);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
 
-    std::vector<uint> dense_treelet_indices;
+    std::vector<int> dense_treelet_indices;
     {
-        uint max_primitive_num_in_a_treelet = 0;
-        uint verify_counter = 0;
-        for (uint idx = 0; idx < MAX_TREELET_NUM; idx++) {
-            uint current_treelet_primitives_num = sparse_treelets[idx].n_primitives;
+        int max_primitive_num_in_a_treelet = 0;
+        int verify_counter = 0;
+        for (int idx = 0; idx < MAX_TREELET_NUM; idx++) {
+            int current_treelet_primitives_num = sparse_treelets[idx].n_primitives;
             if (current_treelet_primitives_num <= 0) {
                 continue;
             }
@@ -541,12 +540,12 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
     }
 
     auto dense_treelets = local_allocator.allocate<Treelet>(dense_treelet_indices.size());
-    for (uint idx = 0; idx < dense_treelet_indices.size(); idx++) {
-        const uint sparse_idx = dense_treelet_indices[idx];
+    for (int idx = 0; idx < dense_treelet_indices.size(); idx++) {
+        const int sparse_idx = dense_treelet_indices[idx];
         dense_treelets[idx] = sparse_treelets[sparse_idx];
     }
 
-    uint max_build_node_length = (2 * dense_treelet_indices.size() + 1) + (2 * num_primtives + 1);
+    int max_build_node_length = (2 * dense_treelet_indices.size() + 1) + (2 * num_primtives + 1);
 
     build_nodes = allocator.allocate<BVHBuildNode>(max_build_node_length);
 
@@ -554,34 +553,34 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
 
     ThreadPool thread_pool;
     // TODO: increase thread_num in ThreadPool when building top BVH
-    const uint top_bvh_node_num =
+    const int top_bvh_node_num =
         build_top_bvh_for_treelets(dense_treelets, dense_treelet_indices.size(), thread_pool);
 
     auto start_bottom_bvh = std::chrono::system_clock::now();
 
-    uint start = 0;
-    uint end = top_bvh_node_num;
+    int start = 0;
+    int end = top_bvh_node_num;
 
-    auto shared_offset = local_allocator.allocate<uint>();
+    auto shared_offset = local_allocator.allocate<int>();
     *shared_offset = end;
 
-    uint depth = 0;
+    int depth = 0;
 
-    uint last_allocated_size = (end - start) * 4;
+    int last_allocated_size = (end - start) * 4;
     auto bvh_args_array = local_allocator.allocate<BottomBVHArgs>(last_allocated_size);
 
     while (end > start) {
-        const uint array_length = end - start;
+        const int array_length = end - start;
 
         if (array_length > last_allocated_size) {
             // to avoid unnecessarily repeated memory allocation
-            uint current_size = array_length;
+            int current_size = array_length;
             bvh_args_array = local_allocator.allocate<BottomBVHArgs>(current_size);
             last_allocated_size = current_size;
         }
 
         {
-            uint blocks = divide_and_ceil(array_length, threads);
+            int blocks = divide_and_ceil(array_length, threads);
             init_bvh_args<<<blocks, threads>>>(bvh_args_array, build_nodes, shared_offset, start,
                                                end);
             CHECK_CUDA_ERROR(cudaGetLastError());
@@ -596,7 +595,7 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
         start = end;
         end = *shared_offset;
 
-        uint blocks = divide_and_ceil(array_length, threads);
+        int blocks = divide_and_ceil(array_length, threads);
 
         hlbvh_build_bottom_bvh<<<blocks, threads>>>(bvh_args_array, array_length, this);
         CHECK_CUDA_ERROR(cudaGetLastError());
@@ -621,11 +620,11 @@ void HLBVH::build_bvh(const std::vector<const Primitive *> &gpu_primitives, cons
            tag.c_str());
 }
 
-uint HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, const uint num_dense_treelets,
-                                       ThreadPool &thread_pool) {
-    std::vector<uint> treelet_indices;
+int HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, const int num_dense_treelets,
+                                      ThreadPool &thread_pool) {
+    std::vector<int> treelet_indices;
     treelet_indices.reserve(num_dense_treelets);
-    for (uint idx = 0; idx < num_dense_treelets; idx++) {
+    for (int idx = 0; idx < num_dense_treelets; idx++) {
         treelet_indices.emplace_back(idx);
     }
 
@@ -646,11 +645,11 @@ uint HLBVH::build_top_bvh_for_treelets(const Treelet *treelets, const uint num_d
     return node_count.load();
 }
 
-void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indices,
+void HLBVH::build_upper_sah(int build_node_idx, std::vector<int> treelet_indices,
                             const Treelet *treelets, std::atomic_int &node_count,
                             ThreadPool &thread_pool, bool spawn) {
     if (treelet_indices.size() == 1) {
-        uint treelet_idx = treelet_indices[0];
+        int treelet_idx = treelet_indices[0];
         const auto &current_treelet = treelets[treelet_idx];
 
         build_nodes[build_node_idx].init_leaf(current_treelet.first_primitive_offset,
@@ -674,9 +673,9 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
     }
 
     struct BVHSplitBucket {
-        uint count = 0;
+        int count = 0;
         Bounds3f bounds = Bounds3f ::empty();
-        std::vector<uint> treelet_indices;
+        std::vector<int> treelet_indices;
     };
     BVHSplitBucket buckets[NUM_BUCKETS];
     for (auto &bucket : buckets) {
@@ -691,7 +690,7 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
         const auto treelet = &treelets[treelet_idx];
 
         auto centroid_val = treelet->bounds.centroid()[split_axis];
-        uint bucket_idx = NUM_BUCKETS * ((centroid_val - base_val) / span);
+        int bucket_idx = NUM_BUCKETS * ((centroid_val - base_val) / span);
 
         if (bucket_idx > NUM_BUCKETS) {
             REPORT_FATAL_ERROR();
@@ -709,18 +708,18 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
 
     // Compute costs for splitting after each bucket
     Real sah_cost[NUM_BUCKETS - 1];
-    for (uint split_idx = 0; split_idx < NUM_BUCKETS - 1; ++split_idx) {
+    for (int split_idx = 0; split_idx < NUM_BUCKETS - 1; ++split_idx) {
         Bounds3f bounds_left;
         Bounds3f bounds_right;
-        uint count_left = 0;
-        uint count_right = 0;
+        int count_left = 0;
+        int count_right = 0;
 
-        for (uint left = 0; left <= split_idx; ++left) {
+        for (int left = 0; left <= split_idx; ++left) {
             bounds_left += buckets[left].bounds;
             count_left += buckets[left].count;
         }
 
-        for (uint right = split_idx + 1; right < NUM_BUCKETS; ++right) {
+        for (int right = split_idx + 1; right < NUM_BUCKETS; ++right) {
             bounds_right += buckets[right].bounds;
             count_right += buckets[right].count;
         }
@@ -732,25 +731,25 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
 
     // Find bucket to split at that minimizes SAH metric
     Real min_cost_so_far = sah_cost[0];
-    uint min_cost_split = 0;
-    for (uint idx = 1; idx < NUM_BUCKETS - 1; ++idx) {
+    int min_cost_split = 0;
+    for (int idx = 1; idx < NUM_BUCKETS - 1; ++idx) {
         if (sah_cost[idx] < min_cost_so_far) {
             min_cost_so_far = sah_cost[idx];
             min_cost_split = idx;
         }
     }
 
-    std::vector<uint> left_indices;
-    std::vector<uint> right_indices;
+    std::vector<int> left_indices;
+    std::vector<int> right_indices;
     left_indices.reserve(treelet_indices.size());
     right_indices.reserve(treelet_indices.size());
 
-    for (uint idx = 0; idx <= min_cost_split; ++idx) {
+    for (int idx = 0; idx <= min_cost_split; ++idx) {
         left_indices.insert(left_indices.end(), buckets[idx].treelet_indices.begin(),
                             buckets[idx].treelet_indices.end());
     }
 
-    for (uint idx = min_cost_split + 1; idx < NUM_BUCKETS; ++idx) {
+    for (int idx = min_cost_split + 1; idx < NUM_BUCKETS; ++idx) {
         right_indices.insert(right_indices.end(), buckets[idx].treelet_indices.begin(),
                              buckets[idx].treelet_indices.end());
     }
@@ -778,7 +777,7 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
 
     if (DEBUG_MODE) {
         // check missing indices
-        std::vector<uint> combined_indices = left_indices;
+        std::vector<int> combined_indices = left_indices;
         combined_indices.insert(combined_indices.end(), right_indices.begin(), right_indices.end());
 
         auto treelet_indices_copy = treelet_indices;
@@ -793,13 +792,13 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
 
     treelet_indices.clear();
 
-    const uint left_build_node_idx = node_count.fetch_add(2);
-    const uint right_build_node_idx = left_build_node_idx + 1;
+    const int left_build_node_idx = node_count.fetch_add(2);
+    const int right_build_node_idx = left_build_node_idx + 1;
 
     build_nodes[build_node_idx].init_interior(split_axis, left_build_node_idx,
                                               full_bounds_of_current_level);
 
-    constexpr uint MIN_SIZE_TO_SPAWN = 64;
+    constexpr int MIN_SIZE_TO_SPAWN = 64;
     // don't bother to send jobs into queue when the size is too small
 
     if (spawn && left_indices.size() >= MIN_SIZE_TO_SPAWN) {
@@ -826,13 +825,13 @@ void HLBVH::build_upper_sah(uint build_node_idx, std::vector<uint> treelet_indic
 }
 
 PBRT_GPU
-uint HLBVH::partition_morton_primitives(const uint start, const uint end,
-                                        const uint8_t split_dimension, const Real split_val) {
+int HLBVH::partition_morton_primitives(const int start, const int end,
+                                       const uint8_t split_dimension, const Real split_val) {
     // taken and modified from
     // https://users.cs.duke.edu/~reif/courses/alglectures/littman.lectures/lect05/node27.html
 
-    uint left = start;
-    uint right = end - 1;
+    int left = start;
+    int right = end - 1;
 
     while (true) {
         while (morton_primitives[right].centroid[split_dimension] >= split_val && right > start) {

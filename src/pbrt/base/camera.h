@@ -27,7 +27,7 @@ class Camera : public HIDDEN::CameraVariants {
     }
 
     PBRT_CPU_GPU
-    void approximate_dp_dxy(const Point3f p, const Normal3f n, uint samples_per_pixel,
+    void approximate_dp_dxy(const Point3f p, const Normal3f n, int samples_per_pixel,
                             Vector3f *dpdx, Vector3f *dpdy) const {
         get_camerabase()->approximate_dp_dxy(p, n, samples_per_pixel, dpdx, dpdy);
     }

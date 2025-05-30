@@ -12,7 +12,7 @@ class HashMap {
         uint64_t value;
     };
 
-    static HashMap *create(uint capacity, GPUMemoryAllocator &allocator);
+    static HashMap *create(int capacity, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     uint64_t lookup(uint64_t key) const;
@@ -22,6 +22,6 @@ class HashMap {
 
   private:
     KeyValue *items;
-    uint size;
-    uint capacity;
+    int size;
+    int capacity;
 };

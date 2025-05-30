@@ -43,7 +43,7 @@ struct WrapMode2D {
     WrapMode2D(WrapMode x, WrapMode y) : wrap{x, y} {}
 
     PBRT_CPU_GPU
-    WrapMode operator[](const uint idx) const {
+    WrapMode operator[](const int idx) const {
         return wrap[idx];
     }
 

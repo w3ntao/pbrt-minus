@@ -31,7 +31,7 @@ const GlobalSpectra *GlobalSpectra::create(RGBtoSpectrumData::Gamut gamut,
 
     auto global_spectra = allocator.allocate<GlobalSpectra>();
 
-    for (uint idx = 0; idx < 3; ++idx) {
+    for (int idx = 0; idx < 3; ++idx) {
         global_spectra->cie_xyz[idx] = cie_xyz[idx];
     }
     global_spectra->cie_y = cie_xyz[1];

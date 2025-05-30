@@ -20,10 +20,10 @@ struct IntegratorBase {
     const Filter *filter;
 
     const Light **lights;
-    uint light_num;
+    int light_num;
 
     const Light **infinite_lights;
-    uint infinite_light_num;
+    int infinite_light_num;
 
     const PowerLightSampler *light_sampler;
 

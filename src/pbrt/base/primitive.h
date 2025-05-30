@@ -26,15 +26,15 @@ class Primitive {
 
     static const Primitive *create_geometric_primitives(const Shape *shapes,
                                                         const Material *material,
-                                                        const Light *diffuse_area_light, uint num,
+                                                        const Light *diffuse_area_light, int num,
                                                         GPUMemoryAllocator &allocator);
 
     static const Primitive *create_simple_primitives(const Shape *shapes, const Material *material,
-                                                     uint num, GPUMemoryAllocator &allocator);
+                                                     int num, GPUMemoryAllocator &allocator);
 
     static const Primitive *create_transformed_primitives(const Primitive *base_primitives,
                                                           const Transform &render_from_primitive,
-                                                          uint num, GPUMemoryAllocator &allocator);
+                                                          int num, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     void init(const HLBVH *hlbvh);
@@ -54,7 +54,7 @@ class Primitive {
     PBRT_CPU_GPU
     Bounds3f bounds() const;
 
-    void record_material(std::map<std::string, uint> &counter) const;
+    void record_material(std::map<std::string, int> &counter) const;
 
     PBRT_CPU_GPU
     bool fast_intersect(const Ray &ray, Real t_max) const;

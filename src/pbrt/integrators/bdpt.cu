@@ -186,7 +186,7 @@ SampledSpectrum Vertex::Le(const Light **infinite_lights, int num_infinite_light
         // Return emitted radiance for infinite light sources
         SampledSpectrum Le(0.f);
 
-        for (uint idx = 0; idx < num_infinite_lights; ++idx) {
+        for (int idx = 0; idx < num_infinite_lights; ++idx) {
             auto light = infinite_lights[idx];
             Le += light->le(Ray(p(), -w), lambda);
         }
@@ -687,9 +687,9 @@ BDPTIntegrator *BDPTIntegrator::create(int samples_per_pixel, const std::string 
 
 __global__ void wavefront_render(BDPTSample *bdpt_samples, FilmSample *film_samples,
                                  int *film_sample_counter, Vertex *global_camera_vertices,
-                                 Vertex *global_light_vertices, uint pass, uint samples_per_pixel,
+                                 Vertex *global_light_vertices, int pass, int samples_per_pixel,
                                  const Point2i film_resolution, BDPTIntegrator *bdpt_integrator) {
-    const uint worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_SAMPLERS) {
         return;
     }
@@ -733,7 +733,7 @@ __global__ void wavefront_render(BDPTSample *bdpt_samples, FilmSample *film_samp
     rendered_sample->lambda = lambda;
 }
 
-void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool preview) {
+void BDPTIntegrator::render(Film *film, int samples_per_pixel, const bool preview) {
     const auto image_resolution = film->get_resolution();
 
     GPUMemoryAllocator local_allocator;
@@ -756,19 +756,19 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
 
     auto num_pixels = image_resolution.x * image_resolution.y;
 
-    constexpr uint threads = 32;
-    const uint blocks = divide_and_ceil<uint>(NUM_SAMPLERS, threads);
+    constexpr int threads = 32;
+    const int blocks = divide_and_ceil<int>(NUM_SAMPLERS, threads);
 
     auto total_pass = divide_and_ceil<long long>(num_pixels * samples_per_pixel, NUM_SAMPLERS);
 
-    for (uint pass = 0; pass < total_pass; ++pass) {
+    for (int pass = 0; pass < total_pass; ++pass) {
         *film_sample_counter = 0;
         wavefront_render<<<blocks, threads>>>(bdpt_samples, film_samples, film_sample_counter,
                                               global_camera_vertices, global_light_vertices, pass,
                                               samples_per_pixel, film->get_resolution(), this);
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        for (uint idx = 0; idx < NUM_SAMPLERS; ++idx) {
+        for (int idx = 0; idx < NUM_SAMPLERS; ++idx) {
             const auto global_idx = (long long)(pass)*NUM_SAMPLERS + idx;
             const auto sample_idx = global_idx / num_pixels;
             if (sample_idx >= samples_per_pixel) {
@@ -784,7 +784,7 @@ void BDPTIntegrator::render(Film *film, uint samples_per_pixel, const bool previ
             std::sort(film_samples + 0, film_samples + (*film_sample_counter), std::less{});
         }
 
-        for (uint idx = 0; idx < *film_sample_counter; ++idx) {
+        for (int idx = 0; idx < *film_sample_counter; ++idx) {
             const auto sample = &film_samples[idx];
             film->add_splat(sample->p_film, sample->l_path, sample->lambda);
         }
