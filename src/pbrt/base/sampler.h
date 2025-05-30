@@ -2,12 +2,12 @@
 
 #include <pbrt/euclidean_space/point2.h>
 
-struct CameraSample;
 class Filter;
 class GPUMemoryAllocator;
 class IndependentSampler;
 class MLTSampler;
 class StratifiedSampler;
+struct CameraSample;
 
 class Sampler {
   public:

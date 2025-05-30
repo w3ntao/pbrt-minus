@@ -1,9 +1,9 @@
+#include <pbrt/base/integrator_base.h>
 #include <pbrt/base/interaction.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/integrators/surface_normal.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
-
-#include <pbrt/gpu/gpu_memory_allocator.h>
 
 const SurfaceNormalIntegrator *
 SurfaceNormalIntegrator::create(const ParameterDictionary &parameters,

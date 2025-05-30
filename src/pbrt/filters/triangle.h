@@ -1,7 +1,6 @@
 #pragma once
 
 #include <pbrt/euclidean_space/point2.h>
-#include <pbrt/euclidean_space/vector2.h>
 #include <pbrt/util/math.h>
 
 class GPUMemoryAllocator;

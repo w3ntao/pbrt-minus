@@ -35,7 +35,6 @@ class MLTSampler {
     RNG rng;
 
     PrimarySample samples[LENGTH];
-    // TODO: MLTSampler: rewrite samples array, big array ruin SIMD
 
     // MLTSampler Private Members
     int mutations_per_pixel;
@@ -93,12 +92,6 @@ class MLTSampler {
     PBRT_CPU_GPU
     int get_next_index() {
         return stream_index + stream_count * sample_index++;
-    }
-
-    PBRT_CPU_GPU
-    void start_pixel_sample(uint, uint, uint) {
-        printf("\nERROR: you should never invoke %s() for MLT sampler\n", __func__);
-        REPORT_FATAL_ERROR();
     }
 
     PBRT_CPU_GPU

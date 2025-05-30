@@ -1,12 +1,13 @@
 #pragma once
 
-#include <pbrt/samplers/mlt.h>
-#include <pbrt/spectrum_util/sampled_spectrum.h>
+#include <pbrt/base/spectrum.h>
 
 class Film;
 class GPUMemoryAllocator;
 class GreyScaleFilm;
 class ParameterDictionary;
+
+class MLTSampler;
 class Sampler;
 
 struct BDPTConfig;
@@ -48,7 +49,7 @@ class MLTBDPTIntegrator {
 
     PBRT_CPU_GPU
     Real compute_luminance(const SampledSpectrum &radiance,
-                                const SampledWavelengths &lambda) const {
+                           const SampledWavelengths &lambda) const {
         return radiance.y(lambda, cie_y);
     }
 

@@ -2,19 +2,64 @@
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
-#include <pbrt/base/interaction.h>
-#include <pbrt/base/material.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/lights/image_infinite_light.h>
-#include <pbrt/samplers/independent.h>
-#include <pbrt/samplers/stratified.h>
 #include <pbrt/scene/parameter_dictionary.h>
 
 constexpr size_t NUM_SAMPLERS = 64 * 1024;
+
+struct FilmSample {
+    Point2f p_film;
+    SampledSpectrum l_path;
+    SampledWavelengths lambda;
+
+    // to help sorting
+    PBRT_CPU_GPU
+    bool operator<(const FilmSample &right) const {
+        if (p_film.x < right.p_film.x) {
+            return true;
+        }
+        if (p_film.x > right.p_film.x) {
+            return false;
+        }
+
+        if (p_film.y < right.p_film.y) {
+            return true;
+        }
+        if (p_film.y > right.p_film.y) {
+            return false;
+        }
+
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
+            if (l_path[idx] < right.l_path[idx]) {
+                return true;
+            }
+            if (l_path[idx] > right.l_path[idx]) {
+                return false;
+            }
+
+            if (lambda[idx] < right.lambda[idx]) {
+                return true;
+            }
+            if (lambda[idx] > right.lambda[idx]) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+};
+
+struct BDPTSample {
+    Point2i p_pixel;
+    Real weight;
+    SampledSpectrum l_path;
+    SampledWavelengths lambda;
+};
 
 PBRT_CPU_GPU
 Real infinite_light_density(const Light **infinite_lights, int num_infinite_lights,

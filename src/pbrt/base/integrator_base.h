@@ -6,14 +6,13 @@
 class Camera;
 class Filter;
 class HLBVH;
+class Interaction;
 class Light;
 class UniformLightSampler;
 class PowerLightSampler;
-
-struct ShapeIntersection;
-
 class Ray;
-class Interaction;
+class SampledSpectrum;
+struct ShapeIntersection;
 
 struct IntegratorBase {
     const HLBVH *bvh;

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <pbrt/accelerator/hlbvh.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/ray.h>
-#include <pbrt/base/sampler.h>
+#include <pbrt/base/spectrum.h>
 
 class GPUMemoryAllocator;
 class ParameterDictionary;
+class Sampler;
 
 struct IntegratorBase;
 

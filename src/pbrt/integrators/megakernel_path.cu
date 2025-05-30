@@ -1,8 +1,5 @@
 #include <pbrt/accelerator/hlbvh.h>
-#include <pbrt/base/bxdf.h>
 #include <pbrt/base/integrator_base.h>
-#include <pbrt/base/interaction.h>
-#include <pbrt/base/material.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/integrators/megakernel_path.h>

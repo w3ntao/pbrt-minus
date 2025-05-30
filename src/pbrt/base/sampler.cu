@@ -86,7 +86,8 @@ void Sampler::start_pixel_sample(uint pixel_idx, uint sample_idx, uint dimension
     }
 
     case Type::mlt: {
-        static_cast<MLTSampler *>(ptr)->start_pixel_sample(pixel_idx, sample_idx, dimension);
+        printf("\nERROR: you should never invoke %s() for MLT sampler\n", __func__);
+        REPORT_FATAL_ERROR();
         return;
     }
 

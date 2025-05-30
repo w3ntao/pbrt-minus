@@ -1,9 +1,10 @@
+#include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/sampler.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/integrators/ambient_occlusion.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>
-
-#include <pbrt/gpu/gpu_memory_allocator.h>
 
 const AmbientOcclusionIntegrator *
 AmbientOcclusionIntegrator::create(const ParameterDictionary &parameters,

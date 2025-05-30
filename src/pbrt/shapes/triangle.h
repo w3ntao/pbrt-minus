@@ -6,9 +6,9 @@
 #include <pbrt/shapes/triangle_mesh.h>
 #include <pbrt/util/sampling.h>
 
-class ShapeSampleContext;
-class ShapeSample;
 struct ShapeIntersection;
+struct ShapeSample;
+struct ShapeSampleContext;
 
 class Triangle {
   public:
@@ -96,9 +96,10 @@ class Triangle {
     }
 
     PBRT_CPU_GPU
-    pbrt::optional<Triangle::TriangleIntersection>
-    intersect_triangle(const Ray &ray, Real t_max, const Point3f &p0, const Point3f &p1,
-                       const Point3f &p2) const;
+    pbrt::optional<Triangle::TriangleIntersection> intersect_triangle(const Ray &ray, Real t_max,
+                                                                      const Point3f &p0,
+                                                                      const Point3f &p1,
+                                                                      const Point3f &p2) const;
 
     PBRT_CPU_GPU
     SurfaceInteraction interaction_from_intersection(const TriangleIntersection &ti,

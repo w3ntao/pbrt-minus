@@ -1,12 +1,12 @@
 #pragma once
 
-#include <pbrt/base/integrator_base.h>
 #include <pbrt/base/spectrum.h>
 #include <pbrt/spectra/rgb_albedo_spectrum.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>
 
 class GPUMemoryAllocator;
 class ParameterDictionary;
+struct IntegratorBase;
 
 class SurfaceNormalIntegrator {
   public:

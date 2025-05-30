@@ -9,6 +9,7 @@
 #include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/integrators/mlt_bdpt.h>
+#include <pbrt/samplers/mlt.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 
