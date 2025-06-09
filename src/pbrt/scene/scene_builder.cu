@@ -250,12 +250,6 @@ void SceneBuilder::build_integrator() {
         samples_per_pixel = 4;
     }
 
-    if (sampler_type == "stratified" && integrator_name->find("mlt") == std::string::npos) {
-        // MLT integrator ues it's own sampler
-        const auto sqrt_val = static_cast<int>(std::sqrt(samples_per_pixel.value()));
-        samples_per_pixel = sqr(sqrt_val);
-    }
-
     if (integrator_name == "volpath") {
         integrator_name = "path";
     }
@@ -392,6 +386,13 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
 
     if (keyword == "Sampler") {
         const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
+
+        sampler_type = tokens[1].values[0];
+        if (!(sampler_type == "independent" || sampler_type == "stratified")) {
+            printf("\n%sWARNING: Sampler `%s` not supported, changed to stratified%s\n\n",
+                   FLAG_COLORFUL_PRINT_RED_START, sampler_type.c_str(), FLAG_COLORFUL_PRINT_END);
+            sampler_type = "stratified";
+        }
 
         if (!samples_per_pixel.has_value()) {
             samples_per_pixel = parameters.get_integer("pixelsamples", 4);
