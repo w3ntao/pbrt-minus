@@ -32,6 +32,12 @@ struct CommandLineOption {
                 if (argument == "--spp") {
                     samples_per_pixel = stoi(read_next_argument());
                     idx += 2;
+
+                    if (const int spp = samples_per_pixel.value(); spp <= 0) {
+                        printf("\nERROR: illegal spp `%d`\n", spp);
+                        REPORT_FATAL_ERROR();
+                    }
+
                     continue;
                 }
 

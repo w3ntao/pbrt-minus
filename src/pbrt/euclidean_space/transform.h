@@ -11,12 +11,12 @@ class Ray;
 class SurfaceInteraction;
 
 class Transform {
-  private:
     SquareMatrix<4> m;
     SquareMatrix<4> inv_m;
 
   public:
-    PBRT_CPU_GPU Transform() {
+    PBRT_CPU_GPU
+    Transform() {
         m = SquareMatrix<4>::identity();
         inv_m = m;
     }
@@ -53,7 +53,8 @@ class Transform {
     PBRT_CPU_GPU
     Transform(const SquareMatrix<4> &_m, const SquareMatrix<4> &_inv_m) : m(_m), inv_m(_inv_m) {}
 
-    PBRT_CPU_GPU static Transform identity() {
+    PBRT_CPU_GPU
+    static Transform identity() {
         return {};
     }
 
@@ -106,7 +107,8 @@ class Transform {
         return Transform(SquareMatrix(data_m), SquareMatrix(data_m_inv));
     }
 
-    PBRT_CPU_GPU static Transform translate(Real x, Real y, Real z) {
+    PBRT_CPU_GPU
+    static Transform translate(Real x, Real y, Real z) {
         const Real data_m[4][4] = {
             {1, 0, 0, x},
             {0, 1, 0, y},

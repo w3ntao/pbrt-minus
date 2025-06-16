@@ -937,6 +937,10 @@ void SceneBuilder::render() const {
     std::cout << "rendering a " << film_resolution.x << "x" << film_resolution.y << " image";
 
     const auto spp = samples_per_pixel.value();
+    if (spp <= 0) {
+        printf("\nERROR: illegal spp `%d`\n", spp);
+        REPORT_FATAL_ERROR();
+    }
 
     if (bdpt_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
