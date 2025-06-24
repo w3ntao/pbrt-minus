@@ -87,7 +87,7 @@ class HLBVH {
 
     PBRT_CPU_GPU
     cuda::std::pair<const Primitive **, int> get_primitives() const {
-        return {primitives, num_primtives};
+        return {primitives, num_primitives};
     }
 
     PBRT_CPU_GPU
@@ -114,7 +114,7 @@ class HLBVH {
     int partition_morton_primitives(int start, int end, uint8_t split_dimension, Real split_val);
 
     const Primitive **primitives;
-    int num_primtives;
+    int num_primitives;
 
     MortonPrimitive *morton_primitives;
     BVHBuildNode *build_nodes;
