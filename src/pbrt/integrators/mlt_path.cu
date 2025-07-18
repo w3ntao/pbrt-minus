@@ -13,7 +13,7 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 
-constexpr size_t NUM_MLT_PATH_SAMPLERS = 64 * 1024;
+constexpr size_t NUM_MLT_PATH_SAMPLERS = 8 * 1024;
 // large number of samplers: large number of shallow markov chains
 // small number of samplers: small number of deep markov chains
 
@@ -195,8 +195,8 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
     return PathSample(p_film, radiance, lambda);
 }
 
-double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
-                                 const int mutations_per_pixel, const bool preview) {
+double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map, const int mutations_per_pixel,
+                                 const bool preview) {
     GPUMemoryAllocator local_allocator;
 
     const auto num_paths_per_worker =
@@ -257,8 +257,8 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map,
     long long accumulate_samples = 0; // this is for debugging and verification
     for (int pass = 0; pass < total_pass; ++pass) {
         const int num_mutations = pass == total_pass - 1
-                                       ? total_mutations - (total_pass - 1) * NUM_MLT_PATH_SAMPLERS
-                                       : NUM_MLT_PATH_SAMPLERS;
+                                      ? total_mutations - (total_pass - 1) * NUM_MLT_PATH_SAMPLERS
+                                      : NUM_MLT_PATH_SAMPLERS;
 
         wavefront_render<<<blocks, threads>>>(mlt_samples, num_mutations, path_samples, this, rngs);
         CHECK_CUDA_ERROR(cudaGetLastError());
