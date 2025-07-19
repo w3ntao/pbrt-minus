@@ -34,7 +34,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
                                                       int max_depth, bool regularize) {
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
-    bool specular_bounce = true;
+    bool specular_bounce = false;
     bool any_non_specular_bounces = false;
 
     int depth = 0;

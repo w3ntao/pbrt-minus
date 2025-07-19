@@ -37,7 +37,7 @@ struct FrameBuffer {
 };
 
 struct MISParameter {
-    bool specular_bounce = true;
+    bool specular_bounce = false;
     bool any_non_specular_bounces = false;
 
     pbrt::optional<Real> pdf_bsdf;
@@ -45,7 +45,7 @@ struct MISParameter {
 
     PBRT_CPU_GPU
     void init() {
-        specular_bounce = true;
+        specular_bounce = false;
         any_non_specular_bounces = false;
 
         pdf_bsdf = {};
