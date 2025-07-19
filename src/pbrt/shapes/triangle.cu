@@ -4,10 +4,9 @@
 
 PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> Triangle::intersect(const Ray &ray, Real t_max) const {
-    Point3f points[3];
-    get_points(points);
+    const auto [p0, p1, p2] = get_points();
 
-    auto tri_intersection = intersect_triangle(ray, t_max, points[0], points[1], points[2]);
+    auto tri_intersection = intersect_triangle(ray, t_max, p0, p1, p2);
     if (!tri_intersection) {
         return {};
     }
@@ -35,9 +34,8 @@ Real Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
             return 0;
         }
 
-        // Compute PDF in solid angle measure from shape intersection point
-        Real pdf = (1 / area()) / (isect->interaction.n.abs_dot(-wi) /
-                                        ctx.p().squared_distance(isect->interaction.p()));
+        Real pdf = ctx.p().squared_distance(isect->interaction.p()) /
+                   (area() * isect->interaction.n.abs_dot(-wi));
 
         if (isinf(pdf)) {
             pdf = 0;
@@ -50,13 +48,6 @@ Real Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
     // Adjust PDF for warp product sampling of triangle $\cos\theta$ factor
     if (ctx.ns != Normal3f(0, 0, 0)) {
         // Get triangle vertices in _p0_, _p1_, and _p2_
-        /*
-        const TriangleMesh *mesh = GetMesh();
-        const int *v = &mesh->vertexIndices[3 * triIndex];
-
-
-        Point3f p0 = mesh->p[v[0]], p1 = mesh->p[v[1]], p2 = mesh->p[v[2]];
-        */
         Point3f points[3];
         get_points(points);
         const auto p0 = points[0];
@@ -70,9 +61,9 @@ Real Triangle::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
         Vector3f wi[3] = {(p0 - rp).normalize(), (p1 - rp).normalize(), (p2 - rp).normalize()};
 
         Real w[4] = {std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
-                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
-                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[0])),
-                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[2]))};
+                     std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
+                     std::max<Real>(0.01, ctx.ns.abs_dot(wi[0])),
+                     std::max<Real>(0.01, ctx.ns.abs_dot(wi[2]))};
 
         pdf *= bilinear_pdf(u, w);
     }
@@ -135,7 +126,6 @@ pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Poin
     const auto p0 = points[0];
     const auto p1 = points[1];
     const auto p2 = points[2];
-    const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
 
     // Use uniform area sampling for numerically unstable cases
     Real solid_angle = this->solid_angle(ctx.p());
@@ -168,9 +158,9 @@ pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Poin
         Vector3f wi[3] = {(p0 - rp).normalize(), (p1 - rp).normalize(), (p2 - rp).normalize()};
 
         Real w[4] = {std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
-                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
-                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[0])),
-                          std::max<Real>(0.01, ctx.ns.abs_dot(wi[2]))};
+                     std::max<Real>(0.01, ctx.ns.abs_dot(wi[1])),
+                     std::max<Real>(0.01, ctx.ns.abs_dot(wi[0])),
+                     std::max<Real>(0.01, ctx.ns.abs_dot(wi[2]))};
         u = sample_bilinear(u, w);
         pdf = bilinear_pdf(u, w);
     }
@@ -192,6 +182,7 @@ pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Poin
     // Compute surface normal for sampled point on triangle
     Normal3f n = Normal3f((p1 - p0).cross(p2 - p0).normalize());
 
+    const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
     if (mesh->n) {
         Normal3f ns(b[0] * mesh->n[v[0]] + b[1] * mesh->n[v[1]] +
                     (1 - b[0] - b[1]) * mesh->n[v[2]]);
@@ -322,8 +313,7 @@ Triangle::intersect_triangle(const Ray &ray, Real t_max, const Point3f &p0, cons
 
     // Compute $\delta_t$ term for triangle $t$ error bounds and check _t_
     Real maxE = Vector3f(e0, e1, e2).abs().max_component_value();
-    Real deltaT =
-        3 * (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) * std::abs(invDet);
+    Real deltaT = 3 * (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) * std::abs(invDet);
     if (t <= deltaT) {
         return {};
     }

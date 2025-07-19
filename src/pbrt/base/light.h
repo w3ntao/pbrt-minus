@@ -44,7 +44,7 @@ struct LightBase {
 
 struct SampledLight {
     const Light *light;
-    Real p;
+    Real pdf;
 };
 
 struct LightLiSample {

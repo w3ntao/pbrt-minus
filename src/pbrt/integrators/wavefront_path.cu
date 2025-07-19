@@ -494,7 +494,7 @@ SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &int
     }
 
     // Return light's contribution to reflected radiance
-    Real pdf_light = sampled_light->p * ls->pdf;
+    Real pdf_light = sampled_light->pdf * ls->pdf;
     if (pbrt::is_delta_light(light->get_light_type())) {
         return ls->l * f / pdf_light;
     }

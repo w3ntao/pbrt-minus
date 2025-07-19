@@ -54,7 +54,7 @@ pbrt::optional<SampledLight> PowerLightSampler::sample(const Real u) const {
         }
     }
 
-    return SampledLight{.light = lights[result.first], .p = result.second};
+    return SampledLight{.light = lights[result.first], .pdf = result.second};
 }
 
 PBRT_CPU_GPU

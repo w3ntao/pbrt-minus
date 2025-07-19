@@ -42,18 +42,15 @@ class Triangle {
 
     PBRT_CPU_GPU
     Real area() const {
-        Point3f p[3];
-        get_points(p);
-
-        return (p[1] - p[0]).cross((p[2] - p[0])).length() * 0.5;
+        const auto [p0, p1, p2] = get_points();
+        return (p1 - p0).cross((p2 - p0)).length() * 0.5;
     }
 
     PBRT_CPU_GPU
     bool fast_intersect(const Ray &ray, Real t_max) const {
-        Point3f points[3];
-        get_points(points);
+        const auto [p0, p1, p2] = get_points();
 
-        return intersect_triangle(ray, t_max, points[0], points[1], points[2]).has_value();
+        return intersect_triangle(ray, t_max, p0, p1, p2).has_value();
     }
 
     PBRT_CPU_GPU
@@ -86,13 +83,18 @@ class Triangle {
     }
 
     PBRT_CPU_GPU
-    Real solid_angle(const Point3f p) const {
-        // Get triangle vertices in _p0_, _p1_, and _p2_
-        Point3f points[3];
-        get_points(points);
+    cuda::std::tuple<Point3f, Point3f, Point3f> get_points() const {
+        const int *v = &(mesh->vertex_indices[3 * triangle_idx]);
 
-        return spherical_triangle_area((points[0] - p).normalize(), (points[1] - p).normalize(),
-                                       (points[2] - p).normalize());
+        return {mesh->p[v[0]], mesh->p[v[1]], mesh->p[v[2]]};
+    }
+
+    PBRT_CPU_GPU
+    Real solid_angle(const Point3f p) const {
+        const auto [p0, p1, p2] = get_points();
+
+        return spherical_triangle_area((p0 - p).normalize(), (p1 - p).normalize(),
+                                       (p2 - p).normalize());
     }
 
     PBRT_CPU_GPU

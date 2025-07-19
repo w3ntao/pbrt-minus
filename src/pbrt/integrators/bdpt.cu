@@ -504,7 +504,7 @@ int BDPTIntegrator::generate_light_subpath(SampledWavelengths &lambda, Sampler *
     }
 
     auto light = sampledLight->light;
-    auto lightSamplePDF = sampledLight->p;
+    auto lightSamplePDF = sampledLight->pdf;
 
     auto ul0 = sampler->get_2d();
     auto ul1 = sampler->get_2d();
@@ -598,7 +598,7 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
             auto sampledLight = integrator_base->light_sampler->sample(sampler->get_1d());
             if (sampledLight) {
                 auto light = sampledLight->light;
-                auto p_l = sampledLight->p;
+                auto p_l = sampledLight->pdf;
 
                 LightSampleContext ctx;
                 if (pt.is_on_surface()) {

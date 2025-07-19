@@ -24,7 +24,7 @@ class UniformLightSampler {
 
         const auto num_in_float = Real(light_num);
         const int light_idx = clamp<int>(int(u * num_in_float), 0, light_num - 1);
-        return SampledLight{.light = lights[light_idx], .p = Real(1.0 / num_in_float)};
+        return SampledLight{.light = lights[light_idx], .pdf = Real(1.0 / num_in_float)};
     }
 
     PBRT_CPU_GPU
