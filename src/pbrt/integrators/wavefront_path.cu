@@ -40,17 +40,16 @@ struct MISParameter {
     bool specular_bounce = true;
     bool any_non_specular_bounces = false;
 
-    Real pdf_bsdf;
-    Real eta_scale;
-    LightSampleContext prev_interaction_light_sample_ctx;
+    pbrt::optional<Real> pdf_bsdf;
+    pbrt::optional<LightSampleContext> prev_interaction_light_sample_ctx;
 
     PBRT_CPU_GPU
     void init() {
         specular_bounce = true;
         any_non_specular_bounces = false;
 
-        pdf_bsdf = NAN;
-        eta_scale = 1.0;
+        pdf_bsdf = {};
+        prev_interaction_light_sample_ctx = pbrt::optional<LightSampleContext>();
     }
 };
 
@@ -90,14 +89,12 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
     if (!should_terminate_path && path_length > 8) {
         // possibly terminate the path with Russian roulette
 
-        auto &eta_scale = path_state->mis_parameters[path_idx].eta_scale;
         auto &sampler = path_state->samplers[path_idx];
         const auto u = sampler.get_1d();
         // consume this random value anyway to keep samples aligned
 
-        SampledSpectrum russian_roulette_beta = beta * eta_scale;
-        if (russian_roulette_beta.max_component_value() < 1) {
-            auto q = clamp<Real>(1 - russian_roulette_beta.max_component_value(), 0, 0.95);
+        if (beta.max_component_value() < 1) {
+            auto q = clamp<Real>(1 - beta.max_component_value(), 0, 0.95);
             if (u < q) {
                 beta = SampledSpectrum(0.0);
                 should_terminate_path = true;
@@ -119,9 +116,9 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
                 } else {
                     // Compute MIS weight for infinite light
                     Real pdf_light =
-                        base->light_sampler->pmf(prev_interaction_light_sample_ctx, light) *
-                        light->pdf_li(prev_interaction_light_sample_ctx, ray.d, true);
-                    Real weight_bsdf = power_heuristic(1, pdf_bsdf, 1, pdf_light);
+                        base->light_sampler->pmf(*prev_interaction_light_sample_ctx, light) *
+                        light->pdf_li(*prev_interaction_light_sample_ctx, ray.d, true);
+                    Real weight_bsdf = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
 
                     L += beta * weight_bsdf * Le;
                 }
@@ -150,9 +147,9 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
             auto area_light = isect.area_light;
 
             Real pdf_light =
-                base->light_sampler->pmf(prev_interaction_light_sample_ctx, area_light) *
-                area_light->pdf_li(prev_interaction_light_sample_ctx, ray.d);
-            Real weight_light = power_heuristic(1, pdf_bsdf, 1, pdf_light);
+                base->light_sampler->pmf(*prev_interaction_light_sample_ctx, area_light) *
+                area_light->pdf_li(*prev_interaction_light_sample_ctx, ray.d);
+            Real weight_light = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
 
             path_state->L[path_idx] += beta * weight_light * Le;
         }
@@ -346,12 +343,7 @@ void WavefrontPathIntegrator::sample_bsdf(int path_idx, PathState *path_state) c
     path_state->mis_parameters[path_idx].pdf_bsdf =
         bs->pdf_is_proportional ? path_state->bsdf[path_idx].pdf(wo, bs->wi) : bs->pdf;
     path_state->mis_parameters[path_idx].specular_bounce = bs->is_specular();
-    path_state->mis_parameters[path_idx].any_non_specular_bounces |= (!bs->is_specular());
-
-    if (bs->is_transmission()) {
-        path_state->mis_parameters[path_idx].eta_scale *= sqr(bs->eta);
-    }
-
+    path_state->mis_parameters[path_idx].any_non_specular_bounces |= !bs->is_specular();
     path_state->mis_parameters[path_idx].prev_interaction_light_sample_ctx = isect;
 
     path_state->camera_rays[path_idx].ray = isect.spawn_ray(bs->wi);

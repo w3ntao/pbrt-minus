@@ -9,7 +9,8 @@ class optional {
   public:
     using value_type = T;
 
-    optional() = default;
+    PBRT_CPU_GPU
+    optional() : set(false) {}
 
     PBRT_CPU_GPU
     optional(const T &v) : set(true) {
