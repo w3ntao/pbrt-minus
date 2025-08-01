@@ -88,19 +88,15 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
 
     if (!should_terminate_path && path_length > 8) {
         // possibly terminate the path with Russian roulette
-
         auto &sampler = path_state->samplers[path_idx];
-        const auto u = sampler.get_1d();
-        // consume this random value anyway to keep samples aligned
 
-        if (beta.max_component_value() < 1) {
-            auto q = clamp<Real>(1 - beta.max_component_value(), 0, 0.95);
-            if (u < q) {
-                beta = SampledSpectrum(0.0);
-                should_terminate_path = true;
-            } else {
-                beta /= 1 - q;
-            }
+        // depth-8 and clamped-to-0.95 are taken from Mitsuba
+        const auto rr_survive_prob = clamp<Real>(beta.max_component_value(), 0, 0.95);
+        if (sampler.get_1d() > rr_survive_prob) {
+            beta = SampledSpectrum(0.0);
+            should_terminate_path = true;
+        } else {
+            beta /= rr_survive_prob;
         }
     }
 
@@ -115,9 +111,8 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
-                    Real pdf_light =
-                        base->light_sampler->pmf(*prev_interaction_light_sample_ctx, light) *
-                        light->pdf_li(*prev_interaction_light_sample_ctx, ray.d, true);
+                    Real pdf_light = base->light_sampler->pmf(light) *
+                                     light->pdf_li(*prev_interaction_light_sample_ctx, ray.d, true);
                     Real weight_bsdf = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
 
                     L += beta * weight_bsdf * Le;
@@ -146,9 +141,8 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
             // Compute MIS weight for area light
             auto area_light = isect.area_light;
 
-            Real pdf_light =
-                base->light_sampler->pmf(*prev_interaction_light_sample_ctx, area_light) *
-                area_light->pdf_li(*prev_interaction_light_sample_ctx, ray.d);
+            Real pdf_light = base->light_sampler->pmf(area_light) *
+                             area_light->pdf_li(*prev_interaction_light_sample_ctx, ray.d);
             Real weight_light = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
 
             path_state->L[path_idx] += beta * weight_light * Le;

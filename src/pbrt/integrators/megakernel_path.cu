@@ -58,9 +58,8 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
-                    Real pdf_light =
-                        base->light_sampler->pmf(*prev_interaction_light_sample_ctx, light) *
-                        light->pdf_li(*prev_interaction_light_sample_ctx, ray.d, true);
+                    Real pdf_light = base->light_sampler->pmf(light) *
+                                     light->pdf_li(*prev_interaction_light_sample_ctx, ray.d, true);
                     Real weight_bsdf = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
 
                     L += beta * weight_bsdf * Le;
@@ -81,9 +80,8 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
                 // Compute MIS weight for area light
                 auto area_light = isect.area_light;
 
-                Real pdf_light =
-                    base->light_sampler->pmf(*prev_interaction_light_sample_ctx, area_light) *
-                    area_light->pdf_li(*prev_interaction_light_sample_ctx, ray.d);
+                Real pdf_light = base->light_sampler->pmf(area_light) *
+                                 area_light->pdf_li(*prev_interaction_light_sample_ctx, ray.d);
                 Real weight_light = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
 
                 L += beta * weight_light * Le;
@@ -109,8 +107,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
 
         // Sample BSDF to get new path direction
         Vector3f wo = -ray.d;
-        Real u = sampler->get_1d();
-        auto bs = bsdf.sample_f(wo, u, sampler->get_2d());
+        auto bs = bsdf.sample_f(wo, sampler->get_1d(), sampler->get_2d());
         if (!bs) {
             break;
         }
@@ -130,14 +127,11 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li(const Ray &primary_ray,
         // Possibly terminate the path with Russian roulette
         if (depth > 8) {
             // depth-8 and clamped-to-0.95 are taken from Mitsuba
-            if (beta.max_component_value() < 1) {
-                auto q = clamp<Real>(1 - beta.max_component_value(), 0, 0.95);
-
-                if (sampler->get_1d() < q) {
-                    break;
-                }
-                beta /= 1 - q;
+            auto rr_survive_prob = clamp<Real>(beta.max_component_value(), 0, 0.95);
+            if (sampler->get_1d() > rr_survive_prob) {
+                break;
             }
+            beta /= rr_survive_prob;
         }
     }
 
