@@ -10,6 +10,7 @@
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/util/russian_roulette.h>
 #include <pbrt/util/timer.h>
 
 constexpr int PATH_POOL_SIZE = 1 * 1024 * 1024;
@@ -84,19 +85,11 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
     const auto pdf_bsdf = path_state->mis_parameters[path_idx].pdf_bsdf;
 
     bool should_terminate_path = !path_state->shape_intersections[path_idx].has_value() ||
-                                 path_length > max_depth || !beta.is_positive();
+                                 path_length >= max_depth || !beta.is_positive();
 
-    if (!should_terminate_path && path_length > 8) {
-        // possibly terminate the path with Russian roulette
-        auto &sampler = path_state->samplers[path_idx];
-
-        // depth-8 and clamped-to-0.95 are taken from Mitsuba
-        const auto rr_survive_prob = clamp<Real>(beta.max_component_value(), 0, 0.95);
-        if (sampler.get_1d() > rr_survive_prob) {
-            beta = SampledSpectrum(0.0);
-            should_terminate_path = true;
-        } else {
-            beta /= rr_survive_prob;
+    if (!should_terminate_path) {
+        if (path_length >= depth_russian_roulette) {
+            should_terminate_path |= russian_roulette(beta, &path_state->samplers[path_idx]);
         }
     }
 

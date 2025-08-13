@@ -8,6 +8,7 @@
 #include <pbrt/medium/homogeneous_medium.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectra/densely_sampled_spectrum.h>
+#include <pbrt/util/russian_roulette.h>
 
 const MegakernelPathIntegrator *
 MegakernelPathIntegrator::create(const ParameterDictionary &parameters,
@@ -20,29 +21,6 @@ MegakernelPathIntegrator::create(const ParameterDictionary &parameters,
     *path_integrator = MegakernelPathIntegrator(integrator_base, max_depth, regularize);
 
     return path_integrator;
-}
-
-constexpr int rr_depth = 8;                         // TODO: move rr_depth into namespace pbrt
-constexpr Real russian_roulette_upper_bound = 0.95; // TODO: move rr_upper into namespace pbrt
-
-PBRT_CPU_GPU
-static bool should_terminate(const int bounces, const int max_depth, SampledSpectrum &throughput,
-                             Sampler *sampler) {
-    if (bounces >= max_depth) {
-        return true;
-    }
-
-    if (bounces >= rr_depth) {
-        const auto survive_prob =
-            std::fmin(throughput.max_component_value(), russian_roulette_upper_bound);
-        if (sampler->get_1d() > survive_prob) {
-            return true;
-        }
-
-        throughput /= survive_prob;
-    }
-
-    return false;
 }
 
 PBRT_CPU_GPU
@@ -94,7 +72,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li_volume(const Ray &primary_
 
                 beta *= phase_sample->rho / phase_sample->pdf * sigma_s;
 
-                if (should_terminate(bounces, max_depth, beta, sampler)) {
+                if (bounces >= max_depth) {
+                    break;
+                }
+                if (bounces >= depth_russian_roulette && russian_roulette(beta, sampler)) {
                     break;
                 }
                 bounces += 1;
@@ -182,7 +163,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_li_volume(const Ray &primary_
 
         beta *= bs->f * bs->wi.abs_dot(surface_interaction.shading.n.to_vector3()) / bs->pdf;
 
-        if (should_terminate(bounces, max_depth, beta, sampler)) {
+        if (bounces >= max_depth) {
+            break;
+        }
+        if (bounces >= depth_russian_roulette && russian_roulette(beta, sampler)) {
             break;
         }
         bounces += 1;
