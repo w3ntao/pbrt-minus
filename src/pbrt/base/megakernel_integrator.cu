@@ -162,8 +162,8 @@ void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
 
     GPUMemoryAllocator local_allocator;
 
-    auto samplers = Sampler::create_samplers(sampler_type, samples_per_pixel,
-                                                             num_pixels, local_allocator);
+    auto samplers =
+        Sampler::create_samplers(sampler_type, samples_per_pixel, num_pixels, local_allocator);
     constexpr int thread_width = 16;
     constexpr int thread_height = 16;
 

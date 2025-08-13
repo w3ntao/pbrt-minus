@@ -88,8 +88,9 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
                                  path_length >= max_depth || !beta.is_positive();
 
     if (!should_terminate_path) {
-        if (path_length >= depth_russian_roulette) {
-            should_terminate_path |= russian_roulette(beta, &path_state->samplers[path_idx]);
+        if (path_length >= start_russian_roulette) {
+            should_terminate_path |=
+                russian_roulette(beta, &path_state->samplers[path_idx], nullptr);
         }
     }
 

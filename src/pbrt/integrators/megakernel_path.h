@@ -25,13 +25,14 @@ class MegakernelPathIntegrator {
     PBRT_CPU_GPU
     static inline SampledSpectrum sample_ld_volume(const SurfaceInteraction &surface_interaction,
                                                    const BSDF *bsdf, SampledWavelengths &lambda,
-                                                   const IntegratorBase *base, Sampler *sampler);
+                                                   const IntegratorBase *base, Sampler *sampler,
+                                                   int max_depth);
 
     PBRT_CPU_GPU
     SampledSpectrum li(const Ray &primary_ray, SampledWavelengths &lambda, Sampler *sampler) const;
 
   private:
     const IntegratorBase *base = nullptr;
-    int max_depth = 5;
+    int max_depth = 5; // TODO: move max_depth into IntegratorBase
     bool regularize = true;
 };

@@ -35,6 +35,16 @@ class SampledSpectrum {
     }
 
     PBRT_CPU_GPU
+    static SampledSpectrum exp(const SampledSpectrum &s) {
+        SampledSpectrum result;
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
+            result[idx] = std::exp(s[idx]);
+        }
+
+        return result;
+    }
+
+    PBRT_CPU_GPU
     SampledSpectrum sqrt() const {
         SampledSpectrum result;
         for (int idx = 0; idx < NSpectrumSamples; ++idx) {
