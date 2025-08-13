@@ -17,24 +17,13 @@ class MegakernelPathIntegrator {
     MegakernelPathIntegrator(const IntegratorBase *_base, int _max_depth, bool _regularize)
         : base(_base), max_depth(_max_depth), regularize(_regularize) {}
 
-    // TODO: delete evaluate_li() when volumetric pt finished
-    PBRT_CPU_GPU
-    static SampledSpectrum evaluate_li(const Ray &primary_ray, SampledWavelengths &lambda,
-                                       const IntegratorBase *base, Sampler *sampler, int max_depth,
-                                       bool regularize);
-
     PBRT_CPU_GPU
     static SampledSpectrum evaluate_li_volume(const Ray &primary_ray, SampledWavelengths &lambda,
                                               const IntegratorBase *base, Sampler *sampler,
                                               int max_depth, bool regularize);
 
     PBRT_CPU_GPU
-    static inline SampledSpectrum sample_Ld(const SurfaceInteraction &intr, const BSDF *bsdf,
-                                            SampledWavelengths &lambda, const IntegratorBase *base,
-                                            Sampler *sampler);
-
-    PBRT_CPU_GPU
-    static inline SampledSpectrum sample_Ld_volume(const SurfaceInteraction &surface_interaction,
+    static inline SampledSpectrum sample_ld_volume(const SurfaceInteraction &surface_interaction,
                                                    const BSDF *bsdf, SampledWavelengths &lambda,
                                                    const IntegratorBase *base, Sampler *sampler);
 

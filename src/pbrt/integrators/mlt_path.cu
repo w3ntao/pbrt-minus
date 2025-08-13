@@ -169,7 +169,7 @@ MLTPathIntegrator *MLTPathIntegrator::create(const int mutations_per_pixel,
         integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
     }
 
-    integrator->film_dimension = base->camera->get_camerabase()->resolution;
+    integrator->film_dimension = base->camera->get_camera_base()->resolution;
     integrator->cie_y = parameters.global_spectra->cie_y;
 
     integrator->max_depth = parameters.get_integer("maxdepth", 5);
@@ -189,7 +189,7 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
 
     const auto ray = base->camera->generate_ray(camera_sample, sampler);
 
-    const auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_li(
+    const auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_li_volume(
                                            ray.ray, lambda, base, sampler, max_depth, regularize);
 
     return PathSample(p_film, radiance, lambda);
