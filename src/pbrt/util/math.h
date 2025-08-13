@@ -16,6 +16,7 @@
 constexpr Real Sqrt2 = 1.41421356237309504880;
 
 constexpr Real Infinity = std::numeric_limits<Real>::infinity();
+// TODO: add Infinity into namespace pbrt
 
 constexpr Real MachineEpsilon = std::numeric_limits<Real>::epsilon() * 0.5;
 

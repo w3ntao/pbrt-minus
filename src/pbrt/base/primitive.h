@@ -26,8 +26,9 @@ class Primitive {
 
     static const Primitive *create_geometric_primitives(const Shape *shapes,
                                                         const Material *material,
-                                                        const Light *diffuse_area_light, int num,
-                                                        GPUMemoryAllocator &allocator);
+                                                        const Light *diffuse_area_light,
+                                                        const MediumInterface *medium_interface,
+                                                        int num, GPUMemoryAllocator &allocator);
 
     static const Primitive *create_simple_primitives(const Shape *shapes, const Material *material,
                                                      int num, GPUMemoryAllocator &allocator);

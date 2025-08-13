@@ -16,8 +16,8 @@ class GPUMemoryAllocator;
 class Material;
 class Spectrum;
 class SpectrumTexture;
-class Token;
 struct GlobalSpectra;
+struct Token;
 
 class ParameterDictionary {
   public:

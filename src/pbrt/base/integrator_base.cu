@@ -13,8 +13,7 @@ bool IntegratorBase::unoccluded(const Interaction &p0, const Interaction &p1) co
 }
 
 PBRT_CPU_GPU
-pbrt::optional<ShapeIntersection> IntegratorBase::intersect(const Ray &ray,
-                                                                 Real t_max) const {
+pbrt::optional<ShapeIntersection> IntegratorBase::intersect(const Ray &ray, Real t_max) const {
     return bvh->intersect(ray, t_max);
 }
 

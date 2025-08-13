@@ -1,8 +1,8 @@
 #pragma once
 
+#include <pbrt/gpu/macro.h>
 #include <pbrt/spectrum_util/rgb.h>
 #include <pbrt/spectrum_util/rgb_sigmoid_polynomial.h>
-#include <pbrt/gpu/macro.h>
 
 class Spectrum;
 class RGBColorSpace;
@@ -16,6 +16,9 @@ class RGBIlluminantSpectrum {
 
     PBRT_CPU_GPU
     void init(const RGB &rgb, const RGBColorSpace *rgb_color_space);
+
+    PBRT_CPU_GPU
+    Real max_value() const;
 
     PBRT_CPU_GPU
     Real operator()(Real lambda) const;

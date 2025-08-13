@@ -31,6 +31,10 @@ std::string Material::material_type_to_string(const Type type) {
 const Material *Material::create(const std::string &type_of_material,
                                  const ParameterDictionary &parameters,
                                  GPUMemoryAllocator &allocator) {
+    if (type_of_material == "interface") {
+        return nullptr;
+    }
+
     auto material = allocator.allocate<Material>();
 
     if (type_of_material == "coatedconductor") {

@@ -10,6 +10,15 @@ void RGBIlluminantSpectrum::init(const RGB &rgb, const RGBColorSpace *rgb_color_
 }
 
 PBRT_CPU_GPU
+Real RGBIlluminantSpectrum::max_value() const {
+    if (!illuminant) {
+        return 0.0;
+    }
+
+    return scale * rsp.max_value() * illuminant->max_value();
+}
+
+PBRT_CPU_GPU
 Real RGBIlluminantSpectrum::operator()(Real lambda) const {
     return scale * rsp(lambda) * (*illuminant)(lambda);
 }

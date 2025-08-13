@@ -1,7 +1,8 @@
 #pragma once
 
-#include <pbrt/base/material.h>
 #include <pbrt/base/shape.h>
+
+class Material;
 
 class SimplePrimitive {
   public:
@@ -33,11 +34,11 @@ class SimplePrimitive {
             return {};
         }
 
-        si->interaction.set_intersection_properties(material, nullptr);
+        si->interaction.set_intersection_properties(material, nullptr, {}, ray.medium);
         return si;
     }
 
   private:
-    const Shape *shape;
-    const Material *material;
+    const Shape *shape = nullptr;
+    const Material *material = nullptr;
 };

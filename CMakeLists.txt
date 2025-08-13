@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 # `CUDA_ARCHITECTURES native` is available in CMake since 3.24
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -113,6 +115,8 @@ add_executable(${PROJ_NAME}
         src/pbrt/materials/diffuse_material.cu
         src/pbrt/materials/diffuse_transmission_material.cu
         src/pbrt/materials/mix_material.cu
+
+        src/pbrt/medium/homogeneous_medium.cu
 
         src/pbrt/primitives/geometric_primitive.cu
         src/pbrt/primitives/transformed_primitive.cu

@@ -1,10 +1,10 @@
-#include <pbrt/base/media.h>
 #include <pbrt/euclidean_space/frame.h>
+#include <pbrt/medium/media_util.h>
 #include <pbrt/util/math.h>
 #include <pbrt/util/sampling.h>
 
 PBRT_CPU_GPU
-Vector3f SampleHenyeyGreenstein(Vector3f wo, Real g, Point2f u, Real *pdf) {
+Vector3f sample_henyey_greenstein(const Vector3f &wo, Real g, const Point2f u, Real *pdf) {
     // When g \approx -1 and u[0] \approx 0 or with g \approx 1 and u[0]
     // \approx 1, the computation of cosTheta below is unstable and can
     // give, leading to NaNs. For now we limit g to the range where it is

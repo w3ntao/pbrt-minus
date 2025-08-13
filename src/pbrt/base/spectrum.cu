@@ -18,9 +18,9 @@ const Spectrum *Spectrum::create_black_body(Real temperature, GPUMemoryAllocator
     return spectrum;
 }
 
-const Spectrum *Spectrum::create_cie_d(Real temperature, const Real *cie_s0,
-                                       const Real *cie_s1, const Real *cie_s2,
-                                       const Real *cie_lambda, GPUMemoryAllocator &allocator) {
+const Spectrum *Spectrum::create_cie_d(Real temperature, const Real *cie_s0, const Real *cie_s1,
+                                       const Real *cie_s2, const Real *cie_lambda,
+                                       GPUMemoryAllocator &allocator) {
     Real cct = temperature * 1.4388f / 1.4380f;
     if (cct < 4000) {
         // CIE D ill-defined, use blackbody
@@ -38,9 +38,9 @@ const Spectrum *Spectrum::create_cie_d(Real temperature, const Real *cie_s0,
 
     // Convert CCT to xy
     Real x = cct <= 7000 ? -4.607f * 1e9f / pbrt::pow<3>(cct) + 2.9678f * 1e6f / sqr(cct) +
-                                    0.09911f * 1e3f / cct + 0.244063f
-                              : -2.0064f * 1e9f / pbrt::pow<3>(cct) + 1.9018f * 1e6f / sqr(cct) +
-                                    0.24748f * 1e3f / cct + 0.23704f;
+                               0.09911f * 1e3f / cct + 0.244063f
+                         : -2.0064f * 1e9f / pbrt::pow<3>(cct) + 1.9018f * 1e6f / sqr(cct) +
+                               0.24748f * 1e3f / cct + 0.23704f;
 
     Real y = -3 * x * x + 2.870f * x - 0.275f;
 
@@ -185,33 +185,45 @@ void Spectrum::init(const PiecewiseLinearSpectrum *piecewise_linear_spectrum) {
 }
 
 PBRT_CPU_GPU
+Real Spectrum::max_value() const {
+    switch (type) {
+    case Type::rgb_illuminant: {
+        return static_cast<const RGBIlluminantSpectrum *>(ptr)->max_value();
+    }
+    }
+
+    printf("type %d not implemented\n", type);
+    REPORT_FATAL_ERROR();
+}
+
+PBRT_CPU_GPU
 Real Spectrum::operator()(Real lambda) const {
     switch (type) {
-    case (Type::black_body): {
+    case Type::black_body: {
         return static_cast<const BlackbodySpectrum *>(ptr)->operator()(lambda);
     }
 
-    case (Type::constant): {
+    case Type::constant: {
         return static_cast<const ConstantSpectrum *>(ptr)->operator()(lambda);
     }
 
-    case (Type::densely_sampled): {
+    case Type::densely_sampled: {
         return static_cast<const DenselySampledSpectrum *>(ptr)->operator()(lambda);
     }
 
-    case (Type::piecewise_linear): {
+    case Type::piecewise_linear: {
         return static_cast<const PiecewiseLinearSpectrum *>(ptr)->operator()(lambda);
     }
 
-    case (Type::rgb_albedo): {
+    case Type::rgb_albedo: {
         return static_cast<const RGBAlbedoSpectrum *>(ptr)->operator()(lambda);
     }
 
-    case (Type::rgb_illuminant): {
+    case Type::rgb_illuminant: {
         return static_cast<const RGBIlluminantSpectrum *>(ptr)->operator()(lambda);
     }
 
-    case (Type::rgb_unbounded): {
+    case Type::rgb_unbounded: {
         return static_cast<const RGBUnboundedSpectrum *>(ptr)->operator()(lambda);
     }
     }

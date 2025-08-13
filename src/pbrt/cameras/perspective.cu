@@ -6,9 +6,10 @@
 
 PerspectiveCamera::PerspectiveCamera(const Point2i &resolution,
                                      const CameraTransform &camera_transform, const Film *_film,
-                                     const Filter *filter, const ParameterDictionary &parameters) {
+                                     const Filter *filter, const Medium *medium,
+                                     const ParameterDictionary &parameters) {
     film = _film;
-    camera_base.init(resolution, camera_transform);
+    camera_base = CameraBase(resolution, camera_transform, medium);
 
     focal_distance = parameters.get_float("focaldistance", 1e6);
     lens_radius = parameters.get_float("lensradius", 0.0);
@@ -66,7 +67,7 @@ CameraRay PerspectiveCamera::generate_ray(const CameraSample &sample, Sampler *s
     Point3f p_film = Point3f(sample.p_film.x, sample.p_film.y, 0);
     Point3f p_camera = camera_from_raster(p_film);
 
-    Ray ray(Point3f(0, 0, 0), p_camera.to_vector3().normalize());
+    Ray ray(Point3f(0, 0, 0), p_camera.to_vector3().normalize(), camera_base.medium);
 
     if (lens_radius > 0) {
         // Sample point on lens

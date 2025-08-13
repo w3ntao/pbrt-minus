@@ -1,5 +1,6 @@
 #include <pbrt/accelerator/hlbvh.h>
 #include <pbrt/base/light.h>
+#include <pbrt/base/material.h>
 #include <pbrt/base/primitive.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/primitives/geometric_primitive.h>
@@ -19,20 +20,25 @@ static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives
 
 static __global__ void init_geometric_primitives(GeometricPrimitive *geometric_primitives,
                                                  const Shape *shapes, const Material *material,
-                                                 const Light *diffuse_area_lights, int num) {
+                                                 const Light *diffuse_area_lights,
+                                                 const MediumInterface *medium_interface, int num) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= num) {
         return;
     }
 
-    geometric_primitives[idx].init(&shapes[idx], material, &diffuse_area_lights[idx]);
+    if (diffuse_area_lights) {
+        geometric_primitives[idx].init(&shapes[idx], material, &diffuse_area_lights[idx],
+                                       medium_interface);
+    } else {
+        geometric_primitives[idx].init(&shapes[idx], material, nullptr, medium_interface);
+    }
 }
 
 static __global__ void init_transformed_primitives(Primitive *primitives,
                                                    TransformedPrimitive *transformed_primitives,
                                                    const Primitive *base_primitives,
-                                                   const Transform render_from_primitive,
-                                                   int num) {
+                                                   const Transform render_from_primitive, int num) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= num) {
         return;
@@ -55,8 +61,9 @@ static __global__ void init_primitives(Primitive *primitives, TypeOfPrimitive *_
 
 const Primitive *Primitive::create_geometric_primitives(const Shape *shapes,
                                                         const Material *material,
-                                                        const Light *diffuse_area_light, int num,
-                                                        GPUMemoryAllocator &allocator) {
+                                                        const Light *diffuse_area_light,
+                                                        const MediumInterface *medium_interface,
+                                                        int num, GPUMemoryAllocator &allocator) {
     constexpr int threads = 1024;
     const int blocks = divide_and_ceil(num, threads);
 
@@ -65,7 +72,7 @@ const Primitive *Primitive::create_geometric_primitives(const Shape *shapes,
     auto primitives = allocator.allocate<Primitive>(num);
 
     init_geometric_primitives<<<blocks, threads>>>(geometric_primitives, shapes, material,
-                                                   diffuse_area_light, num);
+                                                   diffuse_area_light, medium_interface, num);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -187,7 +194,9 @@ Bounds3f Primitive::bounds() const {
 
 void Primitive::record_material(std::map<std::string, int> &counter) const {
     const auto count_material = [](const Material *material, std::map<std::string, int> &counter) {
-        const auto name = Material::material_type_to_string(material->get_material_type());
+        const auto name = material
+                              ? Material::material_type_to_string(material->get_material_type())
+                              : "interface";
 
         if (counter.find(name) == counter.end()) {
             counter[name] = 1;
@@ -219,9 +228,7 @@ void Primitive::record_material(std::map<std::string, int> &counter) const {
     }
 
     if (type == Type::bvh) {
-        const auto result = static_cast<const HLBVH *>(ptr)->get_primitives();
-        const auto primitives = result.first;
-        const auto num = result.second;
+        const auto [primitives, num] = static_cast<const HLBVH *>(ptr)->get_primitives();
 
         for (int idx = 0; idx < num; idx++) {
             primitives[idx]->record_material(counter);
@@ -258,8 +265,7 @@ bool Primitive::fast_intersect(const Ray &ray, const Real t_max) const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<ShapeIntersection> Primitive::intersect(const Ray &ray,
-                                                       const Real t_max) const {
+pbrt::optional<ShapeIntersection> Primitive::intersect(const Ray &ray, const Real t_max) const {
     switch (type) {
     case Type::bvh: {
         return static_cast<const HLBVH *>(ptr)->intersect(ray, t_max);

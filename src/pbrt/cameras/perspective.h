@@ -10,7 +10,7 @@ class Sampler;
 class PerspectiveCamera {
   public:
     PerspectiveCamera(const Point2i &resolution, const CameraTransform &camera_transform,
-                      const Film *_film, const Filter *filter,
+                      const Film *_film, const Filter *filter, const Medium *medium,
                       const ParameterDictionary &parameters);
 
     PBRT_CPU_GPU
@@ -29,7 +29,7 @@ class PerspectiveCamera {
                                              SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    const CameraBase *get_camerabase() const {
+    const CameraBase *get_camera_base() const {
         return &camera_base;
     }
 

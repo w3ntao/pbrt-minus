@@ -2,6 +2,7 @@
 #include <pbrt/base/interaction.h>
 #include <pbrt/base/light.h>
 #include <pbrt/base/material.h>
+#include <pbrt/medium/medium_interface.h>
 #include <pbrt/textures/texture_eval_context.h>
 
 PBRT_CPU_GPU
@@ -39,15 +40,27 @@ void SurfaceInteraction::compute_differentials(const Camera *camera, int samples
 
 PBRT_CPU_GPU
 void SurfaceInteraction::set_intersection_properties(const Material *_material,
-                                                     const Light *_area_light) {
-    if (_material->get_material_type() == Material::Type::mix) {
-        const auto u = pbrt::hash_float(pi, wo);
-        material = _material->get_material_from_mix_material(u);
+                                                     const Light *_area_light,
+                                                     const MediumInterface *_medium_interface,
+                                                     const Medium *_medium) {
+    if (_material == nullptr) {
+        material = nullptr;
     } else {
-        material = _material;
+        if (_material->get_material_type() == Material::Type::mix) {
+            const auto u = pbrt::hash_float(pi, wo);
+            material = _material->get_material_from_mix_material(u);
+        } else {
+            material = _material;
+        }
     }
 
     area_light = _area_light;
+
+    if (_medium_interface && _medium_interface->is_medium_transition()) {
+        medium_interface = _medium_interface;
+    } else {
+        medium = _medium;
+    }
 }
 
 PBRT_CPU_GPU

@@ -29,7 +29,7 @@ Ray Transform::operator()(const Ray &r, Real *tMax) const {
         }
     }
 
-    return Ray(o.to_point3f(), d);
+    return Ray(o.to_point3f(), d, r.medium);
 }
 
 PBRT_CPU_GPU
@@ -50,7 +50,7 @@ Ray Transform::apply_inverse(const Ray &r, Real *tMax) const {
         }
     }
 
-    return Ray(o.to_point3f(), d);
+    return Ray(o.to_point3f(), d, r.medium);
 }
 
 PBRT_CPU_GPU

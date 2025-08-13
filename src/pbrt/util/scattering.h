@@ -4,6 +4,7 @@
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/euclidean_space/vector3.h>
 #include <pbrt/gpu/macro.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/util/complex.h>
 #include <pbrt/util/sampling.h>
 
@@ -203,8 +204,7 @@ class TrowbridgeReitzDistribution {
         Real pz = std::sqrt(std::max<Real>(0, 1 - p.to_vector2f().length_squared()));
 
         Vector3f nh = p.x * T1 + p.y * T2 + pz * wh;
-        return Vector3f(alpha_x * nh.x, alpha_y * nh.y, std::max<Real>(1e-6f, nh.z))
-            .normalize();
+        return Vector3f(alpha_x * nh.x, alpha_y * nh.y, std::max<Real>(1e-6f, nh.z)).normalize();
     }
 
     PBRT_CPU_GPU

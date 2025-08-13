@@ -5,6 +5,7 @@
 #include <pbrt/euclidean_space/normal3f.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/euclidean_space/point3fi.h>
+#include <pbrt/medium/medium_interface.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 
 class BSDF;
@@ -15,10 +16,13 @@ class SampledWavelengths;
 
 class Interaction {
   public:
-    Point3fi pi;
-    Vector3f wo;
-    Normal3f n;
-    Point2f uv;
+    Point3fi pi = Point3fi(NAN, NAN, NAN);
+    Vector3f wo = Vector3f(NAN, NAN, NAN);
+    Normal3f n = Normal3f(0, 0, 0); // TODO: change 0 to NAN?
+    Point2f uv = Point2f(NAN, NAN);
+
+    const MediumInterface *medium_interface = nullptr;
+    const Medium *medium = nullptr;
 
     PBRT_CPU_GPU
     Interaction()
@@ -53,22 +57,39 @@ class Interaction {
     }
 
     PBRT_CPU_GPU
+    const Medium *get_medium(const Vector3f &w) const {
+        if (medium_interface) {
+            return n.dot(w) > 0 ? medium_interface->exterior : medium_interface->interior;
+        }
+
+        return medium;
+    }
+
+    PBRT_CPU_GPU
     Point3f offset_ray_origin(const Vector3f &w) const {
         return Ray::offset_ray_origin(pi, n, w);
     }
 
     PBRT_CPU_GPU
     Ray spawn_ray(const Vector3f &d) const {
-        return Ray(offset_ray_origin(d), d);
+        return Ray(offset_ray_origin(d), d, get_medium(d));
     }
 
     PBRT_CPU_GPU
-    Ray spawn_ray_to(const Interaction &it) const {
-        return Ray::spawn_ray_to(pi, n, it.pi, it.n);
+    Ray spawn_ray_to(const Interaction &it, bool normalize = false) const {
+        auto ray = Ray::spawn_ray_to(pi, n, it.pi, it.n);
+        ray.medium = get_medium(ray.d);
+
+        if (normalize) {
+            ray.d = ray.d.normalize();
+        }
+
+        return ray;
     }
 };
 
-class SurfaceInteraction : public Interaction {
+class SurfaceInteraction
+    : public Interaction { // TODO: build SurfaceInteraction and MediumInteraction with variant
   public:
     Vector3f dpdu, dpdv;
     Normal3f dndu, dndv;
@@ -100,6 +121,14 @@ class SurfaceInteraction : public Interaction {
           area_light(nullptr) {}
 
     PBRT_CPU_GPU
+    SurfaceInteraction(const Point3f &_p) : SurfaceInteraction() {
+        // TODO: rewrite SurfaceInteraction initialization
+        pi = Point3fi(_p);
+        n = Normal3f(0, 0, 0);
+        shading.n = Normal3f(0, 0, 0);
+    }
+
+    PBRT_CPU_GPU
     explicit SurfaceInteraction(const Point3fi &pi, const Point2f &uv, const Vector3f &wo,
                                 const Vector3f &dpdu, const Vector3f &dpdv, Normal3f dndu,
                                 const Normal3f &dndv, bool flip_normal)
@@ -123,7 +152,9 @@ class SurfaceInteraction : public Interaction {
     void compute_differentials(const Camera *camera, int samples_per_pixel);
 
     PBRT_CPU_GPU
-    void set_intersection_properties(const Material *_material, const Light *_area_light);
+    void set_intersection_properties(const Material *_material, const Light *_area_light,
+                                     const MediumInterface *_medium_interface,
+                                     const Medium *_medium);
 
     PBRT_CPU_GPU
     void set_shading_geometry(const Normal3f &ns, const Vector3f &dpdus, const Vector3f &dpdvs,
@@ -140,14 +171,15 @@ class SurfaceInteraction : public Interaction {
 // ShapeIntersection Definition
 struct ShapeIntersection {
     SurfaceInteraction interaction;
-    Real t_hit;
+    Real t_hit = NAN;
+    // TODO: rename t_hit to t
 
     PBRT_CPU_GPU
     ShapeIntersection(const SurfaceInteraction &si, Real t) : interaction(si), t_hit(t) {}
 };
 
 struct QuadricIntersection {
-    Real t_hit;
+    Real t_hit = NAN;
     Point3f p_obj;
-    Real phi;
+    Real phi = NAN;
 };

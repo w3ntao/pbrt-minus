@@ -53,29 +53,22 @@ void Distribution2D::build(const std::vector<std::vector<Real>> &data,
 
 PBRT_CPU_GPU
 cuda::std::pair<Point2f, Real> Distribution2D::sample(const Point2f &uv) const {
-    auto first_dim_sample = dimension_x_distribution->sample(uv.x);
+    auto [sampled_dim_x, first_pdf] = dimension_x_distribution->sample(uv.x);
+    sampled_dim_x = clamp<int>(sampled_dim_x, 0, dimension.x - 1);
 
-    auto sampled_dim_x = clamp<int>(first_dim_sample.first, 0, dimension.x - 1);
+    auto [sampled_dim_y, second_pdf] = dimension_y_distribution_list[sampled_dim_x].sample(uv.y);
 
-    auto first_pdf = first_dim_sample.second;
-
-    auto second_dim_sample = dimension_y_distribution_list[sampled_dim_x].sample(uv.y);
-
-    auto pdf = first_pdf * second_dim_sample.second;
-
-    return {Point2f(Real(sampled_dim_x) / Real(dimension.x),
-                    Real(second_dim_sample.first) / Real(dimension.y)),
-            pdf};
+    return {
+        Point2f(Real(sampled_dim_x) / Real(dimension.x), Real(sampled_dim_y) / Real(dimension.y)),
+        first_pdf * second_pdf};
 }
 
 PBRT_CPU_GPU
 Real Distribution2D::get_pdf(const Point2f &u) const {
-    const auto first_dimension_index =
-        clamp<int>(u.x * Real(dimension.x), 0, dimension.x - 1);
+    const auto first_dimension_index = clamp<int>(u.x * Real(dimension.x), 0, dimension.x - 1);
     const auto first_dimension_pdf = dimension_x_distribution->pdfs[first_dimension_index];
 
-    const auto second_dimension_index =
-        clamp<int>(u.y * Real(dimension.y), 0, dimension.y - 1);
+    const auto second_dimension_index = clamp<int>(u.y * Real(dimension.y), 0, dimension.y - 1);
     const auto second_dimension_pdf =
         dimension_y_distribution_list[first_dimension_index].get_pdf(second_dimension_index);
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <iostream>
 #include <stdint.h>
 // don't delete `stdint.h` as some compilers need it for `uint8_t`

@@ -437,7 +437,7 @@ WavefrontPathIntegrator *WavefrontPathIntegrator::create(int samples_per_pixel,
     integrator->samples_per_pixel = samples_per_pixel;
 
     integrator->base = base;
-    integrator->path_state.create(samples_per_pixel, base->camera->get_camerabase()->resolution,
+    integrator->path_state.create(samples_per_pixel, base->camera->get_camera_base()->resolution,
                                   sampler_type, allocator);
 
     integrator->queues.init(allocator);

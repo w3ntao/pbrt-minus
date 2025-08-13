@@ -46,15 +46,15 @@ pbrt::optional<SampledLight> PowerLightSampler::sample(const Real u) const {
         return {};
     }
 
-    auto result = lights_power_distribution->sample(u);
+    const auto [light_id, pdf] = lights_power_distribution->sample(u);
 
     if (DEBUG_MODE) {
-        if (result.first >= light_num) {
+        if (light_id >= light_num) {
             REPORT_FATAL_ERROR();
         }
     }
 
-    return SampledLight{.light = lights[result.first], .pdf = result.second};
+    return SampledLight{.light = lights[light_id], .pdf = pdf};
 }
 
 PBRT_CPU_GPU

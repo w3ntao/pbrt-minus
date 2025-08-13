@@ -89,8 +89,7 @@ static std::ostream &operator<<(std::ostream &stream, const TokenType type) {
     return stream;
 }
 
-class Token {
-  public:
+struct Token {
     TokenType type;
     std::vector<std::string> values;
 

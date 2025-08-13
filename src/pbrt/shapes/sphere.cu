@@ -14,7 +14,6 @@ const Sphere *Sphere::create(const Transform &render_from_object,
     auto phi_max = parameters.get_float("phimax", 360.0);
 
     auto sphere = allocator.allocate<Sphere>();
-
     sphere->init(render_from_object, object_from_render, reverse_orientation, radius, z_min, z_max,
                  phi_max);
 

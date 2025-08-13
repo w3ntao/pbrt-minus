@@ -26,8 +26,8 @@
 
 int next_keyword_position(const std::vector<Token> &tokens, int start) {
     for (int idx = start + 1; idx < tokens.size(); ++idx) {
-        const auto type = tokens[idx].type;
-        if (type == TokenType::Number || type == TokenType::String || type == TokenType::Variable ||
+        if (const auto type = tokens[idx].type;
+            type == TokenType::Number || type == TokenType::String || type == TokenType::Variable ||
             type == TokenType::List) {
             continue;
         }
@@ -166,9 +166,10 @@ void SceneBuilder::build_camera() {
             REPORT_FATAL_ERROR();
         }
 
-        integrator_base->camera =
-            Camera::create_perspective_camera(film->get_resolution(), camera_transform, this->film,
-                                              integrator_base->filter, parameters, allocator);
+        const auto medium_interface = graphics_state.medium_interface;
+        integrator_base->camera = Camera::create_perspective_camera(
+            film->get_resolution(), camera_transform, this->film, integrator_base->filter,
+            medium_interface ? medium_interface->exterior : nullptr, parameters, allocator);
 
         return;
     }
@@ -359,6 +360,11 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
         return;
     }
 
+    if (keyword == "MakeNamedMedium") {
+        parse_make_named_medium(tokens);
+        return;
+    }
+
     if (keyword == "Material") {
         parse_material(tokens);
         return;
@@ -426,13 +432,36 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
         return;
     }
 
-    if (keyword == "MakeNamedMedium" || keyword == "MediumInterface") {
-        static std::set<std::string> unimplemented_keywords;
-        if (unimplemented_keywords.find(keyword) == unimplemented_keywords.end()) {
-            unimplemented_keywords.insert(keyword);
-            printf("%s(): keyword `%s` not implemented\n", __func__, keyword.c_str());
+    if (keyword == "MediumInterface") {
+        if (tokens.size() != 3) {
+            REPORT_FATAL_ERROR();
         }
 
+        for (const auto idx : {1, 2}) {
+            if (tokens[idx].type == TokenType::String && tokens[idx].values.size() == 1) {
+                continue;
+            }
+            REPORT_FATAL_ERROR();
+        }
+
+        auto interior_name = tokens[1].values[0];
+        auto exterior_name = tokens[2].values[0];
+
+        auto build_medium = [&](const std::string &name) -> const Medium * {
+            if (name.empty()) {
+                return nullptr;
+            }
+
+            return named_medium.at(name);
+        };
+
+        auto interior_medium = build_medium(tokens[1].values[0]);
+        auto exterior_medium = build_medium(tokens[2].values[0]);
+
+        auto medium_interface = allocator.allocate<MediumInterface>();
+        *medium_interface = MediumInterface(interior_medium, exterior_medium);
+
+        graphics_state.medium_interface = medium_interface;
         return;
     }
 
@@ -473,7 +502,7 @@ void SceneBuilder::parse_light_source(const std::vector<Token> &tokens) {
 
 void SceneBuilder::parse_lookat(const std::vector<Token> &tokens) {
     if (tokens[0] != Token(TokenType::Keyword, "LookAt")) {
-        throw std::runtime_error("expect Keyword(LookAt)");
+        REPORT_FATAL_ERROR();
     }
 
     std::vector<Real> data;
@@ -497,9 +526,23 @@ void SceneBuilder::parse_make_named_material(const std::vector<Token> &tokens) {
 
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
-    auto type_of_material = parameters.get_one_string("type");
+    const auto type_of_material = parameters.get_one_string("type");
 
-    materials[material_name] = Material::create(type_of_material, parameters, allocator);
+    named_materials[material_name] = Material::create(type_of_material, parameters, allocator);
+}
+
+void SceneBuilder::parse_make_named_medium(const std::vector<Token> &tokens) {
+    const auto medium_name = tokens[1].values[0];
+
+    const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
+
+    if (const auto type_of_medium = parameters.get_one_string("type");
+        type_of_medium != "homogeneous") {
+        printf("%s(): : only `homogeneous` supported\n");
+        REPORT_FATAL_ERROR();
+    }
+
+    named_medium[medium_name] = Medium::create(parameters, allocator);
 }
 
 void SceneBuilder::parse_material(const std::vector<Token> &tokens) {
@@ -521,11 +564,11 @@ void SceneBuilder::parse_named_material(const std::vector<Token> &tokens) {
 
     const auto material_name = tokens[1].values[0];
 
-    if (materials.find(material_name) == materials.end()) {
+    if (named_materials.find(material_name) == named_materials.end()) {
         REPORT_FATAL_ERROR();
     }
 
-    graphics_state.material = materials.at(material_name);
+    graphics_state.material = named_materials.at(material_name);
 }
 
 void SceneBuilder::parse_rotate(const std::vector<Token> &tokens) {
@@ -561,7 +604,8 @@ void SceneBuilder::parse_area_light_source(const std::vector<Token> &tokens) {
     }
 
     if (tokens[1] != Token(TokenType::String, "diffuse")) {
-        throw std::runtime_error("parse_area_light_source: only `diffuse` supported at the moment");
+        printf("%s(): : only `diffuse` supported\n");
+        REPORT_FATAL_ERROR();
     }
 
     graphics_state.area_light_entity =
@@ -574,15 +618,17 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     }
 
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
-    auto type_of_shape = tokens[1].values[0];
+    const auto type_of_shape = tokens[1].values[0];
     const auto render_from_object = get_render_from_object();
 
-    auto result = Shape::create(type_of_shape, render_from_object, render_from_object.inverse(),
-                                graphics_state.reverse_orientation, parameters, allocator);
-    auto shapes = result.first;
-    auto num_shapes = result.second;
+    auto [shapes, num_shapes] =
+        Shape::create(type_of_shape, render_from_object, render_from_object.inverse(),
+                      graphics_state.reverse_orientation, parameters, allocator);
 
-    if (!graphics_state.area_light_entity) {
+    const auto area_light_entity = graphics_state.area_light_entity;
+    const auto medium_interface = graphics_state.medium_interface;
+
+    if (!area_light_entity && (!medium_interface || !medium_interface->is_medium_transition())) {
         auto simple_primitives = Primitive::create_simple_primitives(
             shapes, graphics_state.material, num_shapes, allocator);
 
@@ -599,26 +645,29 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         return;
     }
 
-    // otherwise: build AreaDiffuseLight
+    // otherwise: build AreaDiffuseLight and MediumInterface
 
     if (active_instance_definition) {
-        printf("\nERROR: area lights not supported with object instancing\n");
+        printf("\nERROR: area lights and medium interfaces not supported with object instancing\n");
         REPORT_FATAL_ERROR();
     }
 
-    auto diffuse_area_lights =
-        Light::create_diffuse_area_lights(shapes, num_shapes, render_from_object,
-                                          graphics_state.area_light_entity->parameters, allocator);
+    const auto diffuse_area_lights =
+        area_light_entity
+            ? Light::create_diffuse_area_lights(shapes, num_shapes, render_from_object,
+                                                area_light_entity->parameters, allocator)
+            : nullptr;
+    if (diffuse_area_lights) {
+        for (int idx = 0; idx < num_shapes; ++idx) {
+            gpu_lights.push_back(&diffuse_area_lights[idx]);
+        }
+    }
 
-    auto geometric_primitives = Primitive::create_geometric_primitives(
-        shapes, graphics_state.material, diffuse_area_lights, num_shapes, allocator);
-
+    auto geometric_primitives =
+        Primitive::create_geometric_primitives(shapes, graphics_state.material, diffuse_area_lights,
+                                               medium_interface, num_shapes, allocator);
     for (int idx = 0; idx < num_shapes; ++idx) {
-        auto primitive_ptr = &geometric_primitives[idx];
-        auto area_light_ptr = &diffuse_area_lights[idx];
-
-        gpu_lights.push_back(area_light_ptr);
-        gpu_primitives.push_back(primitive_ptr);
+        gpu_primitives.push_back(&geometric_primitives[idx]);
     }
 }
 
@@ -629,10 +678,8 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 4));
 
     if (color_type == "float") {
-        auto float_texture =
+        float_textures[texture_name] =
             FloatTexture::create(texture_type, get_render_from_object(), parameters, allocator);
-        float_textures[texture_name] = float_texture;
-
         return;
     }
 
@@ -648,7 +695,6 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
         unbounded_spectrum_textures[texture_name] =
             SpectrumTexture::create(texture_type, SpectrumType::Unbounded, get_render_from_object(),
                                     global_spectra->rgb_color_space, parameters, allocator);
-
         return;
     }
 

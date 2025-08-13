@@ -198,7 +198,7 @@ ParameterDictionary::ParameterDictionary(
 }
 
 const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
-                                                  SpectrumType spectrum_type,
+                                                  const SpectrumType spectrum_type,
                                                   GPUMemoryAllocator &allocator) const {
     if (spectra.find(key) != spectra.end()) {
         return spectra.at(key);
@@ -251,8 +251,7 @@ ParameterDictionary::get_float_texture_or_null(const std::string &key,
     return nullptr;
 }
 
-const FloatTexture *ParameterDictionary::get_float_texture(const std::string &key,
-                                                           Real default_val,
+const FloatTexture *ParameterDictionary::get_float_texture(const std::string &key, Real default_val,
                                                            GPUMemoryAllocator &allocator) const {
     auto texture = get_float_texture_or_null(key, allocator);
     if (texture != nullptr) {
@@ -262,8 +261,9 @@ const FloatTexture *ParameterDictionary::get_float_texture(const std::string &ke
     return FloatTexture::create_constant_float_texture(default_val, allocator);
 }
 
-const FloatTexture *ParameterDictionary::get_float_texture_with_default_val(
-    const std::string &key, Real default_val, GPUMemoryAllocator &allocator) const {
+const FloatTexture *
+ParameterDictionary::get_float_texture_with_default_val(const std::string &key, Real default_val,
+                                                        GPUMemoryAllocator &allocator) const {
     auto texture = get_float_texture_or_null(key, allocator);
     if (texture) {
         return texture;

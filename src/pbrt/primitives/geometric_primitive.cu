@@ -4,10 +4,11 @@
 
 PBRT_CPU_GPU
 void GeometricPrimitive::init(const Shape *_shape_ptr, const Material *_material,
-                              const Light *_area_light) {
+                              const Light *_area_light, const MediumInterface *_medium_interface) {
     shape_ptr = _shape_ptr;
     material = _material;
     area_light = _area_light;
+    medium_interface = _medium_interface;
 }
 
 PBRT_CPU_GPU
@@ -26,13 +27,12 @@ bool GeometricPrimitive::fast_intersect(const Ray &ray, Real t_max) const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<ShapeIntersection> GeometricPrimitive::intersect(const Ray &ray,
-                                                                     Real t_max) const {
+pbrt::optional<ShapeIntersection> GeometricPrimitive::intersect(const Ray &ray, Real t_max) const {
     auto si = shape_ptr->intersect(ray, t_max);
     if (!si.has_value()) {
         return {};
     }
 
-    si->interaction.set_intersection_properties(material, area_light);
+    si->interaction.set_intersection_properties(material, area_light, medium_interface, nullptr);
     return si;
 }

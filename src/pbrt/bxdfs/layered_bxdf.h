@@ -1,9 +1,9 @@
 #pragma once
 
-#include <pbrt/base/media.h>
 #include <pbrt/bxdfs/top_or_bottom_bxdf.h>
-#include <pbrt/util/hash.h>
 #include <pbrt/gpu/macro.h>
+#include <pbrt/medium/media_util.h>
+#include <pbrt/util/hash.h>
 #include <pbrt/util/rng.h>
 
 // LayeredBxDF Definition
@@ -11,14 +11,14 @@ template <typename TopBxDF, typename BottomBxDF, bool twoSided>
 class LayeredBxDF {
   public:
     PBRT_CPU_GPU
-    LayeredBxDF(){};
+    LayeredBxDF() {};
 
     PBRT_CPU_GPU
     LayeredBxDF(TopBxDF top, BottomBxDF bottom, Real thickness, const SampledSpectrum &albedo,
                 Real g, int maxDepth, int nSamples)
         : top(top), bottom(bottom),
-          thickness(std::max(thickness, std::numeric_limits<Real>::min())), g(g),
-          albedo(albedo), maxDepth(maxDepth), nSamples(nSamples) {}
+          thickness(std::max(thickness, std::numeric_limits<Real>::min())), g(g), albedo(albedo),
+          maxDepth(maxDepth), nSamples(nSamples) {}
 
     PBRT_CPU_GPU
     void regularize() {
@@ -86,9 +86,7 @@ class LayeredBxDF {
         }
 
         RNG rng(pbrt::hash(wo), pbrt::hash(wi));
-        auto r = [&rng]() {
-            return std::min<Real>(rng.uniform<Real>(), OneMinusEpsilon);
-        };
+        auto r = [&rng]() { return std::min<Real>(rng.uniform<Real>(), OneMinusEpsilon); };
 
         for (int s = 0; s < nSamples; ++s) {
             // Sample random walk through layers to estimate BSDF value
@@ -153,17 +151,17 @@ class LayeredBxDF {
                             wt = power_heuristic(1, wis->pdf, 1, phase.pdf(-w, -wis->wi));
                         }
 
-                        f += beta * albedo * phase.p(-w, -wis->wi) * wt * Tr(zp - exitZ, wis->wi) *
-                             wis->f / wis->pdf;
+                        f += beta * albedo * phase.eval(-w, -wis->wi) * wt *
+                             Tr(zp - exitZ, wis->wi) * wis->f / wis->pdf;
 
                         // Sample phase function and update layered path state
                         Point2f u{r(), r()};
-                        pbrt::optional<PhaseFunctionSample> ps = phase.sample_p(-w, u);
+                        pbrt::optional<PhaseFunctionSample> ps = phase.sample(-w, u);
                         if (!ps || ps->pdf == 0 || ps->wi.z == 0) {
                             continue;
                         }
 
-                        beta *= albedo * ps->p / ps->pdf;
+                        beta *= albedo * ps->rho / ps->pdf;
                         w = ps->wi;
                         z = zp;
 
@@ -173,8 +171,8 @@ class LayeredBxDF {
                             // Account for scattering through _exitInterface_
                             SampledSpectrum fExit = exitInterface.f(-w, wi, mode);
                             if (fExit.is_positive()) {
-                                Real exitPDF = exitInterface.pdf(
-                                    -w, wi, mode, BxDFReflTransFlags::Transmission);
+                                Real exitPDF = exitInterface.pdf(-w, wi, mode,
+                                                                 BxDFReflTransFlags::Transmission);
                                 Real wt = power_heuristic(1, ps->pdf, 1, exitPDF);
                                 f += beta * Tr(zp - exitZ, ps->wi) * fExit * wt;
                             }
@@ -230,8 +228,8 @@ class LayeredBxDF {
                         if (fExit.is_positive()) {
                             Real wt = 1;
                             if (!pbrt::is_specular(nonExitInterface.flags())) {
-                                Real exitPDF = exitInterface.pdf(
-                                    -w, wi, mode, BxDFReflTransFlags::Transmission);
+                                Real exitPDF = exitInterface.pdf(-w, wi, mode,
+                                                                 BxDFReflTransFlags::Transmission);
                                 wt = power_heuristic(1, bs->pdf, 1, exitPDF);
                             }
                             f += beta * Tr(thickness, bs->wi) * fExit * wt;
@@ -275,9 +273,7 @@ class LayeredBxDF {
         bool specularPath = bs->is_specular();
 
         RNG rng(pbrt::hash(wo), pbrt::hash(uc, u));
-        auto r = [&rng]() {
-            return std::min<Real>(rng.uniform<Real>(), OneMinusEpsilon);
-        };
+        auto r = [&rng]() { return std::min<Real>(rng.uniform<Real>(), OneMinusEpsilon); };
 
         // Declare common variables for layered BSDF sampling
         SampledSpectrum f = bs->f * bs->wi.abs_cos_theta();
@@ -312,13 +308,12 @@ class LayeredBxDF {
 
                 if (0 < zp && zp < thickness) {
                     // Update path state for valid scattering event between interfaces
-                    pbrt::optional<PhaseFunctionSample> ps =
-                        phase.sample_p(-w, Point2f(r(), r()));
+                    pbrt::optional<PhaseFunctionSample> ps = phase.sample(-w, Point2f(r(), r()));
                     if (!ps || ps->pdf == 0 || ps->wi.z == 0) {
                         return {};
                     }
 
-                    f *= albedo * ps->p;
+                    f *= albedo * ps->rho;
                     pdf *= ps->pdf;
                     specularPath = false;
                     w = ps->wi;
@@ -379,7 +374,7 @@ class LayeredBxDF {
 
     PBRT_CPU_GPU
     Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
-                  BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
+             BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         // Set _wo_ and _wi_ for layered BSDF evaluation
         if (twoSided && wo.z < 0) {
             wo = -wo;
@@ -388,9 +383,7 @@ class LayeredBxDF {
 
         // Declare _RNG_ for layered PDF evaluation
         RNG rng(pbrt::hash(wi), pbrt::hash(wo));
-        auto r = [&rng]() {
-            return std::min<Real>(rng.uniform<Real>(), OneMinusEpsilon);
-        };
+        auto r = [&rng]() { return std::min<Real>(rng.uniform<Real>(), OneMinusEpsilon); };
 
         // Update _pdfSum_ for reflection at the entrance layer
         bool enteredTop = twoSided || wo.z > 0;

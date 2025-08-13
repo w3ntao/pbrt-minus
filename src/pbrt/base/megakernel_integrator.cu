@@ -157,7 +157,7 @@ SampledSpectrum MegakernelIntegrator::li(const Ray &ray, SampledWavelengths &lam
 void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
                                   const int samples_per_pixel,
                                   const IntegratorBase *integrator_base, const bool preview) const {
-    const auto film_resolution = integrator_base->camera->get_camerabase()->resolution;
+    const auto film_resolution = integrator_base->camera->get_camera_base()->resolution;
     const auto num_pixels = film_resolution.x * film_resolution.y;
 
     GPUMemoryAllocator local_allocator;

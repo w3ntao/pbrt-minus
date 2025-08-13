@@ -4,6 +4,7 @@
 #include <pbrt/base/ray.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/euclidean_space/transform.h>
+#include <pbrt/medium/homogeneous_medium.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 
 enum class RenderingCoordinateSystem {
@@ -95,13 +96,15 @@ struct CameraBase {
     Vector3f minPosDifferentialX, minPosDifferentialY;
     Vector3f minDirDifferentialX, minDirDifferentialY;
 
+    const Medium *medium = nullptr;
+
     PBRT_CPU_GPU
     CameraBase() {}
 
-    void init(const Point2i _resolution, const CameraTransform &_camera_transform) {
-        resolution = _resolution;
-        camera_transform = _camera_transform;
-    }
+    PBRT_CPU_GPU
+    CameraBase(const Point2i &_resolution, const CameraTransform &_camera_transform,
+               const Medium *_medium)
+        : resolution(_resolution), camera_transform(_camera_transform), medium(_medium) {}
 
     PBRT_CPU_GPU
     void approximate_dp_dxy(const Point3f p, const Normal3f n, const int samples_per_pixel,

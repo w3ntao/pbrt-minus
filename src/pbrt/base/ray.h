@@ -5,16 +5,30 @@
 #include <pbrt/euclidean_space/point3fi.h>
 #include <pbrt/euclidean_space/vector3.h>
 
+struct Medium;
+
 class Ray {
   public:
     Point3f o;
     Vector3f d;
+    const Medium *medium = nullptr;
 
     PBRT_CPU_GPU Ray() {}
 
-    PBRT_CPU_GPU Ray(Point3f _o, Vector3f _d) : o(_o), d(_d) {}
+    PBRT_CPU_GPU
+    Ray(const Point3f &_o, const Vector3f &_d, const Medium *_medium = nullptr)
+        : o(_o), d(_d), medium(_medium) {}
 
-    PBRT_CPU_GPU Point3f at(Real t) const {
+    PBRT_CPU_GPU
+    bool normalized() const {
+        constexpr Real tolerance = 0.0001;
+
+        const auto length = d.length();
+        return length > 1 - tolerance && length < 1 + tolerance;
+    }
+
+    PBRT_CPU_GPU
+    Point3f at(const Real t) const {
         return o + t * d;
     }
 
@@ -42,8 +56,9 @@ class Ray {
         return po;
     }
 
-    PBRT_CPU_GPU static Ray spawn_ray_to(const Point3fi &p_from, const Normal3f &n_from,
-                                         const Point3fi &p_to, const Normal3f &n_to) {
+    PBRT_CPU_GPU
+    static Ray spawn_ray_to(const Point3fi &p_from, const Normal3f &n_from, const Point3fi &p_to,
+                            const Normal3f &n_to) {
         auto pf = offset_ray_origin(p_from, n_from, p_to.to_point3f() - p_from.to_point3f());
         auto pt = offset_ray_origin(p_to, n_to, pf - p_to.to_point3f());
 

@@ -23,8 +23,8 @@ inline Real sample_linear(Real u, Real a, Real b) {
 }
 
 PBRT_CPU_GPU
-inline int sample_discrete(const Real *weights, int num_weights, Real u,
-                           Real *pmf = nullptr, Real *uRemapped = nullptr) {
+inline int sample_discrete(const Real *weights, int num_weights, Real u, Real *pmf = nullptr,
+                           Real *uRemapped = nullptr) {
     // Handle empty _weights_ for discrete sampling
     if (num_weights == 0) {
         if (pmf != nullptr) {
@@ -159,8 +159,8 @@ inline void sample_uniform_triangle(Real out[3], const Point2f u) {
 }
 
 PBRT_CPU_GPU
-static void sample_spherical_triangle(Real out[3], Real *pdf, const Point3f v[3],
-                                      const Point3f p, const Point2f u) {
+static void sample_spherical_triangle(Real out[3], Real *pdf, const Point3f v[3], const Point3f p,
+                                      const Point2f u) {
     if (pdf) {
         *pdf = 0.0;
     }
@@ -208,7 +208,7 @@ static void sample_spherical_triangle(Real out[3], Real *pdf, const Point3f v[3]
     Real k1 = cosPhi + cosAlpha;
     Real k2 = sinPhi - sinAlpha * a.dot(b) /* cos c */;
     Real cosBp = (k2 + (difference_of_products(k2, cosPhi, k1, sinPhi)) * cosAlpha) /
-                      ((sum_of_products(k2, sinPhi, k1, cosPhi)) * sinAlpha);
+                 ((sum_of_products(k2, sinPhi, k1, cosPhi)) * sinAlpha);
 
     cosBp = clamp<Real>(cosBp, -1, 1);
 
@@ -341,7 +341,7 @@ inline Real SampleSmoothStep(Real u, Real a, Real b) {
 }
 
 PBRT_CPU_GPU
-Vector3f SampleHenyeyGreenstein(Vector3f wo, Real g, Point2f u, Real *pdf);
+Vector3f sample_henyey_greenstein(const Vector3f &wo, Real g, const Point2f u, Real *pdf);
 
 PBRT_CPU_GPU
 // Via Jim Arvo's SphTri.C

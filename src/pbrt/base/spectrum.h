@@ -35,9 +35,9 @@ class Spectrum {
 
     static const Spectrum *create_black_body(Real temperature, GPUMemoryAllocator &allocator);
 
-    static const Spectrum *create_cie_d(Real temperature, const Real *cie_s0,
-                                        const Real *cie_s1, const Real *cie_s2,
-                                        const Real *cie_lambda, GPUMemoryAllocator &allocator);
+    static const Spectrum *create_cie_d(Real temperature, const Real *cie_s0, const Real *cie_s1,
+                                        const Real *cie_s2, const Real *cie_lambda,
+                                        GPUMemoryAllocator &allocator);
 
     static const Spectrum *create_constant_spectrum(Real val, GPUMemoryAllocator &allocator);
 
@@ -45,9 +45,10 @@ class Spectrum {
                                            const RGBColorSpace *color_space,
                                            GPUMemoryAllocator &allocator);
 
-    static const Spectrum *create_piecewise_linear_spectrum_from_lambdas_and_values(
-        const std::vector<Real> &cpu_lambdas, const std::vector<Real> &cpu_values,
-        GPUMemoryAllocator &allocator);
+    static const Spectrum *
+    create_piecewise_linear_spectrum_from_lambdas_and_values(const std::vector<Real> &cpu_lambdas,
+                                                             const std::vector<Real> &cpu_values,
+                                                             GPUMemoryAllocator &allocator);
 
     static const Spectrum *
     create_piecewise_linear_spectrum_from_interleaved(const std::vector<Real> &samples,
@@ -78,7 +79,11 @@ class Spectrum {
         return type == Type::constant;
     }
 
-    PBRT_CPU_GPU Real operator()(Real lambda) const;
+    PBRT_CPU_GPU
+    Real max_value() const;
+
+    PBRT_CPU_GPU
+    Real operator()(Real lambda) const;
 
     PBRT_CPU_GPU
     Real inner_product(const Spectrum *const spectrum) const {

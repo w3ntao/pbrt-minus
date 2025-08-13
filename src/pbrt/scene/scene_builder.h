@@ -31,13 +31,15 @@ struct AreaLightEntity {
 
 class GraphicsState {
   public:
-    GraphicsState() : transform(Transform::identity()), reverse_orientation(false) {}
+    GraphicsState() : transform(Transform::identity()) {}
 
     bool reverse_orientation = false;
     Transform transform;
     const Material *material = nullptr;
 
     std::optional<AreaLightEntity> area_light_entity;
+
+    const MediumInterface *medium_interface = nullptr;
 };
 
 class SceneBuilder {
@@ -75,7 +77,8 @@ class SceneBuilder {
 
     GPUMemoryAllocator allocator;
 
-    std::map<std::string, const Material *> materials;
+    std::map<std::string, const Material *> named_materials;
+    std::map<std::string, const Medium *> named_medium;
     std::map<std::string, const Spectrum *> spectra;
 
     std::map<std::string, const FloatTexture *> float_textures;
@@ -135,9 +138,10 @@ class SceneBuilder {
     explicit SceneBuilder(const CommandLineOption &command_line_option);
 
     [[nodiscard]] ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
-        return ParameterDictionary(tokens, root, global_spectra, spectra, materials, float_textures,
-                                   albedo_spectrum_textures, illuminant_spectrum_textures,
-                                   unbounded_spectrum_textures, allocator);
+        return ParameterDictionary(tokens, root, global_spectra, spectra, named_materials,
+                                   float_textures, albedo_spectrum_textures,
+                                   illuminant_spectrum_textures, unbounded_spectrum_textures,
+                                   allocator);
     }
 
     void build_camera();
@@ -161,6 +165,8 @@ class SceneBuilder {
     void parse_lookat(const std::vector<Token> &tokens);
 
     void parse_make_named_material(const std::vector<Token> &tokens);
+
+    void parse_make_named_medium(const std::vector<Token> &tokens);
 
     void parse_material(const std::vector<Token> &tokens);
 

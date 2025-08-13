@@ -2,17 +2,20 @@
 
 #include <pbrt/spectrum_util/sampled_wavelengths.h>
 #include <pbrt/spectrum_util/spectrum_constants_cie.h>
-#include <vector>
 
+class GPUMemoryAllocator;
 class Spectrum;
 
 class DenselySampledSpectrum {
   public:
+    static const DenselySampledSpectrum *create(const Spectrum *spectrum, Real scale,
+                                                GPUMemoryAllocator &allocator);
+
     PBRT_CPU_GPU
     Real inner_product(const Spectrum *spectrum) const;
 
     PBRT_CPU_GPU
-    void init_from_spectrum(const Spectrum *spectrum);
+    void init_from_spectrum(const Spectrum *spectrum, Real scale);
 
     template <typename F>
     PBRT_CPU_GPU void init_with_sample_function(F func, int lambda_min = LAMBDA_MIN,
@@ -61,13 +64,6 @@ class DenselySampledSpectrum {
         }
 
         return sampled_values;
-    }
-
-    PBRT_CPU_GPU
-    void scale(Real s) {
-        for (int i = 0; i < LAMBDA_RANGE; ++i) {
-            values[i] = values[i] * s;
-        }
     }
 
   private:

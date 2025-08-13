@@ -1,11 +1,10 @@
 #pragma once
 
-#include <pbrt/base/spectrum.h>
 #include <pbrt/util/optional.h>
 #include <pbrt/util/scattering.h>
 
 struct PhaseFunctionSample {
-    Real p;
+    Real rho;
     Vector3f wi;
     Real pdf;
 };
@@ -16,25 +15,25 @@ class HGPhaseFunction {
     HGPhaseFunction() {}
 
     PBRT_CPU_GPU
-    HGPhaseFunction(Real g) : g(g) {}
+    HGPhaseFunction(Real _g) : g(_g) {}
 
     PBRT_CPU_GPU
-    Real p(const Vector3f wo, const Vector3f wi) const {
+    Real eval(const Vector3f &wo, const Vector3f &wi) const {
         return HenyeyGreenstein(wo.dot(wi), g);
     }
 
     PBRT_CPU_GPU
-    pbrt::optional<PhaseFunctionSample> sample_p(Vector3f wo, Point2f u) const {
+    pbrt::optional<PhaseFunctionSample> sample(const Vector3f &wo, const Point2f &u) const {
         Real pdf;
-        Vector3f wi = SampleHenyeyGreenstein(wo, g, u, &pdf);
+        Vector3f wi = sample_henyey_greenstein(wo, g, u, &pdf);
         return PhaseFunctionSample{pdf, wi, pdf};
     }
 
     PBRT_CPU_GPU
-    Real pdf(Vector3f wo, Vector3f wi) const {
-        return p(wo, wi);
+    Real pdf(const Vector3f &wo, const Vector3f &wi) const {
+        return eval(wo, wi);
     }
 
   private:
-    Real g;
+    Real g = NAN;
 };

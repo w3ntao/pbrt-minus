@@ -17,7 +17,7 @@ class GPUMemoryAllocator {
     }
 
     template <typename T>
-    T *allocate(const size_t num = 1) {
+    [[nodiscard]] T *allocate(const size_t num = 1) {
         std::unique_lock lock(mtx);
 
         T *data;
