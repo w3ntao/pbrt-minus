@@ -227,7 +227,7 @@ SampledSpectrum MegakernelPathIntegrator::sample_ld_volume(
 
     auto shadow_ray = surface_interaction.spawn_ray_to(ls->p_light, true);
     bool reach_light = false;
-    bool trap_by_self_intersection = false;
+    bool possible_self_intersection = false;
     for (auto depth = 0; depth < max_depth * 2; depth++) {
         const auto distance_to_light = ls->p_light.p().distance(shadow_ray.o);
         auto optional_intersection =
@@ -260,12 +260,12 @@ SampledSpectrum MegakernelPathIntegrator::sample_ld_volume(
         shadow_ray = optional_intersection->interaction.spawn_ray(shadow_ray.d);
 
         if (optional_intersection->t_hit < epsilon_distance) {
-            if (trap_by_self_intersection) {
+            if (possible_self_intersection) {
                 // forcibly offset shadow_ray.o to avoid self-intersection
                 shadow_ray.o += epsilon_distance * shadow_ray.d;
-                trap_by_self_intersection = false;
+                possible_self_intersection = false;
             } else {
-                trap_by_self_intersection = true;
+                possible_self_intersection = true;
             }
         }
     }

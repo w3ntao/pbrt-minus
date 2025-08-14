@@ -196,7 +196,7 @@ pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, const 
         wi = wi.normalize();
 
         // Convert area sampling PDF in _ss_ to solid angle measure
-        ss->pdf /= ss->interaction.n.abs_dot(-wi) / ctx.p().squared_distance(ss->interaction.p());
+        ss->pdf *= ctx.p().squared_distance(ss->interaction.p()) / ss->interaction.n.abs_dot(-wi);
 
         if (is_inf(ss->pdf)) {
             return {};
@@ -276,8 +276,8 @@ Real Sphere::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
         }
 
         // Compute PDF in solid angle measure from shape intersection point
-        Real pdf = (1.0 / area()) / (isect->interaction.n.abs_dot(-wi) /
-                                     ctx.p().squared_distance(isect->interaction.p()));
+        Real pdf = ctx.p().squared_distance(isect->interaction.p()) /
+                   (area() * isect->interaction.n.abs_dot(-wi));
 
         if (isinf(pdf)) {
             pdf = 0;
