@@ -86,12 +86,9 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
 
     bool should_terminate_path = !path_state->shape_intersections[path_idx].has_value() ||
                                  path_length >= max_depth || !beta.is_positive();
-
-    if (!should_terminate_path) {
-        if (path_length >= start_russian_roulette) {
-            should_terminate_path |=
-                russian_roulette(beta, &path_state->samplers[path_idx], nullptr);
-        }
+    if (!should_terminate_path && path_length >= start_russian_roulette) {
+        // possibly terminate the path with Russian roulette
+        should_terminate_path = russian_roulette(beta, &path_state->samplers[path_idx], nullptr);
     }
 
     if (should_terminate_path) {
