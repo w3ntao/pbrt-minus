@@ -55,5 +55,5 @@ SampledSpectrum AmbientOcclusionIntegrator::li(const Ray &ray, SampledWavelength
     }
 
     return illuminant_spectrum->sample(lambda) *
-           (illuminant_scale * normal.dot(wi) / (compute_pi() * pdf));
+           (illuminant_scale * normal.dot(wi) / (pbrt::PI * pdf));
 }

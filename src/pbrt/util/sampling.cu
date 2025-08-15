@@ -23,7 +23,7 @@ Vector3f sample_henyey_greenstein(const Vector3f &wo, Real g, const Point2f u, R
 
     // Compute direction _wi_ for Henyey--Greenstein sample
     Real sinTheta = safe_sqrt(1 - sqr(cosTheta));
-    Real phi = 2 * compute_pi() * u[1];
+    Real phi = 2 * pbrt::PI * u[1];
 
     Frame wFrame = Frame::from_z(wo);
 
@@ -88,10 +88,10 @@ Point2f InvertSphericalTriangleSample(const Point3f v[3], const Point3f &p, cons
 
         n_cpb = n_cpb.normalize();
         n_acp = n_acp.normalize();
-        Real Ap = alpha + angle_between(n_ab, n_cpb) + angle_between(n_acp, -n_cpb) - compute_pi();
+        Real Ap = alpha + angle_between(n_ab, n_cpb) + angle_between(n_acp, -n_cpb) - pbrt::PI;
 
         // Compute sample _u0_ that gives the area $A'$
-        Real A = alpha + beta + gamma - compute_pi();
+        Real A = alpha + beta + gamma - pbrt::PI;
         u0 = Ap / A;
     }
 
@@ -163,7 +163,7 @@ Vector3f EqualAreaSquareToSphere(Point2f p) {
     Real r = 1 - d;
 
     // Compute angle $\phi$ for square to sphere mapping
-    Real phi = (r == 0 ? 1 : (vp - up) / r + 1) * compute_pi() / 4;
+    Real phi = (r == 0 ? 1 : (vp - up) / r + 1) * pbrt::PI / 4;
 
     // Find $z$ coordinate for spherical direction
     Real z = pbrt::copysign(1 - sqr(r), signedDistance);

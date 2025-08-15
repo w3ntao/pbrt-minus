@@ -110,7 +110,7 @@ pbrt::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleCon
     Vector3f wi = render_from_light(wLight);
 
     // Compute PDF for sampled infinite light direction
-    const Real pdf = map_pdf / (4 * compute_pi());
+    const Real pdf = map_pdf / (4 * pbrt::PI);
 
     const auto interaction = Interaction(ctx.p() + wi * (2 * scene_radius));
 
@@ -131,11 +131,9 @@ PBRT_CPU_GPU SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &l
         }
     }
 
-    const auto pi = compute_pi();
-
     // Integrating over the sphere, so 4pi for that.  Then one more for Pi
     // r^2 for the area of the disk receiving illumination...
-    return 4 * pi * pi * sqr(scene_radius) * scale * sumL / (width * height);
+    return 4 * pbrt::PI * pbrt::PI * sqr(scene_radius) * scale * sumL / (width * height);
 }
 
 PBRT_CPU_GPU
@@ -145,7 +143,7 @@ Real ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &w
     Point2f uv = EqualAreaSphereToSquare(wLight);
 
     auto pdf = this->image_le_distribution->get_pdf(uv) * image_resolution.x * image_resolution.y;
-    return pdf / (4 * compute_pi());
+    return pdf / (4 * pbrt::PI);
 }
 
 void ImageInfiniteLight::preprocess(const Bounds3f &scene_bounds) {

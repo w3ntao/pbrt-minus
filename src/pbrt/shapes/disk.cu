@@ -61,7 +61,7 @@ pbrt::optional<ShapeSample> Disk::sample(const Point2f &u) const {
     // Compute $(u,v)$ for sampled point on disk
     Real phi = std::atan2(pd.y, pd.x);
     if (phi < 0) {
-        phi += 2 * compute_pi();
+        phi += 2 * pbrt::PI;
     }
 
     Real radiusSample = std::sqrt(sqr(pObj.x) + sqr(pObj.y));
@@ -120,7 +120,7 @@ pbrt::optional<QuadricIntersection> Disk::basic_intersect(const Ray &r, Real tMa
     // Test disk $\phi$ value against $\phimax$
     Real phi = std::atan2(pHit.y, pHit.x);
     if (phi < 0) {
-        phi += 2 * compute_pi();
+        phi += 2 * pbrt::PI;
     }
 
     if (phi > phi_max) {

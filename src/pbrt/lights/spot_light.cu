@@ -31,7 +31,7 @@ SpotLight *SpotLight::create(const Transform &renderFromLight,
         auto cosFalloffEnd = std::cos(degree_to_radian(coneangle));
         auto cosFalloffStart = std::cos(degree_to_radian(coneangle - conedelta));
         auto k_e =
-            2 * compute_pi() * ((1 - cosFalloffStart) + (cosFalloffStart - cosFalloffEnd) / 2);
+            2 * pbrt::PI * ((1 - cosFalloffStart) + (cosFalloffStart - cosFalloffEnd) / 2);
         sc *= phi_v / k_e;
     }
 
@@ -100,10 +100,10 @@ pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point
         Real cosTheta = SampleSmoothStep(u1[0], cosFalloffEnd, cosFalloffStart);
 
         Real sinTheta = safe_sqrt(1 - sqr(cosTheta));
-        Real phi = u1[1] * 2 * compute_pi();
+        Real phi = u1[1] * 2 * pbrt::PI;
         wLight = SphericalDirection(sinTheta, cosTheta, phi);
         pdfDir = SmoothStepPDF(cosTheta, cosFalloffEnd, cosFalloffStart) * sectionPDF /
-                 (2 * compute_pi());
+                 (2 * pbrt::PI);
     }
 
     // Return sampled spotlight ray
@@ -122,7 +122,7 @@ void SpotLight::pdf_le(const Ray &ray, Real *pdfPos, Real *pdfDir) const {
         *pdfDir = UniformConePDF(cosFalloffStart) * p[0] / (p[0] + p[1]);
     } else {
         *pdfDir = SmoothStepPDF(cosTheta, cosFalloffEnd, cosFalloffStart) * p[1] /
-                  ((p[0] + p[1]) * (2 * compute_pi()));
+                  ((p[0] + p[1]) * (2 * pbrt::PI));
     }
 }
 
@@ -134,7 +134,7 @@ Real SpotLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
 
 PBRT_CPU_GPU
 SampledSpectrum SpotLight::phi(const SampledWavelengths &lambda) const {
-    return scale * i_emit->sample(lambda) * 2 * compute_pi() *
+    return scale * i_emit->sample(lambda) * 2 * pbrt::PI *
            ((1 - cosFalloffStart) + (cosFalloffStart - cosFalloffEnd) / 2);
 }
 

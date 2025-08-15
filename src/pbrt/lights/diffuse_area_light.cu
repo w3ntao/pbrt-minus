@@ -133,5 +133,5 @@ SampledSpectrum DiffuseAreaLight::phi(const SampledWavelengths &lambda) const {
     // TODO: image in DiffuseAreaLight is not implemented
 
     auto L = l_emit->sample(lambda) * scale;
-    return compute_pi() * (two_sided ? 2 : 1) * this->shape->area() * L;
+    return pbrt::PI * (two_sided ? 2 : 1) * this->shape->area() * L;
 }

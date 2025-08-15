@@ -24,7 +24,7 @@ UniformInfiniteLight *UniformInfiniteLight::create(const Transform &renderFromLi
         // If the scene specifies desired illuminance, first calculate
         // the illuminance from a uniform hemispherical emission
         // of L_v then use this to scale the emission spectrum.
-        auto k_e = compute_pi();
+        auto k_e = pbrt::PI;
         scale *= E_v / k_e;
     }
 
@@ -49,9 +49,7 @@ void UniformInfiniteLight::init(const Transform &renderFromLight, const Spectrum
 
 PBRT_CPU_GPU
 SampledSpectrum UniformInfiniteLight::phi(const SampledWavelengths &lambda) const {
-    const auto PI = compute_pi();
-
-    return 4 * PI * PI * sqr(sceneRadius) * scale * Lemit->sample(lambda);
+    return 4 * pbrt::PI * pbrt::PI * sqr(sceneRadius) * scale * Lemit->sample(lambda);
 }
 
 PBRT_CPU_GPU
@@ -67,7 +65,7 @@ pbrt::optional<LightLiSample> UniformInfiniteLight::sample_li(const LightSampleC
 
 PBRT_CPU_GPU
 Real UniformInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
-                                       bool allow_incomplete_pdf) const {
+                                  bool allow_incomplete_pdf) const {
     if (allow_incomplete_pdf) {
         return 0;
     }
@@ -94,7 +92,7 @@ pbrt::optional<LightLeSample> UniformInfiniteLight::sample_le(const Point2f &u1,
     Ray ray(pDisk + sceneRadius * -w, w);
 
     // Compute probabilities for uniform infinite light
-    auto pdfPos = 1.0 / (compute_pi() * sqr(sceneRadius));
+    auto pdfPos = 1.0 / (pbrt::PI * sqr(sceneRadius));
     auto pdfDir = uniform_sphere_pdf();
 
     return LightLeSample(scale * Lemit->sample(lambda), ray, pdfPos, pdfDir);

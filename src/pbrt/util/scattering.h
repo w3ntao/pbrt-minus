@@ -52,7 +52,7 @@ inline Real HenyeyGreenstein(Real cosTheta, Real g) {
     // very smooth microfacet distribution...)
     g = clamp<Real>(g, -.99, .99);
     Real denom = 1 + sqr(g) + 2 * g * cosTheta;
-    return 1.0 / (4.0 * compute_pi()) * (1 - sqr(g)) / (denom * safe_sqrt(denom));
+    return 1.0 / (4.0 * pbrt::PI) * (1 - sqr(g)) / (denom * safe_sqrt(denom));
 }
 
 PBRT_CPU_GPU inline Real FrComplex(Real cosTheta_i, pbrt::complex<Real> eta) {
@@ -140,7 +140,7 @@ class TrowbridgeReitzDistribution {
         }
 
         Real e = tan2Theta * (sqr(wm.cos_phi() / alpha_x) + sqr(wm.sin_phi() / alpha_y));
-        return 1 / (compute_pi() * alpha_x * alpha_y * cos4Theta * sqr(1 + e));
+        return 1 / (pbrt::PI * alpha_x * alpha_y * cos4Theta * sqr(1 + e));
     }
 
     PBRT_CPU_GPU

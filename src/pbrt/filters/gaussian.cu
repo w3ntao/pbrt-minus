@@ -6,7 +6,7 @@
 #include <pbrt/util/math.h>
 
 PBRT_CPU_GPU inline Real gaussian(Real x, Real mu = 0, Real sigma = 1) {
-    return 1 / std::sqrt(2 * compute_pi() * sigma * sigma) *
+    return 1 / std::sqrt(2 * pbrt::PI * sigma * sigma) *
            std::exp(-sqr(x - mu) / (2 * sigma * sigma));
 }
 

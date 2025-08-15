@@ -3,13 +3,12 @@
 
 PBRT_CPU_GPU
 TexCoord2D CylindricalMapping::map(const TextureEvalContext &ctx) const {
-    const auto PI = compute_pi();
-    const auto Inv2Pi = 0.5 / PI;
+    const Real Inv2Pi = 0.5 * pbrt::InvPI;
 
     Point3f pt = textureFromRender(ctx.p);
     // Compute texture coordinate differentials for cylinder $(u,v)$ mapping
     Real x2y2 = sqr(pt.x) + sqr(pt.y);
-    Vector3f dsdp = Vector3f(-pt.y, pt.x, 0) / (2 * PI * x2y2), dtdp = Vector3f(0, 0, 1);
+    Vector3f dsdp = Vector3f(-pt.y, pt.x, 0) / (2 * pbrt::PI * x2y2), dtdp = Vector3f(0, 0, 1);
 
     auto dpdx = textureFromRender(ctx.dpdx);
     auto dpdy = textureFromRender(ctx.dpdy);
@@ -19,7 +18,7 @@ TexCoord2D CylindricalMapping::map(const TextureEvalContext &ctx) const {
     auto dtdx = dtdp.dot(dpdx);
     auto dtdy = dtdp.dot(dpdy);
 
-    Point2f st((PI + std::atan2(pt.y, pt.x)) * Inv2Pi, pt.z);
+    Point2f st((pbrt::PI + std::atan2(pt.y, pt.x)) * Inv2Pi, pt.z);
     return TexCoord2D{st, dsdx, dsdy, dtdx, dtdy};
 }
 
@@ -46,14 +45,12 @@ TexCoord2D SphericalMapping::map(const TextureEvalContext &ctx) const {
     // Compute $\partial\,s/\partial\,\pt{}$ and $\partial\,t/\partial\,\pt{}$ for
     // spherical mapping
 
-    const auto PI = compute_pi();
-    const auto InvPi = 1.0 / PI;
-    const auto Inv2Pi = 0.5 / PI;
+    const Real Inv2Pi = 0.5 * pbrt::InvPI;
 
     Real x2y2 = sqr(pt.x) + sqr(pt.y);
     Real sqrtx2y2 = std::sqrt(x2y2);
-    Vector3f dsdp = Vector3f(-pt.y, pt.x, 0) / (2 * PI * x2y2);
-    Vector3f dtdp = 1 / (PI * (x2y2 + sqr(pt.z))) *
+    Vector3f dsdp = Vector3f(-pt.y, pt.x, 0) / (2 * pbrt::PI * x2y2);
+    Vector3f dtdp = 1 / (pbrt::PI * (x2y2 + sqr(pt.z))) *
                     Vector3f(pt.x * pt.z / sqrtx2y2, pt.y * pt.z / sqrtx2y2, -sqrtx2y2);
 
     // Compute texture coordinate differentials for spherical mapping
@@ -67,7 +64,7 @@ TexCoord2D SphericalMapping::map(const TextureEvalContext &ctx) const {
     // Return $(s,t)$ texture coordinates and differentials based on spherical mapping
     auto vec = (pt - Point3f(0, 0, 0)).normalize();
 
-    Point2f st(vec.spherical_theta() * InvPi, vec.spherical_phi() * Inv2Pi);
+    Point2f st(vec.spherical_theta() * pbrt::InvPI, vec.spherical_phi() * Inv2Pi);
 
     return TexCoord2D{st, dsdx, dsdy, dtdx, dtdy};
 }

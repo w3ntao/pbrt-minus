@@ -225,7 +225,7 @@ class Vector3 {
     PBRT_CPU_GPU
     Real spherical_phi() const {
         Real p = std::atan2(y, x);
-        return (p < 0) ? (p + 2 * compute_pi()) : p;
+        return (p < 0) ? (p + 2 * pbrt::PI) : p;
     }
 
     PBRT_CPU_GPU void print() const {
@@ -253,7 +253,7 @@ PBRT_CPU_GPU inline Vector3f FMA(const Vector3f &a, Real b, const Vector3f &c) {
 template <typename T>
 PBRT_CPU_GPU inline Real angle_between(Vector3<T> v1, Vector3<T> v2) {
     if (v1.dot(v2) < 0) {
-        return compute_pi() - 2 * safe_asin((v1 + v2).length() / 2);
+        return pbrt::PI - 2 * safe_asin((v1 + v2).length() / 2);
     } else {
         return 2 * safe_asin((v2 - v1).length() / 2);
     }

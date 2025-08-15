@@ -14,8 +14,7 @@ class DiffuseTransmissionBxDF {
 
     PBRT_CPU_GPU
     SampledSpectrum f(const Vector3f &wo, const Vector3f &wi, TransportMode mode) const {
-        const auto InvPi = 1.0 / compute_pi();
-        return wo.same_hemisphere(wi) ? (R * InvPi) : (T * InvPi);
+        return (wo.same_hemisphere(wi) ? R : T) * pbrt::InvPI;
     }
 
     PBRT_CPU_GPU

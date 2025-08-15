@@ -108,7 +108,7 @@ void PerspectiveCamera::pdf_we(const Ray &ray, Real *pdfPos, Real *pdfDir) const
     }
 
     // Compute lens area  and return perspective camera probabilities
-    Real lensArea = lens_radius != 0 ? (compute_pi() * sqr(lens_radius)) : 1;
+    Real lensArea = lens_radius != 0 ? (pbrt::PI * sqr(lens_radius)) : 1;
     *pdfPos = 1 / lensArea;
     *pdfDir = 1 / (A * pbrt::pow<3>(cosTheta));
 }
@@ -139,7 +139,7 @@ SampledSpectrum PerspectiveCamera::we(const Ray &ray, SampledWavelengths &lambda
     }
 
     // Compute lens area of perspective camera
-    auto lensArea = lens_radius != 0 ? (compute_pi() * sqr(lens_radius)) : 1;
+    auto lensArea = lens_radius != 0 ? (pbrt::PI * sqr(lens_radius)) : 1;
 
     // Return importance for point on image plane
     return SampledSpectrum(1.0 / (A * lensArea * pbrt::pow<4>(cosTheta)));
@@ -161,7 +161,7 @@ pbrt::optional<CameraWiSample> PerspectiveCamera::sample_wi(const Interaction &r
     wi /= dist;
 
     // Compute PDF for importance arriving at _ref_
-    auto lensArea = lens_radius != 0 ? (compute_pi() * sqr(lens_radius)) : 1;
+    auto lensArea = lens_radius != 0 ? (pbrt::PI * sqr(lens_radius)) : 1;
     auto pdf = sqr(dist) / (lensIntr.n.abs_dot(wi) * lensArea);
 
     // Compute importance and return _CameraWiSample_

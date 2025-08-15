@@ -109,7 +109,7 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, Real t
 
     phi = std::atan2(pHit.y, pHit.x);
     if (phi < 0) {
-        phi += 2 * compute_pi();
+        phi += 2 * pbrt::PI;
     }
 
     // Test sphere intersection against clipping parameters
@@ -136,7 +136,7 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, Real t
 
         phi = std::atan2(pHit.y, pHit.x);
         if (phi < 0) {
-            phi += 2 * compute_pi();
+            phi += 2 * pbrt::PI;
         }
 
         if ((z_min > -radius && pHit.z < z_min) || (z_max < radius && pHit.z > z_max) ||
@@ -169,7 +169,7 @@ pbrt::optional<ShapeSample> Sphere::sample(const Point2f &u) const {
     Real theta = safe_acos(pObj.z / radius);
     Real phi = std::atan2(pObj.y, pObj.x);
     if (phi < 0) {
-        phi += 2 * compute_pi();
+        phi += 2 * pbrt::PI;
     }
 
     Point2f uv(phi / phi_max, (theta - theta_z_min) / (theta_z_max - theta_z_min));
@@ -229,7 +229,7 @@ pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, const 
     Real sinAlpha = safe_sqrt(1 - sqr(cosAlpha));
 
     // Compute surface normal and sampled point on sphere
-    Real phi = u[1] * 2 * compute_pi();
+    Real phi = u[1] * 2 * pbrt::PI;
     Vector3f w = SphericalDirection(sinAlpha, cosAlpha, phi);
 
     Frame samplingFrame = Frame::from_z((pCenter - ctx.p()).normalize());
@@ -252,13 +252,13 @@ pbrt::optional<ShapeSample> Sphere::sample(const ShapeSampleContext &ctx, const 
     Real spherePhi = std::atan2(pObj.y, pObj.x);
 
     if (spherePhi < 0) {
-        spherePhi += 2 * compute_pi();
+        spherePhi += 2 * pbrt::PI;
     }
 
     Point2f uv(spherePhi / phi_max, (theta - theta_z_min) / (theta_z_max - theta_z_min));
 
     return ShapeSample{.interaction = Interaction(Point3fi(p, pError), n, uv),
-                       .pdf = 1 / (2 * compute_pi() * oneMinusCosThetaMax)};
+                       .pdf = 1 / (2 * pbrt::PI * oneMinusCosThetaMax)};
 }
 
 PBRT_CPU_GPU
@@ -296,5 +296,5 @@ Real Sphere::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
         oneMinusCosThetaMax = sin2ThetaMax / 2;
     }
 
-    return 1.0 / (2.0 * compute_pi() * oneMinusCosThetaMax);
+    return 1.0 / (2.0 * pbrt::PI * oneMinusCosThetaMax);
 }

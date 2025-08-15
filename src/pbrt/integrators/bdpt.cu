@@ -87,7 +87,7 @@ Real Vertex::pdf_light(const IntegratorBase *integrator_base, const Vertex &v) c
         Point3f sceneCenter;
         Real sceneRadius;
         sceneBounds.bounding_sphere(&sceneCenter, &sceneRadius);
-        pdf = 1.0 / (compute_pi() * sqr(sceneRadius));
+        pdf = 1.0 / (pbrt::PI * sqr(sceneRadius));
     } else if (is_on_surface()) {
         // Compute sampling density at emissive surface
         if (DEBUG_MODE && type == VertexType::light) {

@@ -478,7 +478,7 @@ class LayeredBxDF {
             }
         }
         // Return mixture of pdf estimate and constant pdf
-        return pbrt::lerp(0.9f, 1 / (4 * compute_pi()), pdfSum / nSamples);
+        return pbrt::lerp(0.9f, 1 / (4 * pbrt::PI), pdfSum / nSamples);
     }
 
   private:

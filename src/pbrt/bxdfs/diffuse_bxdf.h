@@ -40,7 +40,7 @@ class DiffuseBxDF {
             return SampledSpectrum(0.0);
         }
 
-        return r * (1.0 / compute_pi());
+        return r * pbrt::InvPI;
     }
 
     PBRT_CPU_GPU
@@ -59,7 +59,7 @@ class DiffuseBxDF {
 
         Real pdf = cosine_hemisphere_pdf(wi.abs_cos_theta());
 
-        return BSDFSample(r * (1.0 / compute_pi()), wi, pdf, BxDFFlags::DiffuseReflection);
+        return BSDFSample(r * pbrt::InvPI, wi, pdf, BxDFFlags::DiffuseReflection);
     }
 
     PBRT_CPU_GPU

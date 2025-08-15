@@ -387,8 +387,8 @@ LoopSubdivide::LoopSubdivide(int nLevels, const std::vector<int> &vertexIndices,
         if (!vertex->boundary) {
             // Compute tangents of interior face
             for (int j = 0; j < valence; ++j) {
-                S += std::cos(2 * compute_pi() * j / valence) * pRing[j].to_vector3();
-                T += std::sin(2 * compute_pi() * j / valence) * pRing[j].to_vector3();
+                S += std::cos(2 * pbrt::PI * j / valence) * pRing[j].to_vector3();
+                T += std::sin(2 * pbrt::PI * j / valence) * pRing[j].to_vector3();
             }
         } else {
             // Compute tangents of boundary face
@@ -401,7 +401,7 @@ LoopSubdivide::LoopSubdivide(int nLevels, const std::vector<int> &vertexIndices,
                 T = (-1 * pRing[0] + 2 * pRing[1] + 2 * pRing[2] + -1 * pRing[3] + -2 * vertex->p)
                         .to_vector3();
             else {
-                Real theta = compute_pi() / Real(valence - 1);
+                Real theta = pbrt::PI / Real(valence - 1);
                 T = (std::sin(theta) * (pRing[0] + pRing[valence - 1])).to_vector3();
                 for (int k = 1; k < valence - 1; ++k) {
                     Real wt = (2 * std::cos(theta) - 2) * std::sin((k)*theta);

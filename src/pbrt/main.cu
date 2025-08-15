@@ -1,3 +1,4 @@
+#include <numbers>
 #include <pbrt/scene/scene_builder.h>
 
 using namespace std;
@@ -120,7 +121,15 @@ void display_system_info() {
     fflush(stdout);
 }
 
+void verify_constant() {
+    if (float_to_bits(OneMinusEpsilon) + 1 != float_to_bits(static_cast<Real>(1.0))) {
+        REPORT_FATAL_ERROR();
+    }
+}
+
 int main(int argc, const char **argv) {
+    verify_constant();
+
     size_t stack_size;
     cudaDeviceGetLimit(&stack_size, cudaLimitStackSize);
     size_t new_stack_size = std::max(stack_size, size_t(64 * 1024));

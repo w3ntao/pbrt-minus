@@ -10,7 +10,7 @@
 
 PBRT_CPU_GPU
 inline Real cosine_hemisphere_pdf(Real cos_theta) {
-    return cos_theta / compute_pi();
+    return cos_theta / pbrt::PI;
 }
 
 PBRT_CPU_GPU
@@ -120,14 +120,14 @@ inline Point2f sample_uniform_disk_concentric(Point2f u) {
     // Apply concentric mapping to point
     Real r = NAN;
     Real theta = NAN;
-    Real pi_over_4 = compute_pi() / 4.0;
+    Real pi_over_4 = pbrt::PI / 4.0;
 
     if (abs(u_offset.x) > abs(u_offset.y)) {
         r = u_offset.x;
         theta = pi_over_4 * (u_offset.y / u_offset.x);
     } else {
         r = u_offset.y;
-        Real pi_over_2 = compute_pi() / 2.0;
+        Real pi_over_2 = pbrt::PI / 2.0;
         theta = pi_over_2 - pi_over_4 * (u_offset.x / u_offset.y);
     }
 
@@ -137,7 +137,7 @@ inline Point2f sample_uniform_disk_concentric(Point2f u) {
 PBRT_CPU_GPU
 inline Point2f sample_uniform_disk_polar(const Point2f u) {
     Real r = std::sqrt(u[0]);
-    Real theta = 2 * compute_pi() * u[1];
+    Real theta = 2 * pbrt::PI * u[1];
     return {r * std::cos(theta), r * std::sin(theta)};
 }
 
@@ -191,13 +191,11 @@ static void sample_spherical_triangle(Real out[3], Real *pdf, const Point3f v[3]
     Real beta = angle_between(n_bc, -n_ab);
     Real gamma = angle_between(n_ca, -n_bc);
 
-    const auto PI = compute_pi();
-
     // Uniformly sample triangle area $A$ to compute $A'$
     Real A_pi = alpha + beta + gamma;
-    Real Ap_pi = pbrt::lerp(u[0], PI, A_pi);
+    Real Ap_pi = pbrt::lerp(u[0], pbrt::PI, A_pi);
     if (pdf) {
-        Real A = A_pi - PI;
+        Real A = A_pi - pbrt::PI;
         *pdf = (A <= 0) ? 0 : 1 / A;
     }
 
@@ -257,14 +255,14 @@ inline Vector3f sample_uniform_sphere(Point2f u) {
     Real z = 1 - 2 * u[0];
     Real r = safe_sqrt(1 - sqr(z));
 
-    Real phi = 2 * compute_pi() * u[1];
+    Real phi = 2 * pbrt::PI * u[1];
 
     return {r * std::cos(phi), r * std::sin(phi), z};
 }
 
 PBRT_CPU_GPU
 inline Real uniform_sphere_pdf() {
-    return 1.0 / (4.0 * compute_pi());
+    return 1.0 / (4.0 * pbrt::PI);
 }
 
 PBRT_CPU_GPU
@@ -280,13 +278,13 @@ inline Vector3f SampleUniformCone(Point2f u, Real cosThetaMax) {
     Real cosTheta = (1 - u[0]) + u[0] * cosThetaMax;
     Real sinTheta = safe_sqrt(1 - sqr(cosTheta));
 
-    Real phi = u[1] * 2 * compute_pi();
+    Real phi = u[1] * 2 * pbrt::PI;
     return SphericalDirection(sinTheta, cosTheta, phi);
 }
 
 PBRT_CPU_GPU
 inline Real UniformConePDF(Real cosThetaMax) {
-    return 1.0 / (2.0 * compute_pi() * (1.0 - cosThetaMax));
+    return 1.0 / (2.0 * pbrt::PI * (1.0 - cosThetaMax));
 }
 
 PBRT_CPU_GPU

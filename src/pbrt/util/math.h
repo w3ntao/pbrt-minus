@@ -13,7 +13,12 @@
 #define OneMinusEpsilon _FloatOneMinusEpsilon
 #endif
 
-constexpr Real Sqrt2 = 1.41421356237309504880;
+namespace pbrt {
+constexpr Real PI = std::numbers::pi;
+constexpr Real InvPI = 1.0 / std::numbers::pi;
+} // namespace pbrt
+
+constexpr Real Sqrt2 = std::numbers::sqrt2;
 
 constexpr Real Infinity = std::numeric_limits<Real>::infinity();
 // TODO: add Infinity into namespace pbrt
@@ -90,13 +95,8 @@ PBRT_CPU_GPU constexpr T clamp(T x, T low, T high) {
 }
 
 PBRT_CPU_GPU
-static Real compute_pi() {
-    return acos(-1);
-}
-
-PBRT_CPU_GPU
 static Real degree_to_radian(Real degree) {
-    return compute_pi() / 180.0 * degree;
+    return pbrt::PI / 180.0 * degree;
 }
 
 PBRT_CPU_GPU
@@ -105,7 +105,7 @@ inline Real safe_asin(Real x) {
 }
 
 PBRT_CPU_GPU
-inline float safe_acos(float x) {
+inline Real safe_acos(Real x) {
     return std::acos(clamp<Real>(x, -1, 1));
 }
 
