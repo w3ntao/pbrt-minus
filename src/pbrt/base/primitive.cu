@@ -64,19 +64,18 @@ const Primitive *Primitive::create_geometric_primitives(const Shape *shapes,
                                                         const Light *diffuse_area_light,
                                                         const MediumInterface *medium_interface,
                                                         int num, GPUMemoryAllocator &allocator) {
-    constexpr int threads = 1024;
-    const int blocks = divide_and_ceil(num, threads);
+    const int blocks = divide_and_ceil(num, MAX_THREADS_PER_BLOCKS);
 
     auto geometric_primitives = allocator.allocate<GeometricPrimitive>(num);
 
     auto primitives = allocator.allocate<Primitive>(num);
 
-    init_geometric_primitives<<<blocks, threads>>>(geometric_primitives, shapes, material,
-                                                   diffuse_area_light, medium_interface, num);
+    init_geometric_primitives<<<blocks, MAX_THREADS_PER_BLOCKS>>>(
+        geometric_primitives, shapes, material, diffuse_area_light, medium_interface, num);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-    init_primitives<<<blocks, threads>>>(primitives, geometric_primitives, num);
+    init_primitives<<<blocks, MAX_THREADS_PER_BLOCKS>>>(primitives, geometric_primitives, num);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -85,18 +84,18 @@ const Primitive *Primitive::create_geometric_primitives(const Shape *shapes,
 
 const Primitive *Primitive::create_simple_primitives(const Shape *shapes, const Material *material,
                                                      int num, GPUMemoryAllocator &allocator) {
-    constexpr int threads = 1024;
-    const int blocks = divide_and_ceil(num, threads);
+    const int blocks = divide_and_ceil(num, MAX_THREADS_PER_BLOCKS);
 
     auto simple_primitives = allocator.allocate<SimplePrimitive>(num);
 
     auto primitives = allocator.allocate<Primitive>(num);
 
-    init_simple_primitives<<<blocks, threads>>>(simple_primitives, shapes, material, num);
+    init_simple_primitives<<<blocks, MAX_THREADS_PER_BLOCKS>>>(simple_primitives, shapes, material,
+                                                               num);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-    init_primitives<<<blocks, threads>>>(primitives, simple_primitives, num);
+    init_primitives<<<blocks, MAX_THREADS_PER_BLOCKS>>>(primitives, simple_primitives, num);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -106,15 +105,14 @@ const Primitive *Primitive::create_simple_primitives(const Shape *shapes, const 
 const Primitive *Primitive::create_transformed_primitives(const Primitive *base_primitives,
                                                           const Transform &render_from_primitive,
                                                           int num, GPUMemoryAllocator &allocator) {
-    const int threads = 1024;
-    const int blocks = divide_and_ceil(num, threads);
+    const int blocks = divide_and_ceil(num, MAX_THREADS_PER_BLOCKS);
 
     auto transformed_primitives = allocator.allocate<TransformedPrimitive>(num);
 
     auto primitives = allocator.allocate<Primitive>(num);
 
-    init_transformed_primitives<<<blocks, threads>>>(primitives, transformed_primitives,
-                                                     base_primitives, render_from_primitive, num);
+    init_transformed_primitives<<<blocks, MAX_THREADS_PER_BLOCKS>>>(
+        primitives, transformed_primitives, base_primitives, render_from_primitive, num);
 
     return primitives;
 }

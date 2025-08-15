@@ -66,8 +66,7 @@ Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num,
                                          const Transform &render_from_light,
                                          const ParameterDictionary &parameters,
                                          GPUMemoryAllocator &allocator) {
-    constexpr int threads = 1024;
-    const int blocks = divide_and_ceil(num, threads);
+    const int blocks = divide_and_ceil(num, MAX_THREADS_PER_BLOCKS);
 
     auto diffuse_area_lights = allocator.allocate<DiffuseAreaLight>(num);
     auto lights = allocator.allocate<Light>(num);
@@ -76,7 +75,7 @@ Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num,
         diffuse_area_lights[idx].init(&shapes[idx], render_from_light, parameters, allocator);
     }
 
-    init_lights<<<blocks, threads>>>(lights, diffuse_area_lights, num);
+    init_lights<<<blocks, MAX_THREADS_PER_BLOCKS>>>(lights, diffuse_area_lights, num);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -222,7 +221,7 @@ pbrt::optional<LightLeSample> Light::sample_le(Point2f u1, Point2f u2,
 
 PBRT_CPU_GPU
 Real Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
-                        bool allow_incomplete_pdf) const {
+                   bool allow_incomplete_pdf) const {
     switch (type) {
     case Type::diffuse_area_light: {
         return static_cast<const DiffuseAreaLight *>(ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
@@ -247,8 +246,7 @@ Real Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
 }
 
 PBRT_CPU_GPU
-void Light::pdf_le(const Interaction &intr, Vector3f w, Real *pdfPos,
-                   Real *pdfDir) const {
+void Light::pdf_le(const Interaction &intr, Vector3f w, Real *pdfPos, Real *pdfDir) const {
     if (type == Type::diffuse_area_light) {
         return static_cast<const DiffuseAreaLight *>(ptr)->pdf_le(intr, w, pdfPos, pdfDir);
     }

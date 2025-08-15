@@ -40,10 +40,8 @@ RGBFilm::RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
 
     pixels = allocator.allocate<Pixel>(resolution.x * resolution.y);
 
-    int threads = 1024;
-    int blocks = divide_and_ceil(int(resolution.x * resolution.y), threads);
-
-    init_pixels<<<blocks, threads>>>(pixels, resolution);
+    int blocks = divide_and_ceil(int(resolution.x * resolution.y), MAX_THREADS_PER_BLOCKS);
+    init_pixels<<<blocks, MAX_THREADS_PER_BLOCKS>>>(pixels, resolution);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 

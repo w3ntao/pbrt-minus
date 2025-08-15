@@ -389,8 +389,7 @@ void WavefrontPathIntegrator::PathState::create(int samples_per_pixel, const Poi
     mis_parameters = allocator.allocate<MISParameter>(PATH_POOL_SIZE);
     samplers = Sampler::create_samplers(sampler_type, samples_per_pixel, PATH_POOL_SIZE, allocator);
 
-    constexpr int threads = 1024;
-    gpu_init_path_state<<<PATH_POOL_SIZE, threads>>>(this);
+    gpu_init_path_state<<<PATH_POOL_SIZE, MAX_THREADS_PER_BLOCKS>>>(this);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

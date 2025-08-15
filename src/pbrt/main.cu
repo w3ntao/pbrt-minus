@@ -125,6 +125,17 @@ void verify_constant() {
     if (float_to_bits(OneMinusEpsilon) + 1 != float_to_bits(static_cast<Real>(1.0))) {
         REPORT_FATAL_ERROR();
     }
+
+    int device_count;
+    cudaGetDeviceCount(&device_count);
+    for (int i = 0; i < device_count; ++i) {
+        cudaDeviceProp props;
+        cudaGetDeviceProperties(&props, i);
+
+        if (props.maxThreadsPerBlock != MAX_THREADS_PER_BLOCKS) {
+            REPORT_FATAL_ERROR();
+        }
+    }
 }
 
 int main(int argc, const char **argv) {

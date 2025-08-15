@@ -8,6 +8,8 @@
 #define PBRT_CPU_GPU __host__ __device__
 #define PBRT_GPU __device__
 
+constexpr int MAX_THREADS_PER_BLOCKS = 1024;
+
 #ifdef PBRT_FLOAT_AS_DOUBLE
 using Real = double;
 #else

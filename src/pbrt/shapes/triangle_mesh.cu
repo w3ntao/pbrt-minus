@@ -45,12 +45,11 @@ TriangleMesh::build_triangles(const Transform &render_from_object, const bool re
     CHECK_CUDA_ERROR(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
                                 cudaMemcpyHostToDevice));
 
-    constexpr int threads = 1024;
     {
-        const int blocks = divide_and_ceil<int>(points.size(), threads);
+        const int blocks = divide_and_ceil<int>(points.size(), MAX_THREADS_PER_BLOCKS);
         if (!render_from_object.is_identity()) {
-            gpu_transform<<<blocks, threads>>>(gpu_points, render_from_object, false,
-                                               points.size());
+            gpu_transform<<<blocks, MAX_THREADS_PER_BLOCKS>>>(gpu_points, render_from_object, false,
+                                                              points.size());
         }
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
@@ -67,9 +66,9 @@ TriangleMesh::build_triangles(const Transform &render_from_object, const bool re
                                     cudaMemcpyHostToDevice));
 
         if (!render_from_object.is_identity() || reverse_orientation) {
-            const int blocks = divide_and_ceil<int>(normals.size(), threads);
-            gpu_transform<<<blocks, threads>>>(gpu_normals, render_from_object, reverse_orientation,
-                                               normals.size());
+            const int blocks = divide_and_ceil<int>(normals.size(), MAX_THREADS_PER_BLOCKS);
+            gpu_transform<<<blocks, MAX_THREADS_PER_BLOCKS>>>(gpu_normals, render_from_object,
+                                                              reverse_orientation, normals.size());
             CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
@@ -93,12 +92,12 @@ TriangleMesh::build_triangles(const Transform &render_from_object, const bool re
     auto shapes = allocator.allocate<Shape>(num_triangles);
 
     {
-        const int blocks = divide_and_ceil(num_triangles, threads);
-        init_triangles_from_mesh<<<blocks, threads>>>(triangles, mesh);
+        const int blocks = divide_and_ceil(num_triangles, MAX_THREADS_PER_BLOCKS);
+        init_triangles_from_mesh<<<blocks, MAX_THREADS_PER_BLOCKS>>>(triangles, mesh);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-        init_shapes<<<blocks, threads>>>(shapes, triangles, num_triangles);
+        init_shapes<<<blocks, MAX_THREADS_PER_BLOCKS>>>(shapes, triangles, num_triangles);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }

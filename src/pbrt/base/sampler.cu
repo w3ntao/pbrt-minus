@@ -20,8 +20,7 @@ static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers
 Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
                                   const int samples_per_pixel, const int size,
                                   GPUMemoryAllocator &allocator) {
-    constexpr int threads = 1024;
-    const int blocks = divide_and_ceil(size, threads);
+    const int blocks = divide_and_ceil(size, MAX_THREADS_PER_BLOCKS);
 
     auto samplers = allocator.allocate<Sampler>(size);
 
@@ -29,7 +28,8 @@ Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
 
     if (sampler_type == Type::independent) {
         auto independent_samplers = allocator.allocate<IndependentSampler>(size);
-        init_samplers<<<blocks, threads>>>(samplers, independent_samplers, samples_per_pixel, size);
+        init_samplers<<<blocks, MAX_THREADS_PER_BLOCKS>>>(samplers, independent_samplers,
+                                                          samples_per_pixel, size);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -38,7 +38,8 @@ Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
 
     if (sampler_type == Type::stratified) {
         auto stratified_samplers = allocator.allocate<StratifiedSampler>(size);
-        init_samplers<<<blocks, threads>>>(samplers, stratified_samplers, samples_per_pixel, size);
+        init_samplers<<<blocks, MAX_THREADS_PER_BLOCKS>>>(samplers, stratified_samplers,
+                                                          samples_per_pixel, size);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
