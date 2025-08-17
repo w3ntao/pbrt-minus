@@ -7,20 +7,11 @@
 
 class DiffuseBxDF {
   public:
-    PBRT_CPU_GPU DiffuseBxDF() : r(SampledSpectrum(NAN)) {}
-
-    PBRT_CPU_GPU DiffuseBxDF(const SampledSpectrum &_r) {
-        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
-            r[idx] = _r[idx];
-        }
-    }
+    PBRT_CPU_GPU
+    DiffuseBxDF() {}
 
     PBRT_CPU_GPU
-    void init(const SampledSpectrum &_r) {
-        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
-            r[idx] = _r[idx];
-        }
-    }
+    explicit DiffuseBxDF(const SampledSpectrum &_r) : r(_r) {}
 
     PBRT_CPU_GPU
     BxDFFlags flags() const {
@@ -73,5 +64,5 @@ class DiffuseBxDF {
     }
 
   private:
-    SampledSpectrum r;
+    SampledSpectrum r = SampledSpectrum(NAN);
 };

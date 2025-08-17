@@ -78,6 +78,17 @@ struct TextureMapping2D {
         uv,
     };
 
+    explicit TextureMapping2D(const CylindricalMapping *cylindrical_mapping)
+        : type(Type::cylindrical), ptr(cylindrical_mapping) {}
+
+    explicit TextureMapping2D(const PlanarMapping *planar_mapping)
+        : type(Type::planar), ptr(planar_mapping) {}
+
+    explicit TextureMapping2D(const SphericalMapping *spherical_mapping)
+        : type(Type::spherical), ptr(spherical_mapping) {}
+
+    explicit TextureMapping2D(const UVMapping *uv_mapping) : type(Type::uv), ptr(uv_mapping) {}
+
     static const TextureMapping2D *create(const Transform &render_from_texture,
                                           const ParameterDictionary &parameters,
                                           GPUMemoryAllocator &allocator);
@@ -88,12 +99,4 @@ struct TextureMapping2D {
   private:
     Type type;
     const void *ptr = nullptr;
-
-    void init(const CylindricalMapping *cylindrical_mapping);
-
-    void init(const PlanarMapping *planar_mapping);
-
-    void init(const SphericalMapping *spherical_mapping);
-
-    void init(const UVMapping *uv_mapping);
 };

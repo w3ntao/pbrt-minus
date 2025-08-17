@@ -17,12 +17,13 @@ class ParameterDictionary;
 
 class ImageInfiniteLight : public LightBase {
   public:
+    ImageInfiniteLight(const Transform &render_from_light, Real _scale,
+                       const RGBColorSpace *_color_space, const GPUImage *_image_ptr,
+                       GPUMemoryAllocator &allocator);
+
     static ImageInfiniteLight *create(const Transform &render_from_light,
                                       const ParameterDictionary &parameters,
                                       GPUMemoryAllocator &allocator);
-
-    void init(const Transform &_render_from_light, const ParameterDictionary &parameters,
-              GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
@@ -35,23 +36,22 @@ class ImageInfiniteLight : public LightBase {
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    Real pdf_li(const LightSampleContext &ctx, const Vector3f &w,
-                     bool allow_incomplete_pdf) const;
+    Real pdf_li(const LightSampleContext &ctx, const Vector3f &w, bool allow_incomplete_pdf) const;
 
     void preprocess(const Bounds3<Real> &scene_bounds);
 
   private:
-    Real scale;
-    const RGBColorSpace *color_space;
+    Real scale = NAN;
+    const RGBColorSpace *color_space = nullptr;
 
-    const GPUImage *image_ptr;
+    const GPUImage *image_ptr = nullptr;
+    const Distribution2D *image_le_distribution = nullptr;
 
-    const Distribution2D *image_le_distribution;
+    Point2i image_resolution = Point2i(0, 0);
 
-    Point2i image_resolution;
+    Real scene_radius = NAN;
+    Point3f scene_center = Point3f(NAN, NAN, NAN);
 
-    Real scene_radius;
-    Point3f scene_center;
-
-    PBRT_CPU_GPU SampledSpectrum ImageLe(Point2f uv, const SampledWavelengths &lambda) const;
+    PBRT_CPU_GPU
+    SampledSpectrum ImageLe(Point2f uv, const SampledWavelengths &lambda) const;
 };

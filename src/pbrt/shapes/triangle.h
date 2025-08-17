@@ -27,10 +27,7 @@ class Triangle {
     }
 
     PBRT_CPU_GPU
-    void init(int idx, const TriangleMesh *_mesh) {
-        triangle_idx = idx;
-        mesh = _mesh;
-    }
+    Triangle(const int idx, const TriangleMesh *_mesh) : triangle_idx(idx), mesh(_mesh) {}
 
     PBRT_CPU_GPU
     Bounds3f bounds() const {
@@ -69,8 +66,8 @@ class Triangle {
     pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, Point2f u) const;
 
   private:
-    int triangle_idx;
-    const TriangleMesh *mesh;
+    int triangle_idx = -1;
+    const TriangleMesh *mesh = nullptr;
     static constexpr Real MinSphericalSampleArea = 3e-4;
     static constexpr Real MaxSphericalSampleArea = 6.22;
 

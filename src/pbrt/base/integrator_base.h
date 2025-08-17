@@ -15,30 +15,19 @@ class SampledSpectrum;
 struct ShapeIntersection;
 
 struct IntegratorBase {
-    const HLBVH *bvh;
-    const Camera *camera;
-    const Filter *filter;
+    IntegratorBase() {}
 
-    const Light **lights;
-    int light_num;
+    const HLBVH *bvh = nullptr;
+    const Camera *camera = nullptr;
+    const Filter *filter = nullptr;
 
-    const Light **infinite_lights;
-    int infinite_light_num;
+    const Light **lights = nullptr;
+    int light_num = 0;
 
-    const PowerLightSampler *light_sampler;
+    const Light **infinite_lights = nullptr;
+    int infinite_light_num = 0;
 
-    void init() {
-        bvh = nullptr;
-        camera = nullptr;
-        filter = nullptr;
-        light_sampler = nullptr;
-
-        lights = nullptr;
-        light_num = 0;
-
-        infinite_lights = nullptr;
-        infinite_light_num = 0;
-    }
+    const PowerLightSampler *light_sampler = nullptr;
 
     [[nodiscard]] bool is_ready() const {
         if (bvh == nullptr || camera == nullptr || filter == nullptr || light_sampler == nullptr) {

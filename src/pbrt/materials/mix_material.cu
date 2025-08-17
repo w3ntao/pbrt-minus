@@ -3,14 +3,6 @@
 #include <pbrt/materials/mix_material.h>
 #include <pbrt/scene/parameter_dictionary.h>
 
-const MixMaterial *MixMaterial::create(const ParameterDictionary &parameters,
-                                       GPUMemoryAllocator &allocator) {
-    auto mix_material = allocator.allocate<MixMaterial>();
-    *mix_material = MixMaterial(parameters);
-
-    return mix_material;
-}
-
 MixMaterial::MixMaterial(const ParameterDictionary &parameters) {
     amount = parameters.get_float("amount", 0.5);
 

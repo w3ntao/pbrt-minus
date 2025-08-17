@@ -6,7 +6,7 @@ Camera *Camera::create_perspective_camera(const Point2i &resolution,
                                           const Filter *filter, const Medium *medium,
                                           const ParameterDictionary &parameters,
                                           GPUMemoryAllocator &allocator) {
-    auto camera = allocator.allocate<Camera>();
+    auto camera = allocator.allocate<Camera>(1);
     *camera = PerspectiveCamera(resolution, camera_transform, film, filter, medium, parameters);
 
     return camera;

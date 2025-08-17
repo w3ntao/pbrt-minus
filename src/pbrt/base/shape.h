@@ -78,19 +78,19 @@ class Shape {
         triangle,
     };
 
+    PBRT_CPU_GPU
+    explicit Shape(const Disk *disk) : type(Type::disk), ptr(disk) {}
+
+    PBRT_CPU_GPU
+    explicit Shape(const Triangle *triangle) : type(Type::triangle), ptr(triangle) {}
+
+    PBRT_CPU_GPU
+    explicit Shape(const Sphere *sphere) : type(Type::sphere), ptr(sphere) {}
+
     static std::pair<const Shape *, int>
     create(const std::string &type_of_shape, const Transform &render_from_object,
            const Transform &object_from_render, bool reverse_orientation,
            const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
-
-    PBRT_CPU_GPU
-    void init(const Disk *disk);
-
-    PBRT_CPU_GPU
-    void init(const Sphere *sphere);
-
-    PBRT_CPU_GPU
-    void init(const Triangle *triangle);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const;
@@ -118,5 +118,5 @@ class Shape {
 
   private:
     Type type;
-    const void *ptr;
+    const void *ptr = nullptr;
 };

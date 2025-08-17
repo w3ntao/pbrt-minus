@@ -9,10 +9,7 @@ class GPUMemoryAllocator;
 
 class Distribution1D {
   public:
-    static const Distribution1D *create(const std::vector<Real> &values,
-                                        GPUMemoryAllocator &allocator);
-
-    void build(const std::vector<Real> &values, GPUMemoryAllocator &allocator);
+    Distribution1D(const std::vector<Real> &values, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     cuda::std::pair<int, Real> sample(Real u) const;
@@ -21,5 +18,5 @@ class Distribution1D {
     Real get_pdf(int idx) const;
 
   private:
-    const AliasTable *alias_table;
+    const AliasTable *alias_table = nullptr;
 };

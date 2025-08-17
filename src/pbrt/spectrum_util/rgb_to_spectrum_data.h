@@ -29,10 +29,10 @@ struct RGBtoSpectrumTable {
     double z_nodes[RES];
     double coefficients[3][RES][RES][RES][3];
 
+    RGBtoSpectrumTable(const std::string &str_gamut);
+
     PBRT_CPU_GPU
     RGBSigmoidPolynomial operator()(const RGB &rgb) const;
-
-    void init(const std::string &str_gamut);
 };
 
 // clang-format off

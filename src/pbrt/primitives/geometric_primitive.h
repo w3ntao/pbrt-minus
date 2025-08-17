@@ -3,17 +3,21 @@
 #include <pbrt/base/interaction.h>
 #include <pbrt/euclidean_space/bounds3.h>
 #include <pbrt/gpu/macro.h>
-#include <pbrt/medium/medium_interface.h>
 
 class Light;
 class Material;
 class Shape;
 
+struct MediumInterface;
+
 class GeometricPrimitive {
   public:
     PBRT_CPU_GPU
-    void init(const Shape *_shape_ptr, const Material *_material, const Light *_area_light,
-              const MediumInterface *_medium_interface);
+    GeometricPrimitive::GeometricPrimitive(const Shape *_shape_ptr, const Material *_material,
+                                           const Light *_area_light,
+                                           const MediumInterface *_medium_interface)
+        : shape_ptr(_shape_ptr), material(_material), area_light(_area_light),
+          medium_interface(_medium_interface) {}
 
     PBRT_CPU_GPU
     const Material *get_material() const;

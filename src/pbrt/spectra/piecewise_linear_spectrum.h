@@ -9,14 +9,11 @@ class Spectrum;
 
 class PiecewiseLinearSpectrum {
   public:
-    static const PiecewiseLinearSpectrum *
-    create_from_lambdas_values(const std::vector<Real> &cpu_lambdas,
-                               const std::vector<Real> &cpu_values,
-                               GPUMemoryAllocator &allocator);
+    PiecewiseLinearSpectrum(const std::vector<Real> &samples, bool normalize, const Spectrum *cie_y,
+                            GPUMemoryAllocator &allocator);
 
-    static const PiecewiseLinearSpectrum *
-    create_from_interleaved(const std::vector<Real> &samples, bool normalize,
-                            const Spectrum *cie_y, GPUMemoryAllocator &allocator);
+    PiecewiseLinearSpectrum(const std::vector<Real> &_lambdas, const std::vector<Real> &_values,
+                            GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Real operator()(Real lambda) const;
@@ -24,25 +21,16 @@ class PiecewiseLinearSpectrum {
     PBRT_CPU_GPU
     SampledSpectrum sample(const SampledWavelengths &lambda) const;
 
-    PBRT_CPU_GPU
-    void scale(Real scaling_factor) {
-        for (int idx = 0; idx < size; ++idx) {
-            values[idx] = values[idx] * scaling_factor;
-        }
-    }
+    void scale(Real factor, GPUMemoryAllocator &allocator);
 
   private:
-    Real *lambdas;
-    Real *values;
-    int size;
+    const Real *lambdas = nullptr;
+    const Real *values = nullptr;
+    int size = 0;
 
     PBRT_CPU_GPU
     Real inner_product(const Spectrum *spectrum) const;
 
-    void init_from_lambdas_values(const std::vector<Real> &cpu_lambdas,
-                                  const std::vector<Real> &cpu_values,
-                                  GPUMemoryAllocator &allocator);
-
-    void init_from_interleaved(const std::vector<Real> &samples, bool normalize,
-                               const Spectrum *cie_y, GPUMemoryAllocator &allocator);
+    void init(const std::vector<Real> &_lambdas, const std::vector<Real> &_values,
+              GPUMemoryAllocator &allocator);
 };

@@ -38,6 +38,11 @@ class MLTBDPTIntegrator {
     static constexpr int connectionStreamIndex = 2;
     static constexpr int nSampleStreams = 3;
 
+    MLTBDPTIntegrator(const BDPTConfig *_config, Sampler *_samplers, MLTSampler *_mlt_samplers,
+                      const Point2i &_film_dimension, const Spectrum *_cie_y)
+        : config(_config), samplers(_samplers), mlt_samplers(_mlt_samplers),
+          film_dimension(_film_dimension), cie_y(_cie_y) {}
+
     static MLTBDPTIntegrator *create(int mutations_per_pixel, const ParameterDictionary &parameters,
                                      const IntegratorBase *base, GPUMemoryAllocator &allocator);
 
@@ -53,13 +58,13 @@ class MLTBDPTIntegrator {
         return radiance.y(lambda, cie_y);
     }
 
-    Sampler *samplers;
-    MLTSampler *mlt_samplers;
+    const BDPTConfig *config = nullptr;
 
-    const BDPTConfig *config;
+    Sampler *samplers = nullptr;
+    MLTSampler *mlt_samplers = nullptr;
 
   private:
-    Point2i film_dimension;
+    Point2i film_dimension = {0, 0};
 
-    const Spectrum *cie_y;
+    const Spectrum *cie_y = nullptr;
 };

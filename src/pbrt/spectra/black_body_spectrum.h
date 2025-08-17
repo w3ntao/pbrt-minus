@@ -1,8 +1,8 @@
 #pragma once
 
+#include <pbrt/gpu/macro.h>
 #include <pbrt/spectrum_util/sampled_spectrum.h>
 #include <pbrt/spectrum_util/sampled_wavelengths.h>
-#include <pbrt/gpu/macro.h>
 
 PBRT_CPU_GPU inline Real Blackbody(Real lambda, Real T) {
     if (T <= 0) {
@@ -23,19 +23,13 @@ class BlackbodySpectrum {
   public:
     // BlackbodySpectrum Public Methods
     PBRT_CPU_GPU
-    BlackbodySpectrum(Real _T) {
-        init(_T);
-    }
-
-    PBRT_CPU_GPU
-    void init(Real _T) {
-        // Compute blackbody normalization constant for given temperature
-        T = _T;
-        Real lambdaMax = 2.8977721e-3f / _T;
+    BlackbodySpectrum(Real _T) : T(_T) {
+        const Real lambdaMax = 2.8977721e-3f / _T;
         normalization_factor = 1 / Blackbody(lambdaMax * 1e9f, _T);
     }
 
-    PBRT_CPU_GPU Real operator()(Real lambda) const {
+    PBRT_CPU_GPU
+    Real operator()(Real lambda) const {
         return Blackbody(lambda, T) * normalization_factor;
     }
 
@@ -50,6 +44,6 @@ class BlackbodySpectrum {
     }
 
   private:
-    Real T;
-    Real normalization_factor;
+    Real T = NAN;
+    Real normalization_factor = NAN;
 };

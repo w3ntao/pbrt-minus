@@ -28,23 +28,7 @@ UniformInfiniteLight *UniformInfiniteLight::create(const Transform &renderFromLi
         scale *= E_v / k_e;
     }
 
-    auto uniform_infinite_light = allocator.allocate<UniformInfiniteLight>();
-
-    uniform_infinite_light->init(renderFromLight, L, scale);
-
-    return uniform_infinite_light;
-}
-
-void UniformInfiniteLight::init(const Transform &renderFromLight, const Spectrum *_Lemit,
-                                Real _scale) {
-    this->render_from_light = renderFromLight;
-    this->light_type = LightType::infinite;
-
-    this->Lemit = _Lemit;
-    this->scale = _scale;
-
-    sceneCenter = Point3f(NAN, NAN, NAN);
-    sceneRadius = NAN;
+    return allocator.create<UniformInfiniteLight>(renderFromLight, L, scale);
 }
 
 PBRT_CPU_GPU

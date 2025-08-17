@@ -1,29 +1,22 @@
 #pragma once
 
-#include <pbrt/gpu/macro.h>
-#include <vector>
 #include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/gpu/macro.h>
 #include <pbrt/util/math.h>
+#include <vector>
 
 class PiecewiseConstant1D {
   public:
-    static const PiecewiseConstant1D *create(const std::vector<Real> &f, Real min,
-                                             Real max, GPUMemoryAllocator &allocator) {
-        auto piecewise_constant_1D = allocator.allocate<PiecewiseConstant1D>();
-
-        piecewise_constant_1D->init(f.data(), f.size(), min, max, allocator);
-
-        return piecewise_constant_1D;
+    static const PiecewiseConstant1D *create(const std::vector<Real> &f, Real min, Real max,
+                                             GPUMemoryAllocator &allocator) {
+        return allocator.create<PiecewiseConstant1D>(f.data(), f.size(), min, max, allocator);
     }
 
-    void init(const Real *f, int f_size, Real _min, Real _max,
-              GPUMemoryAllocator &allocator) {
-        cdf = nullptr;
-        func = nullptr;
+    PiecewiseConstant1D() = default;
 
-        min = _min;
-        max = _max;
-        _size = f_size;
+    PiecewiseConstant1D(const Real *f, const int f_size, const Real _min, const Real _max,
+                        GPUMemoryAllocator &allocator)
+        : size(f_size), min(_min), max(_max) {
 
         func = allocator.allocate<Real>(f_size);
 
@@ -57,14 +50,10 @@ class PiecewiseConstant1D {
         return funcInt;
     }
 
-    PBRT_CPU_GPU int size() const {
-        return _size;
-    }
-
     PBRT_CPU_GPU
     Real sample(Real u, Real *pdf = nullptr, int *offset = nullptr) const {
         // Find surrounding CDF segments and _offset_
-        int o = find_interval(_size + 1, [&](int index) { return cdf[index] <= u; });
+        int o = find_interval(size + 1, [&](int index) { return cdf[index] <= u; });
 
         if (offset) {
             *offset = o;
@@ -83,16 +72,16 @@ class PiecewiseConstant1D {
         }
 
         // Return $x$ corresponding to sample
-        return pbrt::lerp((o + du) / size(), min, max);
+        return pbrt::lerp((o + du) / size, min, max);
     }
 
   private:
-    int _size;
+    int size = 0;
 
-    Real *func; // size = _size
-    Real *cdf;  // size = _size + 1
+    Real *func = nullptr; // size = _size
+    Real *cdf = nullptr;  // size = _size + 1
 
-    Real min;
-    Real max;
-    Real funcInt;
+    Real min = NAN;
+    Real max = NAN;
+    Real funcInt = NAN;
 };

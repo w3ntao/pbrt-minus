@@ -2,6 +2,7 @@
 #include <numeric>
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
+#include <pbrt/base/integrator_base.h>
 #include <pbrt/base/megakernel_integrator.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
@@ -87,50 +88,30 @@ const MegakernelIntegrator *MegakernelIntegrator::create(const std::string &inte
                                                          const ParameterDictionary &parameters,
                                                          const IntegratorBase *integrator_base,
                                                          GPUMemoryAllocator &allocator) {
-    auto integrator = allocator.allocate<MegakernelIntegrator>();
-
     if (integrator_name == "ambientocclusion") {
         auto ambient_occlusion_integrator =
-            AmbientOcclusionIntegrator::create(parameters, integrator_base, allocator);
-        integrator->init(ambient_occlusion_integrator);
+            allocator.create<AmbientOcclusionIntegrator>(parameters, integrator_base);
 
-        return integrator;
+        return allocator.create<MegakernelIntegrator>(ambient_occlusion_integrator);
     }
 
     if (integrator_name == "megakernelpath") {
         auto path_integrator =
-            MegakernelPathIntegrator::create(parameters, integrator_base, allocator);
-        integrator->init(path_integrator);
+            allocator.create<MegakernelPathIntegrator>(parameters, integrator_base);
 
-        return integrator;
+        return allocator.create<MegakernelIntegrator>(path_integrator);
     }
 
     if (integrator_name == "surfacenormal") {
         auto surface_normal_integrator =
-            SurfaceNormalIntegrator::create(parameters, integrator_base, allocator);
-        integrator->init(surface_normal_integrator);
+            allocator.create<SurfaceNormalIntegrator>(parameters, integrator_base);
 
-        return integrator;
+        return allocator.create<MegakernelIntegrator>(surface_normal_integrator);
     }
 
     printf("\n%s(): unknown Integrator: %s\n\n", __func__, integrator_name.c_str());
     REPORT_FATAL_ERROR();
     return nullptr;
-}
-
-void MegakernelIntegrator::init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator) {
-    type = Type::ambient_occlusion;
-    ptr = ambient_occlusion_integrator;
-}
-
-void MegakernelIntegrator::init(const MegakernelPathIntegrator *megakernel_path_integrator) {
-    type = Type::megakernel_path;
-    ptr = megakernel_path_integrator;
-}
-
-void MegakernelIntegrator::init(const SurfaceNormalIntegrator *surface_normal_integrator) {
-    type = Type::surface_normal;
-    ptr = surface_normal_integrator;
 }
 
 PBRT_CPU_GPU
@@ -172,8 +153,7 @@ void MegakernelIntegrator::render(Film *film, const std::string &sampler_type,
     if (preview) {
         gl_helper.init("initializing", film_resolution);
 
-        counter = local_allocator.allocate<int>();
-        *counter = 0;
+        counter = local_allocator.create<int>(0);
     }
 
     dim3 blocks(divide_and_ceil(int(film_resolution.x), thread_width),

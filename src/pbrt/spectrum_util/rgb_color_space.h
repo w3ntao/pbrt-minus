@@ -1,17 +1,16 @@
 #pragma once
 
 #include <pbrt/base/spectrum.h>
+#include <pbrt/gpu/macro.h>
 #include <pbrt/spectrum_util/rgb.h>
 #include <pbrt/spectrum_util/rgb_sigmoid_polynomial.h>
 #include <pbrt/spectrum_util/rgb_to_spectrum_data.h>
-#include <pbrt/gpu/macro.h>
 
 class RGBColorSpace {
   public:
-    PBRT_CPU_GPU
-    void init(const Point2f _r, const Point2f _g, const Point2f _b, const Spectrum *_illuminant,
-              const RGBtoSpectrumData::RGBtoSpectrumTable *_rgb_to_spectrum_table,
-              const Spectrum *cie_xyz[3]) {
+    RGBColorSpace(const Point2f _r, const Point2f _g, const Point2f _b, const Spectrum *_illuminant,
+                  const RGBtoSpectrumData::RGBtoSpectrumTable *_rgb_to_spectrum_table,
+                  const Spectrum *cie_xyz[3]) {
         r = _r;
         g = _g;
         b = _b;
@@ -53,8 +52,8 @@ class RGBColorSpace {
     Point2f b;
     Point2f w;
 
-    const Spectrum *illuminant;
+    const Spectrum *illuminant = nullptr;
     SquareMatrix<3> xyz_from_rgb;
     SquareMatrix<3> rgb_from_xyz;
-    const RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_table;
+    const RGBtoSpectrumData::RGBtoSpectrumTable *rgb_to_spectrum_table = nullptr;
 };

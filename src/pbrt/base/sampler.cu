@@ -14,7 +14,7 @@ static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers
         return;
     }
     _samplers[idx] = TypeOfSampler(samples_per_pixel);
-    samplers[idx].init(&_samplers[idx]);
+    samplers[idx] = Sampler(&_samplers[idx]);
 }
 
 Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
@@ -48,24 +48,6 @@ Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
 
     REPORT_FATAL_ERROR();
     return nullptr;
-}
-
-PBRT_CPU_GPU
-void Sampler::init(IndependentSampler *independent_sampler) {
-    type = Type::independent;
-    ptr = independent_sampler;
-}
-
-PBRT_CPU_GPU
-void Sampler::init(MLTSampler *mlt_sampler) {
-    type = Type::mlt;
-    ptr = mlt_sampler;
-}
-
-PBRT_CPU_GPU
-void Sampler::init(StratifiedSampler *stratified_sampler) {
-    type = Type::stratified;
-    ptr = stratified_sampler;
 }
 
 PBRT_CPU_GPU

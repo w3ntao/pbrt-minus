@@ -4,24 +4,18 @@
 #include <pbrt/shapes/disk.h>
 #include <pbrt/util/sampling.h>
 
-const Disk *Disk::create(const Transform &render_from_object, const Transform &object_from_render,
-                         bool reverse_orientation, const ParameterDictionary &parameters,
-                         GPUMemoryAllocator &allocator) {
-    auto disk = allocator.allocate<Disk>();
+Disk::Disk(const Transform &_render_from_object, const Transform &_object_from_render,
+           const bool _reverse_orientation, const ParameterDictionary &parameters)
+    : render_from_object(_render_from_object), object_from_render(_object_from_render),
+      reverse_orientation(_reverse_orientation),
+      transform_swaps_handedness(_render_from_object.swaps_handedness()) {
 
-    disk->render_from_object = render_from_object;
-    disk->object_from_render = object_from_render;
-    disk->reverse_orientation = reverse_orientation;
-    disk->transform_wwapsHandedness = render_from_object.swaps_handedness();
+    height = parameters.get_float("height", 0);
+    radius = parameters.get_float("radius", 1);
+    inner_radius = parameters.get_float("innerradius", 0);
 
-    disk->height = parameters.get_float("height", 0);
-    disk->radius = parameters.get_float("radius", 1);
-    disk->inner_radius = parameters.get_float("innerradius", 0);
-
-    auto _phi_max = parameters.get_float("phimax", 360);
-    disk->phi_max = degree_to_radian(clamp<Real>(_phi_max, 0, 360));
-
-    return disk;
+    const auto _phi_max = parameters.get_float("phimax", 360);
+    phi_max = degree_to_radian(clamp<Real>(_phi_max, 0, 360));
 }
 
 PBRT_CPU_GPU
@@ -36,7 +30,7 @@ Real Disk::pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const {
 
     // Compute PDF in solid angle measure from shape intersection point
     Real pdf = (1.0 / area()) / (isect->interaction.n.abs_dot(-wi) /
-                                      ctx.p().squared_distance(isect->interaction.p()));
+                                 ctx.p().squared_distance(isect->interaction.p()));
 
     if (isinf(pdf)) {
         pdf = 0;
@@ -151,7 +145,7 @@ SurfaceInteraction Disk::interaction_from_intersection(const QuadricIntersection
     Vector3f pError(0, 0, 0);
 
     // Return _SurfaceInteraction_ for quadric intersection
-    bool flipNormal = reverse_orientation ^ transform_wwapsHandedness;
+    bool flipNormal = reverse_orientation ^ transform_swaps_handedness;
     Vector3f woObject = object_from_render(wo);
 
     return render_from_object(SurfaceInteraction(Point3fi(pHit, pError), Point2f(u, v), woObject,

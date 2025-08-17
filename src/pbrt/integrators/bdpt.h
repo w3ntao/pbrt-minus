@@ -6,40 +6,43 @@ struct IntegratorBase;
 struct FilmSample;
 
 struct BDPTConfig {
-    const IntegratorBase *base;
+    const IntegratorBase *base = nullptr;
 
-    int max_depth;
-    int film_sample_size;
+    int max_depth = 0;
+    int film_sample_size = 0;
 
-    bool regularize;
+    bool regularize = true;
+
+    BDPTConfig(const IntegratorBase *_base, const int _max_depth, const int _film_sample_size,
+               const bool _regularize)
+        : base(_base), max_depth(_max_depth), film_sample_size(_film_sample_size),
+          regularize(_regularize) {}
 };
 
 struct EndpointInteraction : Interaction {
-    const Camera *camera;
-    const Light *light;
+    const Camera *camera = nullptr;
+    const Light *light = nullptr;
 
     PBRT_CPU_GPU
-    EndpointInteraction() : Interaction(), camera(nullptr), light(nullptr) {}
+    EndpointInteraction() {}
 
     PBRT_CPU_GPU
-    EndpointInteraction(const Light *light, const Ray &r)
-        : Interaction(r.o), camera(nullptr), light(light) {}
+    EndpointInteraction(const Light *light, const Ray &r) : Interaction(r.o), light(light) {}
 
     PBRT_CPU_GPU
     EndpointInteraction(const Camera *camera, const Ray &ray)
-        : Interaction(ray.o), camera(camera), light(nullptr) {}
+        : Interaction(ray.o), camera(camera) {}
 
     PBRT_CPU_GPU
     EndpointInteraction(const Light *light, const Interaction &intr)
-        : Interaction(intr), camera(nullptr), light(light) {}
+        : Interaction(intr), light(light) {}
 
     PBRT_CPU_GPU
     EndpointInteraction(const Interaction &it, const Camera *camera)
-        : Interaction(it), camera(camera), light(nullptr) {}
+        : Interaction(it), camera(camera) {}
 
     PBRT_CPU_GPU
-    EndpointInteraction(const Ray &ray)
-        : Interaction(ray.at(1), Normal3f(-ray.d)), camera(nullptr), light(nullptr) {}
+    EndpointInteraction(const Ray &ray) : Interaction(ray.at(1), Normal3f(-ray.d)) {}
 };
 
 struct Vertex {
@@ -251,6 +254,9 @@ struct Vertex {
 
 class BDPTIntegrator {
   public:
+    BDPTIntegrator(const BDPTConfig *_config, Sampler *_samplers)
+        : config(_config), samplers(_samplers) {}
+
     static BDPTIntegrator *create(int samples_per_pixel, const std::string &sampler_type,
                                   const ParameterDictionary &parameters,
                                   const IntegratorBase *integrator_base,
@@ -269,14 +275,13 @@ class BDPTIntegrator {
     PBRT_GPU
     static SampledSpectrum connect_bdpt(SampledWavelengths &lambda, Vertex *lightVertices,
                                         Vertex *cameraVertices, int s, int t, Sampler *sampler,
-                                        pbrt::optional<Point2f> *pRaster, const BDPTConfig *config,
-                                        Real *misWeightPtr = nullptr);
+                                        pbrt::optional<Point2f> *pRaster, const BDPTConfig *config);
 
     PBRT_GPU
     static SampledSpectrum li(FilmSample *film_samples, int *film_sample_counter, const Ray &ray,
                               SampledWavelengths &lambda, Sampler *sampler, Vertex *camera_vertices,
                               Vertex *light_vertices, const BDPTConfig *config);
 
-    const BDPTConfig *config;
-    Sampler *samplers;
+    const BDPTConfig *config = nullptr;
+    Sampler *samplers = nullptr;
 };

@@ -71,9 +71,7 @@ Point2i remap_pixel_coord(const Point2i p, const Point2i resolution, WrapMode2D 
 
 const GPUImage *GPUImage::create_from_file(const std::string &filename,
                                            GPUMemoryAllocator &allocator) {
-    auto image = allocator.allocate<GPUImage>();
-    image->pixels = nullptr;
-    image->resolution = Point2i(0, 0);
+    auto image = allocator.create<GPUImage>();
 
     const auto file_extension = std::filesystem::path(filename).extension();
 

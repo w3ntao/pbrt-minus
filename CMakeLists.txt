@@ -86,6 +86,7 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/film/grey_scale_film.cu
         src/pbrt/film/rgb_film.cu
+        src/pbrt/film/pixel_sensor.cu
 
         src/pbrt/filters/box.cu
         src/pbrt/filters/mitchell.cu
@@ -136,9 +137,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/shapes/triangle_mesh.cu
         src/pbrt/shapes/tri_quad_mesh.cu
 
-        src/pbrt/spectra/densely_sampled_spectrum.cu
         src/pbrt/spectra/piecewise_linear_spectrum.cu
-        src/pbrt/spectra/rgb_albedo_spectrum.cu
         src/pbrt/spectra/rgb_illuminant_spectrum.cu
         src/pbrt/spectra/rgb_unbounded_spectrum.cu
 

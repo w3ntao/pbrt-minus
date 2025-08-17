@@ -6,14 +6,6 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/textures/texture_eval_context.h>
 
-const ConductorMaterial *ConductorMaterial::create(const ParameterDictionary &parameters,
-                                                   GPUMemoryAllocator &allocator) {
-    auto conductor_material = allocator.allocate<ConductorMaterial>();
-    *conductor_material = ConductorMaterial(parameters, allocator);
-
-    return conductor_material;
-}
-
 ConductorMaterial::ConductorMaterial(const ParameterDictionary &parameters,
                                      GPUMemoryAllocator &allocator) {
     eta = parameters.get_spectrum_texture("eta", SpectrumType::Unbounded, allocator);

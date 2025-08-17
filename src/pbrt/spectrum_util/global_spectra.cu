@@ -29,22 +29,15 @@ const GlobalSpectra *GlobalSpectra::create(RGBtoSpectrumData::Gamut gamut,
         Spectrum::create_piecewise_linear_spectrum_from_interleaved(CIE_Illum_D6500, true,
                                                                     cie_xyz[1], allocator);
 
-    auto global_spectra = allocator.allocate<GlobalSpectra>();
-
-    for (int idx = 0; idx < 3; ++idx) {
-        global_spectra->cie_xyz[idx] = cie_xyz[idx];
-    }
-    global_spectra->cie_y = cie_xyz[1];
+    auto global_spectra = allocator.create<GlobalSpectra>(nullptr, cie_xyz);
 
     if (gamut == RGBtoSpectrumData::Gamut::sRGB) {
-        auto rgb_to_spectrum_table = allocator.allocate<RGBtoSpectrumData::RGBtoSpectrumTable>();
-        rgb_to_spectrum_table->init("sRGB");
+        auto rgb_to_spectrum_table =
+            allocator.create<RGBtoSpectrumData::RGBtoSpectrumTable>("sRGB");
 
-        auto rgb_color_space = allocator.allocate<RGBColorSpace>();
-        rgb_color_space->init(Point2f(0.64, 0.33), Point2f(0.3, 0.6), Point2f(0.15, 0.06),
-                              spectrum_cie_illum_d6500, rgb_to_spectrum_table, cie_xyz);
-
-        global_spectra->rgb_color_space = rgb_color_space;
+        global_spectra->rgb_color_space = allocator.create<RGBColorSpace>(
+            Point2f(0.64, 0.33), Point2f(0.3, 0.6), Point2f(0.15, 0.06), spectrum_cie_illum_d6500,
+            rgb_to_spectrum_table, cie_xyz);
 
     } else {
         REPORT_FATAL_ERROR();

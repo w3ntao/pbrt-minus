@@ -5,29 +5,17 @@
 #include <pbrt/shapes/sphere.h>
 #include <pbrt/util/sampling.h>
 
-const Sphere *Sphere::create(const Transform &render_from_object,
-                             const Transform &object_from_render, bool reverse_orientation,
-                             const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
-    auto radius = parameters.get_float("radius", 1.0);
-    auto z_min = parameters.get_float("zmin", -radius);
-    auto z_max = parameters.get_float("zmax", radius);
-    auto phi_max = parameters.get_float("phimax", 360.0);
+Sphere::Sphere(const Transform &_render_from_object, const Transform &_object_from_render,
+               bool _reverse_orientation, const ParameterDictionary &parameters)
+    : render_from_object(_render_from_object), object_from_render(_object_from_render),
+      reverse_orientation(_reverse_orientation),
+      transform_swaps_handedness(render_from_object.swaps_handedness()),
+      radius(parameters.get_float("radius", 1.0)) {
 
-    auto sphere = allocator.allocate<Sphere>();
-    sphere->init(render_from_object, object_from_render, reverse_orientation, radius, z_min, z_max,
-                 phi_max);
+    const auto _z_min = parameters.get_float("zmin", -radius);
+    const auto _z_max = parameters.get_float("zmax", radius);
+    const auto _phi_max = parameters.get_float("phimax", 360.0);
 
-    return sphere;
-}
-
-void Sphere::init(const Transform &_render_from_object, const Transform &_object_from_render,
-                  bool _reverse_orientation, Real _radius, Real _z_min, Real _z_max,
-                  Real _phi_max) {
-    render_from_object = _render_from_object;
-    object_from_render = _object_from_render;
-    reverse_orientation = _reverse_orientation;
-
-    radius = _radius;
     z_min = clamp(std::min(_z_min, _z_max), -radius, radius);
     z_max = clamp(std::max(_z_min, _z_max), -radius, radius);
 

@@ -11,8 +11,7 @@ class GPUMemoryAllocator;
 
 class Distribution2D {
   public:
-    static const Distribution2D *create(const std::vector<std::vector<Real>> &data,
-                                        GPUMemoryAllocator &allocator);
+    Distribution2D(const std::vector<std::vector<Real>> &data, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     cuda::std::pair<Point2f, Real> sample(const Point2f &uv) const;
@@ -21,10 +20,8 @@ class Distribution2D {
     Real get_pdf(const Point2f &u) const;
 
   private:
-    Point2i dimension;
+    Point2i dimension = {0, 0};
 
-    Distribution1D *dimension_y_distribution_list;
-    const AliasTable *dimension_x_distribution;
-
-    void build(const std::vector<std::vector<Real>> &data, GPUMemoryAllocator &allocator);
+    const Distribution1D *dimension_y_distribution_list = nullptr;
+    const AliasTable *dimension_x_distribution = nullptr;
 };

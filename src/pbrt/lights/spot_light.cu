@@ -1,10 +1,9 @@
 #include <pbrt/base/light.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/lights/spot_light.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>
-
-#include <pbrt/gpu/gpu_memory_allocator.h>
 
 SpotLight *SpotLight::create(const Transform &renderFromLight,
                              const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
@@ -30,35 +29,12 @@ SpotLight *SpotLight::create(const Transform &renderFromLight,
     if (phi_v > 0) {
         auto cosFalloffEnd = std::cos(degree_to_radian(coneangle));
         auto cosFalloffStart = std::cos(degree_to_radian(coneangle - conedelta));
-        auto k_e =
-            2 * pbrt::PI * ((1 - cosFalloffStart) + (cosFalloffStart - cosFalloffEnd) / 2);
+        auto k_e = 2 * pbrt::PI * ((1 - cosFalloffStart) + (cosFalloffStart - cosFalloffEnd) / 2);
         sc *= phi_v / k_e;
     }
 
-    auto spot_light = allocator.allocate<SpotLight>();
-
-    spot_light->init(finalRenderFromLight, I, sc, coneangle, coneangle - conedelta);
-
-    return spot_light;
-}
-
-void SpotLight::init(const Transform &renderFromLight, const Spectrum *Iemit, Real _scale,
-                     Real totalWidth, Real falloffStart) {
-    this->light_type = LightType::delta_position;
-    this->render_from_light = renderFromLight;
-
-    this->i_emit = Iemit;
-    this->scale = _scale;
-
-    this->cosFalloffEnd = std::cos(degree_to_radian(totalWidth));
-    this->cosFalloffStart = std::cos(degree_to_radian(falloffStart));
-}
-
-PBRT_CPU_GPU
-SampledSpectrum SpotLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
-                             const SampledWavelengths &lambda) const {
-    REPORT_FATAL_ERROR();
-    return {};
+    return allocator.create<SpotLight>(finalRenderFromLight, I, sc, coneangle,
+                                       coneangle - conedelta);
 }
 
 PBRT_CPU_GPU
@@ -102,8 +78,8 @@ pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f u1, const Point
         Real sinTheta = safe_sqrt(1 - sqr(cosTheta));
         Real phi = u1[1] * 2 * pbrt::PI;
         wLight = SphericalDirection(sinTheta, cosTheta, phi);
-        pdfDir = SmoothStepPDF(cosTheta, cosFalloffEnd, cosFalloffStart) * sectionPDF /
-                 (2 * pbrt::PI);
+        pdfDir =
+            SmoothStepPDF(cosTheta, cosFalloffEnd, cosFalloffStart) * sectionPDF / (2 * pbrt::PI);
     }
 
     // Return sampled spotlight ray
@@ -124,12 +100,6 @@ void SpotLight::pdf_le(const Ray &ray, Real *pdfPos, Real *pdfDir) const {
         *pdfDir = SmoothStepPDF(cosTheta, cosFalloffEnd, cosFalloffStart) * p[1] /
                   ((p[0] + p[1]) * (2 * pbrt::PI));
     }
-}
-
-PBRT_CPU_GPU
-Real SpotLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
-                            bool allow_incomplete_pdf) const {
-    return 0.0;
 }
 
 PBRT_CPU_GPU

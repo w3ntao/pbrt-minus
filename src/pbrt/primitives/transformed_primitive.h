@@ -7,10 +7,8 @@ class Primitive;
 class TransformedPrimitive {
   public:
     PBRT_CPU_GPU
-    void init(const Primitive *_primitive, const Transform _render_from_primitive) {
-        primitive = _primitive;
-        render_from_primitive = _render_from_primitive;
-    }
+    TransformedPrimitive(const Primitive *_primitive, const Transform _render_from_primitive)
+        : render_from_primitive(_render_from_primitive), primitive(_primitive) {}
 
     PBRT_CPU_GPU
     const Material *get_material() const;

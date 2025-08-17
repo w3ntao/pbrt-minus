@@ -12,19 +12,6 @@
 
 constexpr Real interface_bounce_contribution = 0.3;
 
-const MegakernelPathIntegrator *
-MegakernelPathIntegrator::create(const ParameterDictionary &parameters,
-                                 const IntegratorBase *integrator_base,
-                                 GPUMemoryAllocator &allocator) {
-    auto max_depth = parameters.get_integer("maxdepth", 5);
-    auto regularize = parameters.get_bool("regularize", false);
-
-    auto path_integrator = allocator.allocate<MegakernelPathIntegrator>();
-    *path_integrator = MegakernelPathIntegrator(integrator_base, max_depth, regularize);
-
-    return path_integrator;
-}
-
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::evaluate_li_volume(const Ray &primary_ray,
                                                              SampledWavelengths &lambda,

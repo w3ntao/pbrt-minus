@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <pbrt/accelerator/hlbvh.h>
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
@@ -96,10 +97,11 @@ Real Vertex::pdf_light(const IntegratorBase *integrator_base, const Vertex &v) c
             }
         }
 
-        auto light = (type == VertexType::light) ? ei.light : si.area_light;
+        const auto light = type == VertexType::light ? ei.light : si.area_light;
         Real pdfPos, pdfDir;
         light->pdf_le(ei, w, &pdfPos, &pdfDir);
         pdf = pdfDir * invDist2;
+
     } else {
         if (DEBUG_MODE) {
             if (type != VertexType::light || ei.light == nullptr) {
@@ -279,14 +281,14 @@ SampledSpectrum G(const IntegratorBase *integrator_base, const Vertex &v0, const
 }
 
 PBRT_CPU_GPU
-Real mis_weight(const IntegratorBase *integrator_base, Vertex *lightVertices,
-                Vertex *cameraVertices, Vertex &sampled, int s, int t) {
+Real compute_mis_weight(const IntegratorBase *integrator_base, Vertex *lightVertices,
+                        Vertex *cameraVertices, Vertex &sampled, int s, int t) {
     if (s + t == 2) {
         return 1;
     }
 
     // Define helper function _remap0_ that deals with Dirac delta functions
-    auto remap0 = [](float f) -> Real { return f != 0 ? f : 1.0; };
+    auto remap0 = [](const Real f) -> Real { return f != 0 ? f : 1.0; };
 
     // Temporarily update vertex properties for current strategy
     // Look up connection vertices and their predecessors
@@ -550,7 +552,7 @@ PBRT_GPU
 SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex *lightVertices,
                                              Vertex *cameraVertices, int s, int t, Sampler *sampler,
                                              pbrt::optional<Point2f> *pRaster,
-                                             const BDPTConfig *config, Real *misWeightPtr) {
+                                             const BDPTConfig *config) {
     SampledSpectrum L(0.f);
     // Ignore invalid connections related to infinite area lights
     if (t > 1 && s != 0 && cameraVertices[t - 1].type == Vertex::VertexType::light) {
@@ -575,8 +577,7 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
         // Sample a point on the camera and connect it to the light subpath
         const Vertex &qs = lightVertices[s - 1];
         if (qs.is_connectible()) {
-            auto cs = camera->sample_wi(qs.get_interaction(), sampler->get_2d(), lambda);
-            if (cs) {
+            if (auto cs = camera->sample_wi(qs.get_interaction(), sampler->get_2d(), lambda)) {
                 *pRaster = cs->pRaster;
                 // Initialize dynamically sampled vertex and _L_ for $t=1$ case
                 sampled = Vertex::create_camera(camera, cs->pLens, cs->Wi / cs->pdf);
@@ -593,10 +594,8 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
         }
     } else if (s == 1) {
         // Sample a point on a light and connect it to the camera subpath
-        const Vertex &pt = cameraVertices[t - 1];
-        if (pt.is_connectible()) {
-            auto sampledLight = integrator_base->light_sampler->sample(sampler->get_1d());
-            if (sampledLight) {
+        if (const Vertex &pt = cameraVertices[t - 1]; pt.is_connectible()) {
+            if (auto sampledLight = integrator_base->light_sampler->sample(sampler->get_1d())) {
                 auto light = sampledLight->light;
                 auto p_l = sampledLight->pdf;
 
@@ -653,42 +652,34 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
     }
 
     // Compute MIS weight for connection strategy
-    Real misWeight = L.is_positive()
-                         ? mis_weight(integrator_base, lightVertices, cameraVertices, sampled, s, t)
-                         : 0.0;
-
-    L *= misWeight;
-    if (misWeightPtr != nullptr) {
-        *misWeightPtr = misWeight;
-    }
-
-    return L;
+    const Real weight = L.is_positive() ? compute_mis_weight(integrator_base, lightVertices,
+                                                             cameraVertices, sampled, s, t)
+                                        : 0.0;
+    return L * weight;
 }
 
-BDPTIntegrator *BDPTIntegrator::create(int samples_per_pixel, const std::string &sampler_type,
+BDPTIntegrator *BDPTIntegrator::create(const int samples_per_pixel, const std::string &sampler_type,
                                        const ParameterDictionary &parameters,
                                        const IntegratorBase *integrator_base,
                                        GPUMemoryAllocator &allocator) {
-    auto bdpt_integrator = allocator.allocate<BDPTIntegrator>();
-    auto config = allocator.allocate<BDPTConfig>();
+    const auto max_depth = parameters.get_integer("maxdepth", 5);
+    const auto film_sample_size = max_depth * NUM_SAMPLERS;
+    const auto regularize = parameters.get_bool("regularize", false);
 
-    config->base = integrator_base;
-    config->max_depth = parameters.get_integer("maxdepth", 5);
-    config->regularize = parameters.get_bool("regularize", false);
-    config->film_sample_size = config->max_depth * NUM_SAMPLERS;
+    const auto config =
+        allocator.create<BDPTConfig>(integrator_base, max_depth, film_sample_size, regularize);
 
-    bdpt_integrator->config = config;
-
-    bdpt_integrator->samplers =
+    auto samplers =
         Sampler::create_samplers(sampler_type, samples_per_pixel, NUM_SAMPLERS, allocator);
 
-    return bdpt_integrator;
+    return allocator.create<BDPTIntegrator>(config, samplers);
 }
 
 __global__ void wavefront_render(BDPTSample *bdpt_samples, FilmSample *film_samples,
                                  int *film_sample_counter, Vertex *global_camera_vertices,
-                                 Vertex *global_light_vertices, int pass, int samples_per_pixel,
-                                 const Point2i film_resolution, BDPTIntegrator *bdpt_integrator) {
+                                 Vertex *global_light_vertices, const int pass,
+                                 const int samples_per_pixel, const Point2i film_resolution,
+                                 const BDPTIntegrator *bdpt_integrator) {
     const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= NUM_SAMPLERS) {
         return;
@@ -747,7 +738,7 @@ void BDPTIntegrator::render(Film *film, int samples_per_pixel, const bool previe
 
     auto film_samples = local_allocator.allocate<FilmSample>(config->film_sample_size);
 
-    auto film_sample_counter = local_allocator.allocate<int>();
+    auto film_sample_counter = local_allocator.create<int>(0);
 
     auto global_camera_vertices =
         local_allocator.allocate<Vertex>(NUM_SAMPLERS * (config->max_depth + 2));
@@ -819,10 +810,8 @@ SampledSpectrum BDPTIntegrator::li(FilmSample *film_samples, int *film_sample_co
 
             // Execute the $(s, t)$ connection strategy and update _L_
             pbrt::optional<Point2f> optional_p_film_new;
-            Real misWeight = 0;
-            SampledSpectrum l_path =
-                connect_bdpt(lambda, light_vertices, camera_vertices, s, t, sampler,
-                             &optional_p_film_new, config, &misWeight);
+            SampledSpectrum l_path = connect_bdpt(lambda, light_vertices, camera_vertices, s, t,
+                                                  sampler, &optional_p_film_new, config);
 
             if (t != 1) {
                 accumulated_l += l_path;

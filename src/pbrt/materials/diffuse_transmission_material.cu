@@ -5,15 +5,6 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/textures/texture_eval_context.h>
 
-const DiffuseTransmissionMaterial *
-DiffuseTransmissionMaterial::create(const ParameterDictionary &parameters,
-                                    GPUMemoryAllocator &allocator) {
-    auto diffuse_transmission_material = allocator.allocate<DiffuseTransmissionMaterial>();
-    *diffuse_transmission_material = DiffuseTransmissionMaterial(parameters, allocator);
-
-    return diffuse_transmission_material;
-}
-
 DiffuseTransmissionMaterial::DiffuseTransmissionMaterial(const ParameterDictionary &parameters,
                                                          GPUMemoryAllocator &allocator) {
     reflectance = parameters.get_spectrum_texture("reflectance", SpectrumType::Albedo, allocator);

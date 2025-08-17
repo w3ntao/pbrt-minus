@@ -11,11 +11,7 @@ struct CameraSample;
 
 class Sampler {
   public:
-    enum class Type {
-        independent,
-        mlt,
-        stratified,
-    };
+    enum class Type { independent, mlt, stratified };
 
     static Type parse_sampler_type(const std::string &sampler_type) {
         if (sampler_type == "independent") {
@@ -38,13 +34,15 @@ class Sampler {
                                     int size, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    void init(IndependentSampler *independent_sampler);
+    explicit Sampler(IndependentSampler *independent_sampler)
+        : type(Type::independent), ptr(independent_sampler) {}
 
     PBRT_CPU_GPU
-    void init(MLTSampler *mlt_sampler);
+    explicit Sampler(MLTSampler *mlt_sampler) : type(Type::mlt), ptr(mlt_sampler) {}
 
     PBRT_CPU_GPU
-    void init(StratifiedSampler *stratified_sampler);
+    explicit Sampler(StratifiedSampler *stratified_sampler)
+        : type(Type::stratified), ptr(stratified_sampler) {}
 
     PBRT_CPU_GPU
     MLTSampler *get_mlt_sampler() const;
@@ -69,5 +67,5 @@ class Sampler {
 
   private:
     Type type;
-    void *ptr;
+    void *ptr = nullptr;
 };

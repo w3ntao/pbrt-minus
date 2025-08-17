@@ -34,6 +34,26 @@ class Material {
 
     static std::string material_type_to_string(Type type);
 
+    explicit Material(const DiffuseMaterial *diffuse_material)
+        : type(Type::diffuse), ptr(diffuse_material) {}
+
+    explicit Material(const CoatedConductorMaterial *coated_conductor_material)
+        : type(Type::coated_conductor), ptr(coated_conductor_material) {}
+
+    explicit Material(const CoatedDiffuseMaterial *coated_diffuse_material)
+        : type(Type::coated_diffuse), ptr(coated_diffuse_material) {}
+
+    explicit Material(const ConductorMaterial *conductor_material)
+        : type(Type::conductor), ptr(conductor_material) {}
+
+    explicit Material(const DielectricMaterial *dielectric_material)
+        : type(Type::dielectric), ptr(dielectric_material) {}
+
+    explicit Material(const DiffuseTransmissionMaterial *diffuse_transmission_material)
+        : type(Type::diffuse_transmission), ptr(diffuse_transmission_material) {}
+
+    explicit Material(const MixMaterial *mix_material) : type(Type::mix), ptr(mix_material) {}
+
     static const Material *create(const std::string &type_of_material,
                                   const ParameterDictionary &parameters,
                                   GPUMemoryAllocator &allocator);
@@ -47,7 +67,7 @@ class Material {
     }
 
     PBRT_CPU_GPU
-    const Material *get_material_from_mix_material(const Real u) const;
+    const Material *get_material_from_mix_material(Real u) const;
 
     PBRT_CPU_GPU
     BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
@@ -55,18 +75,4 @@ class Material {
   private:
     Type type;
     const void *ptr = nullptr;
-
-    void init(const CoatedConductorMaterial *coated_conductor_material);
-
-    void init(const CoatedDiffuseMaterial *coated_diffuse_material);
-
-    void init(const ConductorMaterial *conductor_material);
-
-    void init(const DielectricMaterial *dielectric_material);
-
-    void init(const DiffuseMaterial *diffuse_material);
-
-    void init(const DiffuseTransmissionMaterial *diffuse_transmission_material);
-
-    void init(const MixMaterial *mix_material);
 };

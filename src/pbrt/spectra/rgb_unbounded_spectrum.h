@@ -1,8 +1,8 @@
 #pragma once
 
+#include <pbrt/gpu/macro.h>
 #include <pbrt/spectrum_util/rgb.h>
 #include <pbrt/spectrum_util/rgb_sigmoid_polynomial.h>
-#include <pbrt/gpu/macro.h>
 
 class RGBColorSpace;
 class SampledSpectrum;
@@ -11,13 +11,7 @@ class SampledWavelengths;
 class RGBUnboundedSpectrum {
   public:
     PBRT_CPU_GPU
-    RGBUnboundedSpectrum() : rsp(0, 0, 0), scale(0) {}
-
-    PBRT_CPU_GPU
-    RGBUnboundedSpectrum(RGB rgb, const RGBColorSpace *cs);
-
-    PBRT_CPU_GPU
-    void init(RGB rgb, const RGBColorSpace *cs);
+    RGBUnboundedSpectrum(const RGB &rgb, const RGBColorSpace *cs);
 
     PBRT_CPU_GPU
     Real operator()(Real lambda) const {
@@ -28,6 +22,6 @@ class RGBUnboundedSpectrum {
     SampledSpectrum sample(const SampledWavelengths &lambda) const;
 
   private:
-    Real scale;
+    Real scale = NAN;
     RGBSigmoidPolynomial rsp;
 };

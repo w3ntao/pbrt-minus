@@ -8,8 +8,9 @@ class FloatScaledTexture;
 
 class GPUMemoryAllocator;
 class ParameterDictionary;
-class TextureEvalContext;
 class Transform;
+
+struct TextureEvalContext;
 
 class FloatTexture {
   public:
@@ -18,6 +19,15 @@ class FloatTexture {
         image,
         scale,
     };
+
+    explicit FloatTexture(const FloatConstantTexture *texture_ptr)
+        : type(Type::constant), ptr(texture_ptr) {}
+
+    explicit FloatTexture(const FloatImageTexture *texture_ptr)
+        : type(Type::image), ptr(texture_ptr) {}
+
+    explicit FloatTexture(const FloatScaledTexture *texture_ptr)
+        : type(Type::scale), ptr(texture_ptr) {}
 
     static const FloatTexture *create(const std::string &texture_type,
                                       const Transform &render_from_object,
@@ -33,10 +43,4 @@ class FloatTexture {
   private:
     Type type;
     const void *ptr = nullptr;
-
-    void init(const FloatConstantTexture *float_constant_texture);
-
-    void init(const FloatImageTexture *float_image_texture);
-
-    void init(const FloatScaledTexture *float_scaled_texture);
 };

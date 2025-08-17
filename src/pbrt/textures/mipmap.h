@@ -46,8 +46,7 @@ struct MIPMapFilterOptions {
 
 class MIPMap {
   public:
-    static const MIPMap *create(const ParameterDictionary &parameters,
-                                GPUMemoryAllocator &allocator);
+    MIPMap(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     RGB filter(const Point2f st) const;
@@ -56,6 +55,4 @@ class MIPMap {
     const GPUImage *image = nullptr;
     WrapMode wrap_mode;
     MIPMapFilterOptions options;
-
-    MIPMap(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 };

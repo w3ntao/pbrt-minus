@@ -36,6 +36,9 @@ struct LightBase {
     LightType light_type;
     Transform render_from_light;
 
+    LightBase(const LightType type, const Transform &_render_from_light)
+        : light_type(type), render_from_light(_render_from_light) {}
+
     PBRT_CPU_GPU
     LightType get_light_type() const {
         return light_type;
@@ -43,8 +46,8 @@ struct LightBase {
 };
 
 struct SampledLight {
-    const Light *light;
-    Real pdf;
+    const Light *light = nullptr;
+    Real pdf = NAN;
 };
 
 struct LightLiSample {
@@ -118,28 +121,31 @@ class Light {
         uniform_infinite_light,
     };
 
+    PBRT_CPU_GPU
+    explicit Light(DistantLight *distant_light) : type(Type::distant_light), ptr(distant_light) {}
+
+    PBRT_CPU_GPU
+    explicit Light(DiffuseAreaLight *diffuse_area_light)
+        : type(Type::diffuse_area_light), ptr(diffuse_area_light) {}
+
+    PBRT_CPU_GPU
+    explicit Light(ImageInfiniteLight *image_infinite_light)
+        : type(Type::image_infinite_light), ptr(image_infinite_light) {}
+
+    PBRT_CPU_GPU
+    explicit Light(SpotLight *spot_light) : type(Type::spot_light), ptr(spot_light) {}
+
+    PBRT_CPU_GPU
+    explicit Light(UniformInfiniteLight *uniform_infinite_light)
+        : type(Type::uniform_infinite_light), ptr(uniform_infinite_light) {}
+
     static Light *create(const std::string &type_of_light, const Transform &render_from_light,
                          const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
-    static Light *create_diffuse_area_lights(const Shape *shapes, const int num,
+    static Light *create_diffuse_area_lights(const Shape *shapes, int num,
                                              const Transform &render_from_light,
                                              const ParameterDictionary &parameters,
                                              GPUMemoryAllocator &allocator);
-
-    PBRT_CPU_GPU
-    void init(DistantLight *distant_light);
-
-    PBRT_CPU_GPU
-    void init(DiffuseAreaLight *diffuse_area_light);
-
-    PBRT_CPU_GPU
-    void init(ImageInfiniteLight *image_infinite_light);
-
-    PBRT_CPU_GPU
-    void init(SpotLight *spot_light);
-
-    PBRT_CPU_GPU
-    void init(UniformInfiniteLight *uniform_infinite_light);
 
     PBRT_CPU_GPU
     LightType get_light_type() const;

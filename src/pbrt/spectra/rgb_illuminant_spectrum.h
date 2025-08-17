@@ -10,12 +10,7 @@ class RGBColorSpace;
 class RGBIlluminantSpectrum {
   public:
     PBRT_CPU_GPU
-    RGBIlluminantSpectrum(const RGB &rgb, const RGBColorSpace *rgb_color_space) {
-        init(rgb, rgb_color_space);
-    }
-
-    PBRT_CPU_GPU
-    void init(const RGB &rgb, const RGBColorSpace *rgb_color_space);
+    RGBIlluminantSpectrum(const RGB &rgb, const RGBColorSpace *rgb_color_space);
 
     PBRT_CPU_GPU
     Real max_value() const;
@@ -30,7 +25,7 @@ class RGBIlluminantSpectrum {
     SampledSpectrum sample(const SampledWavelengths &lambda) const;
 
   private:
-    Real scale;
+    Real scale = NAN;
     RGBSigmoidPolynomial rsp;
-    const Spectrum *illuminant;
+    const Spectrum *illuminant = nullptr;
 };

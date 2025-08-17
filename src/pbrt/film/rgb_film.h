@@ -14,9 +14,9 @@ class SampledSpectrum;
 class SampledWavelengths;
 
 struct Pixel {
-    RGB rgb_sum;
-    Real weight_sum;
-    RGB rgb_splat;
+    RGB rgb_sum = RGB(0, 0, 0);
+    Real weight_sum = 0;
+    RGB rgb_splat = RGB(0, 0, 0);
 
     PBRT_CPU_GPU
     void init_zero() {

@@ -13,7 +13,7 @@ MitchellFilter::MitchellFilter(const ParameterDictionary &parameters, GPUMemoryA
     b = parameters.get_float("B", 1.f / 3.f);
     c = parameters.get_float("C", 1.f / 3.f);
 
-    sampler = FilterSampler::create(*this, allocator);
+    sampler = allocator.create<FilterSampler>(*this, allocator);
 }
 
 PBRT_CPU_GPU

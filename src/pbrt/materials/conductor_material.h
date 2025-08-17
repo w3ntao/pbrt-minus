@@ -12,8 +12,7 @@ struct MaterialEvalContext;
 
 class ConductorMaterial {
   public:
-    static const ConductorMaterial *create(const ParameterDictionary &parameters,
-                                           GPUMemoryAllocator &allocator);
+    ConductorMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
@@ -27,6 +26,4 @@ class ConductorMaterial {
     const FloatTexture *vRoughness = nullptr;
 
     bool remapRoughness = true;
-
-    ConductorMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 };

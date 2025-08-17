@@ -7,7 +7,7 @@ class GPUMemoryAllocator;
 class Shape;
 
 struct TriangleMesh {
-    int triangles_num = 0;
+    const int triangles_num = 0;
 
     const int *vertex_indices = nullptr;
     const Point3f *p = nullptr;
@@ -16,26 +16,17 @@ struct TriangleMesh {
     const Point2f *uv = nullptr;
     const int *faceIndices = nullptr;
 
-    bool reverse_orientation = false;
-    bool transformSwapsHandedness = false;
+    const bool reverse_orientation = false;
+    bool transform_swaps_handedness = false;
 
-    TriangleMesh(bool _reverse_orientation, const int *_vertex_indices, int num_indices,
-                 const Point3f *_p, const Normal3f *_n, const Point2f *_uv)
-        : reverse_orientation(_reverse_orientation), triangles_num(num_indices / 3),
-          vertex_indices(_vertex_indices), p(_p), uv(_uv), n(_n)
-
-    {
-        reverse_orientation = _reverse_orientation;
-
-        triangles_num = num_indices / 3;
-        vertex_indices = _vertex_indices;
-        p = _p;
-        uv = _uv;
-    }
+    TriangleMesh(const Transform &render_from_object, bool _reverse_orientation,
+                 const std::vector<int> &_indices, const std::vector<Point3f> &_p,
+                 const std::vector<Normal3f> &_n, const std::vector<Point2f> &_uv,
+                 GPUMemoryAllocator &allocator);
 
     static std::pair<const Shape *, int>
     build_triangles(const Transform &render_from_object, bool reverse_orientation,
-                    const std::vector<Point3f> &points, const std::vector<int> &indices,
+                    const std::vector<int> &indices, const std::vector<Point3f> &points,
                     const std::vector<Normal3f> &normals, const std::vector<Point2f> &uv,
                     GPUMemoryAllocator &allocator);
 };

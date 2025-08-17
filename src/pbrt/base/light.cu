@@ -16,19 +16,14 @@ static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, 
         return;
     }
 
-    lights[worker_idx].init(&concrete_lights[worker_idx]);
+    lights[worker_idx] = Light(&concrete_lights[worker_idx]);
 }
 
 Light *Light::create(const std::string &type_of_light, const Transform &render_from_light,
                      const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
-    auto light = allocator.allocate<Light>();
-
     if (type_of_light == "distant") {
         auto distant_light = DistantLight::create(render_from_light, parameters, allocator);
-
-        light->init(distant_light);
-
-        return light;
+        return allocator.create<Light>(distant_light);
     }
 
     if (type_of_light == "infinite") {
@@ -36,25 +31,20 @@ Light *Light::create(const std::string &type_of_light, const Transform &render_f
             auto image_infinite_light =
                 ImageInfiniteLight::create(render_from_light, parameters, allocator);
 
-            light->init(image_infinite_light);
-
-            return light;
+            return allocator.create<Light>(image_infinite_light);
         }
         // otherwise it's UniformInfiniteLight
 
         auto uniform_infinite_light =
             UniformInfiniteLight::create(render_from_light, parameters, allocator);
 
-        light->init(uniform_infinite_light);
-
-        return light;
+        return allocator.create<Light>(uniform_infinite_light);
     }
 
     if (type_of_light == "spot") {
         auto spot_light = SpotLight::create(render_from_light, parameters, allocator);
 
-        light->init(spot_light);
-        return light;
+        return allocator.create<Light>(spot_light);
     }
 
     printf("\n%s(): Light `%s` not implemented\n", __func__, type_of_light.c_str());
@@ -72,7 +62,8 @@ Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num,
     auto lights = allocator.allocate<Light>(num);
 
     for (int idx = 0; idx < num; idx++) {
-        diffuse_area_lights[idx].init(&shapes[idx], render_from_light, parameters, allocator);
+        diffuse_area_lights[idx] =
+            DiffuseAreaLight(&shapes[idx], render_from_light, parameters, allocator);
     }
 
     init_lights<<<blocks, MAX_THREADS_PER_BLOCKS>>>(lights, diffuse_area_lights, num);
@@ -80,36 +71,6 @@ Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num,
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     return lights;
-}
-
-PBRT_CPU_GPU
-void Light::init(DistantLight *distant_light) {
-    type = Type::distant_light;
-    ptr = distant_light;
-}
-
-PBRT_CPU_GPU
-void Light::init(DiffuseAreaLight *diffuse_area_light) {
-    type = Type::diffuse_area_light;
-    ptr = diffuse_area_light;
-}
-
-PBRT_CPU_GPU
-void Light::init(ImageInfiniteLight *image_infinite_light) {
-    type = Type::image_infinite_light;
-    ptr = image_infinite_light;
-}
-
-PBRT_CPU_GPU
-void Light::init(SpotLight *spot_light) {
-    type = Type::spot_light;
-    ptr = spot_light;
-}
-
-PBRT_CPU_GPU
-void Light::init(UniformInfiniteLight *uniform_infinite_light) {
-    type = Type::uniform_infinite_light;
-    ptr = uniform_infinite_light;
 }
 
 PBRT_CPU_GPU

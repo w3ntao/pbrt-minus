@@ -3,15 +3,6 @@
 #include <pbrt/primitives/geometric_primitive.h>
 
 PBRT_CPU_GPU
-void GeometricPrimitive::init(const Shape *_shape_ptr, const Material *_material,
-                              const Light *_area_light, const MediumInterface *_medium_interface) {
-    shape_ptr = _shape_ptr;
-    material = _material;
-    area_light = _area_light;
-    medium_interface = _medium_interface;
-}
-
-PBRT_CPU_GPU
 const Material *GeometricPrimitive::get_material() const {
     return material;
 }

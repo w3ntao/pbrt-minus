@@ -10,8 +10,7 @@ struct MaterialEvalContext;
 
 class CoatedDiffuseMaterial {
   public:
-    static const CoatedDiffuseMaterial *create(const ParameterDictionary &parameters,
-                                               GPUMemoryAllocator &allocator);
+    CoatedDiffuseMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
@@ -30,6 +29,4 @@ class CoatedDiffuseMaterial {
     bool remapRoughness = true;
     int maxDepth = 10;
     int nSamples = 1;
-
-    CoatedDiffuseMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 };

@@ -7,10 +7,8 @@ class Material;
 class SimplePrimitive {
   public:
     PBRT_CPU_GPU
-    void init(const Shape *_shape, const Material *_material) {
-        shape = _shape;
-        material = _material;
-    }
+    SimplePrimitive(const Shape *_shape, const Material *_material)
+        : shape(_shape), material(_material) {}
 
     PBRT_CPU_GPU
     const Material *get_material() const {

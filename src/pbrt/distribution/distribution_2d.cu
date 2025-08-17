@@ -5,16 +5,8 @@
 #include <pbrt/spectrum_util/rgb.h>
 #include <pbrt/util/thread_pool.h>
 
-const Distribution2D *Distribution2D::create(const std::vector<std::vector<Real>> &data,
-                                             GPUMemoryAllocator &allocator) {
-    auto distribution = allocator.allocate<Distribution2D>();
-    distribution->build(data, allocator);
-
-    return distribution;
-}
-
-void Distribution2D::build(const std::vector<std::vector<Real>> &data,
-                           GPUMemoryAllocator &allocator) {
+Distribution2D::Distribution2D(const std::vector<std::vector<Real>> &data,
+                               GPUMemoryAllocator &allocator) {
     if (data.empty()) {
         REPORT_FATAL_ERROR();
     }
@@ -31,7 +23,7 @@ void Distribution2D::build(const std::vector<std::vector<Real>> &data,
         sum_per_row[x] = current_sum;
     }
 
-    dimension_x_distribution = AliasTable::create(sum_per_row, allocator);
+    dimension_x_distribution = allocator.create<AliasTable>(sum_per_row, allocator);
 
     auto _distribution_1d_list = allocator.allocate<Distribution1D>(dimension.x);
 
@@ -45,7 +37,7 @@ void Distribution2D::build(const std::vector<std::vector<Real>> &data,
                 pdfs[y] = data[x][y];
             }
 
-            _distribution_1d_list[x].build(pdfs, allocator);
+            _distribution_1d_list[x] = Distribution1D(pdfs, allocator);
         });
 
     dimension_y_distribution_list = _distribution_1d_list;

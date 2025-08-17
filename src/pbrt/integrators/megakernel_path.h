@@ -1,21 +1,19 @@
 #pragma once
 
 #include <pbrt/gpu/macro.h>
+#include <pbrt/scene/parameter_dictionary.h>
 
-class BSDF;
-class GPUMemoryAllocator;
 class Sampler;
-class ParameterDictionary;
 struct IntegratorBase;
 
 class MegakernelPathIntegrator {
   public:
-    static const MegakernelPathIntegrator *create(const ParameterDictionary &parameters,
-                                                  const IntegratorBase *integrator_base,
-                                                  GPUMemoryAllocator &allocator);
-
-    MegakernelPathIntegrator(const IntegratorBase *_base, int _max_depth, bool _regularize)
-        : base(_base), max_depth(_max_depth), regularize(_regularize) {}
+    MegakernelPathIntegrator(const ParameterDictionary &parameters,
+                             const IntegratorBase *integrator_base)
+        : base(integrator_base) {
+        max_depth = parameters.get_integer("maxdepth", 5);
+        regularize = parameters.get_bool("regularize", false);
+    }
 
     PBRT_CPU_GPU
     static SampledSpectrum evaluate_li_volume(const Ray &primary_ray, SampledWavelengths &lambda,
@@ -33,6 +31,6 @@ class MegakernelPathIntegrator {
 
   private:
     const IntegratorBase *base = nullptr;
-    int max_depth = 5; // TODO: move max_depth into IntegratorBase
+    int max_depth = -1; // TODO: move max_depth into IntegratorBase
     bool regularize = true;
 };

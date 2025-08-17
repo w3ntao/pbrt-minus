@@ -14,7 +14,8 @@ class GPUMemoryAllocator;
 class RGBColorSpace;
 class Transform;
 class ParameterDictionary;
-class TextureEvalContext;
+
+struct TextureEvalContext;
 
 class SpectrumTexture {
   public:
@@ -26,6 +27,24 @@ class SpectrumTexture {
         mix,
         scaled,
     };
+
+    explicit SpectrumTexture(const SpectrumCheckerboardTexture *checkerboard_texture)
+        : type(Type::checkerboard), ptr(checkerboard_texture) {}
+
+    explicit SpectrumTexture(const SpectrumConstantTexture *constant_texture)
+        : type(Type::constant), ptr(constant_texture) {}
+
+    explicit SpectrumTexture(const SpectrumDirectionMixTexture *direction_mix_texture)
+        : type(Type::direction_mix), ptr(direction_mix_texture) {}
+
+    explicit SpectrumTexture(const SpectrumImageTexture *image_texture)
+        : type(Type::image), ptr(image_texture) {}
+
+    explicit SpectrumTexture(const SpectrumMixTexture *mix_texture)
+        : type(Type::mix), ptr(mix_texture) {}
+
+    explicit SpectrumTexture(const SpectrumScaledTexture *scale_texture)
+        : type(Type::scaled), ptr(scale_texture) {}
 
     static const SpectrumTexture *
     create(const std::string &texture_type, SpectrumType spectrum_type,
@@ -44,16 +63,4 @@ class SpectrumTexture {
   private:
     Type type;
     const void *ptr = nullptr;
-
-    void init(const SpectrumCheckerboardTexture *checkerboard_texture);
-
-    void init(const SpectrumConstantTexture *constant_texture);
-
-    void init(const SpectrumDirectionMixTexture *direction_mix_texture);
-
-    void init(const SpectrumImageTexture *image_texture);
-
-    void init(const SpectrumMixTexture *mix_texture);
-
-    void init(const SpectrumScaledTexture *scale_texture);
 };

@@ -13,14 +13,8 @@ struct ShapeSampleContext;
 
 class Sphere {
   public:
-    static const Sphere *create(const Transform &render_from_object,
-                                const Transform &object_from_render, bool reverse_orientation,
-                                const ParameterDictionary &parameters,
-                                GPUMemoryAllocator &allocator);
-
-    void init(const Transform &_render_from_object, const Transform &_object_from_render,
-              bool _reverse_orientation, Real _radius, Real _z_min, Real _z_max,
-              Real _phi_max);
+    Sphere(const Transform &_render_from_object, const Transform &_object_from_render,
+           bool _reverse_orientation, const ParameterDictionary &parameters);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const;
@@ -56,19 +50,19 @@ class Sphere {
     Real pdf(const ShapeSampleContext &ctx, const Vector3f &wi) const;
 
   private:
-    Real radius;
-    Real z_min;
-    Real z_max;
+    const Real radius = NAN;
+    Real z_min = NAN;
+    Real z_max = NAN;
 
-    Real theta_z_min;
-    Real theta_z_max;
-    Real phi_max;
+    Real theta_z_min = NAN;
+    Real theta_z_max = NAN;
+    Real phi_max = NAN;
 
     Transform render_from_object;
     Transform object_from_render;
 
-    bool reverse_orientation;
-    bool transform_swaps_handedness;
+    const bool reverse_orientation = false;
+    const bool transform_swaps_handedness = false;
 
     PBRT_CPU_GPU
     pbrt::optional<QuadricIntersection> basic_intersect(const Ray &r, Real tMax) const;

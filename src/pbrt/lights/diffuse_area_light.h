@@ -11,8 +11,8 @@ struct GlobalSpectra;
 
 class DiffuseAreaLight : public LightBase {
   public:
-    void init(const Shape *_shape, const Transform &_render_from_light,
-              const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
+    DiffuseAreaLight(const Shape *_shape, const Transform &_render_from_light,
+                     const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
@@ -36,8 +36,8 @@ class DiffuseAreaLight : public LightBase {
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
   private:
-    const Shape *shape;
-    bool two_sided;
-    const Spectrum *l_emit;
-    Real scale;
+    const Shape *shape = nullptr;
+    bool two_sided = false;
+    const Spectrum *Lemit = nullptr;
+    Real scale = NAN;
 };

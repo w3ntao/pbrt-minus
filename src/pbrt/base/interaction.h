@@ -18,7 +18,7 @@ class Interaction {
   public:
     Point3fi pi = Point3fi(NAN, NAN, NAN);
     Vector3f wo = Vector3f(NAN, NAN, NAN);
-    Normal3f n = Normal3f(NAN, NAN, NAN);
+    Normal3f n = Normal3f(0, 0, 0);
     Point2f uv = Point2f(NAN, NAN);
 
     const MediumInterface *medium_interface = nullptr;

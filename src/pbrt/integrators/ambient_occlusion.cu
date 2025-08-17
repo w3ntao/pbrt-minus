@@ -1,4 +1,5 @@
 #include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/integrator_base.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/integrators/ambient_occlusion.h>
@@ -6,21 +7,13 @@
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>
 
-const AmbientOcclusionIntegrator *
-AmbientOcclusionIntegrator::create(const ParameterDictionary &parameters,
-                                   const IntegratorBase *integrator_base,
-                                   GPUMemoryAllocator &allocator) {
-
-    auto illuminant_spectrum = parameters.global_spectra->rgb_color_space->illuminant;
+AmbientOcclusionIntegrator::AmbientOcclusionIntegrator(const ParameterDictionary &parameters,
+                                                       const IntegratorBase *integrator_base)
+    : base(integrator_base) {
+    illuminant_spectrum = parameters.global_spectra->rgb_color_space->illuminant;
 
     const auto cie_y = parameters.global_spectra->cie_y;
-    auto illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(cie_y);
-
-    auto ambient_occlusion_integrator = allocator.allocate<AmbientOcclusionIntegrator>();
-
-    ambient_occlusion_integrator->init(integrator_base, illuminant_spectrum, illuminant_scale);
-
-    return ambient_occlusion_integrator;
+    illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(cie_y);
 }
 
 PBRT_CPU_GPU

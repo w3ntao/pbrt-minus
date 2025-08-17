@@ -8,16 +8,10 @@ class GPUMemoryAllocator;
 
 class AliasTable {
   public:
-    static const AliasTable *create(const std::vector<Real> &values,
-                                    GPUMemoryAllocator &allocator);
-
-    PBRT_CPU_GPU
-    cuda::std::pair<int, Real> sample(const Real u0) const;
-
     struct Bin {
-        Real p;
-        int first_idx;
-        int second_idx;
+        Real p = NAN;
+        int first_idx = -1;
+        int second_idx = -1;
 
         PBRT_CPU_GPU
         bool operator<(const Bin &right) const {
@@ -30,13 +24,21 @@ class AliasTable {
         }
 
         PBRT_CPU_GPU
-        Bin() : p(NAN), first_idx(-1), second_idx(-1) {}
+        Bin() {}
 
         PBRT_CPU_GPU
-        Bin(const Real _p, const int a) : p(_p), first_idx(a), second_idx(-1) {}
+        Bin(const Real _p, const int a) : p(_p), first_idx(a) {}
     };
 
-    const Bin *bins;
-    const Real *pdfs;
-    int size;
+    AliasTable(const std::vector<Real> &values, GPUMemoryAllocator &allocator);
+
+    AliasTable(const Bin *_bins, const Real *_pdfs, const int _size)
+        : bins(_bins), pdfs(_pdfs), size(_size) {}
+
+    PBRT_CPU_GPU
+    cuda::std::pair<int, Real> sample(Real u0) const;
+
+    const Bin *bins = nullptr;
+    const Real *pdfs = nullptr;
+    const int size = 0;
 };

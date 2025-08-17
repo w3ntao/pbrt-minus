@@ -17,7 +17,7 @@ static __global__ void init_pixels(Pixel *pixels, Point2i dimension) {
 
 RGBFilm::RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
                  GPUMemoryAllocator &allocator)
-    : filter(_filter), filter_integral(_filter->get_integral()), sensor(nullptr) {
+    : filter(_filter), filter_integral(_filter->get_integral()) {
     auto resolution_x = parameters.get_integer("xresolution");
     auto resolution_y = parameters.get_integer("yresolution");
 
@@ -32,11 +32,9 @@ RGBFilm::RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
     auto d_illum = Spectrum::create_cie_d(white_balance_val == 0.0 ? 6500.0 : white_balance_val,
                                           CIE_S0, CIE_S1, CIE_S2, CIE_S_lambda, allocator);
 
-    auto _sensor = allocator.allocate<PixelSensor>();
-    _sensor->init_cie_1931(parameters.global_spectra->cie_xyz,
-                           parameters.global_spectra->rgb_color_space,
-                           white_balance_val == 0 ? nullptr : d_illum, imaging_ratio);
-    sensor = _sensor;
+    sensor = PixelSensor::create_cie_1931(
+        parameters.global_spectra->cie_xyz, parameters.global_spectra->rgb_color_space,
+        white_balance_val == 0 ? nullptr : d_illum, imaging_ratio, allocator);
 
     pixels = allocator.allocate<Pixel>(resolution.x * resolution.y);
 

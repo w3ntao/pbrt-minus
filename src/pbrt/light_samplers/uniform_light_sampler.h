@@ -1,20 +1,11 @@
 #pragma once
 
 #include <pbrt/base/light.h>
-#include <pbrt/gpu/gpu_memory_allocator.h>
 
 class UniformLightSampler {
   public:
-    static const UniformLightSampler *create(const Light **lights, const int light_num,
-                                             GPUMemoryAllocator &allocator) {
-
-        auto uniform_light_sampler = allocator.allocate<UniformLightSampler>();
-
-        uniform_light_sampler->lights = lights;
-        uniform_light_sampler->light_num = light_num;
-
-        return uniform_light_sampler;
-    }
+    UniformLightSampler(const Light **_lights, const int _light_num)
+        : lights(_lights), light_num(_light_num) {}
 
     PBRT_CPU_GPU
     pbrt::optional<SampledLight> sample(Real u) const {
@@ -46,6 +37,6 @@ class UniformLightSampler {
     }
 
   private:
-    const Light **lights;
-    int light_num;
+    const Light **lights = nullptr;
+    int light_num = 0;
 };

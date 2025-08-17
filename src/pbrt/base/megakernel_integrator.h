@@ -24,6 +24,15 @@ class MegakernelIntegrator {
         surface_normal,
     };
 
+    explicit MegakernelIntegrator(const AmbientOcclusionIntegrator *ambient_occlusion_integrator)
+        : type(Type::ambient_occlusion), ptr(ambient_occlusion_integrator) {}
+
+    explicit MegakernelIntegrator(const MegakernelPathIntegrator *megakernel_path_integrator)
+        : type(Type::megakernel_path), ptr(megakernel_path_integrator) {}
+
+    explicit MegakernelIntegrator(const SurfaceNormalIntegrator *surface_normal_integrator)
+        : type(Type::surface_normal), ptr(surface_normal_integrator) {}
+
     static const MegakernelIntegrator *create(const std::string &integrator_name,
                                               const ParameterDictionary &parameters,
                                               const IntegratorBase *integrator_base,
@@ -55,12 +64,6 @@ class MegakernelIntegrator {
                 const IntegratorBase *integrator_base, bool preview) const;
 
   private:
-    void init(const AmbientOcclusionIntegrator *ambient_occlusion_integrator);
-
-    void init(const MegakernelPathIntegrator *megakernel_path_integrator);
-
-    void init(const SurfaceNormalIntegrator *surface_normal_integrator);
-
     Type type;
-    const void *ptr;
+    const void *ptr = nullptr;
 };

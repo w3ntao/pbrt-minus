@@ -5,14 +5,6 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/textures/texture_eval_context.h>
 
-const DielectricMaterial *DielectricMaterial::create(const ParameterDictionary &parameters,
-                                                     GPUMemoryAllocator &allocator) {
-    auto dielectric_material = allocator.allocate<DielectricMaterial>();
-    *dielectric_material = DielectricMaterial(parameters, allocator);
-
-    return dielectric_material;
-}
-
 DielectricMaterial::DielectricMaterial(const ParameterDictionary &parameters,
                                        GPUMemoryAllocator &allocator) {
     if (const auto key_eta = "eta"; parameters.has_floats(key_eta)) {

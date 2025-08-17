@@ -4,40 +4,29 @@
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/util/hash_map.h>
 
-const PowerLightSampler *PowerLightSampler::create(const Light **lights, const int light_num,
-                                                   GPUMemoryAllocator &allocator) {
-    auto power_light_sampler = allocator.allocate<PowerLightSampler>();
-
-    power_light_sampler->lights = nullptr;
-    power_light_sampler->lights_power_distribution = nullptr;
-    power_light_sampler->light_ptr_to_idx = nullptr;
-    power_light_sampler->light_num = light_num;
-
+PowerLightSampler::PowerLightSampler(const Light **_lights, const int _light_num,
+                                     GPUMemoryAllocator &allocator)
+    : light_num(_light_num), lights(_lights) {
     if (light_num == 0) {
-        return power_light_sampler;
+        return;
     }
 
     std::vector<Real> lights_pmf(light_num);
-    SampledWavelengths lambda = SampledWavelengths::sample_visible(0.5f);
+    const SampledWavelengths lambda = SampledWavelengths::sample_visible(0.5f);
     for (int idx = 0; idx < light_num; ++idx) {
-        auto light = lights[idx];
+        const auto light = lights[idx];
         auto phi = light->phi(lambda).safe_div(lambda.pdf_as_sampled_spectrum());
 
         lights_pmf[idx] = phi.average();
     }
 
-    auto light_to_idx = HashMap::create(light_num, allocator);
+    auto light_to_idx = allocator.create<HashMap>(light_num, allocator);
     for (auto idx = 0; idx < light_num; ++idx) {
-        light_to_idx->insert((uintptr_t)lights[idx], idx);
+        light_to_idx->insert(reinterpret_cast<uintptr_t>(lights[idx]), idx);
     }
 
-    power_light_sampler->light_num = light_num;
-    power_light_sampler->lights = lights;
-    power_light_sampler->light_ptr_to_idx = light_to_idx;
-    power_light_sampler->lights_power_distribution = Distribution1D::create(lights_pmf, allocator);
-    ;
-
-    return power_light_sampler;
+    light_ptr_to_idx = light_to_idx;
+    lights_power_distribution = allocator.create<Distribution1D>(lights_pmf, allocator);
 }
 
 PBRT_CPU_GPU
@@ -69,6 +58,6 @@ Real PowerLightSampler::pmf(const Light *light) const {
         return 0;
     }
 
-    auto light_idx = light_ptr_to_idx->lookup((uintptr_t)light);
+    const auto light_idx = light_ptr_to_idx->lookup(reinterpret_cast<uintptr_t>(light));
     return lights_power_distribution->get_pdf(light_idx);
 }

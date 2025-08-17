@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <functional>
 #include <numeric>
 #include <pbrt/distribution/alias_table.h>
@@ -5,13 +6,11 @@
 #include <pbrt/util/hash.h>
 #include <pbrt/util/math.h>
 
-const AliasTable *AliasTable::create(const std::vector<Real> &values,
-                                     GPUMemoryAllocator &allocator) {
+AliasTable ::AliasTable(const std::vector<Real> &values, GPUMemoryAllocator &allocator)
+    : size(values.size()) {
     if (values.empty()) {
         REPORT_FATAL_ERROR();
     }
-
-    const auto size = values.size();
 
     auto bins_to_sort = std::vector<Bin>(size);
     std::vector<Bin> bins_done_sorting;
@@ -26,12 +25,10 @@ const AliasTable *AliasTable::create(const std::vector<Real> &values,
             gpu_pdfs[idx] = Real(idx) / size;
         }
 
-        auto alias_table = allocator.allocate<AliasTable>();
-        alias_table->size = size;
-        alias_table->bins = gpu_bins;
-        alias_table->pdfs = gpu_pdfs;
+        bins = gpu_bins;
+        pdfs = gpu_pdfs;
 
-        return alias_table;
+        return;
     }
 
     auto gpu_pdfs = allocator.allocate<Real>(size);
@@ -39,6 +36,7 @@ const AliasTable *AliasTable::create(const std::vector<Real> &values,
         bins_to_sort[idx] = Bin(values[idx] * size / value_sum, idx);
         gpu_pdfs[idx] = values[idx] / value_sum;
     }
+    pdfs = gpu_pdfs;
 
     constexpr Real tolerance = 0.001;
 
@@ -66,13 +64,7 @@ const AliasTable *AliasTable::create(const std::vector<Real> &values,
     auto gpu_bins = allocator.allocate<Bin>(size);
     cudaMemcpy(gpu_bins, bins_done_sorting.data(), sizeof(Bin) * size, cudaMemcpyHostToDevice);
 
-    auto alias_table = allocator.allocate<AliasTable>();
-
-    alias_table->size = size;
-    alias_table->bins = gpu_bins;
-    alias_table->pdfs = gpu_pdfs;
-
-    return alias_table;
+    bins = gpu_bins;
 }
 
 PBRT_CPU_GPU

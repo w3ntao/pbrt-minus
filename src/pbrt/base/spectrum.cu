@@ -9,13 +9,8 @@
 #include <pbrt/spectra/rgb_unbounded_spectrum.h>
 
 const Spectrum *Spectrum::create_black_body(Real temperature, GPUMemoryAllocator &allocator) {
-    auto black_body = allocator.allocate<BlackbodySpectrum>();
-    auto spectrum = allocator.allocate<Spectrum>();
-
-    black_body->init(temperature);
-    spectrum->init(black_body);
-
-    return spectrum;
+    auto black_body = allocator.create<BlackbodySpectrum>(temperature);
+    return allocator.create<Spectrum>(black_body);
 }
 
 const Spectrum *Spectrum::create_cie_d(Real temperature, const Real *cie_s0, const Real *cie_s1,
@@ -24,16 +19,13 @@ const Spectrum *Spectrum::create_cie_d(Real temperature, const Real *cie_s0, con
     Real cct = temperature * 1.4388f / 1.4380f;
     if (cct < 4000) {
         // CIE D ill-defined, use blackbody
-        BlackbodySpectrum bb = BlackbodySpectrum(cct);
+        auto bb = BlackbodySpectrum(cct);
 
-        auto densely_sampled_spectrum = allocator.allocate<DenselySampledSpectrum>();
+        auto densely_sampled_spectrum = allocator.create<DenselySampledSpectrum>();
         densely_sampled_spectrum->init_with_sample_function(
             [=](Real lambda) { return bb(lambda); });
 
-        auto spectrum = allocator.allocate<Spectrum>();
-        spectrum->init(densely_sampled_spectrum);
-
-        return spectrum;
+        return allocator.create<Spectrum>(densely_sampled_spectrum);
     }
 
     // Convert CCT to xy
@@ -62,50 +54,32 @@ const Spectrum *Spectrum::create_cie_d(Real temperature, const Real *cie_s0, con
 }
 
 const Spectrum *Spectrum::create_constant_spectrum(Real val, GPUMemoryAllocator &allocator) {
-    auto constant_spectrum = allocator.allocate<ConstantSpectrum>();
-    auto spectrum = allocator.allocate<Spectrum>();
+    auto constant_spectrum = allocator.create<ConstantSpectrum>(val);
 
-    constant_spectrum->init(val);
-    spectrum->init(constant_spectrum);
-
-    return spectrum;
+    return allocator.create<Spectrum>(constant_spectrum);
 }
 
 const Spectrum *Spectrum::create_from_rgb(const RGB &val, SpectrumType spectrum_type,
                                           const RGBColorSpace *color_space,
                                           GPUMemoryAllocator &allocator) {
-    auto spectrum = allocator.allocate<Spectrum>();
-
     switch (spectrum_type) {
     case SpectrumType::Albedo: {
         if (val.r > 1 || val.g > 1 || val.b > 1) {
             REPORT_FATAL_ERROR();
         }
 
-        auto rgb_albedo_spectrum = allocator.allocate<RGBAlbedoSpectrum>();
-
-        rgb_albedo_spectrum->init(val, color_space);
-        spectrum->init(rgb_albedo_spectrum);
-
-        return spectrum;
+        auto rgb_albedo_spectrum = allocator.create<RGBAlbedoSpectrum>(val, color_space);
+        return allocator.create<Spectrum>(rgb_albedo_spectrum);
     }
 
     case SpectrumType::Illuminant: {
-        auto rgb_illuminant_spectrum = allocator.allocate<RGBIlluminantSpectrum>();
-
-        rgb_illuminant_spectrum->init(val, color_space);
-        spectrum->init(rgb_illuminant_spectrum);
-
-        return spectrum;
+        auto rgb_illuminant_spectrum = allocator.create<RGBIlluminantSpectrum>(val, color_space);
+        return allocator.create<Spectrum>(rgb_illuminant_spectrum);
     }
 
     case SpectrumType::Unbounded: {
-        auto rgb_unbounded_spectrum = allocator.allocate<RGBUnboundedSpectrum>();
-
-        rgb_unbounded_spectrum->init(val, color_space);
-        spectrum->init(rgb_unbounded_spectrum);
-
-        return spectrum;
+        auto rgb_unbounded_spectrum = allocator.create<RGBUnboundedSpectrum>(val, color_space);
+        return allocator.create<Spectrum>(rgb_unbounded_spectrum);
     }
     }
 
@@ -118,70 +92,18 @@ const Spectrum *Spectrum::create_from_rgb(const RGB &val, SpectrumType spectrum_
 const Spectrum *Spectrum::create_piecewise_linear_spectrum_from_lambdas_and_values(
     const std::vector<Real> &cpu_lambdas, const std::vector<Real> &cpu_values,
     GPUMemoryAllocator &allocator) {
-    auto piecewise_linear_spectrum =
-        PiecewiseLinearSpectrum::create_from_lambdas_values(cpu_lambdas, cpu_values, allocator);
-
-    auto spectrum = allocator.allocate<Spectrum>();
-
-    spectrum->init(piecewise_linear_spectrum);
-
-    return spectrum;
+    const auto piecewise_linear_spectrum =
+        allocator.create<PiecewiseLinearSpectrum>(cpu_lambdas, cpu_values, allocator);
+    return allocator.create<Spectrum>(piecewise_linear_spectrum);
 }
 
 const Spectrum *
 Spectrum::create_piecewise_linear_spectrum_from_interleaved(const std::vector<Real> &samples,
                                                             bool normalize, const Spectrum *cie_y,
                                                             GPUMemoryAllocator &allocator) {
-    auto piecewise_linear_spectrum =
-        PiecewiseLinearSpectrum::create_from_interleaved(samples, normalize, cie_y, allocator);
-
-    auto spectrum = allocator.allocate<Spectrum>();
-
-    spectrum->init(piecewise_linear_spectrum);
-
-    return spectrum;
-}
-
-PBRT_CPU_GPU
-void Spectrum::init(const BlackbodySpectrum *black_body_spectrum) {
-    type = Type::black_body;
-    ptr = black_body_spectrum;
-}
-
-PBRT_CPU_GPU
-void Spectrum::init(const ConstantSpectrum *constant_spectrum) {
-    type = Type::constant;
-    ptr = constant_spectrum;
-}
-
-PBRT_CPU_GPU
-void Spectrum::init(const DenselySampledSpectrum *densely_sampled_spectrum) {
-    type = Type::densely_sampled;
-    ptr = densely_sampled_spectrum;
-}
-
-PBRT_CPU_GPU
-void Spectrum::init(const RGBAlbedoSpectrum *rgb_albedo_spectrum) {
-    type = Type::rgb_albedo;
-    ptr = rgb_albedo_spectrum;
-}
-
-PBRT_CPU_GPU
-void Spectrum::init(const RGBIlluminantSpectrum *rgb_illuminant_spectrum) {
-    type = Type::rgb_illuminant;
-    ptr = rgb_illuminant_spectrum;
-}
-
-PBRT_CPU_GPU
-void Spectrum::init(const RGBUnboundedSpectrum *rgb_unbounded_spectrum) {
-    type = Type::rgb_unbounded;
-    ptr = rgb_unbounded_spectrum;
-}
-
-PBRT_CPU_GPU
-void Spectrum::init(const PiecewiseLinearSpectrum *piecewise_linear_spectrum) {
-    type = Type::piecewise_linear;
-    ptr = piecewise_linear_spectrum;
+    const auto piecewise_linear_spectrum =
+        allocator.create<PiecewiseLinearSpectrum>(samples, normalize, cie_y, allocator);
+    return allocator.create<Spectrum>(piecewise_linear_spectrum);
 }
 
 PBRT_CPU_GPU
@@ -194,6 +116,7 @@ Real Spectrum::max_value() const {
 
     printf("type %d not implemented\n", type);
     REPORT_FATAL_ERROR();
+    return NAN;
 }
 
 PBRT_CPU_GPU

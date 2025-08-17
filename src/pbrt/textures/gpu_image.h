@@ -74,6 +74,8 @@ inline bool Is32Bit(PixelFormat format) {
 
 class GPUImage {
   public:
+    GPUImage() {}
+
     static const GPUImage *create_from_file(const std::string &filename,
                                             GPUMemoryAllocator &allocator);
 
@@ -88,8 +90,7 @@ class GPUImage {
     PBRT_CPU_GPU RGB bilerp(Point2f p, WrapMode2D wrap) const;
 
   private:
-    Point2i resolution;
-
+    Point2i resolution = Point2i(0, 0);
     const RGB *pixels = nullptr;
 
     void init_exr(const std::string &filename, GPUMemoryAllocator &allocator);

@@ -27,7 +27,7 @@ GaussianFilter::GaussianFilter(const ParameterDictionary &parameters,
     expX = gaussian(radius.x, 0, sigma);
     expY = gaussian(radius.y, 0, sigma);
 
-    sampler = FilterSampler::create(*this, allocator);
+    sampler = allocator.create<FilterSampler>(*this, allocator);
 }
 
 PBRT_CPU_GPU

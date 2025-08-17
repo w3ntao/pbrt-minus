@@ -55,7 +55,7 @@ SpectrumCheckerboardTexture::SpectrumCheckerboardTexture(const Transform &render
     }
 
     if (dimension == 2) {
-        auto map2D = TextureMapping2D::create(renderFromTexture, parameters, allocator);
+        const auto map2D = TextureMapping2D::create(renderFromTexture, parameters, allocator);
         init(map2D, nullptr, tex1, tex2);
 
         return;

@@ -1,56 +1,16 @@
 #include <pbrt/base/spectrum.h>
+#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/spectra/piecewise_linear_spectrum.h>
 #include <pbrt/spectrum_util/spectrum_constants_cie.h>
 
-#include <pbrt/gpu/gpu_memory_allocator.h>
-
-const PiecewiseLinearSpectrum *
-PiecewiseLinearSpectrum::create_from_lambdas_values(const std::vector<Real> &cpu_lambdas,
-                                                    const std::vector<Real> &cpu_values,
-                                                    GPUMemoryAllocator &allocator) {
-    auto spectrum = allocator.allocate<PiecewiseLinearSpectrum>();
-
-    spectrum->init_from_lambdas_values(cpu_lambdas, cpu_values, allocator);
-
-    return spectrum;
-}
-
-const PiecewiseLinearSpectrum *
-PiecewiseLinearSpectrum::create_from_interleaved(const std::vector<Real> &samples,
-                                                 bool normalize, const Spectrum *cie_y,
+PiecewiseLinearSpectrum::PiecewiseLinearSpectrum(const std::vector<Real> &samples, bool normalize,
+                                                 const Spectrum *cie_y,
                                                  GPUMemoryAllocator &allocator) {
-    auto piecewise_linear_spectrum = allocator.allocate<PiecewiseLinearSpectrum>();
-
-    piecewise_linear_spectrum->init_from_interleaved(samples, normalize, cie_y, allocator);
-
-    return piecewise_linear_spectrum;
-}
-
-void PiecewiseLinearSpectrum::init_from_lambdas_values(const std::vector<Real> &cpu_lambdas,
-                                                       const std::vector<Real> &cpu_values,
-                                                       GPUMemoryAllocator &allocator) {
-    if (cpu_lambdas.size() != cpu_values.size()) {
-        REPORT_FATAL_ERROR();
-    }
-    size = cpu_lambdas.size();
-
-    lambdas = allocator.allocate<Real>(size);
-    values = allocator.allocate<Real>(size);
-
-    CHECK_CUDA_ERROR(
-        cudaMemcpy(lambdas, cpu_lambdas.data(), sizeof(Real) * size, cudaMemcpyHostToDevice));
-    CHECK_CUDA_ERROR(
-        cudaMemcpy(values, cpu_values.data(), sizeof(Real) * size, cudaMemcpyHostToDevice));
-}
-
-void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<Real> &samples,
-                                                    bool normalize, const Spectrum *cie_y,
-                                                    GPUMemoryAllocator &allocator) {
     if (samples.size() % 2 != 0) {
         REPORT_FATAL_ERROR();
     }
 
-    int n = samples.size() / 2;
+    const int n = samples.size() / 2;
     std::vector<Real> cpu_lambdas, cpu_values;
 
     // Extend samples to cover range of visible wavelengths if needed.
@@ -71,11 +31,52 @@ void PiecewiseLinearSpectrum::init_from_interleaved(const std::vector<Real> &sam
         REPORT_FATAL_ERROR();
     }
 
-    this->init_from_lambdas_values(cpu_lambdas, cpu_values, allocator);
+    init(cpu_lambdas, cpu_values, allocator);
 
     if (normalize) {
-        this->scale(CIE_Y_integral / inner_product(cie_y));
+        scale(CIE_Y_integral / inner_product(cie_y), allocator);
     }
+}
+
+PiecewiseLinearSpectrum ::PiecewiseLinearSpectrum(const std::vector<Real> &_lambdas,
+                                                  const std::vector<Real> &_values,
+                                                  GPUMemoryAllocator &allocator) {
+    init(_lambdas, _values, allocator);
+}
+
+void PiecewiseLinearSpectrum::init(const std::vector<Real> &_lambdas,
+                                   const std::vector<Real> &_values,
+                                   GPUMemoryAllocator &allocator) {
+    if (_lambdas.size() != _values.size()) {
+        REPORT_FATAL_ERROR();
+    }
+    size = _lambdas.size();
+
+    auto gpu_lambdas = allocator.allocate<Real>(size);
+    auto gpu_values = allocator.allocate<Real>(size);
+
+    CHECK_CUDA_ERROR(
+        cudaMemcpy(gpu_lambdas, _lambdas.data(), sizeof(Real) * size, cudaMemcpyHostToDevice));
+    CHECK_CUDA_ERROR(
+        cudaMemcpy(gpu_values, _values.data(), sizeof(Real) * size, cudaMemcpyHostToDevice));
+
+    lambdas = gpu_lambdas;
+    values = gpu_values;
+}
+
+void PiecewiseLinearSpectrum::scale(const Real factor, GPUMemoryAllocator &allocator) {
+    if (factor <= 0 || std::isnan(factor) || std::isinf(factor)) {
+        REPORT_FATAL_ERROR();
+    }
+
+    auto scaled_values = allocator.allocate<Real>(size);
+    for (int idx = 0; idx < size; ++idx) {
+        scaled_values[idx] = values[idx] * factor;
+    }
+
+    allocator.release(values);
+
+    values = scaled_values;
 }
 
 PBRT_CPU_GPU
@@ -89,7 +90,7 @@ SampledSpectrum PiecewiseLinearSpectrum::sample(const SampledWavelengths &lambda
 }
 
 PBRT_CPU_GPU
-Real PiecewiseLinearSpectrum::operator()(Real lambda) const {
+Real PiecewiseLinearSpectrum::operator()(const Real lambda) const {
     if (size == 0 || lambda < lambdas[0] || lambda > lambdas[size - 1]) {
         return 0;
     }

@@ -23,15 +23,6 @@ const FloatTexture *build_float_texture(const std::string &primary_key,
     return texture;
 }
 
-const CoatedConductorMaterial *
-CoatedConductorMaterial::create(const ParameterDictionary &parameters,
-                                GPUMemoryAllocator &allocator) {
-    auto coated_conductor_material = allocator.allocate<CoatedConductorMaterial>();
-    *coated_conductor_material = CoatedConductorMaterial(parameters, allocator);
-
-    return coated_conductor_material;
-}
-
 CoatedConductorMaterial::CoatedConductorMaterial(const ParameterDictionary &parameters,
                                                  GPUMemoryAllocator &allocator) {
     interfaceURoughness = build_float_texture("interface.uroughness", "interface.roughness", 0.0,

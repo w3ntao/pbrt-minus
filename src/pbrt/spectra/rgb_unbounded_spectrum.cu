@@ -2,13 +2,8 @@
 #include <pbrt/spectrum_util/rgb_color_space.h>
 
 PBRT_CPU_GPU
-RGBUnboundedSpectrum::RGBUnboundedSpectrum(RGB rgb, const RGBColorSpace *cs) {
-    this->init(rgb, cs);
-}
-
-PBRT_CPU_GPU
-void RGBUnboundedSpectrum::init(RGB rgb, const RGBColorSpace *cs) {
-    auto m = std::max({rgb.r, rgb.g, rgb.b});
+RGBUnboundedSpectrum::RGBUnboundedSpectrum(const RGB &rgb, const RGBColorSpace *cs) {
+    const auto m = std::max({rgb.r, rgb.g, rgb.b});
     scale = 2 * m;
 
     if (scale < 0) {

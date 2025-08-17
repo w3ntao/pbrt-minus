@@ -82,10 +82,9 @@ void SceneBuilder::ActiveInstanceDefinition::build_bvh(GPUMemoryAllocator &alloc
         return;
     }
 
-    auto bvh = HLBVH::create(primitives, "for instance `" + this->name + "`", allocator);
+    auto bvh = allocator.create<HLBVH>(primitives, "for instance `" + this->name + "`", allocator);
 
-    auto root = allocator.allocate<Primitive>();
-    root->init(bvh);
+    auto root = allocator.create<Primitive>(bvh);
 
     primitives = {root};
 }
@@ -136,8 +135,7 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
         {"glass-BK7", glass_bk7_eta}, {"glass-F11", glass_f11_eta},
     };
 
-    integrator_base = allocator.allocate<IntegratorBase>();
-    integrator_base->init();
+    integrator_base = allocator.create<IntegratorBase>();
 
     auto texture = SpectrumTexture::create_constant_float_val_texture(0.5, allocator);
     graphics_state.material = Material::create_diffuse_material(texture, allocator);
@@ -218,12 +216,11 @@ void SceneBuilder::build_gpu_lights() {
 
     integrator_base->lights = light_array;
     integrator_base->light_num = gpu_lights.size();
-
     integrator_base->light_sampler =
-        PowerLightSampler::create(light_array, gpu_lights.size(), allocator);
+        allocator.create<PowerLightSampler>(light_array, gpu_lights.size(), allocator);
 
     std::vector<const Light *> infinite_lights;
-    for (auto light : gpu_lights) {
+    for (const auto light : gpu_lights) {
         if (light->get_light_type() == LightType::infinite) {
             infinite_lights.push_back(light);
         }
@@ -276,7 +273,7 @@ void SceneBuilder::build_integrator() {
     }
 
     if (integrator_name == "path") {
-        wavefront_path_integrator = WavefrontPathIntegrator::create(
+        wavefront_path_integrator = allocator.create<WavefrontPathIntegrator>(
             samples_per_pixel.value(), sampler_type, parameters, integrator_base, allocator);
         return;
     }
@@ -458,8 +455,8 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
         auto interior_medium = build_medium(tokens[1].values[0]);
         auto exterior_medium = build_medium(tokens[2].values[0]);
 
-        auto medium_interface = allocator.allocate<MediumInterface>();
-        *medium_interface = MediumInterface(interior_medium, exterior_medium);
+        const auto medium_interface =
+            allocator.create<MediumInterface>(interior_medium, exterior_medium);
 
         graphics_state.medium_interface = medium_interface;
         return;
@@ -858,11 +855,10 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
             if (render_from_instance.is_identity()) {
                 gpu_primitives.push_back(instanced_primitive);
             } else {
-                auto transformed_primitive = allocator.allocate<TransformedPrimitive>();
-                auto primitive = allocator.allocate<Primitive>();
+                auto transformed_primitive = allocator.create<TransformedPrimitive>(
+                    instanced_primitive, render_from_instance);
 
-                transformed_primitive->init(instanced_primitive, render_from_instance);
-                primitive->init(transformed_primitive);
+                const auto primitive = allocator.create<Primitive>(transformed_primitive);
 
                 gpu_primitives.push_back(primitive);
             }
@@ -905,7 +901,7 @@ void SceneBuilder::parse_file(const std::string &_filename) {
 }
 
 void SceneBuilder::preprocess() {
-    integrator_base->bvh = HLBVH::create(gpu_primitives, "for ROOT", allocator);
+    integrator_base->bvh = allocator.create<HLBVH>(gpu_primitives, "for ROOT", allocator);
 
     const auto full_scene_bounds = integrator_base->bvh->bounds();
     for (auto light : gpu_lights) {

@@ -5,15 +5,12 @@
 #include <pbrt/base/light.h>
 #include <pbrt/base/material.h>
 #include <pbrt/base/sampler.h>
-#include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/util/russian_roulette.h>
 #include <pbrt/util/timer.h>
-
-constexpr int PATH_POOL_SIZE = 1 * 1024 * 1024;
 
 struct FrameBuffer {
     int pixel_idx;
@@ -45,7 +42,7 @@ struct MISParameter {
     pbrt::optional<LightSampleContext> prev_interaction_light_sample_ctx;
 
     PBRT_CPU_GPU
-    void init() {
+    void reset() {
         specular_bounce = false;
         any_non_specular_bounces = false;
 
@@ -54,20 +51,20 @@ struct MISParameter {
     }
 };
 
-static __global__ void gpu_init_path_state(WavefrontPathIntegrator::PathState *path_state) {
+static __global__ void gpu_reset_path_state(WavefrontPathIntegrator::PathState *path_state) {
     const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= PATH_POOL_SIZE) {
+    if (worker_idx >= WavefrontPathIntegrator::PATH_POOL_SIZE) {
         return;
     }
 
-    path_state->init_new_path(worker_idx);
+    path_state->reset_path(worker_idx);
 }
 
 __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
                               WavefrontPathIntegrator::Queues *queues, const int max_depth,
                               const IntegratorBase *base) {
     const int path_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (path_idx >= PATH_POOL_SIZE || path_state->finished[path_idx]) {
+    if (path_idx >= WavefrontPathIntegrator::PATH_POOL_SIZE || path_state->finished[path_idx]) {
         return;
     }
 
@@ -207,7 +204,7 @@ __global__ void write_frame_buffer(Film *film, WavefrontPathIntegrator::Queues *
 
 __global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues) {
     const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= PATH_POOL_SIZE) {
+    if (worker_idx >= WavefrontPathIntegrator::PATH_POOL_SIZE) {
         return;
     }
 
@@ -253,7 +250,7 @@ __global__ void generate_new_path(WavefrontPathIntegrator::PathState *path_state
     path_state->sample_indices[path_idx] = sample_idx;
     path_state->path_length[path_idx] = 0;
 
-    path_state->init_new_path(path_idx);
+    path_state->reset_path(path_idx);
 
     queues->rays->append_path(path_idx);
 }
@@ -349,25 +346,27 @@ void WavefrontPathIntegrator::evaluate_material(const Material::Type material_ty
 }
 
 PBRT_CPU_GPU
-void WavefrontPathIntegrator::PathState::init_new_path(int path_idx) {
+void WavefrontPathIntegrator::PathState::reset_path(const int path_idx) {
     finished[path_idx] = false;
-    shape_intersections[path_idx].reset();
+    shape_intersections[path_idx] = {};
 
     L[path_idx] = SampledSpectrum(0.0);
     beta[path_idx] = SampledSpectrum(1.0);
     path_length[path_idx] = 0;
 
-    mis_parameters[path_idx].init();
+    mis_parameters[path_idx].reset();
 }
 
-void WavefrontPathIntegrator::PathState::create(int samples_per_pixel, const Point2i &_resolution,
-                                                const std::string &sampler_type,
-                                                GPUMemoryAllocator &allocator) {
-    image_resolution = _resolution;
+WavefrontPathIntegrator::PathState::PathState(const Point2i &_resolution,
+                                              const int _samples_per_pixel,
+                                              const std::string &sampler_type)
+    : image_resolution(_resolution), samples_per_pixel(_samples_per_pixel),
+      sampler_type(sampler_type), total_path_num(static_cast<long long int>(_samples_per_pixel) *
+                                                 image_resolution.x * image_resolution.y) {
     global_path_counter = 0;
+}
 
-    total_path_num =
-        static_cast<long long int>(samples_per_pixel) * image_resolution.x * image_resolution.y;
+void WavefrontPathIntegrator::PathState::build_path(GPUMemoryAllocator &allocator) {
     if (total_path_num / samples_per_pixel != image_resolution.x * image_resolution.y) {
         REPORT_FATAL_ERROR();
     }
@@ -389,53 +388,40 @@ void WavefrontPathIntegrator::PathState::create(int samples_per_pixel, const Poi
     mis_parameters = allocator.allocate<MISParameter>(PATH_POOL_SIZE);
     samplers = Sampler::create_samplers(sampler_type, samples_per_pixel, PATH_POOL_SIZE, allocator);
 
-    gpu_init_path_state<<<PATH_POOL_SIZE, MAX_THREADS_PER_BLOCKS>>>(this);
+    gpu_reset_path_state<<<PATH_POOL_SIZE, MAX_THREADS_PER_BLOCKS>>>(this);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-void WavefrontPathIntegrator::Queues::init(GPUMemoryAllocator &allocator) {
-    new_paths = build_new_queue(allocator);
-    rays = build_new_queue(allocator);
-    conductor_material = build_new_queue(allocator);
-    coated_conductor_material = build_new_queue(allocator);
-    coated_diffuse_material = build_new_queue(allocator);
-    dielectric_material = build_new_queue(allocator);
-    diffuse_material = build_new_queue(allocator);
-    diffuse_transmission_material = build_new_queue(allocator);
+WavefrontPathIntegrator::Queues::Queues(GPUMemoryAllocator &allocator) {
+    auto create_new_queue = [&allocator] { return allocator.create<SingleQueue>(allocator); };
+
+    new_paths = create_new_queue();
+    rays = create_new_queue();
+    conductor_material = create_new_queue();
+    coated_conductor_material = create_new_queue();
+    coated_diffuse_material = create_new_queue();
+    dielectric_material = create_new_queue();
+    diffuse_material = create_new_queue();
+    diffuse_transmission_material = create_new_queue();
 
     frame_buffer_counter = 0;
     frame_buffer_queue = allocator.allocate<FrameBuffer>(PATH_POOL_SIZE);
 }
 
-WavefrontPathIntegrator::Queues::SingleQueue *
-WavefrontPathIntegrator::Queues::build_new_queue(GPUMemoryAllocator &allocator) {
-    auto queue = allocator.allocate<SingleQueue>(PATH_POOL_SIZE);
-    queue->counter = 0;
-    queue->queue_array = allocator.allocate<int>(PATH_POOL_SIZE);
+WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel,
+                                                 const std::string &sampler_type,
+                                                 const ParameterDictionary &parameters,
+                                                 const IntegratorBase *_base,
+                                                 GPUMemoryAllocator &allocator)
+    : base(_base), samples_per_pixel(_samples_per_pixel),
+      max_depth(parameters.get_integer("maxdepth", 5)),
+      regularize(parameters.get_bool("regularize", false)),
+      path_state(PathState(_base->camera->get_camera_base()->resolution, _samples_per_pixel,
+                           sampler_type)),
+      queues(allocator) {
 
-    return queue;
-}
-
-WavefrontPathIntegrator *WavefrontPathIntegrator::create(int samples_per_pixel,
-                                                         const std::string &sampler_type,
-                                                         const ParameterDictionary &parameters,
-                                                         const IntegratorBase *base,
-                                                         GPUMemoryAllocator &allocator) {
-    auto integrator = allocator.allocate<WavefrontPathIntegrator>();
-
-    integrator->samples_per_pixel = samples_per_pixel;
-
-    integrator->base = base;
-    integrator->path_state.create(samples_per_pixel, base->camera->get_camera_base()->resolution,
-                                  sampler_type, allocator);
-
-    integrator->queues.init(allocator);
-
-    integrator->max_depth = parameters.get_integer("maxdepth", 5);
-    integrator->regularize = parameters.get_bool("regularize", false);
-
-    return integrator;
+    path_state.build_path(allocator);
 }
 
 PBRT_CPU_GPU

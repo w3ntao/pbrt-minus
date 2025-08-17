@@ -4,9 +4,7 @@
 
 class ConstantSpectrum {
   public:
-    void init(Real _c) {
-        c = _c;
-    }
+    explicit ConstantSpectrum(const Real _c) : c(_c) {}
 
     PBRT_CPU_GPU
     Real operator()(Real) const {
@@ -20,5 +18,5 @@ class ConstantSpectrum {
     }
 
   private:
-    Real c;
+    Real c = NAN;
 };

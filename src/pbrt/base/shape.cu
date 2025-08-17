@@ -11,21 +11,19 @@ std::pair<const Shape *, int>
 Shape::create(const std::string &type_of_shape, const Transform &render_from_object,
               const Transform &object_from_render, bool reverse_orientation,
               const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
-    auto shape = allocator.allocate<Shape>();
-
     if (type_of_shape == "disk") {
-        auto disk = Disk::create(render_from_object, object_from_render, reverse_orientation,
-                                 parameters, allocator);
+        auto disk = allocator.create<Disk>(render_from_object, object_from_render,
+                                           reverse_orientation, parameters);
+        auto shape = allocator.create<Shape>(disk);
 
-        shape->init(disk);
         return {shape, 1};
     }
 
     if (type_of_shape == "sphere") {
-        auto sphere = Sphere::create(render_from_object, object_from_render, reverse_orientation,
-                                     parameters, allocator);
+        auto sphere = allocator.create<Sphere>(render_from_object, object_from_render,
+                                               reverse_orientation, parameters);
+        auto shape = allocator.create<Shape>(sphere);
 
-        shape->init(sphere);
         return {shape, 1};
     }
 
@@ -45,7 +43,7 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
 
         if (!ply_mesh.triIndices.empty()) {
             const auto [ply_shapes, ply_shape_num] = TriangleMesh::build_triangles(
-                render_from_object, reverse_orientation, ply_mesh.p, ply_mesh.triIndices,
+                render_from_object, reverse_orientation, ply_mesh.triIndices, ply_mesh.p,
                 ply_mesh.n, ply_mesh.uv, allocator);
             shapes = ply_shapes;
             num_shapes = ply_shape_num;
@@ -60,8 +58,8 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
         auto points = parameters.get_point3_array("P");
         auto normals = parameters.get_normal_array("N");
 
-        return TriangleMesh::build_triangles(render_from_object, reverse_orientation, points,
-                                             indices, normals, uv, allocator);
+        return TriangleMesh::build_triangles(render_from_object, reverse_orientation, indices,
+                                             points, normals, uv, allocator);
     }
 
     if (type_of_shape == "loopsubdiv") {
@@ -72,32 +70,14 @@ Shape::create(const std::string &type_of_shape, const Transform &render_from_obj
         const auto loop_subdivide_data = LoopSubdivide(levels, indices, points);
 
         return TriangleMesh::build_triangles(
-            render_from_object, reverse_orientation, loop_subdivide_data.p_limit,
-            loop_subdivide_data.vertex_indices, loop_subdivide_data.normals, {}, allocator);
+            render_from_object, reverse_orientation, loop_subdivide_data.vertex_indices,
+            loop_subdivide_data.p_limit, loop_subdivide_data.normals, {}, allocator);
     }
 
     printf("\nShape `%s` not implemented\n", type_of_shape.c_str());
 
     REPORT_FATAL_ERROR();
     return {nullptr, 0};
-}
-
-PBRT_CPU_GPU
-void Shape::init(const Disk *disk) {
-    type = Type::disk;
-    ptr = disk;
-}
-
-PBRT_CPU_GPU
-void Shape::init(const Triangle *triangle) {
-    type = Type::triangle;
-    ptr = triangle;
-}
-
-PBRT_CPU_GPU
-void Shape::init(const Sphere *sphere) {
-    type = Type::sphere;
-    ptr = sphere;
 }
 
 PBRT_CPU_GPU

@@ -6,8 +6,11 @@
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>
 
-void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_light,
-                            const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
+DiffuseAreaLight::DiffuseAreaLight(const Shape *_shape, const Transform &_render_from_light,
+                                   const ParameterDictionary &parameters,
+                                   GPUMemoryAllocator &allocator)
+    : LightBase(LightType::area, _render_from_light), shape(_shape) {
+
     if (parameters.has_string("filename")) {
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
     }
@@ -15,23 +18,17 @@ void DiffuseAreaLight::init(const Shape *_shape, const Transform &_render_from_l
     scale = parameters.get_float("scale", 1.0);
     two_sided = parameters.get_bool("twosided", false);
 
-    l_emit = parameters.get_spectrum("L", SpectrumType::Illuminant, allocator);
-    if (l_emit == nullptr) {
-        l_emit = parameters.global_spectra->rgb_color_space->illuminant;
+    Lemit = parameters.get_spectrum("L", SpectrumType::Illuminant, allocator);
+    if (!Lemit) {
+        Lemit = parameters.global_spectra->rgb_color_space->illuminant;
     }
 
     const auto cie_y = parameters.global_spectra->cie_xyz[1];
-    scale /= l_emit->to_photometric(cie_y);
+    scale /= Lemit->to_photometric(cie_y);
 
-    auto phi_v = parameters.get_float("power", -1.0);
-    if (phi_v > 0.0) {
+    if (const auto phi_v = parameters.get_float("power", -1.0); phi_v > 0.0) {
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
     }
-
-    light_type = LightType::area;
-    render_from_light = _render_from_light;
-
-    shape = _shape;
 }
 
 PBRT_CPU_GPU
@@ -42,7 +39,7 @@ SampledSpectrum DiffuseAreaLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f 
         return SampledSpectrum(0.0);
     }
 
-    return scale * l_emit->sample(lambda);
+    return scale * Lemit->sample(lambda);
 }
 
 PBRT_CPU_GPU
@@ -70,7 +67,7 @@ pbrt::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleConte
 
 PBRT_CPU_GPU
 Real DiffuseAreaLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
-                                   bool allow_incomplete_pdf) const {
+                              bool allow_incomplete_pdf) const {
     // allow_incomplete_pdf = false
     ShapeSampleContext shapeCtx(ctx.pi, ctx.n, ctx.ns);
     return shape->pdf(shapeCtx, wi);
@@ -124,7 +121,7 @@ PBRT_CPU_GPU
 void DiffuseAreaLight::pdf_le(const Interaction &intr, Vector3f w, Real *pdfPos,
                               Real *pdfDir) const {
     *pdfPos = shape->pdf(intr);
-    *pdfDir = this->two_sided ? (cosine_hemisphere_pdf(intr.n.abs_dot(w)) / 2)
+    *pdfDir = this->two_sided ? cosine_hemisphere_pdf(intr.n.abs_dot(w)) / 2
                               : cosine_hemisphere_pdf(intr.n.dot(w));
 }
 
@@ -132,6 +129,6 @@ PBRT_CPU_GPU
 SampledSpectrum DiffuseAreaLight::phi(const SampledWavelengths &lambda) const {
     // TODO: image in DiffuseAreaLight is not implemented
 
-    auto L = l_emit->sample(lambda) * scale;
+    auto L = Lemit->sample(lambda) * scale;
     return pbrt::PI * (two_sided ? 2 : 1) * this->shape->area() * L;
 }

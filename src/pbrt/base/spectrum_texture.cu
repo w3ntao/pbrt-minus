@@ -12,57 +12,46 @@ const SpectrumTexture *
 SpectrumTexture::create(const std::string &texture_type, const SpectrumType spectrum_type,
                         const Transform &render_from_texture, const RGBColorSpace *color_space,
                         const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
-    auto spectrum_texture = allocator.allocate<SpectrumTexture>();
-
     if (texture_type == "checkerboard") {
-        auto checkerboard_texture = allocator.allocate<SpectrumCheckerboardTexture>();
-        *checkerboard_texture =
-            SpectrumCheckerboardTexture(render_from_texture, spectrum_type, parameters, allocator);
-        spectrum_texture->init(checkerboard_texture);
+        auto checkerboard_texture = allocator.create<SpectrumCheckerboardTexture>(
+            render_from_texture, spectrum_type, parameters, allocator);
 
-        return spectrum_texture;
+        return allocator.create<SpectrumTexture>(checkerboard_texture);
     }
 
     if (texture_type == "constant") {
-        auto constant_texture = allocator.allocate<SpectrumConstantTexture>();
-        *constant_texture = SpectrumConstantTexture(parameters, spectrum_type, allocator);
-        spectrum_texture->init(constant_texture);
+        auto constant_texture =
+            allocator.create<SpectrumConstantTexture>(parameters, spectrum_type, allocator);
 
-        return spectrum_texture;
+        return allocator.create<SpectrumTexture>(constant_texture);
     }
 
     if (texture_type == "directionmix") {
-        auto direction_mix_texture = allocator.allocate<SpectrumDirectionMixTexture>();
-        *direction_mix_texture =
-            SpectrumDirectionMixTexture(render_from_texture, parameters, spectrum_type, allocator);
-        spectrum_texture->init(direction_mix_texture);
+        auto direction_mix_texture = allocator.create<SpectrumDirectionMixTexture>(
+            render_from_texture, parameters, spectrum_type, allocator);
 
-        return spectrum_texture;
+        return allocator.create<SpectrumTexture>(direction_mix_texture);
     }
 
     if (texture_type == "imagemap") {
-        auto image_texture = allocator.allocate<SpectrumImageTexture>();
-        *image_texture = SpectrumImageTexture(spectrum_type, render_from_texture, color_space,
-                                              parameters, allocator);
-        spectrum_texture->init(image_texture);
+        auto image_texture = allocator.create<SpectrumImageTexture>(
+            spectrum_type, render_from_texture, color_space, parameters, allocator);
 
-        return spectrum_texture;
+        return allocator.create<SpectrumTexture>(image_texture);
     }
 
     if (texture_type == "mix") {
-        auto mix_texture = allocator.allocate<SpectrumMixTexture>();
-        *mix_texture = SpectrumMixTexture(parameters, spectrum_type, allocator);
-        spectrum_texture->init(mix_texture);
+        auto mix_texture =
+            allocator.create<SpectrumMixTexture>(parameters, spectrum_type, allocator);
 
-        return spectrum_texture;
+        return allocator.create<SpectrumTexture>(mix_texture);
     }
 
     if (texture_type == "scale") {
-        auto scaled_texture = allocator.allocate<SpectrumScaledTexture>();
-        *scaled_texture = SpectrumScaledTexture(spectrum_type, parameters, allocator);
-        spectrum_texture->init(scaled_texture);
+        auto scaled_texture =
+            allocator.create<SpectrumScaledTexture>(spectrum_type, parameters, allocator);
 
-        return spectrum_texture;
+        return allocator.create<SpectrumTexture>(scaled_texture);
     }
 
     printf("\ntexture type `%s` not implemented for SpectrumTexture\n", texture_type.c_str());
@@ -83,13 +72,9 @@ const SpectrumTexture *SpectrumTexture::create_constant_texture(const Spectrum *
         REPORT_FATAL_ERROR();
     }
 
-    auto constant_texture = allocator.allocate<SpectrumConstantTexture>();
-    *constant_texture = SpectrumConstantTexture(spectrum);
+    auto constant_texture = allocator.create<SpectrumConstantTexture>(spectrum);
 
-    auto spectrum_texture = allocator.allocate<SpectrumTexture>();
-    spectrum_texture->init(constant_texture);
-
-    return spectrum_texture;
+    return allocator.create<SpectrumTexture>(constant_texture);
 }
 
 PBRT_CPU_GPU
@@ -123,34 +108,4 @@ SampledSpectrum SpectrumTexture::evaluate(const TextureEvalContext &ctx,
 
     REPORT_FATAL_ERROR();
     return {};
-}
-
-void SpectrumTexture::init(const SpectrumCheckerboardTexture *checkerboard_texture) {
-    type = Type::checkerboard;
-    ptr = checkerboard_texture;
-}
-
-void SpectrumTexture::init(const SpectrumConstantTexture *constant_texture) {
-    type = Type::constant;
-    ptr = constant_texture;
-}
-
-void SpectrumTexture::init(const SpectrumDirectionMixTexture *direction_mix_texture) {
-    type = Type::direction_mix;
-    ptr = direction_mix_texture;
-}
-
-void SpectrumTexture::init(const SpectrumImageTexture *image_texture) {
-    type = Type::image;
-    ptr = image_texture;
-}
-
-void SpectrumTexture::init(const SpectrumMixTexture *mix_texture) {
-    type = Type::mix;
-    ptr = mix_texture;
-}
-
-void SpectrumTexture::init(const SpectrumScaledTexture *scale_texture) {
-    type = Type::scaled;
-    ptr = scale_texture;
 }

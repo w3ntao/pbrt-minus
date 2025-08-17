@@ -6,10 +6,10 @@
 class RGBSigmoidPolynomial {
   public:
     PBRT_CPU_GPU
-    RGBSigmoidPolynomial() : c0(NAN), c1(NAN), c2(NAN) {}
+    RGBSigmoidPolynomial() {}
 
     PBRT_CPU_GPU
-    RGBSigmoidPolynomial(Real c0, Real c1, Real c2) : c0(c0), c1(c1), c2(c2) {}
+    RGBSigmoidPolynomial(Real _c0, Real _c1, Real _c2) : c0(_c0), c1(_c1), c2(_c2) {}
 
     PBRT_CPU_GPU
     Real operator()(Real lambda) const {
@@ -38,5 +38,7 @@ class RGBSigmoidPolynomial {
         return .5f + x / (2 * std::sqrt(1 + sqr(x)));
     }
 
-    Real c0, c1, c2;
+    Real c0 = NAN;
+    Real c1 = NAN;
+    Real c2 = NAN;
 };

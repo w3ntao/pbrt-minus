@@ -4,26 +4,20 @@
 
 const Filter *Filter::create(const std::string &filter_type, const ParameterDictionary &parameters,
                              GPUMemoryAllocator &allocator) {
-    auto filter = allocator.allocate<Filter>();
-
     if (filter_type == "box") {
-        *filter = BoxFilter(parameters);
-        return filter;
+        return allocator.create<Filter>(BoxFilter(parameters));
     }
 
     if (filter_type == "gaussian") {
-        *filter = GaussianFilter(parameters, allocator);
-        return filter;
+        return allocator.create<Filter>(GaussianFilter(parameters, allocator));
     }
 
     if (filter_type == "mitchell") {
-        *filter = MitchellFilter(parameters, allocator);
-        return filter;
+        return allocator.create<Filter>(MitchellFilter(parameters, allocator));
     }
 
     if (filter_type == "triangle") {
-        *filter = TriangleFilter(parameters);
-        return filter;
+        return allocator.create<Filter>(TriangleFilter(parameters));
     }
 
     REPORT_FATAL_ERROR();

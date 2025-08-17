@@ -2,17 +2,8 @@
 #include <pbrt/distribution/distribution_1d.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 
-const Distribution1D *Distribution1D::create(const std::vector<Real> &values,
-                                             GPUMemoryAllocator &allocator) {
-    auto distribution_1D = allocator.allocate<Distribution1D>();
-    distribution_1D->build(values, allocator);
-
-    return distribution_1D;
-}
-
-void Distribution1D::build(const std::vector<Real> &values, GPUMemoryAllocator &allocator) {
-    alias_table = AliasTable::create(values, allocator);
-}
+Distribution1D::Distribution1D(const std::vector<Real> &values, GPUMemoryAllocator &allocator)
+    : alias_table(allocator.create<AliasTable>(values, allocator)) {}
 
 PBRT_CPU_GPU
 cuda::std::pair<int, Real> Distribution1D::sample(const Real u) const {

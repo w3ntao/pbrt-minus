@@ -23,7 +23,7 @@ static __global__ void init_triangles_from_mesh(Triangle *triangles, const Trian
         return;
     }
 
-    triangles[worker_idx].init(worker_idx, mesh);
+    triangles[worker_idx] = Triangle(worker_idx, mesh);
 }
 
 template <typename TypeOfShape>
@@ -33,59 +33,66 @@ static __global__ void init_shapes(Shape *shapes, const TypeOfShape *concrete_sh
         return;
     }
 
-    shapes[worker_idx].init(&concrete_shapes[worker_idx]);
+    shapes[worker_idx] = Shape(&concrete_shapes[worker_idx]);
 }
 
-std::pair<const Shape *, int>
-TriangleMesh::build_triangles(const Transform &render_from_object, const bool reverse_orientation,
-                              const std::vector<Point3f> &points, const std::vector<int> &indices,
-                              const std::vector<Normal3f> &normals, const std::vector<Point2f> &uv,
-                              GPUMemoryAllocator &allocator) {
-    auto gpu_points = allocator.allocate<Point3f>(points.size());
-    CHECK_CUDA_ERROR(cudaMemcpy(gpu_points, points.data(), sizeof(Point3f) * points.size(),
-                                cudaMemcpyHostToDevice));
+TriangleMesh::TriangleMesh(const Transform &render_from_object, const bool _reverse_orientation,
+                           const std::vector<int> &_indices, const std::vector<Point3f> &_p,
+                           const std::vector<Normal3f> &_n, const std::vector<Point2f> &_uv,
+                           GPUMemoryAllocator &allocator)
+    : triangles_num(_indices.size() / 3), reverse_orientation(_reverse_orientation),
+      transform_swaps_handedness(render_from_object.swaps_handedness()) {
 
+    auto gpu_points = allocator.allocate<Point3f>(_p.size());
+    CHECK_CUDA_ERROR(
+        cudaMemcpy(gpu_points, _p.data(), sizeof(Point3f) * _p.size(), cudaMemcpyHostToDevice));
     {
-        const int blocks = divide_and_ceil<int>(points.size(), MAX_THREADS_PER_BLOCKS);
+        const int blocks = divide_and_ceil<int>(_p.size(), MAX_THREADS_PER_BLOCKS);
         if (!render_from_object.is_identity()) {
             gpu_transform<<<blocks, MAX_THREADS_PER_BLOCKS>>>(gpu_points, render_from_object, false,
-                                                              points.size());
+                                                              _p.size());
         }
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
+    p = gpu_points;
 
-    auto gpu_indices = allocator.allocate<int>(indices.size());
-    CHECK_CUDA_ERROR(cudaMemcpy(gpu_indices, indices.data(), sizeof(int) * indices.size(),
+    auto gpu_indices = allocator.allocate<int>(_indices.size());
+    CHECK_CUDA_ERROR(cudaMemcpy(gpu_indices, _indices.data(), sizeof(int) * _indices.size(),
                                 cudaMemcpyHostToDevice));
+    vertex_indices = gpu_indices;
 
-    Normal3f *gpu_normals = nullptr;
-    if (!normals.empty()) {
-        gpu_normals = allocator.allocate<Normal3f>(normals.size());
-        CHECK_CUDA_ERROR(cudaMemcpy(gpu_normals, normals.data(), sizeof(Normal3f) * normals.size(),
+    if (!_n.empty()) {
+        auto gpu_normals = allocator.allocate<Normal3f>(_n.size());
+        CHECK_CUDA_ERROR(cudaMemcpy(gpu_normals, _n.data(), sizeof(Normal3f) * _n.size(),
                                     cudaMemcpyHostToDevice));
 
         if (!render_from_object.is_identity() || reverse_orientation) {
-            const int blocks = divide_and_ceil<int>(normals.size(), MAX_THREADS_PER_BLOCKS);
+            const int blocks = divide_and_ceil<int>(_n.size(), MAX_THREADS_PER_BLOCKS);
             gpu_transform<<<blocks, MAX_THREADS_PER_BLOCKS>>>(gpu_normals, render_from_object,
-                                                              reverse_orientation, normals.size());
+                                                              reverse_orientation, _n.size());
             CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
+        n = gpu_normals;
     }
 
-    Point2f *gpu_uv = nullptr;
-    if (!uv.empty()) {
-        gpu_uv = allocator.allocate<Point2f>(uv.size());
+    if (!_uv.empty()) {
+        auto gpu_uv = allocator.allocate<Point2f>(_uv.size());
         CHECK_CUDA_ERROR(
-            cudaMemcpy(gpu_uv, uv.data(), sizeof(Point2f) * uv.size(), cudaMemcpyHostToDevice));
+            cudaMemcpy(gpu_uv, _uv.data(), sizeof(Point2f) * _uv.size(), cudaMemcpyHostToDevice));
+        uv = gpu_uv;
     }
+}
 
-    auto mesh = allocator.allocate<TriangleMesh>();
-    *mesh = TriangleMesh(reverse_orientation, gpu_indices, indices.size(), gpu_points, gpu_normals,
-                         gpu_uv);
-
-    int num_triangles = mesh->triangles_num;
+std::pair<const Shape *, int>
+TriangleMesh::build_triangles(const Transform &render_from_object, const bool reverse_orientation,
+                              const std::vector<int> &indices, const std::vector<Point3f> &points,
+                              const std::vector<Normal3f> &normals, const std::vector<Point2f> &uv,
+                              GPUMemoryAllocator &allocator) {
+    const auto mesh = allocator.create<TriangleMesh>(render_from_object, reverse_orientation,
+                                                     indices, points, normals, uv, allocator);
+    const int num_triangles = mesh->triangles_num;
 
     auto triangles = allocator.allocate<Triangle>(num_triangles);
 

@@ -207,6 +207,7 @@ class Transform {
         return Transform(camera_from_world, world_from_camera);
     }
 
+    [[nodiscard]]
     bool swaps_handedness() const {
         SquareMatrix<3> s;
         for (int x = 0; x < 3; ++x) {

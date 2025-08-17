@@ -73,8 +73,8 @@ class HLBVH {
         }
     };
 
-    static const HLBVH *create(const std::vector<const Primitive *> &gpu_primitives,
-                               const std::string &tag, GPUMemoryAllocator &allocator);
+    HLBVH(const std::vector<const Primitive *> &gpu_primitives, const std::string &tag,
+          GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     Bounds3f bounds() const {
@@ -100,9 +100,6 @@ class HLBVH {
     void build_bottom_bvh(const BottomBVHArgs *bvh_args_array, int array_length);
 
   private:
-    void build_bvh(const std::vector<const Primitive *> &gpu_primitives, const std::string &tag,
-                   GPUMemoryAllocator &allocator);
-
     int build_top_bvh_for_treelets(const Treelet *treelets, int num_dense_treelets,
                                    ThreadPool &thread_pool);
 
@@ -113,9 +110,9 @@ class HLBVH {
     PBRT_GPU
     int partition_morton_primitives(int start, int end, uint8_t split_dimension, Real split_val);
 
-    const Primitive **primitives;
-    int num_primitives;
+    const Primitive **primitives = nullptr;
+    int num_primitives = 0;
 
-    MortonPrimitive *morton_primitives;
-    BVHBuildNode *build_nodes;
+    MortonPrimitive *morton_primitives = nullptr;
+    BVHBuildNode *build_nodes = nullptr;
 };

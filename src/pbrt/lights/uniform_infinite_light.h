@@ -11,6 +11,10 @@ class ParameterDictionary;
 
 class UniformInfiniteLight : public LightBase {
   public:
+    UniformInfiniteLight(const Transform &render_from_light, const Spectrum *_l_emit,
+                         const Real _scale)
+        : LightBase(LightType::infinite, render_from_light), Lemit(_l_emit), scale(_scale) {}
+
     static UniformInfiniteLight *create(const Transform &renderFromLight,
                                         const ParameterDictionary &parameters,
                                         GPUMemoryAllocator &allocator);
@@ -27,8 +31,7 @@ class UniformInfiniteLight : public LightBase {
                                             SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
-                     bool allow_incomplete_pdf) const;
+    Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi, bool allow_incomplete_pdf) const;
 
     PBRT_CPU_GPU
     SampledSpectrum le(const Ray &ray, const SampledWavelengths &lambda) const;
@@ -38,10 +41,8 @@ class UniformInfiniteLight : public LightBase {
                                             SampledWavelengths &lambda) const;
 
   private:
-    const Spectrum *Lemit;
-    Real scale;
-    Point3f sceneCenter;
-    Real sceneRadius;
-
-    void init(const Transform &renderFromLight, const Spectrum *_Lemit, Real _scale);
+    const Spectrum *Lemit = nullptr;
+    Real scale = NAN;
+    Point3f sceneCenter = Point3f(NAN, NAN, NAN);
+    Real sceneRadius = NAN;
 };

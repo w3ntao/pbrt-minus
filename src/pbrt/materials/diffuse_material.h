@@ -10,19 +10,13 @@ struct MaterialEvalContext;
 
 class DiffuseMaterial {
   public:
-    static const DiffuseMaterial *create(const ParameterDictionary &parameters,
-                                         GPUMemoryAllocator &allocator);
+    explicit DiffuseMaterial(const SpectrumTexture *_reflectance) : reflectance(_reflectance) {}
 
-    static const DiffuseMaterial *create(const SpectrumTexture *reflectance,
-                                         GPUMemoryAllocator &allocator);
+    DiffuseMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
     BxDF get_bxdf(const MaterialEvalContext &ctx, SampledWavelengths &lambda) const;
 
   private:
     const SpectrumTexture *reflectance = nullptr;
-
-    DiffuseMaterial(const SpectrumTexture *_reflectance);
-
-    DiffuseMaterial(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 };

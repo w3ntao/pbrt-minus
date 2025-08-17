@@ -166,7 +166,7 @@ MLTPathIntegrator *MLTPathIntegrator::create(const int mutations_per_pixel,
     for (int idx = 0; idx < NUM_MLT_PATH_SAMPLERS; ++idx) {
         integrator->mlt_samplers[idx].setup_config(mutations_per_pixel, sigma,
                                                    large_step_probability, 1);
-        integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
+        integrator->samplers[idx] = Sampler(&integrator->mlt_samplers[idx]);
     }
 
     integrator->film_dimension = base->camera->get_camera_base()->resolution;

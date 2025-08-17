@@ -6,7 +6,9 @@
 template <typename T>
 class Array2D {
   public:
-    void init(int nx, int ny, GPUMemoryAllocator &allocator) {
+    Array2D() {}
+
+    Array2D(int nx, int ny, GPUMemoryAllocator &allocator) {
         values = allocator.allocate<T>(nx * ny);
 
         extent.p_min = {0, 0};
@@ -58,6 +60,6 @@ class Array2D {
     }
 
   private:
-    Bounds2i extent;
-    T *values;
+    Bounds2i extent = Bounds2i();
+    T *values = nullptr;
 };

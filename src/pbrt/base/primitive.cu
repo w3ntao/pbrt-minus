@@ -9,30 +9,28 @@
 
 static __global__ void init_simple_primitives(SimplePrimitive *simple_primitives,
                                               const Shape *shapes, const Material *material,
-                                              int num) {
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+                                              const int num) {
+    const int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= num) {
         return;
     }
 
-    simple_primitives[idx].init(&shapes[idx], material);
+    simple_primitives[idx] = SimplePrimitive(&shapes[idx], material);
 }
 
 static __global__ void init_geometric_primitives(GeometricPrimitive *geometric_primitives,
                                                  const Shape *shapes, const Material *material,
                                                  const Light *diffuse_area_lights,
-                                                 const MediumInterface *medium_interface, int num) {
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+                                                 const MediumInterface *medium_interface,
+                                                 const int num) {
+    const int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= num) {
         return;
     }
 
-    if (diffuse_area_lights) {
-        geometric_primitives[idx].init(&shapes[idx], material, &diffuse_area_lights[idx],
-                                       medium_interface);
-    } else {
-        geometric_primitives[idx].init(&shapes[idx], material, nullptr, medium_interface);
-    }
+    geometric_primitives[idx] = GeometricPrimitive(
+        &shapes[idx], material, diffuse_area_lights ? &diffuse_area_lights[idx] : nullptr,
+        medium_interface);
 }
 
 static __global__ void init_transformed_primitives(Primitive *primitives,
@@ -44,8 +42,9 @@ static __global__ void init_transformed_primitives(Primitive *primitives,
         return;
     }
 
-    transformed_primitives[idx].init(&base_primitives[idx], render_from_primitive);
-    primitives[idx].init(&transformed_primitives[idx]);
+    transformed_primitives[idx] =
+        TransformedPrimitive(&base_primitives[idx], render_from_primitive);
+    primitives[idx] = Primitive(&transformed_primitives[idx]);
 }
 
 template <typename TypeOfPrimitive>
@@ -56,7 +55,7 @@ static __global__ void init_primitives(Primitive *primitives, TypeOfPrimitive *_
         return;
     }
 
-    primitives[idx].init(&_primitives[idx]);
+    primitives[idx] = Primitive(&_primitives[idx]);
 }
 
 const Primitive *Primitive::create_geometric_primitives(const Shape *shapes,
@@ -115,30 +114,6 @@ const Primitive *Primitive::create_transformed_primitives(const Primitive *base_
         primitives, transformed_primitives, base_primitives, render_from_primitive, num);
 
     return primitives;
-}
-
-PBRT_CPU_GPU
-void Primitive::init(const HLBVH *hlbvh) {
-    type = Type::bvh;
-    ptr = hlbvh;
-}
-
-PBRT_CPU_GPU
-void Primitive::init(const GeometricPrimitive *geometric_primitive) {
-    type = Type::geometric;
-    ptr = geometric_primitive;
-}
-
-PBRT_CPU_GPU
-void Primitive::init(const SimplePrimitive *simple_primitive) {
-    type = Type::simple;
-    ptr = simple_primitive;
-}
-
-PBRT_CPU_GPU
-void Primitive::init(const TransformedPrimitive *transformed_primitive) {
-    type = Type::transformed;
-    ptr = transformed_primitive;
 }
 
 PBRT_CPU_GPU

@@ -64,33 +64,26 @@ MLTBDPTIntegrator *MLTBDPTIntegrator::create(const int mutations_per_pixel,
                                              const ParameterDictionary &parameters,
                                              const IntegratorBase *base,
                                              GPUMemoryAllocator &allocator) {
-    auto integrator = allocator.allocate<MLTBDPTIntegrator>();
+    const auto max_depth = parameters.get_integer("maxdepth", 5);
+    const auto regularize = parameters.get_bool("regularize", false);
+    const auto film_sample_size = max_depth * NUM_MLT_SAMPLERS;
 
-    auto config = allocator.allocate<BDPTConfig>();
+    const auto config = allocator.create<BDPTConfig>(base, max_depth, film_sample_size, regularize);
 
-    config->base = base;
-    config->max_depth = parameters.get_integer("maxdepth", 5);
-    config->regularize = parameters.get_bool("regularize", false);
-    config->film_sample_size = config->max_depth * NUM_MLT_SAMPLERS;
-
-    integrator->config = config;
-
-    integrator->mlt_samplers = allocator.allocate<MLTSampler>(NUM_MLT_SAMPLERS);
-    integrator->samplers = allocator.allocate<Sampler>(NUM_MLT_SAMPLERS);
+    auto mlt_samplers = allocator.allocate<MLTSampler>(NUM_MLT_SAMPLERS);
+    auto samplers = allocator.allocate<Sampler>(NUM_MLT_SAMPLERS);
 
     const auto large_step_probability = parameters.get_float("largestepprobability", 0.3);
     const auto sigma = parameters.get_float("sigma", 0.01);
 
     for (int idx = 0; idx < NUM_MLT_SAMPLERS; ++idx) {
-        integrator->mlt_samplers[idx].setup_config(mutations_per_pixel, sigma,
-                                                   large_step_probability, 3);
-        integrator->samplers[idx].init(&integrator->mlt_samplers[idx]);
+        mlt_samplers[idx].setup_config(mutations_per_pixel, sigma, large_step_probability, 3);
+        samplers[idx] = Sampler(&mlt_samplers[idx]);
     }
 
-    integrator->film_dimension = base->camera->get_camera_base()->resolution;
-    integrator->cie_y = parameters.global_spectra->cie_y;
-
-    return integrator;
+    return allocator.create<MLTBDPTIntegrator>(config, samplers, mlt_samplers,
+                                               base->camera->get_camera_base()->resolution,
+                                               parameters.global_spectra->cie_y);
 }
 
 PBRT_GPU
@@ -323,8 +316,8 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, int mutati
     long long accumulate_samples = 0; // this is for debugging and verification
     for (int pass = 0; pass < total_pass; ++pass) {
         const int num_mutations = pass == total_pass - 1
-                                       ? total_mutations - (total_pass - 1) * NUM_MLT_SAMPLERS
-                                       : NUM_MLT_SAMPLERS;
+                                      ? total_mutations - (total_pass - 1) * NUM_MLT_SAMPLERS
+                                      : NUM_MLT_SAMPLERS;
 
         wavefront_render<<<blocks, threads>>>(mlt_samples, path_samples, num_mutations,
                                               global_camera_vertices, global_light_vertices, rngs,

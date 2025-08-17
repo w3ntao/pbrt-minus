@@ -12,42 +12,18 @@
 #include <pbrt/textures/gpu_image.h>
 #include <pbrt/util/sampling.h>
 
-ImageInfiniteLight *ImageInfiniteLight::create(const Transform &render_from_light,
-                                               const ParameterDictionary &parameters,
-                                               GPUMemoryAllocator &allocator) {
-    auto image_infinite_light = allocator.allocate<ImageInfiniteLight>();
-
-    image_infinite_light->init(render_from_light, parameters, allocator);
-
-    return image_infinite_light;
-}
-
-void ImageInfiniteLight::init(const Transform &_render_from_light,
-                              const ParameterDictionary &parameters,
-                              GPUMemoryAllocator &allocator) {
-    auto _scale = parameters.get_float("scale", 1.0);
-
-    const auto cie_y = parameters.global_spectra->cie_y;
-
-    _scale /= parameters.global_spectra->rgb_color_space->illuminant->to_photometric(cie_y);
-    scale = _scale;
-
-    light_type = LightType::infinite;
-    render_from_light = _render_from_light;
-
-    color_space = parameters.global_spectra->rgb_color_space;
-
-    scene_radius = NAN;
-    scene_center = Point3f(NAN, NAN, NAN);
-
-    auto texture_file = parameters.root + "/" + parameters.get_one_string("filename");
-    image_ptr = GPUImage::create_from_file(texture_file, allocator);
+ImageInfiniteLight::ImageInfiniteLight(const Transform &render_from_light, const Real _scale,
+                                       const RGBColorSpace *_color_space,
+                                       const GPUImage *_image_ptr, GPUMemoryAllocator &allocator)
+    : LightBase(LightType::infinite, render_from_light), scale(_scale), color_space(_color_space),
+      image_ptr(_image_ptr) {
 
     image_resolution = image_ptr->get_resolution();
 
     Real max_luminance = 0.0;
-    std::vector<std::vector<Real>> image_luminance_array(image_resolution.x,
-                                                         std::vector<Real>(image_resolution.y));
+    auto image_luminance_array =
+        std::vector(image_resolution.x, std::vector<Real>(image_resolution.y));
+
     for (int x = 0; x < image_resolution.x; ++x) {
         for (int y = 0; y < image_resolution.y; ++y) {
             const auto rgb = image_ptr->fetch_pixel(Point2i(x, y), WrapMode::OctahedralSphere)
@@ -66,9 +42,9 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
 
     // ignore minimal values
     // those pixels with luminance smaller than 0.001 * max_luminance are ignored
-    const auto ignore_ratio = 0.001;
+    constexpr auto ignore_ratio = 0.001;
     auto num_ignore = 0;
-    auto ignore_threshold = ignore_ratio * max_luminance;
+    const auto ignore_threshold = ignore_ratio * max_luminance;
     for (int x = 0; x < image_resolution.x; ++x) {
         for (int y = 0; y < image_resolution.y; ++y) {
             if (image_luminance_array[x][y] < ignore_threshold) {
@@ -79,7 +55,6 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
     }
 
     auto num_pixels = image_resolution.x * image_resolution.y;
-
     if (num_ignore == num_pixels) {
         REPORT_FATAL_ERROR();
     }
@@ -89,7 +64,25 @@ void ImageInfiniteLight::init(const Transform &_render_from_light,
                __func__, num_ignore, num_pixels, Real(num_ignore) / num_pixels * 100, ignore_ratio);
     }
 
-    image_le_distribution = Distribution2D::create(image_luminance_array, allocator);
+    image_le_distribution = allocator.create<Distribution2D>(image_luminance_array, allocator);
+}
+
+ImageInfiniteLight *ImageInfiniteLight::create(const Transform &render_from_light,
+                                               const ParameterDictionary &parameters,
+                                               GPUMemoryAllocator &allocator) {
+    const auto cie_y = parameters.global_spectra->cie_y;
+
+    const auto scale =
+        parameters.get_float("scale", 1.0) /
+        parameters.global_spectra->rgb_color_space->illuminant->to_photometric(cie_y);
+
+    const auto color_space = parameters.global_spectra->rgb_color_space;
+
+    const auto texture_file = parameters.root + "/" + parameters.get_one_string("filename");
+    const auto image_ptr = GPUImage::create_from_file(texture_file, allocator);
+
+    return allocator.create<ImageInfiniteLight>(render_from_light, scale, color_space, image_ptr,
+                                                allocator);
 }
 
 PBRT_CPU_GPU
@@ -118,7 +111,8 @@ pbrt::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleCon
     return LightLiSample(ImageLe(uv, lambda), wi, pdf, interaction);
 }
 
-PBRT_CPU_GPU SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &lambda) const {
+PBRT_CPU_GPU
+SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &lambda) const {
     SampledSpectrum sumL(0.0);
 
     auto width = image_resolution.x;

@@ -14,22 +14,15 @@ uint64_t hash(uint64_t k) {
     return k;
 }
 
-HashMap *HashMap::create(int capacity, GPUMemoryAllocator &allocator) {
-    auto hash_map = allocator.allocate<HashMap>();
-    hash_map->items = allocator.allocate<KeyValue>(capacity);
-
-    hash_map->size = 0;
-    hash_map->capacity = capacity;
-
+HashMap::HashMap(const int _capacity, GPUMemoryAllocator &allocator) : capacity(_capacity) {
+    items = allocator.allocate<KeyValue>(capacity);
     for (int idx = 0; idx < capacity; ++idx) {
-        hash_map->items[idx].key = EMPTY_KEY;
+        items[idx].key = EMPTY_KEY;
     }
-
-    return hash_map;
 }
 
 PBRT_CPU_GPU
-uint64_t HashMap::lookup(uint64_t key) const {
+uint64_t HashMap::lookup(const uint64_t key) const {
     uint64_t slot = hash(key) % capacity;
 
     for (int loop = 0; loop < capacity; ++loop) {
@@ -45,7 +38,7 @@ uint64_t HashMap::lookup(uint64_t key) const {
 }
 
 PBRT_CPU_GPU
-void HashMap::insert(uint64_t key, uint64_t value) {
+void HashMap::insert(const uint64_t key, const uint64_t value) {
     if (size >= capacity) {
         REPORT_FATAL_ERROR();
     }

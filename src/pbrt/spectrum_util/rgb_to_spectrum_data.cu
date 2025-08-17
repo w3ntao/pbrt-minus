@@ -358,6 +358,32 @@ void compute(double *out, int j, const RGBtoSpectrumBuffer &data, const double *
     }
 }
 
+RGBtoSpectrumTable::RGBtoSpectrumTable(const std::string &str_gamut) {
+    if (str_gamut != "sRGB") {
+        throw std::runtime_error("compute_spectrum_table_data: only sRGB is implemented");
+    }
+
+    Gamut gamut = Gamut::sRGB;
+
+    RGBtoSpectrumBuffer rgb_to_spectrum_buffer;
+    init_tables(&rgb_to_spectrum_buffer, gamut);
+
+    for (int k = 0; k < RES; k++) {
+        this->z_nodes[k] = smoothstep(smoothstep(double(k) / double(RES - 1)));
+    }
+
+    auto coefficients_ptr = (double *)this->coefficients;
+    auto z_nodes_ptr = this->z_nodes;
+
+    ThreadPool thread_pool;
+    for (int l = 0; l < 3; ++l) {
+        thread_pool.parallel_execute(
+            0, RES, [coefficients_ptr, z_nodes_ptr, &rgb_to_spectrum_buffer, l](int j) {
+                compute(coefficients_ptr, j, rgb_to_spectrum_buffer, z_nodes_ptr, l);
+            });
+    }
+}
+
 PBRT_CPU_GPU
 RGBSigmoidPolynomial RGBtoSpectrumTable::operator()(const RGB &rgb) const {
     // Handle uniform _rgb_ values
@@ -399,29 +425,4 @@ RGBSigmoidPolynomial RGBtoSpectrumTable::operator()(const RGB &rgb) const {
     return RGBSigmoidPolynomial(c[0], c[1], c[2]);
 }
 
-void RGBtoSpectrumTable::init(const std::string &str_gamut) {
-    if (str_gamut != "sRGB") {
-        throw std::runtime_error("compute_spectrum_table_data: only sRGB is implemented");
-    }
-
-    Gamut gamut = Gamut::sRGB;
-
-    RGBtoSpectrumBuffer rgb_to_spectrum_buffer;
-    init_tables(&rgb_to_spectrum_buffer, gamut);
-
-    for (int k = 0; k < RES; k++) {
-        this->z_nodes[k] = smoothstep(smoothstep(double(k) / double(RES - 1)));
-    }
-
-    auto coefficients_ptr = (double *)this->coefficients;
-    auto z_nodes_ptr = this->z_nodes;
-
-    ThreadPool thread_pool;
-    for (int l = 0; l < 3; ++l) {
-        thread_pool.parallel_execute(
-            0, RES, [coefficients_ptr, z_nodes_ptr, &rgb_to_spectrum_buffer, l](int j) {
-                compute(coefficients_ptr, j, rgb_to_spectrum_buffer, z_nodes_ptr, l);
-            });
-    }
-}
 } // namespace RGBtoSpectrumData

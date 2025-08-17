@@ -11,6 +11,16 @@ class Transform;
 
 class SpotLight : public LightBase {
   public:
+    SpotLight(const Transform &renderFromLight, const Spectrum *Iemit, Real _scale, Real totalWidth,
+              Real falloffStart)
+        : LightBase(LightType::delta_position, renderFromLight) {
+        i_emit = Iemit;
+        scale = _scale;
+
+        cosFalloffEnd = std::cos(degree_to_radian(totalWidth));
+        cosFalloffStart = std::cos(degree_to_radian(falloffStart));
+    }
+
     static SpotLight *create(const Transform &renderFromLight,
                              const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
@@ -20,7 +30,10 @@ class SpotLight : public LightBase {
 
     PBRT_CPU_GPU
     SampledSpectrum l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
-                      const SampledWavelengths &lambda) const;
+                      const SampledWavelengths &lambda) const {
+        REPORT_FATAL_ERROR();
+        return {};
+    }
 
     PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
@@ -35,18 +48,18 @@ class SpotLight : public LightBase {
 
     PBRT_CPU_GPU
     Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
-                     bool allow_incomplete_pdf = false) const;
+                bool allow_incomplete_pdf) const {
+        return 0.0;
+    }
+
     PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
   private:
-    const Spectrum *i_emit;
-    Real scale;
-    Real cosFalloffStart;
-    Real cosFalloffEnd;
-
-    void init(const Transform &renderFromLight, const Spectrum *Iemit, Real _scale,
-              Real totalWidth, Real falloffStart);
+    const Spectrum *i_emit = nullptr;
+    Real scale = NAN;
+    Real cosFalloffStart = NAN;
+    Real cosFalloffEnd = NAN;
 
     PBRT_CPU_GPU
     SampledSpectrum I(const Vector3f &w, const SampledWavelengths &lambda) const;

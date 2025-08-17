@@ -6,19 +6,19 @@
 
 class PiecewiseConstant2D {
   public:
-    void init(const Array2D<Real> *func, const Bounds2f &_domain,
-              GPUMemoryAllocator &allocator) {
+    PiecewiseConstant2D() = default;
+
+    PiecewiseConstant2D(const Array2D<Real> *func, const Bounds2f &_domain,
+                        GPUMemoryAllocator &allocator)
+        : domain(_domain) {
         const int nu = func->x_size();
         const int nv = func->y_size();
 
-        domain = _domain;
-
         pConditionalV = allocator.allocate<PiecewiseConstant1D>(nv);
-
         for (int v = 0; v < nv; ++v) {
             // Compute conditional sampling distribution for $\tilde{v}$
-            pConditionalV[v].init(func->get_values_ptr() + v * nu, nu, domain.p_min[0],
-                                  domain.p_max[0], allocator);
+            pConditionalV[v] = PiecewiseConstant1D(func->get_values_ptr() + v * nu, nu,
+                                                   domain.p_min[0], domain.p_max[0], allocator);
         }
 
         std::vector<Real> marginalFunc;
@@ -26,8 +26,8 @@ class PiecewiseConstant2D {
             marginalFunc.push_back(pConditionalV[v].integral());
         }
 
-        pMarginal.init(marginalFunc.data(), marginalFunc.size(), domain.p_min[1], domain.p_max[1],
-                       allocator);
+        pMarginal = PiecewiseConstant1D(marginalFunc.data(), marginalFunc.size(), domain.p_min[1],
+                                        domain.p_max[1], allocator);
     }
 
     PBRT_CPU_GPU
@@ -50,6 +50,6 @@ class PiecewiseConstant2D {
 
   private:
     Bounds2f domain;
-    PiecewiseConstant1D *pConditionalV;
+    PiecewiseConstant1D *pConditionalV = nullptr;
     PiecewiseConstant1D pMarginal;
 };

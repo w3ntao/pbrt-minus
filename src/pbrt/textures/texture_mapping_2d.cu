@@ -84,15 +84,12 @@ TexCoord2D UVMapping::map(const TextureEvalContext &ctx) const {
 const TextureMapping2D *TextureMapping2D::create(const Transform &render_from_texture,
                                                  const ParameterDictionary &parameters,
                                                  GPUMemoryAllocator &allocator) {
-    auto texture_mapping = allocator.allocate<TextureMapping2D>();
-
     const auto type = parameters.get_one_string("mapping", "uv");
     if (type == "cylindrical") {
-        auto cylindrical_mapping = allocator.allocate<CylindricalMapping>();
-        *cylindrical_mapping = CylindricalMapping(render_from_texture.inverse());
-        texture_mapping->init(cylindrical_mapping);
+        const auto cylindrical_mapping =
+            allocator.create<CylindricalMapping>(render_from_texture.inverse());
 
-        return texture_mapping;
+        return allocator.create<TextureMapping2D>(cylindrical_mapping);
     }
 
     if (type == "planar") {
@@ -102,19 +99,17 @@ const TextureMapping2D *TextureMapping2D::create(const Transform &render_from_te
         const auto udelta = parameters.get_float("udelta", 0.0);
         const auto vdelta = parameters.get_float("vdelta", 0.0);
 
-        auto planar_mapping = allocator.allocate<PlanarMapping>();
-        *planar_mapping = PlanarMapping(render_from_texture.inverse(), v1, v2, udelta, vdelta);
-        texture_mapping->init(planar_mapping);
+        const auto planar_mapping =
+            allocator.create<PlanarMapping>(render_from_texture.inverse(), v1, v2, udelta, vdelta);
 
-        return texture_mapping;
+        return allocator.create<TextureMapping2D>(planar_mapping);
     }
 
     if (type == "spherical") {
-        auto spherical_mapping = allocator.allocate<SphericalMapping>();
-        *spherical_mapping = SphericalMapping(render_from_texture.inverse());
-        texture_mapping->init(spherical_mapping);
+        const auto spherical_mapping =
+            allocator.create<SphericalMapping>(render_from_texture.inverse());
 
-        return texture_mapping;
+        return allocator.create<TextureMapping2D>(spherical_mapping);
     }
 
     if (type == "uv") {
@@ -123,11 +118,9 @@ const TextureMapping2D *TextureMapping2D::create(const Transform &render_from_te
         auto du = parameters.get_float("udelta", 0.);
         auto dv = parameters.get_float("vdelta", 0.);
 
-        auto uv_mapping = allocator.allocate<UVMapping>();
-        *uv_mapping = UVMapping(su, sv, du, dv);
-        texture_mapping->init(uv_mapping);
+        const auto uv_mapping = allocator.create<UVMapping>(su, sv, du, dv);
 
-        return texture_mapping;
+        return allocator.create<TextureMapping2D>(uv_mapping);
     }
 
     printf("ERROR: mapping `%s` not implemented\n", type.c_str());
@@ -158,24 +151,4 @@ TexCoord2D TextureMapping2D::map(const TextureEvalContext &ctx) const {
 
     REPORT_FATAL_ERROR();
     return {};
-}
-
-void TextureMapping2D::init(const CylindricalMapping *cylindrical_mapping) {
-    type = Type::cylindrical;
-    ptr = cylindrical_mapping;
-}
-
-void TextureMapping2D::init(const PlanarMapping *planar_mapping) {
-    type = Type::planar;
-    ptr = planar_mapping;
-}
-
-void TextureMapping2D::init(const SphericalMapping *spherical_mapping) {
-    type = Type::spherical;
-    ptr = spherical_mapping;
-}
-
-void TextureMapping2D::init(const UVMapping *uv_mapping) {
-    type = Type::uv;
-    ptr = uv_mapping;
 }

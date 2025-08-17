@@ -90,7 +90,7 @@ pbrt::optional<ShapeSample> Triangle::sample(Point2f u) const {
         Normal3f ns =
             (b[0] * mesh->n[v[0]] + b[1] * mesh->n[v[1]] + (1 - b[0] - b[1]) * mesh->n[v[2]]);
         n = n.face_forward(ns);
-    } else if ((mesh->reverse_orientation ^ mesh->transformSwapsHandedness)) {
+    } else if ((mesh->reverse_orientation ^ mesh->transform_swaps_handedness)) {
         // this part not implemented
         n *= -1;
     }
@@ -187,7 +187,7 @@ pbrt::optional<ShapeSample> Triangle::sample(const ShapeSampleContext &ctx, Poin
         Normal3f ns(b[0] * mesh->n[v[0]] + b[1] * mesh->n[v[1]] +
                     (1 - b[0] - b[1]) * mesh->n[v[2]]);
         n = n.face_forward(ns);
-    } else if (mesh->reverse_orientation ^ mesh->transformSwapsHandedness) {
+    } else if (mesh->reverse_orientation ^ mesh->transform_swaps_handedness) {
         n *= -1;
     }
 
@@ -371,7 +371,7 @@ SurfaceInteraction Triangle::interaction_from_intersection(const TriangleInterse
     Point3f pHit = ti.b0 * p0 + ti.b1 * p1 + ti.b2 * p2;
     Point2f uvHit = ti.b0 * uv[0] + ti.b1 * uv[1] + ti.b2 * uv[2];
 
-    bool flipNormal = mesh->reverse_orientation ^ mesh->transformSwapsHandedness;
+    bool flipNormal = mesh->reverse_orientation ^ mesh->transform_swaps_handedness;
     // Compute error bounds _pError_ for triangle intersection
     Point3f pAbsSum = (ti.b0 * p0).abs() + (ti.b1 * p1).abs() + (ti.b2 * p2).abs();
     Vector3f pError = gamma(7) * pAbsSum.to_vector3();
@@ -386,7 +386,7 @@ SurfaceInteraction Triangle::interaction_from_intersection(const TriangleInterse
     isect.n = Normal3f(dp02.cross(dp12).normalize());
     isect.shading.n = isect.n;
 
-    if (mesh->reverse_orientation ^ mesh->transformSwapsHandedness) {
+    if (mesh->reverse_orientation ^ mesh->transform_swaps_handedness) {
         isect.n = isect.shading.n = -isect.n;
     }
 

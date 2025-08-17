@@ -8,30 +8,23 @@ const FloatTexture *FloatTexture::create(const std::string &texture_type,
                                          const Transform &render_from_object,
                                          const ParameterDictionary &parameters,
                                          GPUMemoryAllocator &allocator) {
-    auto float_texture = allocator.allocate<FloatTexture>();
-
     if (texture_type == "constant") {
-        auto constant_texture = allocator.allocate<FloatConstantTexture>();
-        *constant_texture = FloatConstantTexture(parameters);
-        float_texture->init(constant_texture);
+        auto constant_texture = allocator.create<FloatConstantTexture>(parameters);
 
-        return float_texture;
-    }
-
-    if (texture_type == "scale") {
-        auto scaled_texture = allocator.allocate<FloatScaledTexture>();
-        *scaled_texture = FloatScaledTexture(parameters, allocator);
-        float_texture->init(scaled_texture);
-
-        return float_texture;
+        return allocator.create<FloatTexture>(constant_texture);
     }
 
     if (texture_type == "imagemap") {
-        auto image_texture = allocator.allocate<FloatImageTexture>();
-        *image_texture = FloatImageTexture(render_from_object, parameters, allocator);
-        float_texture->init(image_texture);
+        auto image_texture =
+            allocator.create<FloatImageTexture>(render_from_object, parameters, allocator);
 
-        return float_texture;
+        return allocator.create<FloatTexture>(image_texture);
+    }
+
+    if (texture_type == "scale") {
+        auto scaled_texture = allocator.create<FloatScaledTexture>(parameters, allocator);
+
+        return allocator.create<FloatTexture>(scaled_texture);
     }
 
     printf("\ntexture type `%s` not implemented for FloatTexture\n", texture_type.c_str());
@@ -42,13 +35,9 @@ const FloatTexture *FloatTexture::create(const std::string &texture_type,
 
 const FloatTexture *FloatTexture::create_constant_float_texture(Real val,
                                                                 GPUMemoryAllocator &allocator) {
-    auto constant_texture = allocator.allocate<FloatConstantTexture>();
-    *constant_texture = FloatConstantTexture(val);
+    auto constant_texture = allocator.create<FloatConstantTexture>(val);
 
-    auto float_texture = allocator.allocate<FloatTexture>();
-    float_texture->init(constant_texture);
-
-    return float_texture;
+    return allocator.create<FloatTexture>(constant_texture);
 }
 
 PBRT_CPU_GPU
@@ -69,19 +58,4 @@ Real FloatTexture::evaluate(const TextureEvalContext &ctx) const {
 
     REPORT_FATAL_ERROR();
     return NAN;
-}
-
-void FloatTexture::init(const FloatConstantTexture *float_constant_texture) {
-    type = Type::constant;
-    ptr = float_constant_texture;
-}
-
-void FloatTexture::init(const FloatImageTexture *float_image_texture) {
-    type = Type::image;
-    ptr = float_image_texture;
-}
-
-void FloatTexture::init(const FloatScaledTexture *float_scaled_texture) {
-    type = Type::scale;
-    ptr = float_scaled_texture;
 }

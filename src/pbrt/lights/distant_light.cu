@@ -10,14 +10,12 @@
 DistantLight *DistantLight::create(const Transform &renderFromLight,
                                    const ParameterDictionary &parameters,
                                    GPUMemoryAllocator &allocator) {
-    auto distant_light = allocator.allocate<DistantLight>();
-
-    auto lemit = parameters.get_spectrum("L", SpectrumType::Illuminant, allocator);
-    if (lemit == nullptr) {
-        lemit = parameters.global_spectra->rgb_color_space->illuminant;
+    auto Lemit = parameters.get_spectrum("L", SpectrumType::Illuminant, allocator);
+    if (Lemit == nullptr) {
+        Lemit = parameters.global_spectra->rgb_color_space->illuminant;
     }
 
-    auto sc = parameters.get_float("scale", 1.0);
+    auto scale = parameters.get_float("scale", 1.0);
 
     Point3f from = parameters.get_point3("from", Point3f(0, 0, 0));
     Point3f to = parameters.get_point3("to", Point3f(0, 0, 1));
@@ -29,25 +27,16 @@ DistantLight *DistantLight::create(const Transform &renderFromLight,
     Real m[4][4] = {v1.x, v2.x, w.x, 0, v1.y, v2.y, w.y, 0, v1.z, v2.z, w.z, 0, 0, 0, 0, 1};
     auto t = Transform(m);
 
-    Transform finalRenderFromLight = renderFromLight * t;
+    const Transform final_render_from_light = renderFromLight * t;
 
-    sc /= lemit->to_photometric(parameters.global_spectra->cie_y);
+    scale /= Lemit->to_photometric(parameters.global_spectra->cie_y);
 
-    auto E_v = parameters.get_float("illuminance", -1);
+    const auto E_v = parameters.get_float("illuminance", -1);
     if (E_v > 0) {
-        sc *= E_v;
+        scale *= E_v;
     }
 
-    distant_light->light_type = LightType::delta_direction;
-    distant_light->render_from_light = finalRenderFromLight;
-
-    distant_light->scale = sc;
-    distant_light->l_emit = lemit;
-
-    distant_light->scene_radius = NAN;
-    distant_light->scene_center = Point3f(NAN, NAN, NAN);
-
-    return distant_light;
+    return allocator.create<DistantLight>(final_render_from_light, Lemit, scale);
 }
 
 PBRT_CPU_GPU
@@ -57,10 +46,10 @@ pbrt::optional<LightLiSample> DistantLight::sample_li(const LightSampleContext &
     Vector3f wi = render_from_light(Vector3f(0, 0, 1)).normalize();
     Point3f pOutside = ctx.p() + wi * (2 * scene_radius);
 
-    return LightLiSample(scale * l_emit->sample(lambda), wi, 1, Interaction(pOutside));
+    return LightLiSample(scale * Lemit->sample(lambda), wi, 1, Interaction(pOutside));
 }
 
 PBRT_CPU_GPU
 SampledSpectrum DistantLight::phi(const SampledWavelengths &lambda) const {
-    return scale * l_emit->sample(lambda) * sqr(scene_radius);
+    return scale * Lemit->sample(lambda) * sqr(scene_radius);
 }

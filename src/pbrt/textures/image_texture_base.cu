@@ -6,7 +6,7 @@
 ImageTextureBase::ImageTextureBase(const Transform &render_from_object,
                                    const ParameterDictionary &parameters,
                                    GPUMemoryAllocator &allocator) {
-    mipmap = MIPMap::create(parameters, allocator);
+    mipmap = allocator.create<MIPMap>(parameters, allocator);
 
     scale = parameters.get_float("scale", 1.0);
     invert = parameters.get_bool("invert", false);

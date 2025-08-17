@@ -13,8 +13,8 @@ class Bounds2 {
     PBRT_CPU_GPU
     Bounds2() {
         T minimum = std::numeric_limits<T>::lowest();
-        T maximun = std::numeric_limits<T>::max();
-        p_min = Point2<T>(maximun, maximun);
+        T maximum = std::numeric_limits<T>::max();
+        p_min = Point2<T>(maximum, maximum);
         p_max = Point2<T>(minimum, minimum);
     }
 
@@ -133,7 +133,8 @@ class Bounds2 {
         return stream;
     }
 
-    Point2<T> p_min, p_max;
+    Point2<T> p_min;
+    Point2<T> p_max;
 };
 
 using Bounds2i = Bounds2<int>;

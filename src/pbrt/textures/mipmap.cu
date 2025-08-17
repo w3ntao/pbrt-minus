@@ -3,13 +3,6 @@
 #include <pbrt/textures/gpu_image.h>
 #include <pbrt/textures/mipmap.h>
 
-const MIPMap *MIPMap::create(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
-    auto mipmap = allocator.allocate<MIPMap>();
-    *mipmap = MIPMap(parameters, allocator);
-
-    return mipmap;
-}
-
 MIPMap::MIPMap(const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
     auto max_anisotropy = parameters.get_float("maxanisotropy", 8.0);
     auto filter_string = parameters.get_one_string("filter", "bilinear");

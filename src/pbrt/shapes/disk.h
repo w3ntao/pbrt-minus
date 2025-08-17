@@ -11,9 +11,8 @@ struct ShapeSampleContext;
 
 class Disk {
   public:
-    static const Disk *create(const Transform &render_from_object,
-                              const Transform &object_from_render, bool reverse_orientation,
-                              const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
+    Disk(const Transform &_render_from_object, const Transform &_object_from_render,
+         bool _reverse_orientation, const ParameterDictionary &parameters);
 
     PBRT_CPU_GPU
     Real area() const {
@@ -55,13 +54,13 @@ class Disk {
     // Disk Private Members
     Transform render_from_object;
     Transform object_from_render;
-    bool reverse_orientation;
-    bool transform_wwapsHandedness;
+    bool reverse_orientation = false;
+    bool transform_swaps_handedness = false;
 
-    Real height;
-    Real radius;
-    Real inner_radius;
-    Real phi_max;
+    Real height = NAN;
+    Real radius = NAN;
+    Real inner_radius = NAN;
+    Real phi_max = NAN;
 
     PBRT_CPU_GPU
     pbrt::optional<QuadricIntersection> basic_intersect(const Ray &r, Real tMax) const;

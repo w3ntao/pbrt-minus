@@ -24,6 +24,21 @@ class Primitive {
         transformed,
     };
 
+    PBRT_CPU_GPU
+    explicit Primitive(const HLBVH *hlbvh) : type(Type::bvh), ptr(hlbvh) {}
+
+    PBRT_CPU_GPU
+    explicit Primitive(const GeometricPrimitive *geometric_primitive)
+        : type(Type::geometric), ptr(geometric_primitive) {}
+
+    PBRT_CPU_GPU
+    explicit Primitive(const SimplePrimitive *simple_primitive)
+        : type(Type::simple), ptr(simple_primitive) {}
+
+    PBRT_CPU_GPU
+    explicit Primitive(const TransformedPrimitive *transformed_primitive)
+        : type(Type::transformed), ptr(transformed_primitive) {}
+
     static const Primitive *create_geometric_primitives(const Shape *shapes,
                                                         const Material *material,
                                                         const Light *diffuse_area_light,
@@ -36,18 +51,6 @@ class Primitive {
     static const Primitive *create_transformed_primitives(const Primitive *base_primitives,
                                                           const Transform &render_from_primitive,
                                                           int num, GPUMemoryAllocator &allocator);
-
-    PBRT_CPU_GPU
-    void init(const HLBVH *hlbvh);
-
-    PBRT_CPU_GPU
-    void init(const GeometricPrimitive *geometric_primitive);
-
-    PBRT_CPU_GPU
-    void init(const SimplePrimitive *simple_primitive);
-
-    PBRT_CPU_GPU
-    void init(const TransformedPrimitive *transformed_primitive);
 
     PBRT_CPU_GPU
     const Material *get_material() const;
@@ -65,5 +68,5 @@ class Primitive {
 
   private:
     Type type;
-    const void *ptr;
+    const void *ptr = nullptr;
 };
