@@ -441,9 +441,6 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
             REPORT_FATAL_ERROR();
         }
 
-        auto interior_name = tokens[1].values[0];
-        auto exterior_name = tokens[2].values[0];
-
         auto build_medium = [&](const std::string &name) -> const Medium * {
             if (name.empty()) {
                 return nullptr;
@@ -452,8 +449,11 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
             return named_medium.at(name);
         };
 
-        auto interior_medium = build_medium(tokens[1].values[0]);
-        auto exterior_medium = build_medium(tokens[2].values[0]);
+        const auto interior_name = tokens[1].values[0];
+        const auto exterior_name = tokens[2].values[0];
+
+        const auto interior_medium = build_medium(interior_name);
+        const auto exterior_medium = build_medium(exterior_name);
 
         const auto medium_interface =
             allocator.create<MediumInterface>(interior_medium, exterior_medium);

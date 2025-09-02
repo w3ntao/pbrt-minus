@@ -15,6 +15,8 @@ class SampledSpectrum;
 struct ShapeIntersection;
 
 struct IntegratorBase {
+    static constexpr Real interface_bounce_contribution = 0.3;
+
     IntegratorBase() {}
 
     const HLBVH *bvh = nullptr;

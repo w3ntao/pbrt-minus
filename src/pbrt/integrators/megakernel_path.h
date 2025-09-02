@@ -6,8 +6,6 @@
 class Sampler;
 struct IntegratorBase;
 
-constexpr Real interface_bounce_contribution = 0.3;
-
 class MegakernelPathIntegrator {
   public:
     MegakernelPathIntegrator(const ParameterDictionary &parameters,
@@ -19,13 +17,13 @@ class MegakernelPathIntegrator {
 
     PBRT_CPU_GPU
     static SampledSpectrum evaluate_Li_volume(const Ray &primary_ray, SampledWavelengths &lambda,
-                                              const IntegratorBase *base, Sampler *sampler,
+                                              Sampler *sampler, const IntegratorBase *base,
                                               int max_depth, bool regularize);
 
     PBRT_CPU_GPU
     static SampledSpectrum sample_Ld_volume(const SurfaceInteraction &surface_interaction,
                                             const BSDF *bsdf, const SampledWavelengths &lambda,
-                                            const IntegratorBase *base, Sampler *sampler,
+                                            Sampler *sampler, const IntegratorBase *base,
                                             int max_depth);
 
     PBRT_CPU_GPU
@@ -33,6 +31,6 @@ class MegakernelPathIntegrator {
 
   private:
     const IntegratorBase *base = nullptr;
-    int max_depth = -1; // TODO: move max_depth into IntegratorBase
+    int max_depth = 0;
     bool regularize = true;
 };

@@ -10,13 +10,12 @@
 #include <pbrt/spectra/densely_sampled_spectrum.h>
 #include <pbrt/util/russian_roulette.h>
 
-
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray,
                                                              SampledWavelengths &lambda,
+                                                             Sampler *sampler,
                                                              const IntegratorBase *base,
-                                                             Sampler *sampler, int max_depth,
-                                                             bool regularize) {
+                                                             int max_depth, bool regularize) {
     auto L = SampledSpectrum(0.0);
     auto beta = SampledSpectrum(1.0);
     bool specular_bounce = false;
@@ -56,7 +55,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
                 medium_interaction.medium = ray.medium;
 
                 SampledSpectrum Ld =
-                    sample_Ld_volume(medium_interaction, nullptr, lambda, base, sampler, max_depth);
+                    sample_Ld_volume(medium_interaction, nullptr, lambda, sampler, base, max_depth);
                 L += beta * Ld * sigma_s;
 
                 auto phase_sample = ray.medium->phase.sample(-ray.d, sampler->get_2d());
@@ -107,7 +106,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
         if (!surface_interaction.material) {
             // pass through material-less interface
             ray = surface_interaction.spawn_ray(ray.d);
-            depth += interface_bounce_contribution;
+            depth += IntegratorBase::interface_bounce_contribution;
             continue;
         }
 
@@ -140,7 +139,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
 
         if (pbrt::is_non_specular(bsdf.flags())) {
             SampledSpectrum Ld =
-                sample_Ld_volume(surface_interaction, &bsdf, lambda, base, sampler, max_depth);
+                sample_Ld_volume(surface_interaction, &bsdf, lambda, sampler, base, max_depth);
             L += beta * Ld;
         }
 
@@ -171,14 +170,14 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
                                              Sampler *sampler) const {
-    return evaluate_Li_volume(primary_ray, lambda, base, sampler, max_depth, regularize);
+    return evaluate_Li_volume(primary_ray, lambda, sampler, base, max_depth, regularize);
 }
 
 PBRT_CPU_GPU
 SampledSpectrum
 MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_interaction,
                                            const BSDF *bsdf, const SampledWavelengths &lambda,
-                                           const IntegratorBase *base, Sampler *sampler,
+                                           Sampler *sampler, const IntegratorBase *base,
                                            const int max_depth) {
     LightSampleContext ctx(surface_interaction);
     // Try to nudge the light sampling position to correct side of the surface

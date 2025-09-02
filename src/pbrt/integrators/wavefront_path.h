@@ -33,12 +33,14 @@ class WavefrontPathIntegrator {
         SampledSpectrum *L = nullptr;
         SampledSpectrum *beta = nullptr;
         SampledSpectrum *multi_transmittance_pdf = nullptr;
-        bool *skip_control_logic = nullptr;
+        bool *skip_material_evaluation = nullptr;
 
         pbrt::optional<ShapeIntersection> *shape_intersections = nullptr;
 
-        Real *path_length = nullptr;
+        Real *depth = nullptr;
         // making depth float type to counter for contribution from material-less hit
+        int *next_time_russian_roulette = nullptr;
+
         bool *finished = nullptr;
 
         BSDF *bsdf = nullptr;
