@@ -39,16 +39,16 @@ struct MISParameter {
     bool specular_bounce = false;
     bool any_non_specular_bounces = false;
 
-    pbrt::optional<Real> pdf_bsdf;
-    pbrt::optional<LightSampleContext> prev_interaction_light_sample_ctx;
+    pbrt::optional<Real> prev_direction_pdf;
+    pbrt::optional<SurfaceInteraction> prev_interaction;
 
     PBRT_CPU_GPU
     void reset() {
         specular_bounce = false;
         any_non_specular_bounces = false;
 
-        pdf_bsdf = {};
-        prev_interaction_light_sample_ctx = pbrt::optional<LightSampleContext>();
+        prev_direction_pdf = {};
+        prev_interaction = pbrt::optional<SurfaceInteraction>();
     }
 };
 
@@ -69,18 +69,17 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
         return;
     }
 
-    auto &isect = path_state->shape_intersections[path_idx]->interaction;
+    const auto &isect = path_state->shape_intersections[path_idx]->interaction;
     const auto ray = path_state->camera_rays[path_idx].ray;
-    auto &lambda = path_state->lambdas[path_idx];
+    const auto &lambda = path_state->lambdas[path_idx];
 
     const auto path_length = path_state->path_length[path_idx];
     const auto specular_bounce = path_state->mis_parameters[path_idx].specular_bounce;
     auto &beta = path_state->beta[path_idx];
     auto &L = path_state->L[path_idx];
 
-    const auto prev_interaction_light_sample_ctx =
-        path_state->mis_parameters[path_idx].prev_interaction_light_sample_ctx;
-    const auto pdf_bsdf = path_state->mis_parameters[path_idx].pdf_bsdf;
+    const auto prev_interaction = path_state->mis_parameters[path_idx].prev_interaction;
+    const auto pdf_bsdf = path_state->mis_parameters[path_idx].prev_direction_pdf;
 
     bool should_terminate_path = !path_state->shape_intersections[path_idx].has_value() ||
                                  path_length >= max_depth || !beta.is_positive();
@@ -101,7 +100,7 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
                 } else {
                     // Compute MIS weight for infinite light
                     Real pdf_light = base->light_sampler->pmf(light) *
-                                     light->pdf_li(*prev_interaction_light_sample_ctx, ray.d, true);
+                                     light->pdf_li(*prev_interaction, ray.d, true);
                     Real weight_bsdf = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
 
                     L += beta * weight_bsdf * Le;
@@ -122,19 +121,18 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
         return;
     }
 
-    SampledSpectrum Le = isect.le(-ray.d, lambda);
+    const SampledSpectrum Le = isect.le(-ray.d, lambda);
     if (Le.is_positive()) {
         if (path_length == 0 || specular_bounce)
             path_state->L[path_idx] += beta * Le;
         else {
             // Compute MIS weight for area light
-            auto area_light = isect.area_light;
+            const auto area_light = isect.area_light;
+            const Real pdf_light =
+                base->light_sampler->pmf(area_light) * area_light->pdf_li(*prev_interaction, ray.d);
+            const Real w = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
 
-            Real pdf_light = base->light_sampler->pmf(area_light) *
-                             area_light->pdf_li(*prev_interaction_light_sample_ctx, ray.d);
-            Real weight_light = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
-
-            path_state->L[path_idx] += beta * weight_light * Le;
+            path_state->L[path_idx] += beta * w * Le;
         }
     }
 
@@ -324,11 +322,11 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, PathState *path_st
 
     path_state->beta[path_idx] *= bs->f * bs->wi.abs_dot(isect.shading.n.to_vector3()) / bs->pdf;
 
-    path_state->mis_parameters[path_idx].pdf_bsdf =
+    path_state->mis_parameters[path_idx].prev_direction_pdf =
         bs->pdf_is_proportional ? path_state->bsdf[path_idx].pdf(wo, bs->wi) : bs->pdf;
     path_state->mis_parameters[path_idx].specular_bounce = bs->is_specular();
     path_state->mis_parameters[path_idx].any_non_specular_bounces |= !bs->is_specular();
-    path_state->mis_parameters[path_idx].prev_interaction_light_sample_ctx = isect;
+    path_state->mis_parameters[path_idx].prev_interaction = isect;
 
     path_state->camera_rays[path_idx].ray = isect.spawn_ray(bs->wi);
 }
