@@ -83,7 +83,7 @@ void Film::write_to_png(const std::string &filename, Real splat_scale) const {
     if (nan_pixels > 0) {
         printf("%sFilm::%s(): %d/%d (%.2f%) pixels with NAN component%s\n",
                FLAG_COLORFUL_PRINT_RED_START, __func__, nan_pixels, width * height,
-               double(nan_pixels) / (width * height) * 100, FLAG_COLORFUL_PRINT_END);
+               static_cast<Real>(nan_pixels) / (width * height) * 100, FLAG_COLORFUL_PRINT_END);
 
         REPORT_FATAL_ERROR();
     }

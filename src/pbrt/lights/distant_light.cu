@@ -42,7 +42,7 @@ DistantLight *DistantLight::create(const Transform &renderFromLight,
 PBRT_CPU_GPU
 pbrt::optional<LightLiSample> DistantLight::sample_li(const LightSampleContext &ctx,
                                                       const Point2f &u,
-                                                      SampledWavelengths &lambda) const {
+                                                      const SampledWavelengths &lambda) const {
     Vector3f wi = render_from_light(Vector3f(0, 0, 1)).normalize();
     Point3f pOutside = ctx.p() + wi * (2 * scene_radius);
 

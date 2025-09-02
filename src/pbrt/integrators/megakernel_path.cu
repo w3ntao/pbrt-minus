@@ -10,7 +10,6 @@
 #include <pbrt/spectra/densely_sampled_spectrum.h>
 #include <pbrt/util/russian_roulette.h>
 
-constexpr Real interface_bounce_contribution = 0.3;
 
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray,
@@ -81,7 +80,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
             multi_transmittance_pdf *= transmittance_pdf;
         }
 
-        if (!optional_intersection) {
+        if (!optional_intersection && beta.is_positive()) {
             // Incorporate emission from infinite lights for escaped ray
             for (int idx = 0; idx < base->infinite_light_num; ++idx) {
                 auto light = base->infinite_lights[idx];
@@ -176,9 +175,11 @@ SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray, SampledWave
 }
 
 PBRT_CPU_GPU
-SampledSpectrum MegakernelPathIntegrator::sample_Ld_volume(
-    const SurfaceInteraction &surface_interaction, const BSDF *bsdf, SampledWavelengths &lambda,
-    const IntegratorBase *base, Sampler *sampler, const int max_depth) {
+SampledSpectrum
+MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_interaction,
+                                           const BSDF *bsdf, const SampledWavelengths &lambda,
+                                           const IntegratorBase *base, Sampler *sampler,
+                                           const int max_depth) {
     LightSampleContext ctx(surface_interaction);
     // Try to nudge the light sampling position to correct side of the surface
     if (bsdf) {

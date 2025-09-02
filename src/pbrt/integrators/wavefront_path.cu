@@ -10,6 +10,7 @@
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectra/densely_sampled_spectrum.h>
 #include <pbrt/util/russian_roulette.h>
 #include <pbrt/util/timer.h>
 
@@ -61,7 +62,7 @@ static __global__ void gpu_reset_path_state(WavefrontPathIntegrator::PathState *
     path_state->reset_path(worker_idx);
 }
 
-__global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
+__global__ void control_logic(const WavefrontPathIntegrator::PathState *path_state,
                               WavefrontPathIntegrator::Queues *queues, const int max_depth,
                               const IntegratorBase *base) {
     const int path_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -69,45 +70,60 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
         return;
     }
 
-    const auto &isect = path_state->shape_intersections[path_idx]->interaction;
+    const auto path_length = path_state->path_length[path_idx];
+    auto &beta = path_state->beta[path_idx];
+
     const auto ray = path_state->camera_rays[path_idx].ray;
     const auto &lambda = path_state->lambdas[path_idx];
 
-    const auto path_length = path_state->path_length[path_idx];
     const auto specular_bounce = path_state->mis_parameters[path_idx].specular_bounce;
-    auto &beta = path_state->beta[path_idx];
     auto &L = path_state->L[path_idx];
 
     const auto prev_interaction = path_state->mis_parameters[path_idx].prev_interaction;
-    const auto pdf_bsdf = path_state->mis_parameters[path_idx].prev_direction_pdf;
+    const auto prev_direction_pdf = path_state->mis_parameters[path_idx].prev_direction_pdf;
+    const auto multi_transmittance_pdf = path_state->multi_transmittance_pdf[path_idx];
 
-    bool should_terminate_path = !path_state->shape_intersections[path_idx].has_value() ||
-                                 path_length >= max_depth || !beta.is_positive();
-    if (!should_terminate_path && path_length >= start_russian_roulette) {
-        // possibly terminate the path with Russian roulette
-        should_terminate_path = russian_roulette(beta, &path_state->samplers[path_idx], nullptr);
-    }
+    bool should_terminate_path = path_length >= max_depth || !beta.is_positive();
 
-    if (should_terminate_path) {
-        if (beta.is_positive()) {
+    if (!should_terminate_path) {
+        if (path_state->skip_control_logic[path_idx]) {
+            queues->rays->append_path(path_idx);
+            return;
+        }
+
+        if (path_length >= start_russian_roulette) {
+            // possibly terminate the path with Russian roulette
+            should_terminate_path =
+                russian_roulette(beta, &path_state->samplers[path_idx], nullptr);
+        }
+
+        if (!path_state->shape_intersections[path_idx].has_value() && beta.is_positive()) {
             // sample infinite lights
             for (int idx = 0; idx < base->infinite_light_num; ++idx) {
-                auto light = base->infinite_lights[idx];
-                auto Le = light->le(ray, lambda);
+                const auto light = base->infinite_lights[idx];
+                const auto Le = light->le(ray, lambda);
 
                 if (path_length == 0 || specular_bounce) {
                     L += beta * Le;
+
                 } else {
                     // Compute MIS weight for infinite light
-                    Real pdf_light = base->light_sampler->pmf(light) *
-                                     light->pdf_li(*prev_interaction, ray.d, true);
-                    Real weight_bsdf = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
+                    const Real pdf_light = base->light_sampler->pmf(light) *
+                                           light->pdf_li(*prev_interaction, ray.d, true);
 
-                    L += beta * weight_bsdf * Le;
+                    const Real dir_pdf = *prev_direction_pdf * multi_transmittance_pdf.average();
+
+                    const Real w = power_heuristic(1, dir_pdf, 1, pdf_light);
+
+                    L += beta * w * Le;
                 }
             }
-        }
 
+            should_terminate_path = true;
+        }
+    }
+
+    if (should_terminate_path) {
         const int queue_idx = atomicAdd(&queues->frame_buffer_counter, 1);
         queues->frame_buffer_queue[queue_idx] = FrameBuffer{
             .pixel_idx = path_state->pixel_indices[path_idx],
@@ -121,26 +137,39 @@ __global__ void control_logic(WavefrontPathIntegrator::PathState *path_state,
         return;
     }
 
-    const SampledSpectrum Le = isect.le(-ray.d, lambda);
-    if (Le.is_positive()) {
-        if (path_length == 0 || specular_bounce)
-            path_state->L[path_idx] += beta * Le;
-        else {
-            // Compute MIS weight for area light
-            const auto area_light = isect.area_light;
-            const Real pdf_light =
-                base->light_sampler->pmf(area_light) * area_light->pdf_li(*prev_interaction, ray.d);
-            const Real w = power_heuristic(1, *pdf_bsdf, 1, pdf_light);
+    const auto &surface_interaction = path_state->shape_intersections[path_idx]->interaction;
 
-            path_state->L[path_idx] += beta * w * Le;
+    if (surface_interaction.material) {
+        const SampledSpectrum Le = surface_interaction.le(-ray.d, lambda);
+        if (Le.is_positive()) {
+            if (path_length == 0 || specular_bounce)
+                L += beta * Le;
+            else {
+                // Compute MIS weight for area light
+                const auto area_light = surface_interaction.area_light;
+                const Real pdf_light = base->light_sampler->pmf(area_light) *
+                                       area_light->pdf_li(*prev_interaction, ray.d);
+
+                const Real dir_pdf = *prev_direction_pdf * multi_transmittance_pdf.average();
+
+                const Real w = power_heuristic(1, dir_pdf, 1, pdf_light);
+
+                L += beta * w * Le;
+            }
         }
     }
 
     // for active paths: advance one segment
 
+    if (!surface_interaction.material) {
+        path_state->path_length[path_idx] += interface_bounce_contribution;
+        queues->interface_material->append_path(path_idx);
+        return;
+    }
+
     path_state->path_length[path_idx] += 1;
 
-    switch (isect.material->get_material_type()) {
+    switch (surface_interaction.material->get_material_type()) {
     case Material::Type::conductor: {
         queues->conductor_material->append_path(path_idx);
         return;
@@ -234,12 +263,12 @@ __global__ void generate_new_path(WavefrontPathIntegrator::PathState *path_state
 
     auto sampler = &path_state->samplers[path_idx];
 
-    auto p_pixel = Point2i(pixel_idx % width, pixel_idx / width);
+    const auto p_pixel = Point2i(pixel_idx % width, pixel_idx / width);
 
     sampler->start_pixel_sample(pixel_idx, sample_idx, 0);
 
     path_state->camera_samples[path_idx] = sampler->get_camera_sample(p_pixel, base->filter);
-    auto lu = sampler->get_1d();
+    const auto lu = sampler->get_1d();
     path_state->lambdas[path_idx] = SampledWavelengths::sample_visible(lu);
 
     path_state->camera_rays[path_idx] =
@@ -254,8 +283,28 @@ __global__ void generate_new_path(WavefrontPathIntegrator::PathState *path_state
     queues->rays->append_path(path_idx);
 }
 
-__global__ void gpu_evaluate_material(WavefrontPathIntegrator::Queues::SingleQueue *material_queue,
-                                      WavefrontPathIntegrator *integrator) {
+__global__ void
+gpu_evaluate_interface_material(const WavefrontPathIntegrator::Queues::SingleQueue *queue,
+                                const WavefrontPathIntegrator *integrator) {
+    const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (queue_idx >= queue->counter) {
+        return;
+    }
+
+    const auto path_state = &integrator->path_state;
+    const int path_idx = queue->queue_array[queue_idx];
+
+    const auto &surface_interaction = path_state->shape_intersections[path_idx]->interaction;
+
+    auto &ray = path_state->camera_rays[path_idx].ray;
+    ray = surface_interaction.spawn_ray(ray.d);
+
+    integrator->queues.rays->append_path(path_idx);
+}
+
+__global__ void
+gpu_evaluate_material(const WavefrontPathIntegrator::Queues::SingleQueue *material_queue,
+                      const WavefrontPathIntegrator *integrator) {
     const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= material_queue->counter) {
         return;
@@ -269,10 +318,10 @@ __global__ void gpu_evaluate_material(WavefrontPathIntegrator::Queues::SingleQue
 
     auto sampler = &path_state->samplers[path_idx];
 
-    auto &isect = path_state->shape_intersections[path_idx]->interaction;
+    auto &surface_interaction = path_state->shape_intersections[path_idx]->interaction;
 
-    path_state->bsdf[path_idx] =
-        isect.get_bsdf(lambda, integrator->base->camera, sampler->get_samples_per_pixel());
+    path_state->bsdf[path_idx] = surface_interaction.get_bsdf(lambda, integrator->base->camera,
+                                                              sampler->get_samples_per_pixel());
 
     integrator->sample_bsdf(path_idx, path_state);
 
@@ -280,21 +329,74 @@ __global__ void gpu_evaluate_material(WavefrontPathIntegrator::Queues::SingleQue
 }
 
 __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
-                         WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base) {
+                         WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base,
+                         const int max_depth) {
     const int ray_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (ray_queue_idx >= queues->rays->counter) {
         return;
     }
 
     const int path_idx = queues->rays->queue_array[ray_queue_idx];
+    path_state->skip_control_logic[path_idx] = false;
+    auto &ray = path_state->camera_rays[path_idx].ray;
 
-    const auto camera_ray = path_state->camera_rays[path_idx];
+    const auto optional_intersection = base->intersect(ray, Infinity);
+    path_state->shape_intersections[path_idx] = optional_intersection;
+    if (ray.medium) {
+        const auto &lambda = path_state->lambdas[path_idx];
 
-    path_state->shape_intersections[path_idx] = base->intersect(camera_ray.ray, Infinity);
+        auto sampler = &path_state->samplers[path_idx];
+        auto &beta = path_state->beta[path_idx];
+        auto &L = path_state->L[path_idx];
+
+        const SampledSpectrum sigma_a = ray.medium->sigma_a->sample(lambda);
+        const SampledSpectrum sigma_s = ray.medium->sigma_s->sample(lambda);
+        const SampledSpectrum sigma_t = sigma_a + sigma_s;
+
+        const auto t_transmittance =
+            optional_intersection ? optional_intersection->t_hit : Infinity;
+        const auto u = sampler->get_1d();
+
+        auto &multi_transmittance_pdf = path_state->multi_transmittance_pdf[path_idx];
+
+        if (const auto t = -std::log(1 - u) / sigma_t.average(); t < t_transmittance) {
+            ray.o = ray.at(t);
+            beta /= sigma_t;
+
+            SurfaceInteraction medium_interaction;
+            medium_interaction.pi = ray.o;
+            medium_interaction.wo = -ray.d;
+            medium_interaction.medium = ray.medium;
+
+            SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(
+                medium_interaction, nullptr, lambda, base, sampler, max_depth);
+            L += beta * Ld * sigma_s;
+
+            auto phase_sample = ray.medium->phase.sample(-ray.d, sampler->get_2d());
+            if (!phase_sample) {
+                beta = SampledSpectrum(0);
+                return;
+            }
+
+            beta *= phase_sample->rho / phase_sample->pdf * sigma_s;
+
+            path_state->mis_parameters[path_idx].prev_direction_pdf = phase_sample->pdf;
+            path_state->mis_parameters[path_idx].prev_interaction = medium_interaction;
+            ray.d = phase_sample->wi;
+
+            multi_transmittance_pdf = SampledSpectrum(1.0);
+
+            path_state->path_length[path_idx] += 1;
+            path_state->skip_control_logic[path_idx] = true;
+
+        } else {
+            multi_transmittance_pdf *= SampledSpectrum::exp(-sigma_t * t_transmittance);
+        }
+    }
 }
 
 PBRT_CPU_GPU
-void WavefrontPathIntegrator::sample_bsdf(const int path_idx, PathState *path_state) const {
+void WavefrontPathIntegrator::sample_bsdf(const int path_idx, const PathState *path_state) const {
     auto &isect = path_state->shape_intersections[path_idx]->interaction;
     auto &lambda = path_state->lambdas[path_idx];
 
@@ -306,7 +408,7 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, PathState *path_st
     }
 
     if (pbrt::is_non_specular(path_state->bsdf[path_idx].flags())) {
-        SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(
+        const SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(
             isect, &path_state->bsdf[path_idx], lambda, base, sampler, max_depth);
         path_state->L[path_idx] += path_state->beta[path_idx] * Ld;
     }
@@ -321,6 +423,7 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, PathState *path_st
     }
 
     path_state->beta[path_idx] *= bs->f * bs->wi.abs_dot(isect.shading.n.to_vector3()) / bs->pdf;
+    path_state->multi_transmittance_pdf[path_idx] = SampledSpectrum(1.0);
 
     path_state->mis_parameters[path_idx].prev_direction_pdf =
         bs->pdf_is_proportional ? path_state->bsdf[path_idx].pdf(wo, bs->wi) : bs->pdf;
@@ -331,8 +434,20 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, PathState *path_st
     path_state->camera_rays[path_idx].ray = isect.spawn_ray(bs->wi);
 }
 
+void WavefrontPathIntegrator::evaluate_interface_material() {
+    if (queues.interface_material->counter <= 0) {
+        return;
+    }
+
+    const auto blocks = divide_and_ceil(queues.interface_material->counter, MAX_THREADS_PER_BLOCKS);
+    gpu_evaluate_interface_material<<<blocks, MAX_THREADS_PER_BLOCKS>>>(queues.interface_material,
+                                                                        this);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
 void WavefrontPathIntegrator::evaluate_material(const Material::Type material_type) {
-    const auto material_queue = this->queues.get_material_queue(material_type);
+    const auto material_queue = queues.get_material_queue(material_type);
     if (material_queue->counter <= 0) {
         return;
     }
@@ -352,8 +467,9 @@ void WavefrontPathIntegrator::PathState::reset_path(const int path_idx) {
 
     L[path_idx] = SampledSpectrum(0.0);
     beta[path_idx] = SampledSpectrum(1.0);
+    multi_transmittance_pdf[path_idx] = SampledSpectrum(1.0);
+    skip_control_logic[path_idx] = false;
     path_length[path_idx] = 0;
-
     mis_parameters[path_idx].reset();
 }
 
@@ -377,7 +493,9 @@ void WavefrontPathIntegrator::PathState::build_path(GPUMemoryAllocator &allocato
 
     L = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
     beta = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
+    multi_transmittance_pdf = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
     shape_intersections = allocator.allocate<pbrt::optional<ShapeIntersection>>(PATH_POOL_SIZE);
+    skip_control_logic = allocator.allocate<bool>(PATH_POOL_SIZE);
 
     path_length = allocator.allocate<Real>(PATH_POOL_SIZE);
     finished = allocator.allocate<bool>(PATH_POOL_SIZE);
@@ -398,6 +516,8 @@ WavefrontPathIntegrator::Queues::Queues(GPUMemoryAllocator &allocator) {
 
     new_paths = create_new_queue();
     rays = create_new_queue();
+
+    interface_material = create_new_queue();
     conductor_material = create_new_queue();
     coated_conductor_material = create_new_queue();
     coated_diffuse_material = create_new_queue();
@@ -454,17 +574,21 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         REPORT_FATAL_ERROR();
     }
 
+    int pass = 0;
     auto timer = Timer();
     while (queues.rays->counter > 0) {
+        if (DEBUG_MODE) {
+            printf("pass: %d, ray_cast(): %d\n", pass, queues.rays->counter);
+        }
         ray_cast<<<divide_and_ceil(queues.rays->counter, threads), threads>>>(&path_state, &queues,
-                                                                              base);
+                                                                              base, max_depth);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         timer.stop("stage 0 ray_cast()");
 
         // clear all queues before control stage
-        for (auto _queue : queues.get_all_queues()) {
+        for (const auto _queue : queues.get_all_queues()) {
             _queue->counter = 0;
         }
         queues.frame_buffer_counter = 0;
@@ -475,6 +599,10 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         timer.stop("stage 1 control_logic()");
+
+        if (DEBUG_MODE) {
+            printf("pass: %d, write_frame_buffer(): %d\n", pass, queues.rays->counter);
+        }
 
         if (queues.frame_buffer_counter > 0) {
             // sort to make film writing deterministic
@@ -503,6 +631,10 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             timer.stop("stage 3 write_frame_buffer()");
         }
 
+        if (DEBUG_MODE) {
+            printf("pass: %d, generate_new_path(): %d\n", pass, queues.rays->counter);
+        }
+
         if (queues.new_paths->counter > 0) {
             generate_new_path<<<divide_and_ceil(queues.new_paths->counter, threads), threads>>>(
                 &path_state, &queues, base);
@@ -512,11 +644,24 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
 
         timer.stop("stage 4 generate_new_path()");
 
+        if (DEBUG_MODE) {
+            printf("pass: %d, evaluate_interface_material(): %d\n", pass,
+                   queues.interface_material->counter);
+        }
+
+        evaluate_interface_material();
         for (const auto material_type : Material::get_basic_material_types()) {
+            if (DEBUG_MODE) {
+                printf("pass: %d, evaluate_material(%d): %d\n", pass, material_type,
+                       queues.get_material_queue(material_type)->counter);
+            }
             evaluate_material(material_type);
         }
 
         timer.stop("stage 5 evaluate_material()");
+        printf("\n");
+
+        pass += 1;
     }
 
     printf("wavefront pathtracing benchmark:\n");

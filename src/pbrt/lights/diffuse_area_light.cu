@@ -45,7 +45,7 @@ SampledSpectrum DiffuseAreaLight::l(Point3f p, Normal3f n, Point2f uv, Vector3f 
 PBRT_CPU_GPU
 pbrt::optional<LightLiSample> DiffuseAreaLight::sample_li(const LightSampleContext &ctx,
                                                           const Point2f &u,
-                                                          SampledWavelengths &lambda) const {
+                                                          const SampledWavelengths &lambda) const {
     // Sample point on shape for _DiffuseAreaLight_
     auto shape_ctx = ShapeSampleContext(ctx.pi, ctx.n, ctx.ns);
 
@@ -75,7 +75,7 @@ Real DiffuseAreaLight::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
 
 PBRT_CPU_GPU
 pbrt::optional<LightLeSample> DiffuseAreaLight::sample_le(Point2f u1, Point2f u2,
-                                                          SampledWavelengths &lambda) const {
+                                                          const SampledWavelengths &lambda) const {
     // Sample a point on the area light's _Shape_
     auto ss = shape->sample(u1);
     if (!ss) {

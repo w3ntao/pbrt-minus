@@ -28,7 +28,7 @@ class UniformInfiniteLight : public LightBase {
 
     PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
-                                            SampledWavelengths &lambda) const;
+                                            const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     Real pdf_li(const LightSampleContext &ctx, const Vector3f &wi, bool allow_incomplete_pdf) const;
@@ -38,7 +38,7 @@ class UniformInfiniteLight : public LightBase {
 
     PBRT_CPU_GPU
     pbrt::optional<LightLeSample> sample_le(const Point2f &u1, const Point2f &u2,
-                                            SampledWavelengths &lambda) const;
+                                            const SampledWavelengths &lambda) const;
 
   private:
     const Spectrum *Lemit = nullptr;

@@ -37,11 +37,11 @@ class SpotLight : public LightBase {
 
     PBRT_CPU_GPU
     pbrt::optional<LightLiSample> sample_li(const LightSampleContext &ctx, const Point2f &u,
-                                            SampledWavelengths &lambda) const;
+                                            const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
-    pbrt::optional<LightLeSample> sample_le(const Point2f u1, const Point2f u2,
-                                            SampledWavelengths &lambda) const;
+    pbrt::optional<LightLeSample> sample_le(const Point2f &u1, const Point2f &u2,
+                                            const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
     void pdf_le(const Ray &ray, Real *pdfPos, Real *pdfDir) const;

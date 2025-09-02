@@ -32,7 +32,8 @@ class WavefrontPathIntegrator {
 
         SampledSpectrum *L = nullptr;
         SampledSpectrum *beta = nullptr;
-        Sampler *samplers = nullptr;
+        SampledSpectrum *multi_transmittance_pdf = nullptr;
+        bool *skip_control_logic = nullptr;
 
         pbrt::optional<ShapeIntersection> *shape_intersections = nullptr;
 
@@ -43,6 +44,8 @@ class WavefrontPathIntegrator {
         BSDF *bsdf = nullptr;
 
         MISParameter *mis_parameters = nullptr;
+
+        Sampler *samplers = nullptr;
 
         int *pixel_indices = nullptr;
         int *sample_indices = nullptr;
@@ -83,6 +86,7 @@ class WavefrontPathIntegrator {
         SingleQueue *new_paths = nullptr;
         SingleQueue *rays = nullptr;
 
+        SingleQueue *interface_material = nullptr;
         SingleQueue *conductor_material = nullptr;
         SingleQueue *coated_conductor_material = nullptr;
         SingleQueue *coated_diffuse_material = nullptr;
@@ -95,7 +99,7 @@ class WavefrontPathIntegrator {
 
         [[nodiscard]]
         std::vector<SingleQueue *> get_all_queues() const {
-            auto all_queues = std::vector({new_paths, rays});
+            auto all_queues = std::vector({new_paths, rays, interface_material});
 
             for (const auto material_type : Material::get_basic_material_types()) {
                 all_queues.push_back(get_material_queue(material_type));
@@ -153,7 +157,9 @@ class WavefrontPathIntegrator {
     const bool regularize = false;
 
     PBRT_CPU_GPU
-    void sample_bsdf(int path_idx, PathState *path_state) const;
+    void sample_bsdf(int path_idx, const PathState *path_state) const;
+
+    void evaluate_interface_material();
 
     void evaluate_material(Material::Type material_type);
 };

@@ -93,9 +93,9 @@ SampledSpectrum ImageInfiniteLight::le(const Ray &ray, const SampledWavelengths 
 }
 
 PBRT_CPU_GPU
-pbrt::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleContext &ctx,
-                                                            const Point2f &u,
-                                                            SampledWavelengths &lambda) const {
+pbrt::optional<LightLiSample>
+ImageInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
+                              const SampledWavelengths &lambda) const {
     const auto [uv, pixel_pdf] = image_le_distribution->sample(u);
     const auto map_pdf = pixel_pdf * image_resolution.x * image_resolution.y;
 

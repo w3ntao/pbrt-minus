@@ -37,11 +37,11 @@ SampledSpectrum UniformInfiniteLight::phi(const SampledWavelengths &lambda) cons
 }
 
 PBRT_CPU_GPU
-pbrt::optional<LightLiSample> UniformInfiniteLight::sample_li(const LightSampleContext &ctx,
-                                                              const Point2f &u,
-                                                              SampledWavelengths &lambda) const {
-    Vector3f wi = sample_uniform_sphere(u);
-    auto pdf = uniform_sphere_pdf();
+pbrt::optional<LightLiSample>
+UniformInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
+                                const SampledWavelengths &lambda) const {
+    const auto wi = sample_uniform_sphere(u);
+    const auto pdf = uniform_sphere_pdf();
 
     return LightLiSample(scale * Lemit->sample(lambda), wi, pdf,
                          Interaction(ctx.p() + wi * (2 * sceneRadius)));
@@ -63,8 +63,9 @@ SampledSpectrum UniformInfiniteLight::le(const Ray &ray, const SampledWavelength
 }
 
 PBRT_CPU_GPU
-pbrt::optional<LightLeSample> UniformInfiniteLight::sample_le(const Point2f &u1, const Point2f &u2,
-                                                              SampledWavelengths &lambda) const {
+pbrt::optional<LightLeSample>
+UniformInfiniteLight::sample_le(const Point2f &u1, const Point2f &u2,
+                                const SampledWavelengths &lambda) const {
     // Sample direction for uniform infinite light ray
     Vector3f w = sample_uniform_sphere(u1);
 
