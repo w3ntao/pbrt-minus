@@ -6,6 +6,7 @@
 #include <pbrt/base/material.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/gui/gl_helper.h>
+#include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/scene/parameter_dictionary.h>
@@ -295,7 +296,7 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
 }
 
 PBRT_CPU_GPU
-void WavefrontPathIntegrator::sample_bsdf(int path_idx, PathState *path_state) const {
+void WavefrontPathIntegrator::sample_bsdf(const int path_idx, PathState *path_state) const {
     auto &isect = path_state->shape_intersections[path_idx]->interaction;
     auto &lambda = path_state->lambdas[path_idx];
 
@@ -307,7 +308,8 @@ void WavefrontPathIntegrator::sample_bsdf(int path_idx, PathState *path_state) c
     }
 
     if (pbrt::is_non_specular(path_state->bsdf[path_idx].flags())) {
-        SampledSpectrum Ld = sample_ld(isect, &path_state->bsdf[path_idx], lambda, sampler);
+        SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(
+            isect, &path_state->bsdf[path_idx], lambda, base, sampler, max_depth);
         path_state->L[path_idx] += path_state->beta[path_idx] * Ld;
     }
 
@@ -332,7 +334,7 @@ void WavefrontPathIntegrator::sample_bsdf(int path_idx, PathState *path_state) c
 }
 
 void WavefrontPathIntegrator::evaluate_material(const Material::Type material_type) {
-    auto material_queue = this->queues.get_material_queue(material_type);
+    const auto material_queue = this->queues.get_material_queue(material_type);
     if (material_queue->counter <= 0) {
         return;
     }
@@ -379,7 +381,7 @@ void WavefrontPathIntegrator::PathState::build_path(GPUMemoryAllocator &allocato
     beta = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
     shape_intersections = allocator.allocate<pbrt::optional<ShapeIntersection>>(PATH_POOL_SIZE);
 
-    path_length = allocator.allocate<int>(PATH_POOL_SIZE);
+    path_length = allocator.allocate<Real>(PATH_POOL_SIZE);
     finished = allocator.allocate<bool>(PATH_POOL_SIZE);
     pixel_indices = allocator.allocate<int>(PATH_POOL_SIZE);
     sample_indices = allocator.allocate<int>(PATH_POOL_SIZE);
@@ -424,63 +426,10 @@ WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel,
     path_state.build_path(allocator);
 }
 
-PBRT_CPU_GPU
-SampledSpectrum WavefrontPathIntegrator::sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
-                                                   SampledWavelengths &lambda,
-                                                   Sampler *sampler) const {
-    // Initialize _LightSampleContext_ for light sampling
-    LightSampleContext ctx(intr);
-    // Try to nudge the light sampling position to correct side of the surface
-    BxDFFlags flags = bsdf->flags();
-    if (pbrt::is_reflective(flags) && !pbrt::is_transmissive(flags)) {
-        ctx.pi = intr.offset_ray_origin(intr.wo);
-    } else if (pbrt::is_transmissive(flags) && !pbrt::is_reflective(flags)) {
-        ctx.pi = intr.offset_ray_origin(-intr.wo);
-    }
-
-    // Choose a light source for the direct lighting calculation
-    Real u = sampler->get_1d();
-    auto sampled_light = base->light_sampler->sample(ctx, u);
-
-    Point2f uLight = sampler->get_2d();
-    if (!sampled_light) {
-        return SampledSpectrum(0);
-    }
-
-    // Sample a point on the light source for direct lighting
-    auto light = sampled_light->light;
-    auto ls = light->sample_li(ctx, uLight, lambda);
-    if (!ls || !ls->l.is_positive() || ls->pdf == 0) {
-        return SampledSpectrum(0);
-    }
-
-    // Evaluate BSDF for light sample and check light visibility
-    Vector3f wo = intr.wo;
-    Vector3f wi = ls->wi;
-    SampledSpectrum f = bsdf->f(wo, wi) * wi.abs_dot(intr.shading.n.to_vector3());
-
-    if (!f.is_positive() || !base->unoccluded(intr, ls->p_light)) {
-        return SampledSpectrum(0);
-    }
-
-    // Return light's contribution to reflected radiance
-    Real pdf_light = sampled_light->pdf * ls->pdf;
-    if (pbrt::is_delta_light(light->get_light_type())) {
-        return ls->l * f / pdf_light;
-    }
-
-    // for non delta light
-    Real pdf_bsdf = bsdf->pdf(wo, wi);
-    Real weight_light = power_heuristic(1, pdf_light, 1, pdf_bsdf);
-
-    return weight_light * ls->l * f / pdf_light;
-}
-
 void WavefrontPathIntegrator::render(Film *film, const bool preview) {
     printf("wavefront pathtracing: path pool size: %u\n", PATH_POOL_SIZE);
 
     const auto image_resolution = this->path_state.image_resolution;
-
     const auto num_pixels = image_resolution.x * image_resolution.y;
 
     GLHelper gl_helper;

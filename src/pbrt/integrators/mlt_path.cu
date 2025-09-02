@@ -189,7 +189,7 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
 
     const auto ray = base->camera->generate_ray(camera_sample, sampler);
 
-    const auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_li_volume(
+    const auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_Li_volume(
                                            ray.ray, lambda, base, sampler, max_depth, regularize);
 
     return PathSample(p_film, radiance, lambda);

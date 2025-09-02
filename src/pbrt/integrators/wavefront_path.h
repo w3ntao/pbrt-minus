@@ -36,7 +36,8 @@ class WavefrontPathIntegrator {
 
         pbrt::optional<ShapeIntersection> *shape_intersections = nullptr;
 
-        int *path_length = nullptr;
+        Real *path_length = nullptr;
+        // making depth float type to counter for contribution from material-less hit
         bool *finished = nullptr;
 
         BSDF *bsdf = nullptr;
@@ -150,10 +151,6 @@ class WavefrontPathIntegrator {
 
     const int max_depth = 0;
     const bool regularize = false;
-
-    PBRT_CPU_GPU
-    SampledSpectrum sample_ld(const SurfaceInteraction &intr, const BSDF *bsdf,
-                              SampledWavelengths &lambda, Sampler *sampler) const;
 
     PBRT_CPU_GPU
     void sample_bsdf(int path_idx, PathState *path_state) const;
