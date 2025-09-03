@@ -378,7 +378,7 @@ RGBtoSpectrumTable::RGBtoSpectrumTable(const std::string &str_gamut) {
     ThreadPool thread_pool;
     for (int l = 0; l < 3; ++l) {
         thread_pool.parallel_execute(
-            0, RES, [coefficients_ptr, z_nodes_ptr, &rgb_to_spectrum_buffer, l](int j) {
+            0, RES, [coefficients_ptr, z_nodes_ptr, &rgb_to_spectrum_buffer, l](const int j) {
                 compute(coefficients_ptr, j, rgb_to_spectrum_buffer, z_nodes_ptr, l);
             });
     }

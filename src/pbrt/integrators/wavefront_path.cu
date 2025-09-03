@@ -12,6 +12,7 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectra/densely_sampled_spectrum.h>
 #include <pbrt/util/russian_roulette.h>
+#include <pbrt/util/thread_pool.h>
 #include <pbrt/util/timer.h>
 
 struct FrameBuffer {
@@ -63,8 +64,8 @@ static __global__ void gpu_reset_path_state(WavefrontPathIntegrator::PathState *
 }
 
 __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_state,
-                              WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base,
-                              const int max_depth) {
+                              WavefrontPathIntegrator::Queues *queues, const int ping_pong_idx,
+                              const IntegratorBase *base, const int max_depth) {
     const int path_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (path_idx >= WavefrontPathIntegrator::PATH_POOL_SIZE || path_state->finished[path_idx]) {
         return;
@@ -125,8 +126,8 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
     }
 
     if (should_terminate_path) {
-        const int queue_idx = atomicAdd(&queues->frame_buffer_counter, 1);
-        queues->frame_buffer_queue[queue_idx] = FrameBuffer{
+        const int queue_idx = atomicAdd(&queues->ping_pong_counter[ping_pong_idx], 1);
+        queues->ping_pong_buffer[ping_pong_idx][queue_idx] = FrameBuffer{
             .pixel_idx = path_state->pixel_indices[path_idx],
             .sample_idx = path_state->sample_indices[path_idx],
             .radiance = L * path_state->camera_rays[path_idx].weight,
@@ -210,22 +211,21 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
     REPORT_FATAL_ERROR();
 }
 
-__global__ void write_frame_buffer(Film *film, WavefrontPathIntegrator::Queues *queues) {
+__global__ void write_frame_buffer(Film *film, const FrameBuffer *frame_buffer_queue,
+                                   const int num) {
     const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (queue_idx >= queues->frame_buffer_counter) {
+    if (queue_idx >= num) {
         return;
     }
 
-    const auto pixel_idx = queues->frame_buffer_queue[queue_idx].pixel_idx;
-    if (queue_idx > 0 && pixel_idx == queues->frame_buffer_queue[queue_idx - 1].pixel_idx) {
+    const auto pixel_idx = frame_buffer_queue[queue_idx].pixel_idx;
+    if (queue_idx > 0 && pixel_idx == frame_buffer_queue[queue_idx - 1].pixel_idx) {
         return;
     }
 
-    for (int idx = queue_idx; idx < queues->frame_buffer_counter &&
-                              queues->frame_buffer_queue[idx].pixel_idx == pixel_idx;
-         ++idx) {
+    for (int idx = queue_idx; idx < num && frame_buffer_queue[idx].pixel_idx == pixel_idx; ++idx) {
         // make sure the same pixels are written by the same thread
-        const auto &frame_buffer = queues->frame_buffer_queue[idx];
+        const auto &frame_buffer = frame_buffer_queue[idx];
         film->add_sample(frame_buffer.pixel_idx, frame_buffer.radiance, frame_buffer.lambda,
                          frame_buffer.weight);
     }
@@ -528,8 +528,10 @@ WavefrontPathIntegrator::Queues::Queues(GPUMemoryAllocator &allocator) {
     diffuse_material = create_new_queue();
     diffuse_transmission_material = create_new_queue();
 
-    frame_buffer_counter = 0;
-    frame_buffer_queue = allocator.allocate<FrameBuffer>(PATH_POOL_SIZE);
+    for (const auto ping_pong_idx : {0, 1}) {
+        ping_pong_counter[ping_pong_idx] = 0;
+        ping_pong_buffer[ping_pong_idx] = allocator.allocate<FrameBuffer>(PATH_POOL_SIZE);
+    }
 }
 
 WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel,
@@ -537,12 +539,11 @@ WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel,
                                                  const ParameterDictionary &parameters,
                                                  const IntegratorBase *_base,
                                                  GPUMemoryAllocator &allocator)
-    : base(_base), samples_per_pixel(_samples_per_pixel),
-      max_depth(parameters.get_integer("maxdepth", 5)),
-      regularize(parameters.get_bool("regularize", false)),
-      path_state(PathState(_base->camera->get_camera_base()->resolution, _samples_per_pixel,
+    : path_state(PathState(_base->camera->get_camera_base()->resolution, _samples_per_pixel,
                            sampler_type)),
-      queues(allocator) {
+      queues(allocator), base(_base), samples_per_pixel(_samples_per_pixel),
+      max_depth(parameters.get_integer("maxdepth", 5)),
+      regularize(parameters.get_bool("regularize", false)) {
 
     path_state.build_path(allocator);
 }
@@ -577,9 +578,29 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         REPORT_FATAL_ERROR();
     }
 
-    int pass = 0;
     auto timer = Timer();
+    std::mutex mutex[2];
+    auto clear_ping_pong_buffer = [&](const int ping_pong_idx) -> bool {
+        const int size = queues.ping_pong_counter[ping_pong_idx];
+        if (size <= 0) {
+            return false;
+        }
+
+        write_frame_buffer<<<divide_and_ceil(size, threads), threads>>>(
+            film, queues.ping_pong_buffer[ping_pong_idx], size);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+        queues.ping_pong_counter[ping_pong_idx] = 0;
+
+        return true;
+    };
+
+    ThreadPool thread_pool;
+    int pass = 0;
     while (queues.rays->counter > 0) {
+        const int ping_pong_idx = pass % 2;
+
         if (DEBUG_MODE) {
             printf("pass: %d, ray_cast(): %d\n", pass, queues.rays->counter);
         }
@@ -594,44 +615,39 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         for (const auto _queue : queues.get_all_queues()) {
             _queue->counter = 0;
         }
-        queues.frame_buffer_counter = 0;
 
-        control_logic<<<divide_and_ceil(PATH_POOL_SIZE, threads), threads>>>(&path_state, &queues,
-                                                                             base, max_depth);
-        CHECK_CUDA_ERROR(cudaGetLastError());
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        mutex[ping_pong_idx].lock();
+        if (clear_ping_pong_buffer(ping_pong_idx) && preview) {
+            film->copy_to_frame_buffer(gl_helper.gpu_frame_buffer);
 
-        timer.stop("stage 1 control_logic()");
+            const auto current_sample_idx =
+                std::min<int>(path_state.global_path_counter / num_pixels, samples_per_pixel);
 
-        if (DEBUG_MODE) {
-            printf("pass: %d, write_frame_buffer(): %d\n", pass, queues.rays->counter);
+            gl_helper.draw_frame(
+                GLHelper::assemble_title(Real(current_sample_idx) / samples_per_pixel));
+        }
+        timer.stop("stage 1 write_frame_buffer()");
+
+        if (queues.ping_pong_counter[ping_pong_idx] != 0) {
+            REPORT_FATAL_ERROR();
         }
 
-        if (queues.frame_buffer_counter > 0) {
-            // sort to make film writing deterministic
-            // TODO: for veach-mis,             sort_fb() takes 30%, write_fb() takes 15%
-            // TODO: for materialball-sequence, sort_fb() takes 9%,  write_fb() takes 6%
-            // TODO: rewrite sort-and-write with ping pong buffer and async thread?
-            std::sort(queues.frame_buffer_queue + 0,
-                      queues.frame_buffer_queue + queues.frame_buffer_counter, std::less{});
-            timer.stop("stage 2 sort_frame_buffer()");
+        control_logic<<<divide_and_ceil(PATH_POOL_SIZE, threads), threads>>>(
+            &path_state, &queues, ping_pong_idx, base, max_depth);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        mutex[ping_pong_idx].unlock();
 
-            write_frame_buffer<<<divide_and_ceil(queues.frame_buffer_counter, threads), threads>>>(
-                film, &queues);
-            CHECK_CUDA_ERROR(cudaGetLastError());
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        timer.stop("stage 2 control_logic()");
 
-            if (preview) {
-                film->copy_to_frame_buffer(gl_helper.gpu_frame_buffer);
-
-                const auto current_sample_idx =
-                    std::min<int>(path_state.global_path_counter / num_pixels, samples_per_pixel);
-
-                gl_helper.draw_frame(
-                    GLHelper::assemble_title(Real(current_sample_idx) / samples_per_pixel));
-            }
-
-            timer.stop("stage 3 write_frame_buffer()");
+        if (queues.ping_pong_counter[ping_pong_idx] > 0) {
+            mutex[ping_pong_idx].lock();
+            thread_pool.submit([&, idx = ping_pong_idx] {
+                const auto buffer_queue = queues.ping_pong_buffer[idx];
+                const auto size = queues.ping_pong_counter[idx];
+                std::sort(buffer_queue, buffer_queue + size, std::less{});
+                mutex[idx].unlock();
+            });
         }
 
         if (DEBUG_MODE) {
@@ -645,7 +661,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         }
 
-        timer.stop("stage 4 generate_new_path()");
+        timer.stop("stage 3 generate_new_path()");
 
         if (DEBUG_MODE) {
             printf("pass: %d, evaluate_interface_material(): %d\n", pass,
@@ -661,9 +677,18 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             evaluate_material(material_type);
         }
 
-        timer.stop("stage 5 evaluate_material()");
+        timer.stop("stage 4 evaluate_material()");
+
         pass += 1;
     }
+
+    thread_pool.sync();
+    for (auto ping_pong_idx : {0, 1}) {
+        mutex[ping_pong_idx].lock();
+        clear_ping_pong_buffer(ping_pong_idx);
+        mutex[ping_pong_idx].unlock();
+    }
+    timer.stop("stage 1 write_frame_buffer()");
 
     printf("wavefront pathtracing benchmark:\n");
     timer.print();

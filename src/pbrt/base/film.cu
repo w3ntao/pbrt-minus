@@ -22,7 +22,7 @@ __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, int wid
 
     const auto worker_idx = y * width + x;
 
-    auto rgb = film->get_pixel_rgb(Point2i(x, y), splat_scale);
+    const auto rgb = film->get_pixel_rgb(Point2i(x, y), splat_scale);
     if (rgb.has_nan()) {
         gpu_frame_buffer[worker_idx * 3 + 0] = 0;
         gpu_frame_buffer[worker_idx * 3 + 1] = 0;

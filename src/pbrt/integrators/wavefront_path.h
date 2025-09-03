@@ -96,8 +96,8 @@ class WavefrontPathIntegrator {
         SingleQueue *diffuse_material = nullptr;
         SingleQueue *diffuse_transmission_material = nullptr;
 
-        int frame_buffer_counter = 0;
-        FrameBuffer *frame_buffer_queue = nullptr;
+        int ping_pong_counter[2] = {0, 0};
+        FrameBuffer *ping_pong_buffer[2] = {nullptr, nullptr};
 
         [[nodiscard]]
         std::vector<SingleQueue *> get_all_queues() const {

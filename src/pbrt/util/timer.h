@@ -20,7 +20,7 @@ class Timer {
 
         click = std::chrono::system_clock::now();
 
-        if (recorder.find(tag) == recorder.end()) {
+        if (!recorder.contains(tag)) {
             recorder[tag] = duration.count();
             return;
         }

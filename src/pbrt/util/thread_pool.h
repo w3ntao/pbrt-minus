@@ -8,8 +8,7 @@
 
 class ThreadPool {
   public:
-    ThreadPool() : quit(false), num_active_jobs(0) {
-        const int num_threads = std::thread::hardware_concurrency();
+    ThreadPool(const int num_threads = std::thread::hardware_concurrency()) {
         for (int i = 0; i < num_threads; ++i) {
             threads.emplace_back([this] {
                 while (true) {
@@ -45,7 +44,7 @@ class ThreadPool {
 
     ~ThreadPool() {
         {
-            std::unique_lock<std::mutex> lock(mtx);
+            std::unique_lock lock(mtx);
             quit = true;
         }
 
@@ -59,7 +58,7 @@ class ThreadPool {
     void parallel_execute(const int start, const int end,
                           const std::function<void(int)> &function_ptr) {
         {
-            std::unique_lock<std::mutex> lock(mtx);
+            std::unique_lock lock(mtx);
             for (int i = start; i < end; ++i) {
                 job_queue.emplace(std::move([i, &function_ptr] { function_ptr(i); }));
 
@@ -69,7 +68,7 @@ class ThreadPool {
         cv.notify_all();
 
         while (true) {
-            std::unique_lock<std::mutex> lock(mtx);
+            std::unique_lock lock(mtx);
             cv.wait(lock, [this] { return num_active_jobs == 0; });
 
             break;
@@ -77,7 +76,7 @@ class ThreadPool {
     }
 
     void submit(const std::function<void()> &function_ptr) {
-        std::unique_lock<std::mutex> lock(mtx);
+        std::unique_lock lock(mtx);
         job_queue.emplace(std::move([function_ptr] { function_ptr(); }));
         num_active_jobs += 1;
         cv.notify_all();
@@ -94,9 +93,9 @@ class ThreadPool {
   private:
     std::vector<std::thread> threads;
     std::queue<std::function<void()>> job_queue;
-    int num_active_jobs;
     std::mutex mtx;
     std::condition_variable cv;
 
-    bool quit;
+    int num_active_jobs = 0;
+    bool quit = false;
 };
