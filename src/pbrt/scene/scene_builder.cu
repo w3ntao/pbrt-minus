@@ -50,13 +50,13 @@ std::map<std::string, int> count_light_type(const std::vector<Light *> &gpu_ligh
 
     for (const auto light : gpu_lights) {
         const auto type = light->type;
-        if (lights_name.find(type) == lights_name.end()) {
+        if (!lights_name.contains(type)) {
             REPORT_FATAL_ERROR();
         }
 
         auto name = lights_name.at(type);
 
-        if (counter.find(name) == counter.end()) {
+        if (!counter.contains(name)) {
             counter[name] = 1;
             continue;
         }
@@ -306,7 +306,7 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
 
     if (keyword == "CoordSysTransform") {
         auto coord_sys_name = tokens[1].values[0];
-        if (named_coordinate_systems.find(coord_sys_name) == named_coordinate_systems.end()) {
+        if (!named_coordinate_systems.contains(coord_sys_name)) {
             printf("\ncoordinate system `%s` not available\n", coord_sys_name.c_str());
             REPORT_FATAL_ERROR();
         }
@@ -561,7 +561,7 @@ void SceneBuilder::parse_named_material(const std::vector<Token> &tokens) {
 
     const auto material_name = tokens[1].values[0];
 
-    if (named_materials.find(material_name) == named_materials.end()) {
+    if (!named_materials.contains(material_name)) {
         REPORT_FATAL_ERROR();
     }
 
@@ -836,7 +836,7 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
 
         if (first_token.type == TokenType::ObjectInstance) {
             const auto object_name = first_token.values[0];
-            if (instance_definition.find(object_name) == instance_definition.end()) {
+            if (!instance_definition.contains(object_name)) {
                 printf("\nERROR: ObjectInstance `%s` not found\n", object_name.c_str());
                 REPORT_FATAL_ERROR();
             }

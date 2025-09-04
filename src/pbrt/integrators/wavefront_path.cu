@@ -682,7 +682,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         pass += 1;
     }
 
-    thread_pool.sync();
+    thread_pool.sync(); // this is not technically necessary, yet a good practice
     for (auto ping_pong_idx : {0, 1}) {
         mutex[ping_pong_idx].lock();
         clear_ping_pong_buffer(ping_pong_idx);

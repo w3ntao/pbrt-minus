@@ -171,7 +171,7 @@ void Primitive::record_material(std::map<std::string, int> &counter) const {
                               ? Material::material_type_to_string(material->get_material_type())
                               : "interface";
 
-        if (counter.find(name) == counter.end()) {
+        if (!counter.contains(name)) {
             counter[name] = 1;
             return;
         }

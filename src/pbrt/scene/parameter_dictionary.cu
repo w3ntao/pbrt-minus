@@ -151,7 +151,7 @@ ParameterDictionary::ParameterDictionary(
                     continue;
                 }
 
-                if (_spectra.find(spectrum_name) != _spectra.end()) {
+                if (_spectra.contains(spectrum_name)) {
                     // or name of a spectrum
                     spectra[variable_name] = _spectra.at(spectrum_name);
                     continue;
@@ -200,7 +200,7 @@ ParameterDictionary::ParameterDictionary(
 const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
                                                   const SpectrumType spectrum_type,
                                                   GPUMemoryAllocator &allocator) const {
-    if (spectra.find(key) != spectra.end()) {
+    if (spectra.contains(key)) {
         return spectra.at(key);
     }
 
@@ -210,7 +210,7 @@ const Spectrum *ParameterDictionary::get_spectrum(const std::string &key,
                                          allocator);
     }
 
-    if (blackbodies.find(key) != blackbodies.end()) {
+    if (blackbodies.contains(key)) {
         const auto value = blackbodies.at(key);
         return Spectrum::create_black_body(value, allocator);
     }
@@ -229,10 +229,10 @@ const Material *ParameterDictionary::get_material(const std::string &key) const 
 const FloatTexture *
 ParameterDictionary::get_float_texture_or_null(const std::string &key,
                                                GPUMemoryAllocator &allocator) const {
-    if (textures_name.find(key) != textures_name.end()) {
+    if (textures_name.contains(key)) {
         const auto tex_name = textures_name.at(key);
 
-        if (float_textures.find(tex_name) != float_textures.end()) {
+        if (float_textures.contains(tex_name)) {
             return float_textures.at(tex_name);
         }
 
@@ -286,7 +286,7 @@ ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType s
     }
     }
 
-    if (textures_name.find(key) != textures_name.end()) {
+    if (textures_name.contains(key)) {
         auto tex_name = textures_name.at(key);
 
         const auto &spectrumTextures =
@@ -295,7 +295,7 @@ ParameterDictionary::get_spectrum_texture(const std::string &key, SpectrumType s
                 : (spectrum_type == SpectrumType::Illuminant ? illuminant_spectrum_textures
                                                              : unbounded_spectrum_textures);
 
-        if (spectrumTextures.find(tex_name) != spectrumTextures.end()) {
+        if (spectrumTextures.contains(tex_name)) {
             return spectrumTextures.at(tex_name);
         }
 

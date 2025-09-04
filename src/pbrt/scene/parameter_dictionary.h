@@ -36,20 +36,24 @@ class ParameterDictionary {
 
     const GlobalSpectra *global_spectra = nullptr;
 
+    [[nodiscard]]
     bool has_floats(const std::string &key) const {
-        return floats.find(key) != floats.end();
+        return floats.contains(key);
     }
 
+    [[nodiscard]]
     bool has_string(const std::string &key) const {
-        return strings.find(key) != strings.end();
+        return strings.contains(key);
     }
 
+    [[nodiscard]]
     bool has_rgb(const std::string &key) const {
-        return rgbs.find(key) != rgbs.end();
+        return rgbs.contains(key);
     }
 
+    [[nodiscard]]
     int get_integer(const std::string &key, std::optional<int> default_val = std::nullopt) const {
-        if (integers.find(key) == integers.end()) {
+        if (!integers.contains(key)) {
             if (!default_val.has_value()) {
                 printf("key `%s` not available\n", key.c_str());
                 REPORT_FATAL_ERROR();
@@ -67,17 +71,19 @@ class ParameterDictionary {
         return query_result.at(0);
     }
 
+    [[nodiscard]]
     std::vector<int> get_integers(const std::string &key) const {
-        if (integers.find(key) == integers.end()) {
+        if (!integers.contains(key)) {
             return {};
         }
 
         return integers.at(key);
     }
 
+    [[nodiscard]]
     Real get_float(const std::string &key,
                    const std::optional<Real> default_val = std::nullopt) const {
-        if (floats.find(key) == floats.end()) {
+        if (!floats.contains(key)) {
             if (default_val.has_value()) {
                 return default_val.value();
             }
@@ -88,8 +94,9 @@ class ParameterDictionary {
         return floats.at(key)[0];
     }
 
+    [[nodiscard]]
     bool get_bool(const std::string &key, std::optional<bool> default_val) const {
-        if (booleans.find(key) == booleans.end()) {
+        if (!booleans.contains(key)) {
             if (!default_val.has_value()) {
                 printf("key `%s` not available\n", key.c_str());
                 REPORT_FATAL_ERROR();
@@ -101,9 +108,10 @@ class ParameterDictionary {
         return booleans.at(key);
     }
 
-    std::string get_one_string(const std::string &key,
-                               std::optional<std::string> default_val = std::nullopt) const {
-        if (strings.find(key) == strings.end()) {
+    [[nodiscard]] std::string
+    get_one_string(const std::string &key,
+                   std::optional<std::string> default_val = std::nullopt) const {
+        if (!strings.contains(key)) {
             if (!default_val.has_value()) {
                 printf("%s(): key `%s` not available\n", __func__, key.c_str());
                 REPORT_FATAL_ERROR();
@@ -120,24 +128,27 @@ class ParameterDictionary {
         return result.at(0);
     }
 
+    [[nodiscard]]
     std::vector<std::string> get_strings(const std::string &key) const {
-        if (strings.find(key) == strings.end()) {
+        if (!strings.contains(key)) {
             return {};
         }
 
         return strings.at(key);
     }
 
+    [[nodiscard]]
     std::vector<Point2f> get_point2_array(const std::string &key) const {
-        if (point2s.find(key) == point2s.end()) {
+        if (!point2s.contains(key)) {
             return {};
         }
 
         return point2s.at(key);
     }
 
+    [[nodiscard]]
     Point3f get_point3(const std::string &key, const std::optional<Point3f> default_val) const {
-        if (point3s.find(key) == point3s.end()) {
+        if (!point3s.contains(key)) {
             if (!default_val.has_value()) {
                 printf("%s(): key not available: %s\n", __func__, key.c_str());
                 REPORT_FATAL_ERROR();
@@ -155,17 +166,19 @@ class ParameterDictionary {
         return val[0];
     }
 
+    [[nodiscard]]
     std::vector<Point3f> get_point3_array(const std::string &key) const {
-        if (point3s.find(key) == point3s.end()) {
+        if (!point3s.contains(key)) {
             return {};
         }
 
         return point3s.at(key);
     }
 
+    [[nodiscard]]
     Vector3f get_vector3f(const std::string &key,
                           const std::optional<Vector3f> default_val = std::nullopt) const {
-        if (vector3s.find(key) == vector3s.end()) {
+        if (!vector3s.contains(key)) {
             if (default_val.has_value()) {
                 return default_val.value();
             }
@@ -176,8 +189,9 @@ class ParameterDictionary {
         return vector3s.at(key);
     }
 
+    [[nodiscard]]
     std::vector<Normal3f> get_normal_array(const std::string &key) const {
-        if (normals.find(key) == normals.end()) {
+        if (!normals.contains(key)) {
             return {};
         }
 
