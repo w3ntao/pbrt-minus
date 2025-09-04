@@ -72,7 +72,7 @@ class Interaction {
     }
 
     PBRT_CPU_GPU
-    Ray spawn_ray_to(const Interaction &it, bool normalize = false) const {
+    Ray spawn_ray_to(const Interaction &it, const bool normalize = false) const {
         auto ray = Ray::spawn_ray_to(pi, n, it.pi, it.n);
         ray.medium = get_medium(ray.d);
 

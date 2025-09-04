@@ -264,8 +264,8 @@ class ScopedAssignment {
 };
 
 PBRT_CPU_GPU
-SampledSpectrum G(const IntegratorBase *integrator_base, const Vertex &v0, const Vertex &v1,
-                  const SampledWavelengths &lambda) {
+SampledSpectrum compute_G(const IntegratorBase *base, const Vertex &v0, const Vertex &v1,
+                          const SampledWavelengths &lambda, const int max_depth) {
     Vector3f d = v0.p() - v1.p();
     auto g = 1.0 / d.squared_length();
     d *= std::sqrt(g);
@@ -277,7 +277,8 @@ SampledSpectrum G(const IntegratorBase *integrator_base, const Vertex &v0, const
         g *= v1.ns().abs_dot(d);
     }
 
-    return g * integrator_base->tr(v0.get_interaction(), v1.get_interaction());
+    return g * base->compute_transmittance(v0.get_interaction(), v1.get_interaction(), lambda,
+                                           max_depth);
 }
 
 PBRT_CPU_GPU
@@ -559,9 +560,9 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
         return SampledSpectrum(0);
     }
 
-    const auto integrator_base = config->base;
+    const auto base = config->base;
 
-    const auto camera = integrator_base->camera;
+    const auto camera = base->camera;
 
     // Perform connection and write contribution to _L_
     Vertex sampled;
@@ -569,8 +570,8 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
         // Interpret the camera subpath as a complete path
         const Vertex &pt = cameraVertices[t - 1];
         if (pt.is_light()) {
-            L = pt.Le(integrator_base->infinite_lights, integrator_base->infinite_light_num,
-                      cameraVertices[t - 2], lambda) *
+            L = pt.Le(base->infinite_lights, base->infinite_light_num, cameraVertices[t - 2],
+                      lambda) *
                 pt.beta;
         }
     } else if (t == 1) {
@@ -588,14 +589,15 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
                 }
 
                 if (L.is_positive()) {
-                    L *= integrator_base->tr(cs->pRef, cs->pLens);
+                    L *=
+                        base->compute_transmittance(cs->pRef, cs->pLens, lambda, config->max_depth);
                 }
             }
         }
     } else if (s == 1) {
         // Sample a point on a light and connect it to the camera subpath
         if (const Vertex &pt = cameraVertices[t - 1]; pt.is_connectible()) {
-            if (auto sampledLight = integrator_base->light_sampler->sample(sampler->get_1d())) {
+            if (auto sampledLight = base->light_sampler->sample(sampler->get_1d())) {
                 auto light = sampledLight->light;
                 auto p_l = sampledLight->pdf;
 
@@ -621,9 +623,8 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
 
                     sampled =
                         Vertex::create_light(ei, lightWeight->l / (lightWeight->pdf * p_l), 0);
-                    sampled.pdfFwd = sampled.pdf_light_origin(integrator_base->infinite_lights,
-                                                              integrator_base->infinite_light_num,
-                                                              pt, integrator_base->light_sampler);
+                    sampled.pdfFwd = sampled.pdf_light_origin(
+                        base->infinite_lights, base->infinite_light_num, pt, base->light_sampler);
 
                     L = pt.beta * pt.f(sampled, TransportMode::Radiance) * sampled.beta;
 
@@ -633,7 +634,8 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
 
                     // Only check visibility if the path would carry radiance.
                     if (L.is_positive()) {
-                        L *= integrator_base->tr(pt.get_interaction(), lightWeight->p_light);
+                        L *= base->compute_transmittance(pt.get_interaction(), lightWeight->p_light,
+                                                         lambda, config->max_depth);
                     }
                 }
             }
@@ -646,15 +648,15 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
                 pt.beta;
 
             if (L.is_positive()) {
-                L *= G(integrator_base, qs, pt, lambda);
+                L *= compute_G(base, qs, pt, lambda, config->max_depth);
             }
         }
     }
 
     // Compute MIS weight for connection strategy
-    const Real weight = L.is_positive() ? compute_mis_weight(integrator_base, lightVertices,
-                                                             cameraVertices, sampled, s, t)
-                                        : 0.0;
+    const Real weight = L.is_positive()
+                            ? compute_mis_weight(base, lightVertices, cameraVertices, sampled, s, t)
+                            : 0.0;
     return L * weight;
 }
 

@@ -12,12 +12,14 @@ class UniformLightSampler;
 class PowerLightSampler;
 class Ray;
 class SampledSpectrum;
+class SampledWavelengths;
+
 struct ShapeIntersection;
 
 struct IntegratorBase {
     static constexpr Real interface_bounce_contribution = 0.3;
 
-    IntegratorBase() {}
+    IntegratorBase() = default;
 
     const HLBVH *bvh = nullptr;
     const Camera *camera = nullptr;
@@ -31,7 +33,8 @@ struct IntegratorBase {
 
     const PowerLightSampler *light_sampler = nullptr;
 
-    [[nodiscard]] bool is_ready() const {
+    [[nodiscard]]
+    bool is_ready() const {
         if (bvh == nullptr || camera == nullptr || filter == nullptr || light_sampler == nullptr) {
             return false;
         }
@@ -57,5 +60,7 @@ struct IntegratorBase {
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, Real t_max) const;
 
     PBRT_CPU_GPU
-    SampledSpectrum tr(const Interaction &p0, const Interaction &p1) const;
+    [[nodiscard]]
+    SampledSpectrum compute_transmittance(const Interaction &p0, const Interaction &p1,
+                                          const SampledWavelengths &lambda, int max_depth) const;
 };

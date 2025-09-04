@@ -212,68 +212,19 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
         return 0;
     }
 
-    SampledSpectrum T_light = 1;
-    SampledSpectrum pdf_transmittance_dir = 1; // for multiple importance sampling
+    const auto transmittance =
+        base->compute_transmittance(surface_interaction, ls->p_light, lambda, max_depth);
 
-    const auto epsilon_distance = surface_interaction.p().distance(ls->p_light.p()) * ShadowEpsilon;
-
-    auto shadow_ray = surface_interaction.spawn_ray_to(ls->p_light, true);
-    bool reach_light = false;
-    bool possible_self_intersection = false;
-    for (auto depth = 0; depth < max_depth * 2; depth++) {
-        const auto distance_to_light = ls->p_light.p().distance(shadow_ray.o);
-        auto optional_intersection =
-            base->intersect(shadow_ray, (1.0 - ShadowEpsilon) * distance_to_light);
-        const auto next_t =
-            optional_intersection ? optional_intersection->t_hit : distance_to_light;
-
-        if (shadow_ray.medium) {
-            const SampledSpectrum sigma_t = shadow_ray.medium->sample_sigma_t(lambda);
-            const auto transmittance = SampledSpectrum::exp(-sigma_t * next_t);
-
-            T_light *= transmittance;
-            pdf_transmittance_dir *= transmittance;
-        }
-
-        if (!optional_intersection) {
-            reach_light = true;
-            break;
-        }
-
-        // ray hit something in between light and origin
-        if (optional_intersection->interaction.material) {
-            // got blocked by some primitives
-            return 0;
-        }
-
-        // otherwise hit material-less shape
-
-        optional_intersection->interaction.n = Normal3f(shadow_ray.d);
-        shadow_ray = optional_intersection->interaction.spawn_ray(shadow_ray.d);
-
-        if (optional_intersection->t_hit < epsilon_distance) {
-            if (possible_self_intersection) {
-                // forcibly offset shadow_ray.o to avoid self-intersection
-                shadow_ray.o += epsilon_distance * shadow_ray.d;
-                possible_self_intersection = false;
-            } else {
-                possible_self_intersection = true;
-            }
-        }
-    }
-
-    if (!reach_light) {
-        return 0;
-    }
+    const auto &pdf_transmittance_dir = transmittance;
 
     const auto pdf_light = sampled_light->pdf * ls->pdf;
-    const auto light_contribution = ls->l / pdf_light * T_light;
+    const auto light_contribution = ls->l / pdf_light * transmittance;
 
     if (bsdf) {
         // Evaluate BSDF for light sample and check light visibility
-        Vector3f wo = surface_interaction.wo;
-        Vector3f wi = ls->wi;
-        SampledSpectrum f =
+        const Vector3f wo = surface_interaction.wo;
+        const Vector3f wi = ls->wi;
+        const SampledSpectrum f =
             bsdf->f(wo, wi) * wi.abs_dot(surface_interaction.shading.n.to_vector3());
 
         if (!f.is_positive() || !base->unoccluded(surface_interaction, ls->p_light)) {
