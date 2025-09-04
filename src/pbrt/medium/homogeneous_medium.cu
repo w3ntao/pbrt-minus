@@ -21,11 +21,8 @@ const Medium *Medium::create(const ParameterDictionary &parameters, GPUMemoryAll
         return Spectrum::create_constant_spectrum(val, allocator);
     };
 
-    auto sigma_a = build_sigma("sigma_a", 1.0);
-    auto sigma_s = build_sigma("sigma_s", 1.0);
-
-    auto Le = parameters.get_spectrum("Le", SpectrumType::Illuminant, allocator);
-    auto Le_scale = parameters.get_float("Lescale", 1.0);
+    const auto Le = parameters.get_spectrum("Le", SpectrumType::Illuminant, allocator);
+    const auto Le_scale = parameters.get_float("Lescale", 1.0);
     if (Le && Le->max_value() > 0 && Le_scale != 0) {
         printf("ERROR: illuminating volume not implemented");
         REPORT_FATAL_ERROR();
@@ -34,12 +31,14 @@ const Medium *Medium::create(const ParameterDictionary &parameters, GPUMemoryAll
     const auto sigma_scale = parameters.get_float("scale", 1.0);
     const auto g = parameters.get_float("g", 0.0);
 
+    auto sigma_a = build_sigma("sigma_a", 1.0);
+    auto sigma_s = build_sigma("sigma_s", 1.0);
+
     return allocator.create<Medium>(sigma_a, sigma_s, sigma_scale, g, allocator);
 }
 
 PBRT_CPU_GPU
-[[nodiscard]] SampledSpectrum Medium::sample_sigma_t(const SampledWavelengths &lambda) const {
-    const SampledSpectrum sampled_sigma_a = sigma_a->sample(lambda);
-    const SampledSpectrum sampled_sigma_s = sigma_s->sample(lambda);
-    return sampled_sigma_a + sampled_sigma_s;
+[[nodiscard]]
+SampledSpectrum Medium::sample_sigma_t(const SampledWavelengths &lambda) const {
+    return sigma_a->sample(lambda) + sigma_s->sample(lambda);
 }

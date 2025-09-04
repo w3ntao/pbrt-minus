@@ -361,6 +361,7 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
         auto &multi_transmittance_pdf = path_state->multi_transmittance_pdf[path_idx];
 
         if (const auto t = -std::log(1 - u) / sigma_t.average(); t < t_transmittance) {
+            // scatter in medium
             ray.o = ray.at(t);
             beta /= sigma_t;
 
@@ -375,7 +376,7 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
 
             auto phase_sample = ray.medium->phase.sample(-ray.d, sampler->get_2d());
             if (!phase_sample) {
-                beta = SampledSpectrum(0);
+                beta = 0;
                 return;
             }
 
@@ -385,12 +386,15 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
             path_state->mis_parameters[path_idx].prev_interaction = medium_interaction;
             ray.d = phase_sample->wi;
 
-            multi_transmittance_pdf = SampledSpectrum(1.0);
+            multi_transmittance_pdf = 1;
 
             path_state->depth[path_idx] += 1;
             path_state->skip_material_evaluation[path_idx] = true;
 
-        } else {
+            path_state->mis_parameters[path_idx].specular_bounce = false;
+            path_state->mis_parameters[path_idx].any_non_specular_bounces = true;
+
+        } else { // otherwise pass through medium
             multi_transmittance_pdf *= SampledSpectrum::exp(-sigma_t * t_transmittance);
         }
     }
@@ -419,12 +423,12 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, const PathState *p
     Real u = sampler->get_1d();
     auto bs = path_state->bsdf[path_idx].sample_f(wo, u, sampler->get_2d());
     if (!bs) {
-        path_state->beta[path_idx] = SampledSpectrum(0.0);
+        path_state->beta[path_idx] = 0;
         return;
     }
 
     path_state->beta[path_idx] *= bs->f * bs->wi.abs_dot(isect.shading.n.to_vector3()) / bs->pdf;
-    path_state->multi_transmittance_pdf[path_idx] = SampledSpectrum(1.0);
+    path_state->multi_transmittance_pdf[path_idx] = 1;
 
     path_state->mis_parameters[path_idx].prev_direction_pdf =
         bs->pdf_is_proportional ? path_state->bsdf[path_idx].pdf(wo, bs->wi) : bs->pdf;
@@ -466,9 +470,9 @@ void WavefrontPathIntegrator::PathState::reset_path(const int path_idx) {
     finished[path_idx] = false;
     shape_intersections[path_idx] = {};
 
-    L[path_idx] = SampledSpectrum(0.0);
-    beta[path_idx] = SampledSpectrum(1.0);
-    multi_transmittance_pdf[path_idx] = SampledSpectrum(1.0);
+    L[path_idx] = 0;
+    beta[path_idx] = 1;
+    multi_transmittance_pdf[path_idx] = 1;
     skip_material_evaluation[path_idx] = false;
     depth[path_idx] = 0;
     next_time_russian_roulette[path_idx] = start_russian_roulette;
