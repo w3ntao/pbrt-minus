@@ -21,5 +21,6 @@ struct Medium {
                                 GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU
-    [[nodiscard]] SampledSpectrum sample_sigma_t(const SampledWavelengths &lambda) const;
+    [[nodiscard]]
+    SampledSpectrum sample_sigma_t(const SampledWavelengths &lambda) const;
 };

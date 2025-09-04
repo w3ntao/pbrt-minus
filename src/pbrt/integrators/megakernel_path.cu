@@ -16,14 +16,14 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
                                                              Sampler *sampler,
                                                              const IntegratorBase *base,
                                                              int max_depth, bool regularize) {
-    auto L = SampledSpectrum(0.0);
-    auto beta = SampledSpectrum(1.0);
+    SampledSpectrum L = 0;
+    SampledSpectrum beta = 1;
     bool specular_bounce = false;
     bool any_non_specular_bounces = false;
 
     pbrt::optional<Real> prev_direction_pdf;
     pbrt::optional<SurfaceInteraction> prev_interaction;
-    auto multi_transmittance_pdf = SampledSpectrum(1.0);
+    SampledSpectrum multi_transmittance_pdf = 1;
 
     auto next_time_russian_roulette = start_russian_roulette;
 
@@ -46,6 +46,8 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
                 optional_intersection ? optional_intersection->t_hit : Infinity;
             const auto u = sampler->get_1d();
             if (const auto t = -std::log(1 - u) / sigma_t.average(); t < t_transmittance) {
+                // scatter in medium
+
                 ray.o = ray.at(t);
                 beta /= sigma_t;
 
@@ -68,12 +70,16 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
                 prev_direction_pdf = phase_sample->pdf;
 
                 prev_interaction = medium_interaction;
-                multi_transmittance_pdf = SampledSpectrum(1.0);
+                multi_transmittance_pdf = 1;
                 ray.d = phase_sample->wi;
+
+                specular_bounce = false;
+                any_non_specular_bounces = true;
 
                 depth += 1;
                 continue;
             }
+            // otherwise pass through medium
 
             auto transmittance_pdf = SampledSpectrum::exp(-sigma_t * t_transmittance);
             multi_transmittance_pdf *= transmittance_pdf;
@@ -152,7 +158,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
         beta *= bs->f * bs->wi.abs_dot(surface_interaction.shading.n.to_vector3()) / bs->pdf;
 
         prev_direction_pdf = bs->pdf_is_proportional ? bsdf.pdf(wo, bs->wi) : bs->pdf;
-        multi_transmittance_pdf = SampledSpectrum(1.0);
+        multi_transmittance_pdf = 1;
 
         specular_bounce = bs->is_specular();
         any_non_specular_bounces |= !specular_bounce;
@@ -196,18 +202,18 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
 
     auto sampled_light = base->light_sampler->sample(ctx, u);
     if (!sampled_light) {
-        return SampledSpectrum(0);
+        return 0;
     }
 
     // Sample a point on the light source for direct lighting
     const auto light = sampled_light->light;
     const auto ls = light->sample_li(ctx, u_light, lambda);
     if (!ls || !ls->l.is_positive() || ls->pdf == 0) {
-        return SampledSpectrum(0);
+        return 0;
     }
 
-    auto T_light = SampledSpectrum(1.0);
-    auto pdf_transmittance_dir = SampledSpectrum(1.0); // for multiple importance sampling
+    SampledSpectrum T_light = 1;
+    SampledSpectrum pdf_transmittance_dir = 1; // for multiple importance sampling
 
     const auto epsilon_distance = surface_interaction.p().distance(ls->p_light.p()) * ShadowEpsilon;
 
@@ -237,7 +243,7 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
         // ray hit something in between light and origin
         if (optional_intersection->interaction.material) {
             // got blocked by some primitives
-            return SampledSpectrum(0);
+            return 0;
         }
 
         // otherwise hit material-less shape
@@ -257,7 +263,7 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
     }
 
     if (!reach_light) {
-        return SampledSpectrum(0);
+        return 0;
     }
 
     const auto pdf_light = sampled_light->pdf * ls->pdf;
@@ -271,7 +277,7 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
             bsdf->f(wo, wi) * wi.abs_dot(surface_interaction.shading.n.to_vector3());
 
         if (!f.is_positive() || !base->unoccluded(surface_interaction, ls->p_light)) {
-            return SampledSpectrum(0);
+            return 0;
         }
 
         // Return light's contribution to reflected radiance
@@ -291,7 +297,7 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
         surface_interaction.medium->phase.sample(surface_interaction.wo, sampler->get_2d());
 
     if (!phase_sample) {
-        return SampledSpectrum(0);
+        return 0;
     }
 
     if (pbrt::is_delta_light(light->get_light_type())) {
