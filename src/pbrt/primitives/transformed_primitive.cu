@@ -19,7 +19,7 @@ bool TransformedPrimitive::fast_intersect(const Ray &ray, Real t_max) const {
 
 PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> TransformedPrimitive::intersect(const Ray &ray,
-                                                                       Real t_max) const {
+                                                                  Real t_max) const {
     // Transform ray to primitive-space and intersect with primitive
     auto inverse_ray = render_from_primitive.apply_inverse(ray, &t_max);
 

@@ -11,7 +11,7 @@ struct GlobalSpectra;
 
 class DiffuseAreaLight : public LightBase {
   public:
-    DiffuseAreaLight(const Shape *_shape, const Transform &_render_from_light,
+    DiffuseAreaLight(const Shape *_shape, const Transform &_render_from_light, const Medium *medium,
                      const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     PBRT_CPU_GPU

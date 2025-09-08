@@ -1,9 +1,9 @@
 #pragma once
 
-#include <pbrt/scene/tokenizer.h>
 #include <fstream>
 #include <iterator>
 #include <optional>
+#include <pbrt/scene/tokenizer.h>
 #include <sstream>
 #include <string>
 #include <vector>

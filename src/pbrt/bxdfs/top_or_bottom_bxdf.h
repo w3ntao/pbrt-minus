@@ -36,7 +36,7 @@ class TopOrBottomBxDF {
 
     PBRT_CPU_GPU
     Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
-                  BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
+             BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         return top ? top->pdf(wo, wi, mode, sampleFlags) : bottom->pdf(wo, wi, mode, sampleFlags);
     }
 

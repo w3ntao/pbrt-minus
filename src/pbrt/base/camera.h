@@ -11,12 +11,10 @@ class Camera : public HIDDEN::CameraVariants {
     using HIDDEN::CameraVariants::CameraVariants;
 
   public:
-    static Camera *create_perspective_camera(const Point2i &resolution,
-                                             const CameraTransform &camera_transform,
-                                             const Film *film, const Filter *filter,
-                                             const Medium *medium,
-                                             const ParameterDictionary &parameters,
-                                             GPUMemoryAllocator &allocator);
+    static Camera *
+    create_perspective_camera(const Point2i &resolution, const CameraTransform &camera_transform,
+                              const Film *film, const Filter *filter, const Medium *medium,
+                              const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
     PBRT_CPU_GPU
     const CameraBase *get_camera_base() const {
         return cuda::std::visit([&](auto &x) { return x.get_camera_base(); }, *this);

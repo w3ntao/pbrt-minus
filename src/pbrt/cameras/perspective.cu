@@ -153,7 +153,7 @@ pbrt::optional<CameraWiSample> PerspectiveCamera::sample_wi(const Interaction &r
     auto pLensRender =
         camera_base.camera_transform.render_from_camera(Point3f(pLens.x, pLens.y, 0));
     auto n = Normal3f(camera_base.camera_transform.render_from_camera(Vector3f(0, 0, 1)));
-    Interaction lensIntr(pLensRender, n);
+    Interaction lensIntr(pLensRender, n, camera_base.medium);
 
     // Find incident direction to camera _wi_ at _ref_
     Vector3f wi = lensIntr.p() - ref.p();

@@ -64,10 +64,15 @@ inline int sample_discrete(const Real *weights, int num_weights, Real u, Real *p
 }
 
 PBRT_CPU_GPU
-inline Real sample_tent(Real u, Real r) {
-    const Real weigits[2] = {0.5, 0.5};
+inline Real sample_exponential(const Real u, const Real a) {
+    return -std::log(1 - u) / a;
+}
 
-    if (sample_discrete(weigits, 2, u, nullptr, &u) == 0) {
+PBRT_CPU_GPU
+inline Real sample_tent(Real u, const Real r) {
+    constexpr Real weights[2] = {0.5, 0.5};
+
+    if (sample_discrete(weights, 2, u, nullptr, &u) == 0) {
         return -r + r * sample_linear(u, 0, 1);
     }
 
@@ -299,11 +304,6 @@ inline Real visible_wavelengths_pdf(Real lambda) {
 PBRT_CPU_GPU
 inline Real sample_visible_wavelengths(Real u) {
     return 538 - 138.888889f * std::atanh(0.85691062f - 1.82750197f * u);
-}
-
-PBRT_CPU_GPU
-inline Real SampleExponential(Real u, Real a) {
-    return -std::log(1 - u) / a;
 }
 
 PBRT_CPU_GPU

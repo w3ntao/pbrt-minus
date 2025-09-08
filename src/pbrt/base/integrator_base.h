@@ -18,6 +18,7 @@ struct ShapeIntersection;
 
 struct IntegratorBase {
     static constexpr Real interface_bounce_contribution = 0.3;
+    static constexpr int MAX_BOUNCES = 1024;
 
     IntegratorBase() = default;
 
@@ -51,16 +52,19 @@ struct IntegratorBase {
     }
 
     PBRT_CPU_GPU
+    [[nodiscard]]
     bool fast_intersect(const Ray &ray, Real t_max) const;
 
     PBRT_CPU_GPU
+    [[nodiscard]]
     bool unoccluded(const Interaction &p0, const Interaction &p1) const;
 
     PBRT_CPU_GPU
+    [[nodiscard]]
     pbrt::optional<ShapeIntersection> intersect(const Ray &ray, Real t_max) const;
 
     PBRT_CPU_GPU
     [[nodiscard]]
     SampledSpectrum compute_transmittance(const Interaction &p0, const Interaction &p1,
-                                          const SampledWavelengths &lambda, int max_depth) const;
+                                          const SampledWavelengths &lambda) const;
 };

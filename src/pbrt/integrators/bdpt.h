@@ -27,48 +27,55 @@ struct EndpointInteraction : Interaction {
     EndpointInteraction() {}
 
     PBRT_CPU_GPU
-    EndpointInteraction(const Light *light, const Ray &r) : Interaction(r.o), light(light) {}
+    EndpointInteraction(const Light *_light, const Ray &ray)
+        : Interaction(ray.o, ray.medium), light(_light) {}
 
     PBRT_CPU_GPU
-    EndpointInteraction(const Camera *camera, const Ray &ray)
-        : Interaction(ray.o), camera(camera) {}
+    EndpointInteraction(const Camera *_camera, const Ray &ray)
+        : Interaction(ray.o, ray.medium), camera(_camera) {}
 
     PBRT_CPU_GPU
-    EndpointInteraction(const Light *light, const Interaction &intr)
-        : Interaction(intr), light(light) {}
+    EndpointInteraction(const Light *_light, const Interaction &_interaction)
+        : Interaction(_interaction), light(_light) {}
 
     PBRT_CPU_GPU
-    EndpointInteraction(const Interaction &it, const Camera *camera)
-        : Interaction(it), camera(camera) {}
+    EndpointInteraction(const Interaction &_interaction, const Camera *_camera)
+        : Interaction(_interaction), camera(_camera) {}
 
     PBRT_CPU_GPU
-    EndpointInteraction(const Ray &ray) : Interaction(ray.at(1), Normal3f(-ray.d)) {}
+    explicit EndpointInteraction(const Ray &ray)
+        : Interaction(ray.at(1), Normal3f(-ray.d), ray.medium) {}
 };
 
 struct Vertex {
-    enum class VertexType { camera, light, surface };
+    enum class VertexType { camera, light, surface, medium };
 
     VertexType type;
-    SampledSpectrum beta;
     EndpointInteraction ei;
     SurfaceInteraction si;
+    Interaction mi;
+    // TODO: rewrite ei/si/mi with union or std::variant
     BSDF bsdf;
 
-    bool delta;
-    Real pdfFwd;
-    Real pdfRev;
+    SampledSpectrum beta = SampledSpectrum(NAN);
+    bool delta = false;
+    Real pdfFwd = 0;
+    Real pdfRev = 0;
 
     PBRT_CPU_GPU
-    Vertex() : type(VertexType::camera), beta(NAN), delta(false), pdfFwd(0), pdfRev(0) {}
+    Vertex() : type(VertexType::camera), beta(NAN) {}
 
     PBRT_CPU_GPU
-    Vertex(VertexType _type, const EndpointInteraction &_ei, const SampledSpectrum &_beta)
-        : type(_type), beta(_beta), delta(false), pdfFwd(0), pdfRev(0), ei(_ei) {}
+    Vertex(const VertexType _type, const EndpointInteraction &_ei, const SampledSpectrum &_beta)
+        : type(_type), ei(_ei), beta(_beta) {}
 
     PBRT_CPU_GPU
     Vertex(const SurfaceInteraction &_si, const BSDF &_bsdf, const SampledSpectrum &_beta)
-        : type(VertexType::surface), beta(_beta), delta(false), pdfFwd(0), pdfRev(0), si(_si),
-          bsdf(_bsdf) {}
+        : type(VertexType::surface), si(_si), bsdf(_bsdf), beta(_beta) {}
+
+    PBRT_CPU_GPU
+    Vertex(const Interaction &mi, const SampledSpectrum &beta)
+        : type(VertexType::medium), mi(mi), beta(beta) {}
 
     PBRT_CPU_GPU
     bool is_light() const {
@@ -95,23 +102,23 @@ struct Vertex {
 
     PBRT_CPU_GPU
     static Vertex create_light(const EndpointInteraction &ei, const SampledSpectrum &beta,
-                               Real pdf) {
+                               const Real pdf) {
         Vertex v(VertexType::light, ei, beta);
         v.pdfFwd = pdf;
         return v;
     }
 
     PBRT_CPU_GPU
-    static Vertex create_light(const Light *light, const Interaction &intr,
-                               const SampledSpectrum &Le, Real pdf) {
-        Vertex v(VertexType::light, EndpointInteraction(light, intr), Le);
+    static Vertex create_light(const Light *light, const Interaction &intractopm,
+                               const SampledSpectrum &Le, const Real pdf) {
+        Vertex v(VertexType::light, EndpointInteraction(light, intractopm), Le);
         v.pdfFwd = pdf;
         return v;
     }
 
     PBRT_CPU_GPU
     static Vertex create_light(const Light *light, const Ray &ray, const SampledSpectrum &Le,
-                               Real pdf) {
+                               const Real pdf) {
         Vertex v(VertexType::light, EndpointInteraction(light, ray), Le);
         v.pdfFwd = pdf;
         return v;
@@ -126,14 +133,28 @@ struct Vertex {
     }
 
     PBRT_CPU_GPU
+    static Vertex create_medium(const Interaction &mi, const SampledSpectrum &beta, const Real pdf,
+                                const Vertex &prev) {
+        Vertex v(mi, beta);
+        v.pdfFwd = prev.convert_density(pdf, v);
+        return v;
+    }
+
+    PBRT_CPU_GPU
     bool is_connectible() const {
         switch (type) {
+        case VertexType::medium: {
+            return true;
+        }
+
         case VertexType::light: {
             return ei.light->get_light_type() != LightType::delta_direction;
         }
+
         case VertexType::camera: {
             return true;
         }
+
         case VertexType::surface: {
             return pbrt::is_non_specular(bsdf.flags());
         }
@@ -146,6 +167,9 @@ struct Vertex {
     PBRT_CPU_GPU
     const Interaction &get_interaction() const {
         switch (type) {
+        case VertexType::medium: {
+            return mi;
+        }
         case VertexType::surface: {
             return si;
         }
@@ -164,8 +188,6 @@ struct Vertex {
         }
 
         REPORT_FATAL_ERROR();
-        SurfaceInteraction unused;
-        return unused;
     }
 
     PBRT_CPU_GPU
@@ -197,17 +219,21 @@ struct Vertex {
         Vector3f wi = next.p() - p();
 
         if (wi.squared_length() == 0) {
-            return SampledSpectrum(0);
+            return 0;
         }
 
         wi = wi.normalize();
         switch (type) {
-        case VertexType::surface:
+        case VertexType::surface: {
             return bsdf.f(si.wo, wi, mode);
+        }
+        case VertexType::medium: {
+            return mi.medium->phase.eval(mi.wo, wi);
+        }
         }
 
         REPORT_FATAL_ERROR();
-        return SampledSpectrum(NAN);
+        return NAN;
     }
 
     PBRT_CPU_GPU
@@ -278,7 +304,7 @@ class BDPTIntegrator {
                                         pbrt::optional<Point2f> *pRaster, const BDPTConfig *config);
 
     PBRT_GPU
-    static SampledSpectrum li(FilmSample *film_samples, int *film_sample_counter, const Ray &ray,
+    static SampledSpectrum Li(FilmSample *film_samples, int *film_sample_counter, const Ray &ray,
                               SampledWavelengths &lambda, Sampler *sampler, Vertex *camera_vertices,
                               Vertex *light_vertices, const BDPTConfig *config);
 

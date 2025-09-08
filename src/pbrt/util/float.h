@@ -1,7 +1,7 @@
 #pragma once
 
-#include <pbrt/gpu/macro.h>
 #include <cuda_fp16.h>
+#include <pbrt/gpu/macro.h>
 
 static const int HalfExponentMask = 0b0111110000000000;
 static const int HalfSignificandMask = 0b1111111111;
@@ -65,7 +65,7 @@ class Half {
 
         if (f.u >= f16max.u) { // result is Inf or NaN (all exponent bits set)
             o.u = (f.u > f32infty.u) ? 0x7e00 : 0x7c00;
-        }                            // NaN->qNaN and Inf->Inf
+        } // NaN->qNaN and Inf->Inf
         else {                       // (De)normalized number or zero
             if (f.u < (113 << 23)) { // resulting FP16 is subnormal or zero
                 // use a magic value to align our 10 mantissa bits at the bottom

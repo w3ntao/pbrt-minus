@@ -42,14 +42,12 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
             const SampledSpectrum sigma_s = ray.medium->sigma_s->sample(lambda);
             const SampledSpectrum sigma_t = sigma_a + sigma_s;
 
-            const auto t_transmittance =
-                optional_intersection ? optional_intersection->t_hit : Infinity;
-            const auto u = sampler->get_1d();
-            if (const auto t = -std::log(1 - u) / sigma_t.average(); t < t_transmittance) {
+            const auto t_max = optional_intersection ? optional_intersection->t_hit : Infinity;
+            if (const auto t = sample_exponential(sampler->get_1d(), sigma_t.average());
+                t < t_max) {
                 // scatter in medium
-
                 ray.o = ray.at(t);
-                beta /= sigma_t;
+                beta *= sigma_s / sigma_t;
 
                 SurfaceInteraction medium_interaction;
                 medium_interaction.pi = ray.o;
@@ -57,15 +55,15 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
                 medium_interaction.medium = ray.medium;
 
                 SampledSpectrum Ld =
-                    sample_Ld_volume(medium_interaction, nullptr, lambda, sampler, base, max_depth);
-                L += beta * Ld * sigma_s;
+                    sample_Ld_volume(medium_interaction, nullptr, lambda, sampler, base);
+                L += beta * Ld;
 
                 auto phase_sample = ray.medium->phase.sample(-ray.d, sampler->get_2d());
                 if (!phase_sample) {
                     break;
                 }
 
-                beta *= phase_sample->rho / phase_sample->pdf * sigma_s;
+                beta *= phase_sample->rho / phase_sample->pdf;
 
                 prev_direction_pdf = phase_sample->pdf;
 
@@ -81,8 +79,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
             }
             // otherwise pass through medium
 
-            auto transmittance_pdf = SampledSpectrum::exp(-sigma_t * t_transmittance);
-            multi_transmittance_pdf *= transmittance_pdf;
+            multi_transmittance_pdf *= SampledSpectrum::exp(-sigma_t * t_max);
         }
 
         if (!optional_intersection && beta.is_positive()) {
@@ -145,7 +142,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
 
         if (pbrt::is_non_specular(bsdf.flags())) {
             SampledSpectrum Ld =
-                sample_Ld_volume(surface_interaction, &bsdf, lambda, sampler, base, max_depth);
+                sample_Ld_volume(surface_interaction, &bsdf, lambda, sampler, base);
             L += beta * Ld;
         }
 
@@ -183,8 +180,7 @@ PBRT_CPU_GPU
 SampledSpectrum
 MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_interaction,
                                            const BSDF *bsdf, const SampledWavelengths &lambda,
-                                           Sampler *sampler, const IntegratorBase *base,
-                                           const int max_depth) {
+                                           Sampler *sampler, const IntegratorBase *base) {
     LightSampleContext ctx(surface_interaction);
     // Try to nudge the light sampling position to correct side of the surface
     if (bsdf) {
@@ -213,7 +209,7 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
     }
 
     const auto transmittance =
-        base->compute_transmittance(surface_interaction, ls->p_light, lambda, max_depth);
+        base->compute_transmittance(surface_interaction, ls->p_light, lambda);
 
     const auto &pdf_transmittance_dir = transmittance;
 

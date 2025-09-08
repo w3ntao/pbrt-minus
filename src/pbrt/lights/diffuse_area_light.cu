@@ -7,10 +7,9 @@
 #include <pbrt/spectrum_util/rgb_color_space.h>
 
 DiffuseAreaLight::DiffuseAreaLight(const Shape *_shape, const Transform &_render_from_light,
-                                   const ParameterDictionary &parameters,
+                                   const Medium *medium, const ParameterDictionary &parameters,
                                    GPUMemoryAllocator &allocator)
-    : LightBase(LightType::area, _render_from_light), shape(_shape) {
-
+    : LightBase(LightType::area, _render_from_light, medium), shape(_shape) {
     if (parameters.has_string("filename")) {
         throw std::runtime_error("DiffuseAreaLight::init(): this part is not implemented\n");
     }
@@ -112,9 +111,12 @@ pbrt::optional<LightLeSample> DiffuseAreaLight::sample_le(Point2f u1, Point2f u2
 
     Frame nFrame = Frame::from_z(intr.n.to_vector3());
     w = nFrame.from_local(w);
-    SampledSpectrum Le = this->l(intr.p(), intr.n, intr.uv, w, lambda);
+    auto const Le = this->l(intr.p(), intr.n, intr.uv, w, lambda);
 
-    return LightLeSample(Le, intr.spawn_ray(w), intr, ss->pdf, pdfDir);
+    auto ray = intr.spawn_ray(w);
+    ray.medium = medium;
+
+    return LightLeSample(Le, ray, intr, ss->pdf, pdfDir);
 }
 
 PBRT_CPU_GPU
@@ -129,6 +131,6 @@ PBRT_CPU_GPU
 SampledSpectrum DiffuseAreaLight::phi(const SampledWavelengths &lambda) const {
     // TODO: image in DiffuseAreaLight is not implemented
 
-    auto L = Lemit->sample(lambda) * scale;
+    const auto L = Lemit->sample(lambda) * scale;
     return pbrt::PI * (two_sided ? 2 : 1) * this->shape->area() * L;
 }

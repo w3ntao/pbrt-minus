@@ -493,7 +493,9 @@ void SceneBuilder::parse_light_source(const std::vector<Token> &tokens) {
 
     const auto light_source_type = tokens[1].values[0];
 
-    auto light = Light::create(light_source_type, get_render_from_object(), parameters, allocator);
+    const auto light =
+        Light::create(light_source_type, get_render_from_object(),
+                      graphics_state.medium_interface->exterior, parameters, allocator);
     gpu_lights.push_back(light);
 }
 
@@ -649,9 +651,11 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         REPORT_FATAL_ERROR();
     }
 
+    const auto medium =
+        graphics_state.medium_interface ? graphics_state.medium_interface->exterior : nullptr;
     const auto diffuse_area_lights =
         area_light_entity
-            ? Light::create_diffuse_area_lights(shapes, num_shapes, render_from_object,
+            ? Light::create_diffuse_area_lights(shapes, num_shapes, render_from_object, medium,
                                                 area_light_entity->parameters, allocator)
             : nullptr;
     if (diffuse_area_lights) {

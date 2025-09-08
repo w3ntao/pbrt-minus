@@ -5,7 +5,7 @@
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>
 
-SpotLight *SpotLight::create(const Transform &renderFromLight,
+SpotLight *SpotLight::create(const Transform &renderFromLight, const Medium *medium,
                              const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
     auto I = parameters.get_spectrum("I", SpectrumType::Illuminant, allocator);
     if (I == nullptr) {
@@ -33,7 +33,7 @@ SpotLight *SpotLight::create(const Transform &renderFromLight,
         sc *= phi_v / k_e;
     }
 
-    return allocator.create<SpotLight>(finalRenderFromLight, I, sc, coneangle,
+    return allocator.create<SpotLight>(finalRenderFromLight, medium, I, sc, coneangle,
                                        coneangle - conedelta);
 }
 
@@ -70,7 +70,6 @@ pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f &u1, const Poin
         // Sample spotlight center cone
         wLight = SampleUniformCone(u1, cosFalloffStart);
         pdfDir = UniformConePDF(cosFalloffStart) * sectionPDF;
-
     } else {
         // Sample spotlight falloff region
         Real cosTheta = SampleSmoothStep(u1[0], cosFalloffEnd, cosFalloffStart);
@@ -84,6 +83,7 @@ pbrt::optional<LightLeSample> SpotLight::sample_le(const Point2f &u1, const Poin
 
     // Return sampled spotlight ray
     auto ray = render_from_light(Ray(Point3f(0, 0, 0), wLight));
+    ray.medium = medium;
 
     return LightLeSample(I(wLight, lambda), ray, 1, pdfDir);
 }

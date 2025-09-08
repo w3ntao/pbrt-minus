@@ -37,10 +37,14 @@ class Interaction {
         : pi(_pi), n(_n), uv(_uv) {}
 
     PBRT_CPU_GPU
-    Interaction(const Point3f &_p) : pi(_p), n(Normal3f(0, 0, 0)) {}
+    Interaction(const Point3f &_p) : pi(_p) {}
 
     PBRT_CPU_GPU
-    Interaction(const Point3f &_p, const Normal3f &_n) : pi(_p), n(_n) {}
+    Interaction(const Point3f &_p, const Medium *_medium) : pi(_p), medium(_medium) {}
+
+    PBRT_CPU_GPU
+    Interaction(const Point3f &_p, const Normal3f &_n, const Medium *_medium)
+        : pi(_p), n(_n), medium(_medium) {}
 
     PBRT_CPU_GPU
     Point3f p() const {

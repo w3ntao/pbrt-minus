@@ -20,7 +20,8 @@ static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, 
 }
 
 Light *Light::create(const std::string &type_of_light, const Transform &render_from_light,
-                     const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
+                     const Medium *medium, const ParameterDictionary &parameters,
+                     GPUMemoryAllocator &allocator) {
     if (type_of_light == "distant") {
         auto distant_light = DistantLight::create(render_from_light, parameters, allocator);
         return allocator.create<Light>(distant_light);
@@ -42,7 +43,7 @@ Light *Light::create(const std::string &type_of_light, const Transform &render_f
     }
 
     if (type_of_light == "spot") {
-        auto spot_light = SpotLight::create(render_from_light, parameters, allocator);
+        auto spot_light = SpotLight::create(render_from_light, medium, parameters, allocator);
 
         return allocator.create<Light>(spot_light);
     }
@@ -53,7 +54,7 @@ Light *Light::create(const std::string &type_of_light, const Transform &render_f
 }
 
 Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num,
-                                         const Transform &render_from_light,
+                                         const Transform &render_from_light, const Medium *medium,
                                          const ParameterDictionary &parameters,
                                          GPUMemoryAllocator &allocator) {
     const int blocks = divide_and_ceil(num, MAX_THREADS_PER_BLOCKS);
@@ -63,7 +64,7 @@ Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num,
 
     for (int idx = 0; idx < num; idx++) {
         diffuse_area_lights[idx] =
-            DiffuseAreaLight(&shapes[idx], render_from_light, parameters, allocator);
+            DiffuseAreaLight(&shapes[idx], render_from_light, medium, parameters, allocator);
     }
 
     init_lights<<<blocks, MAX_THREADS_PER_BLOCKS>>>(lights, diffuse_area_lights, num);

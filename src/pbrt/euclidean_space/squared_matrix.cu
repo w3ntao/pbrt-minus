@@ -123,29 +123,29 @@ Via: https://github.com/google/ion/blob/master/ion/math/matrixutils.cc,
     Real s = 1.0 / determinant;
 
     Real inv[4][4] = {{
-                               s * inner_product(m[1][1], c5, m[1][3], c3, -m[1][2], c4),
-                               s * inner_product(-m[0][1], c5, m[0][2], c4, -m[0][3], c3),
-                               s * inner_product(m[3][1], s5, m[3][3], s3, -m[3][2], s4),
-                               s * inner_product(-m[2][1], s5, m[2][2], s4, -m[2][3], s3),
-                           },
-                           {
-                               s * inner_product(-m[1][0], c5, m[1][2], c2, -m[1][3], c1),
-                               s * inner_product(m[0][0], c5, m[0][3], c1, -m[0][2], c2),
-                               s * inner_product(-m[3][0], s5, m[3][2], s2, -m[3][3], s1),
-                               s * inner_product(m[2][0], s5, m[2][3], s1, -m[2][2], s2),
-                           },
-                           {
-                               s * inner_product(m[1][0], c4, m[1][3], c0, -m[1][1], c2),
-                               s * inner_product(-m[0][0], c4, m[0][1], c2, -m[0][3], c0),
-                               s * inner_product(m[3][0], s4, m[3][3], s0, -m[3][1], s2),
-                               s * inner_product(-m[2][0], s4, m[2][1], s2, -m[2][3], s0),
-                           },
-                           {
-                               s * inner_product(-m[1][0], c3, m[1][1], c1, -m[1][2], c0),
-                               s * inner_product(m[0][0], c3, m[0][2], c0, -m[0][1], c1),
-                               s * inner_product(-m[3][0], s3, m[3][1], s1, -m[3][2], s0),
-                               s * inner_product(m[2][0], s3, m[2][2], s0, -m[2][1], s1),
-                           }};
+                          s * inner_product(m[1][1], c5, m[1][3], c3, -m[1][2], c4),
+                          s * inner_product(-m[0][1], c5, m[0][2], c4, -m[0][3], c3),
+                          s * inner_product(m[3][1], s5, m[3][3], s3, -m[3][2], s4),
+                          s * inner_product(-m[2][1], s5, m[2][2], s4, -m[2][3], s3),
+                      },
+                      {
+                          s * inner_product(-m[1][0], c5, m[1][2], c2, -m[1][3], c1),
+                          s * inner_product(m[0][0], c5, m[0][3], c1, -m[0][2], c2),
+                          s * inner_product(-m[3][0], s5, m[3][2], s2, -m[3][3], s1),
+                          s * inner_product(m[2][0], s5, m[2][3], s1, -m[2][2], s2),
+                      },
+                      {
+                          s * inner_product(m[1][0], c4, m[1][3], c0, -m[1][1], c2),
+                          s * inner_product(-m[0][0], c4, m[0][1], c2, -m[0][3], c0),
+                          s * inner_product(m[3][0], s4, m[3][3], s0, -m[3][1], s2),
+                          s * inner_product(-m[2][0], s4, m[2][1], s2, -m[2][3], s0),
+                      },
+                      {
+                          s * inner_product(-m[1][0], c3, m[1][1], c1, -m[1][2], c0),
+                          s * inner_product(m[0][0], c3, m[0][2], c0, -m[0][1], c1),
+                          s * inner_product(-m[3][0], s3, m[3][1], s1, -m[3][2], s0),
+                          s * inner_product(m[2][0], s3, m[2][2], s0, -m[2][1], s1),
+                      }};
 
     return SquareMatrix(inv);
 }

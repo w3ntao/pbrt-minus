@@ -107,7 +107,6 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
 
                 if (depth == 0 || specular_bounce) {
                     L += beta * Le;
-
                 } else {
                     // Compute MIS weight for infinite light
                     const Real pdf_light = base->light_sampler->pmf(light) *
@@ -349,21 +348,17 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
         auto sampler = &path_state->samplers[path_idx];
         auto &beta = path_state->beta[path_idx];
         auto &L = path_state->L[path_idx];
+        auto &multi_transmittance_pdf = path_state->multi_transmittance_pdf[path_idx];
 
         const SampledSpectrum sigma_a = ray.medium->sigma_a->sample(lambda);
         const SampledSpectrum sigma_s = ray.medium->sigma_s->sample(lambda);
         const SampledSpectrum sigma_t = sigma_a + sigma_s;
 
-        const auto t_transmittance =
-            optional_intersection ? optional_intersection->t_hit : Infinity;
-        const auto u = sampler->get_1d();
-
-        auto &multi_transmittance_pdf = path_state->multi_transmittance_pdf[path_idx];
-
-        if (const auto t = -std::log(1 - u) / sigma_t.average(); t < t_transmittance) {
+        const auto t_max = optional_intersection ? optional_intersection->t_hit : Infinity;
+        if (const auto t = sample_exponential(sampler->get_1d(), sigma_t.average()); t < t_max) {
             // scatter in medium
             ray.o = ray.at(t);
-            beta /= sigma_t;
+            beta *= sigma_s / sigma_t;
 
             SurfaceInteraction medium_interaction;
             medium_interaction.pi = ray.o;
@@ -371,8 +366,8 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
             medium_interaction.medium = ray.medium;
 
             SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(
-                medium_interaction, nullptr, lambda, sampler, base, max_depth);
-            L += beta * Ld * sigma_s;
+                medium_interaction, nullptr, lambda, sampler, base);
+            L += beta * Ld;
 
             auto phase_sample = ray.medium->phase.sample(-ray.d, sampler->get_2d());
             if (!phase_sample) {
@@ -380,7 +375,7 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
                 return;
             }
 
-            beta *= phase_sample->rho / phase_sample->pdf * sigma_s;
+            beta *= phase_sample->rho / phase_sample->pdf;
 
             path_state->mis_parameters[path_idx].prev_direction_pdf = phase_sample->pdf;
             path_state->mis_parameters[path_idx].prev_interaction = medium_interaction;
@@ -393,9 +388,9 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
 
             path_state->mis_parameters[path_idx].specular_bounce = false;
             path_state->mis_parameters[path_idx].any_non_specular_bounces = true;
-
-        } else { // otherwise pass through medium
-            multi_transmittance_pdf *= SampledSpectrum::exp(-sigma_t * t_transmittance);
+        } else {
+            // otherwise pass through medium
+            multi_transmittance_pdf *= SampledSpectrum::exp(-sigma_t * t_max);
         }
     }
 }
@@ -414,7 +409,7 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, const PathState *p
 
     if (pbrt::is_non_specular(path_state->bsdf[path_idx].flags())) {
         const SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(
-            isect, &path_state->bsdf[path_idx], lambda, sampler, base, max_depth);
+            isect, &path_state->bsdf[path_idx], lambda, sampler, base);
         path_state->L[path_idx] += path_state->beta[path_idx] * Ld;
     }
 
@@ -548,7 +543,6 @@ WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel,
       queues(allocator), base(_base), samples_per_pixel(_samples_per_pixel),
       max_depth(parameters.get_integer("maxdepth", 5)),
       regularize(parameters.get_bool("regularize", false)) {
-
     path_state.build_path(allocator);
 }
 

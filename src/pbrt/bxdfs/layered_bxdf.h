@@ -136,7 +136,7 @@ class LayeredBxDF {
                 } else {
                     // Sample medium scattering for layered BSDF evaluation
                     Real sigma_t = 1;
-                    Real dz = SampleExponential(r(), sigma_t / std::abs(w.z));
+                    Real dz = sample_exponential(r(), sigma_t / std::abs(w.z));
                     Real zp = w.z > 0 ? (z + dz) : (z - dz);
 
                     if (z == zp) {
@@ -300,7 +300,7 @@ class LayeredBxDF {
             if (albedo.is_positive()) {
                 // Sample potential scattering event in layered medium
                 Real sigma_t = 1;
-                Real dz = SampleExponential(r(), sigma_t / w.abs_cos_theta());
+                Real dz = sample_exponential(r(), sigma_t / w.abs_cos_theta());
                 Real zp = w.z > 0 ? (z + dz) : (z - dz);
                 if (zp == z) {
                     return {};

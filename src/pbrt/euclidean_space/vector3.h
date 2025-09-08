@@ -267,6 +267,5 @@ PBRT_CPU_GPU inline Vector3<T> gram_schmidt(Vector3<T> v, Vector3<T> w) {
 PBRT_CPU_GPU
 static Vector3f SphericalDirection(Real sinTheta, Real cosTheta, Real phi) {
     return Vector3f(clamp<Real>(sinTheta, -1, 1) * std::cos(phi),
-                    clamp<Real>(sinTheta, -1, 1) * std::sin(phi),
-                    clamp<Real>(cosTheta, -1, 1));
+                    clamp<Real>(sinTheta, -1, 1) * std::sin(phi), clamp<Real>(cosTheta, -1, 1));
 }

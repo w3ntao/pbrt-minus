@@ -19,8 +19,7 @@ class Point3fi : public Point3<Interval> {
     Point3fi(Interval x, Interval y, Interval z) : Point3<Interval>(x, y, z) {}
 
     PBRT_CPU_GPU
-    Point3fi(Real x, Real y, Real z)
-        : Point3<Interval>(Interval(x), Interval(y), Interval(z)) {}
+    Point3fi(Real x, Real y, Real z) : Point3<Interval>(Interval(x), Interval(y), Interval(z)) {}
 
     PBRT_CPU_GPU
     Point3fi(const Point3f &p) : Point3<Interval>(Interval(p.x), Interval(p.y), Interval(p.z)) {}

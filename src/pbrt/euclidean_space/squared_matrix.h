@@ -1,8 +1,8 @@
 #pragma once
 
-#include <pbrt/util/math.h>
-#include <pbrt/util/compensated_float.h>
 #include <iomanip>
+#include <pbrt/util/compensated_float.h>
+#include <pbrt/util/math.h>
 
 template <int N>
 class SquareMatrix {

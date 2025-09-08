@@ -1,10 +1,10 @@
+#include <algorithm>
 #include <ext/lodepng/lodepng.h>
 #include <pbrt/base/filter.h>
 #include <pbrt/film/grey_scale_film.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <pbrt/spectrum_util/rgb.h>
 #include <pbrt/util/math.h>
-#include <algorithm>
 
 const auto black = RGB(0, 0, 0);
 const auto blue = RGB(0, 0, 1);

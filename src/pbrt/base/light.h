@@ -35,9 +35,10 @@ PBRT_CPU_GPU inline bool is_delta_light(LightType type) {
 struct LightBase {
     LightType light_type;
     Transform render_from_light;
+    const Medium *medium = nullptr;
 
-    LightBase(const LightType type, const Transform &_render_from_light)
-        : light_type(type), render_from_light(_render_from_light) {}
+    LightBase(const LightType type, const Transform &_render_from_light, const Medium *_medium)
+        : light_type(type), render_from_light(_render_from_light), medium(_medium) {}
 
     PBRT_CPU_GPU
     LightType get_light_type() const {
@@ -140,10 +141,12 @@ class Light {
         : type(Type::uniform_infinite_light), ptr(uniform_infinite_light) {}
 
     static Light *create(const std::string &type_of_light, const Transform &render_from_light,
-                         const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
+                         const Medium *medium, const ParameterDictionary &parameters,
+                         GPUMemoryAllocator &allocator);
 
     static Light *create_diffuse_area_lights(const Shape *shapes, int num,
                                              const Transform &render_from_light,
+                                             const Medium *medium,
                                              const ParameterDictionary &parameters,
                                              GPUMemoryAllocator &allocator);
 

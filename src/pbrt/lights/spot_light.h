@@ -11,9 +11,9 @@ class Transform;
 
 class SpotLight : public LightBase {
   public:
-    SpotLight(const Transform &renderFromLight, const Spectrum *Iemit, Real _scale, Real totalWidth,
-              Real falloffStart)
-        : LightBase(LightType::delta_position, renderFromLight) {
+    SpotLight(const Transform &renderFromLight, const Medium *medium, const Spectrum *Iemit,
+              Real _scale, Real totalWidth, Real falloffStart)
+        : LightBase(LightType::delta_position, renderFromLight, medium) {
         i_emit = Iemit;
         scale = _scale;
 
@@ -21,7 +21,7 @@ class SpotLight : public LightBase {
         cosFalloffStart = std::cos(degree_to_radian(falloffStart));
     }
 
-    static SpotLight *create(const Transform &renderFromLight,
+    static SpotLight *create(const Transform &renderFromLight, const Medium *medium,
                              const ParameterDictionary &parameters, GPUMemoryAllocator &allocator);
 
     void preprocess(const Bounds3f &scene_bounds) {

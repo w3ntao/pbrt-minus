@@ -13,19 +13,12 @@ class Ray {
     Vector3f d;
     const Medium *medium = nullptr;
 
-    PBRT_CPU_GPU Ray() {}
+    PBRT_CPU_GPU
+    Ray() {}
 
     PBRT_CPU_GPU
     Ray(const Point3f &_o, const Vector3f &_d, const Medium *_medium = nullptr)
         : o(_o), d(_d), medium(_medium) {}
-
-    PBRT_CPU_GPU
-    bool normalized() const {
-        constexpr Real tolerance = 0.0001;
-
-        const auto length = d.length();
-        return length > 1 - tolerance && length < 1 + tolerance;
-    }
 
     PBRT_CPU_GPU
     Point3f at(const Real t) const {
@@ -36,14 +29,13 @@ class Ray {
     PBRT_CPU_GPU
     static Point3f offset_ray_origin(const Point3fi &pi, const Normal3f &n, const Vector3f &w) {
         // Find vector _offset_ to corner of error bounds and compute initial _po_
-        Real d = n.abs_dot(pi.error());
+        const Real d = n.abs_dot(pi.error());
         auto offset = d * n.to_vector3();
         if (n.dot(w) < 0) {
             offset = -offset;
         }
 
         auto po = pi.to_point3f() + offset;
-
         // Round offset point _po_ away from _p_
         for (int i = 0; i < 3; ++i) {
             if (offset[i] > 0) {

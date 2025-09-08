@@ -15,8 +15,8 @@
 ImageInfiniteLight::ImageInfiniteLight(const Transform &render_from_light, const Real _scale,
                                        const RGBColorSpace *_color_space,
                                        const GPUImage *_image_ptr, GPUMemoryAllocator &allocator)
-    : LightBase(LightType::infinite, render_from_light), scale(_scale), color_space(_color_space),
-      image_ptr(_image_ptr) {
+    : LightBase(LightType::infinite, render_from_light, nullptr), scale(_scale),
+      color_space(_color_space), image_ptr(_image_ptr) {
 
     image_resolution = image_ptr->get_resolution();
 

@@ -15,8 +15,7 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
-    SampledWavelengths(const Real _lambda[NSpectrumSamples],
-                       const Real _pdf[NSpectrumSamples]) {
+    SampledWavelengths(const Real _lambda[NSpectrumSamples], const Real _pdf[NSpectrumSamples]) {
         for (int idx = 0; idx < NSpectrumSamples; ++idx) {
             lambda[idx] = _lambda[idx];
             pdf[idx] = _pdf[idx];

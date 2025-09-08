@@ -13,7 +13,8 @@ class UniformInfiniteLight : public LightBase {
   public:
     UniformInfiniteLight(const Transform &render_from_light, const Spectrum *_l_emit,
                          const Real _scale)
-        : LightBase(LightType::infinite, render_from_light), Lemit(_l_emit), scale(_scale) {}
+        : LightBase(LightType::infinite, render_from_light, nullptr), Lemit(_l_emit),
+          scale(_scale) {}
 
     static UniformInfiniteLight *create(const Transform &renderFromLight,
                                         const ParameterDictionary &parameters,

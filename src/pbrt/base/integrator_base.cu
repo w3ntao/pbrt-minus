@@ -20,15 +20,14 @@ pbrt::optional<ShapeIntersection> IntegratorBase::intersect(const Ray &ray, Real
 
 PBRT_CPU_GPU
 SampledSpectrum IntegratorBase::compute_transmittance(const Interaction &p0, const Interaction &p1,
-                                                      const SampledWavelengths &lambda,
-                                                      const int max_depth) const {
+                                                      const SampledWavelengths &lambda) const {
     const auto epsilon_distance = p0.p().distance(p1.p()) * ShadowEpsilon;
 
     auto shadow_ray = p0.spawn_ray_to(p1, true);
     bool possible_self_intersection = false;
 
     SampledSpectrum transmittance = 1;
-    for (auto depth = 0; depth < max_depth * 2; depth++) {
+    for (auto depth = 0; depth < MAX_BOUNCES; depth++) {
         const auto distance_to_light = p1.p().distance(shadow_ray.o);
         auto optional_intersection =
             this->intersect(shadow_ray, (1.0 - ShadowEpsilon) * distance_to_light);
@@ -44,7 +43,7 @@ SampledSpectrum IntegratorBase::compute_transmittance(const Interaction &p0, con
             return transmittance;
         }
 
-        // ray hit something in between light and origin
+        // hit something in between light and ray.o
         if (optional_intersection->interaction.material) {
             // got blocked by some primitives
             return 0;
@@ -63,9 +62,13 @@ SampledSpectrum IntegratorBase::compute_transmittance(const Interaction &p0, con
             } else {
                 possible_self_intersection = true;
             }
+        } else {
+            possible_self_intersection = false;
         }
     }
 
-    // fail to connect 2 points within limited depth
-    return 0;
+    // reaching MAX_BOUNCES
+    // a fail-safe check
+    REPORT_FATAL_ERROR();
+    return NAN;
 }
