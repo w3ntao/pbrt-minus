@@ -32,22 +32,18 @@ Bounds3f Sphere::bounds() const {
 }
 
 PBRT_CPU_GPU
-pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, Real tMax) const {
-    Real phi;
-    Point3f pHit;
+pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, const Real tMax) const {
     // Transform _Ray_ origin and direction to object space
     Point3fi oi = object_from_render(Point3fi(r.o));
     Vector3fi di = object_from_render(Vector3fi(r.d));
 
-    // Solve quadratic equation to compute sphere _t0_ and _t1_
-    Interval t0, t1;
     // Compute sphere quadratic coefficients
     Interval a = sqr(di.x) + sqr(di.y) + sqr(di.z);
     Interval b = 2 * (di.x * oi.x + di.y * oi.y + di.z * oi.z);
     Interval c = sqr(oi.x) + sqr(oi.y) + sqr(oi.z) - sqr(Interval(radius));
 
     // Compute sphere quadratic discriminant _discrim_
-    Vector3fi v(oi - b / (2 * a) * di);
+    const auto v = Vector3fi(oi - b / (2 * a) * di);
 
     Interval length = v.length();
     Interval discrim = 4 * a * (Interval(radius) + length) * (Interval(radius) - length);
@@ -56,17 +52,13 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, Real t
     }
 
     // Compute quadratic $t$ values
-    Interval rootDiscrim = discrim.sqrt();
-    Interval q;
+    const Interval rootDiscrim = discrim.sqrt();
+    const Interval q = (Real)b < 0 ? -.5f * (b - rootDiscrim) : -.5f * (b + rootDiscrim);
 
-    if ((Real)b < 0) {
-        q = -.5f * (b - rootDiscrim);
-    } else {
-        q = -.5f * (b + rootDiscrim);
-    }
+    // Solve quadratic equation to compute sphere _t0_ and _t1_
+    Interval t0 = q / a;
 
-    t0 = q / a;
-    t1 = c / q;
+    Interval t1 = c / q;
     // Swap quadratic $t$ values so that _t0_ is the lesser
     if (t0.low > t1.low) {
         pbrt::swap(t0, t1);
@@ -86,7 +78,7 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, Real t
     }
 
     // Compute sphere hit position and $\phi$
-    pHit = oi.to_point3f() + (Real)tShapeHit * di.to_vector3f();
+    auto pHit = oi.to_point3f() + (Real)tShapeHit * di.to_vector3f();
 
     // Refine sphere intersection point
     pHit *= radius / pHit.distance(Point3f(0, 0, 0));
@@ -95,7 +87,7 @@ pbrt::optional<QuadricIntersection> Sphere::basic_intersect(const Ray &r, Real t
         pHit.x = 1e-5f * radius;
     }
 
-    phi = std::atan2(pHit.y, pHit.x);
+    auto phi = std::atan2(pHit.y, pHit.x);
     if (phi < 0) {
         phi += 2 * pbrt::PI;
     }

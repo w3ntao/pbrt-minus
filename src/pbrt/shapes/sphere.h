@@ -25,7 +25,7 @@ class Sphere {
     }
 
     PBRT_CPU_GPU
-    bool fast_intersect(const Ray &r, Real t_max) const {
+    bool fast_intersect(const Ray &r, const Real t_max) const {
         return basic_intersect(r, t_max).has_value();
     }
 
@@ -36,8 +36,8 @@ class Sphere {
             return {};
         }
 
-        SurfaceInteraction intr = interaction_from_intersection(*isect, -ray.d);
-        return ShapeIntersection{intr, isect->t_hit};
+        SurfaceInteraction surface_interaction = interaction_from_intersection(*isect, -ray.d);
+        return ShapeIntersection{surface_interaction, isect->t_hit};
     }
 
     PBRT_CPU_GPU

@@ -58,7 +58,8 @@ struct LightLiSample {
     Interaction p_light;
 
     PBRT_CPU_GPU
-    LightLiSample(SampledSpectrum _l, Vector3f _wi, Real _pdf, Interaction _p_light)
+    LightLiSample(const SampledSpectrum &_l, const Vector3f &_wi, const Real _pdf,
+                  const Interaction &_p_light)
         : l(_l), wi(_wi), pdf(_pdf), p_light(_p_light) {}
 };
 

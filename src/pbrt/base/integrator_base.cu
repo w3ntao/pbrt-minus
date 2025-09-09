@@ -24,10 +24,10 @@ SampledSpectrum IntegratorBase::compute_transmittance(const Interaction &p0, con
     const auto epsilon_distance = p0.p().distance(p1.p()) * ShadowEpsilon;
 
     auto shadow_ray = p0.spawn_ray_to(p1, true);
-    bool possible_self_intersection = false;
+    bool previous_self_intersection = false;
 
     SampledSpectrum transmittance = 1;
-    for (auto depth = 0; depth < MAX_BOUNCES; depth++) {
+    for (int depth = 0; depth < MAX_VOLUME_BOUNCES; depth++) {
         const auto distance_to_light = p1.p().distance(shadow_ray.o);
         auto optional_intersection =
             this->intersect(shadow_ray, (1.0 - ShadowEpsilon) * distance_to_light);
@@ -53,17 +53,14 @@ SampledSpectrum IntegratorBase::compute_transmittance(const Interaction &p0, con
 
         optional_intersection->interaction.n = Normal3f(shadow_ray.d);
         shadow_ray = optional_intersection->interaction.spawn_ray(shadow_ray.d);
-
         if (optional_intersection->t_hit < epsilon_distance) {
-            if (possible_self_intersection) {
+            if (previous_self_intersection) {
                 // forcibly offset shadow_ray.o to avoid self-intersection
                 shadow_ray.o += epsilon_distance * shadow_ray.d;
-                possible_self_intersection = false;
-            } else {
-                possible_self_intersection = true;
             }
+            previous_self_intersection = true;
         } else {
-            possible_self_intersection = false;
+            previous_self_intersection = false;
         }
     }
 

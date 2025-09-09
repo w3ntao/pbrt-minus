@@ -6,17 +6,18 @@
 
 class Interval {
   public:
-    Real low;
-    Real high;
+    Real low = NAN;
+    Real high = NAN;
 
     PBRT_CPU_GPU
-    Interval() : low(NAN), high(NAN) {}
+    Interval() {}
 
     PBRT_CPU_GPU
     explicit Interval(Real v) : low(v), high(v) {}
 
     PBRT_CPU_GPU
-    Interval(Real low, Real high) : low(std::min(low, high)), high(std::max(low, high)) {}
+    Interval(const Real low, const Real high)
+        : low(std::min(low, high)), high(std::max(low, high)) {}
 
     PBRT_CPU_GPU
     static Interval from_value_and_error(Real v, Real err) {
@@ -134,7 +135,8 @@ class Interval {
         }
     }
 
-    PBRT_CPU_GPU Interval sqrt() const {
+    PBRT_CPU_GPU
+    Interval sqrt() const {
         return {sqrt_round_down(low), sqrt_round_up(high)};
     }
 };

@@ -20,7 +20,7 @@ bool GeometricPrimitive::fast_intersect(const Ray &ray, Real t_max) const {
 PBRT_CPU_GPU
 pbrt::optional<ShapeIntersection> GeometricPrimitive::intersect(const Ray &ray, Real t_max) const {
     auto si = shape_ptr->intersect(ray, t_max);
-    if (!si.has_value()) {
+    if (!si) {
         return {};
     }
 

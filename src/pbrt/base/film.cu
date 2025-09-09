@@ -64,12 +64,13 @@ void Film::write_to_png(const std::string &filename, Real splat_scale) const {
     std::vector<unsigned char> png_pixels(width * height * 4);
 
     int nan_pixels = 0;
-
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            int index = y * width + x;
-            auto rgb = get_pixel_rgb(Point2i(x, y), splat_scale);
+            const int index = y * width + x;
+            const auto rgb = get_pixel_rgb(Point2i(x, y), splat_scale);
             if (rgb.has_nan()) {
+                printf("%sFilm::%s(): pixel (%d, %d) carries NAN components%s\n",
+                       FLAG_COLORFUL_PRINT_RED_START, __func__, x, y, FLAG_COLORFUL_PRINT_END);
                 nan_pixels += 1;
             }
 
@@ -81,7 +82,7 @@ void Film::write_to_png(const std::string &filename, Real splat_scale) const {
     }
 
     if (nan_pixels > 0) {
-        printf("%sFilm::%s(): %d/%d (%.2f%) pixels with NAN component%s\n",
+        printf("%sFilm::%s(): %d/%d (%.2f%) pixels carry NAN components%s\n",
                FLAG_COLORFUL_PRINT_RED_START, __func__, nan_pixels, width * height,
                static_cast<Real>(nan_pixels) / (width * height) * 100, FLAG_COLORFUL_PRINT_END);
 

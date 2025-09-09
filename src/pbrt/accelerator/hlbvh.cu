@@ -337,7 +337,6 @@ HLBVH::HLBVH(const std::vector<const Primitive *> &gpu_primitives, const std::st
     auto start_top_bvh = std::chrono::system_clock::now();
 
     ThreadPool thread_pool;
-    // TODO: increase thread_num in ThreadPool when building top BVH
     const int top_bvh_node_num =
         build_top_bvh_for_treelets(dense_treelets, dense_treelet_indices.size(), thread_pool);
 

@@ -28,15 +28,22 @@ class RGB {
 
     PBRT_CPU_GPU
     bool has_nan() const {
-        return isnan(r) || isnan(g) || isnan(b) || isinf(r) || isinf(g) || isinf(b);
+        for (int idx = 0; idx < 3; ++idx) {
+            if (const auto component = (*this)[idx]; isnan(component) || isinf(component)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    PBRT_CPU_GPU Real max_component() const {
+    PBRT_CPU_GPU
+    Real max_component() const {
         return std::max(std::max(r, g), b);
     }
 
     PBRT_CPU_GPU
-    Real operator[](uint8_t idx) const {
+    Real operator[](const uint8_t idx) const {
         switch (idx) {
         case 0: {
             return r;
@@ -54,7 +61,7 @@ class RGB {
     }
 
     PBRT_CPU_GPU
-    Real &operator[](uint8_t index) {
+    Real &operator[](const uint8_t index) {
         switch (index) {
         case 0: {
             return r;

@@ -28,15 +28,17 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
     auto next_time_russian_roulette = start_russian_roulette;
 
     auto ray = primary_ray;
+
     Real depth = 0.0;
     // making depth float type to counter for contribution from material-less hit
-    while (depth < max_depth) {
+    while (depth < max_depth && beta.is_positive()) {
         if (depth >= next_time_russian_roulette &&
             russian_roulette(beta, sampler, &next_time_russian_roulette)) {
             break;
         }
 
         auto optional_intersection = base->intersect(ray, Infinity);
+
         if (ray.medium) {
             const SampledSpectrum sigma_a = ray.medium->sigma_a->sample(lambda);
             const SampledSpectrum sigma_s = ray.medium->sigma_s->sample(lambda);
@@ -82,7 +84,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
             multi_transmittance_pdf *= SampledSpectrum::exp(-sigma_t * t_max);
         }
 
-        if (!optional_intersection && beta.is_positive()) {
+        if (!optional_intersection) {
             // Incorporate emission from infinite lights for escaped ray
             for (int idx = 0; idx < base->infinite_light_num; ++idx) {
                 auto light = base->infinite_lights[idx];
@@ -101,7 +103,6 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
                     L += beta * w * Le;
                 }
             }
-
             break;
         }
 
@@ -110,6 +111,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
             // pass through material-less interface
             ray = surface_interaction.spawn_ray(ray.d);
             depth += IntegratorBase::interface_bounce_contribution;
+
+            // in such case self-intersection is less worrying
+            // because depth increases for every intersection
+
             continue;
         }
 

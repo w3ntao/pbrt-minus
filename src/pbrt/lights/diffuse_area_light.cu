@@ -129,8 +129,6 @@ void DiffuseAreaLight::pdf_le(const Interaction &intr, Vector3f w, Real *pdfPos,
 
 PBRT_CPU_GPU
 SampledSpectrum DiffuseAreaLight::phi(const SampledWavelengths &lambda) const {
-    // TODO: image in DiffuseAreaLight is not implemented
-
     const auto L = Lemit->sample(lambda) * scale;
     return pbrt::PI * (two_sided ? 2 : 1) * this->shape->area() * L;
 }

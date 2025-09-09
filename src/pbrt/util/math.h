@@ -21,7 +21,6 @@ constexpr Real InvPI = 1.0 / std::numbers::pi;
 constexpr Real Sqrt2 = std::numbers::sqrt2;
 
 constexpr Real Infinity = std::numeric_limits<Real>::infinity();
-// TODO: add Infinity into namespace pbrt
 
 constexpr Real MachineEpsilon = std::numeric_limits<Real>::epsilon() * 0.5;
 

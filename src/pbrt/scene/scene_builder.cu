@@ -68,7 +68,7 @@ std::map<std::string, int> count_light_type(const std::vector<Light *> &gpu_ligh
 }
 
 void SceneBuilder::ActiveInstanceDefinition::build_bvh(GPUMemoryAllocator &allocator) {
-    if (bvh_build) {
+    if (bvh_ready) {
         REPORT_FATAL_ERROR();
     }
 
@@ -76,7 +76,7 @@ void SceneBuilder::ActiveInstanceDefinition::build_bvh(GPUMemoryAllocator &alloc
         return;
     }
 
-    bvh_build = true;
+    bvh_ready = true;
 
     if (primitives.size() == 1) {
         return;
@@ -908,6 +908,14 @@ void SceneBuilder::preprocess() {
     integrator_base->bvh = allocator.create<HLBVH>(gpu_primitives, "for ROOT", allocator);
 
     const auto full_scene_bounds = integrator_base->bvh->bounds();
+
+    Real scene_radius = NAN;
+    full_scene_bounds.bounding_sphere(nullptr, &scene_radius);
+    integrator_base->epsilon_distance = min(scene_radius * Real(1e-5), Real(0.01));
+    // this idea is taken from lajolla renderer
+    // 1e-2 = 0.01
+    // 1e-5 = 0.00001
+
     for (auto light : gpu_lights) {
         light->preprocess(full_scene_bounds);
     }

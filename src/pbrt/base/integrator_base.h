@@ -18,7 +18,7 @@ struct ShapeIntersection;
 
 struct IntegratorBase {
     static constexpr Real interface_bounce_contribution = 0.3;
-    static constexpr int MAX_BOUNCES = 1024;
+    static constexpr int MAX_VOLUME_BOUNCES = 128;
 
     IntegratorBase() = default;
 
@@ -34,6 +34,8 @@ struct IntegratorBase {
 
     const PowerLightSampler *light_sampler = nullptr;
 
+    Real epsilon_distance = NAN;
+
     [[nodiscard]]
     bool is_ready() const {
         if (bvh == nullptr || camera == nullptr || filter == nullptr || light_sampler == nullptr) {
@@ -45,6 +47,10 @@ struct IntegratorBase {
         }
 
         if (infinite_light_num > 0 && infinite_lights == nullptr) {
+            return false;
+        }
+
+        if (std::isnan(epsilon_distance) || epsilon_distance <= 0) {
             return false;
         }
 

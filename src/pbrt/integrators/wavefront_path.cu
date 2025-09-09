@@ -71,7 +71,7 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
         return;
     }
 
-    const auto depth = path_state->depth[path_idx];
+    auto &depth = path_state->depth[path_idx];
     auto &beta = path_state->beta[path_idx];
 
     const auto ray = path_state->camera_rays[path_idx].ray;
@@ -99,7 +99,7 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
                                                      &next_time_russian_roulette);
         }
 
-        if (!path_state->shape_intersections[path_idx].has_value() && beta.is_positive()) {
+        if (!path_state->shape_intersections[path_idx].has_value()) {
             // sample infinite lights
             for (int idx = 0; idx < base->infinite_light_num; ++idx) {
                 const auto light = base->infinite_lights[idx];
@@ -140,35 +140,35 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
 
     const auto &surface_interaction = path_state->shape_intersections[path_idx]->interaction;
 
-    if (surface_interaction.material) {
-        const SampledSpectrum Le = surface_interaction.le(-ray.d, lambda);
-        if (Le.is_positive()) {
-            if (depth == 0 || specular_bounce)
-                L += beta * Le;
-            else {
-                // Compute MIS weight for area light
-                const auto area_light = surface_interaction.area_light;
-                const Real pdf_light = base->light_sampler->pmf(area_light) *
-                                       area_light->pdf_li(*prev_interaction, ray.d);
-
-                const Real dir_pdf = *prev_direction_pdf * multi_transmittance_pdf.average();
-
-                const Real w = power_heuristic(1, dir_pdf, 1, pdf_light);
-
-                L += beta * w * Le;
-            }
-        }
-    }
-
-    // for active paths: advance one segment
-
     if (!surface_interaction.material) {
-        path_state->depth[path_idx] += IntegratorBase::interface_bounce_contribution;
+        // intersecting material-less interface
+        depth += IntegratorBase::interface_bounce_contribution;
         queues->interface_material->append_path(path_idx);
         return;
     }
 
-    path_state->depth[path_idx] += 1;
+    // otherwise intersecting primitives with material
+
+    const SampledSpectrum Le = surface_interaction.le(-ray.d, lambda);
+    if (Le.is_positive()) {
+        if (depth == 0 || specular_bounce)
+            L += beta * Le;
+        else {
+            // Compute MIS weight for area light
+            const auto area_light = surface_interaction.area_light;
+            const Real pdf_light =
+                base->light_sampler->pmf(area_light) * area_light->pdf_li(*prev_interaction, ray.d);
+
+            const Real dir_pdf = *prev_direction_pdf * multi_transmittance_pdf.average();
+
+            const Real w = power_heuristic(1, dir_pdf, 1, pdf_light);
+
+            L += beta * w * Le;
+        }
+    }
+
+    // for active paths: advance one segment
+    depth += 1;
 
     switch (surface_interaction.material->get_material_type()) {
     case Material::Type::conductor: {

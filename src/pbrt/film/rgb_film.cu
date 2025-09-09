@@ -70,7 +70,7 @@ void RGBFilm::add_sample(int pixel_index, const SampledSpectrum &radiance_l,
     auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
 
     if (DEBUG_MODE && rgb.has_nan()) {
-        printf("RGBFilm::%s(): pixel(%d): has a NAN component\n", __func__, pixel_index);
+        printf("RGBFilm::%s(): pixel (%d): carries NAN components\n", __func__, pixel_index);
     }
 
     // TODO: should I clamp pixel rgb?

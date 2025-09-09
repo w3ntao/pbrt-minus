@@ -394,9 +394,10 @@ int random_walk(SampledWavelengths &lambda, const Ray &initial_ray, Sampler *sam
     auto ray = initial_ray;
     bool any_non_specular_bounces = false;
     auto pdfFwd = pdf;
+    const auto epsilon_distance = config->base->epsilon_distance;
 
-    bool record_intersect_interface[2] = {false, false};
-    for (int i = 0; i < IntegratorBase::MAX_BOUNCES; ++i) {
+    bool previous_self_intersection = false;
+    for (int _i = 0; _i < IntegratorBase::MAX_VOLUME_BOUNCES; ++_i) {
         if (!beta.is_positive()) {
             return bounces;
         }
@@ -408,22 +409,24 @@ int random_walk(SampledWavelengths &lambda, const Ray &initial_ray, Sampler *sam
 
         if (optional_intersection && !optional_intersection->interaction.material) {
             // intersecting material-less interface
-            if (record_intersect_interface[0] && record_intersect_interface[1]) {
-                // intersecting interface 3 times in a row, just terminate this ray
-                // a simple way to handle self intersection
-                return bounces;
+            ray = optional_intersection->interaction.spawn_ray(ray.d);
+
+            if (optional_intersection->t_hit < epsilon_distance) {
+                if (previous_self_intersection) {
+                    // forcibly offset shadow_ray.o to avoid self-intersection
+                    ray.o += epsilon_distance * ray.d;
+                }
+                previous_self_intersection = true;
+
+            } else {
+                previous_self_intersection = false;
             }
 
-            record_intersect_interface[1] = record_intersect_interface[0];
-            record_intersect_interface[0] = true;
-
-            ray = optional_intersection->interaction.spawn_ray(ray.d);
             // pass through interface
             // don't increase bounces so no vertex created
             continue;
         }
-        record_intersect_interface[0] = false;
-        record_intersect_interface[1] = false;
+        previous_self_intersection = false;
 
         if (ray.medium) {
             const SampledSpectrum sigma_a = ray.medium->sigma_a->sample(lambda);
@@ -537,10 +540,9 @@ int BDPTIntegrator::generate_camera_subpath(const Ray &ray, SampledWavelengths &
 
     const SampledSpectrum beta = 1;
     // Generate first vertex on camera subpath and start random walk
-    Real pdfPos, pdfDir;
-
     path[0] = Vertex::create_camera(camera, ray, beta);
 
+    Real pdfPos, pdfDir;
     camera->pdf_we(ray, &pdfPos, &pdfDir);
 
     return 1 + random_walk(lambda, ray, sampler, beta, pdfDir, maxDepth - 1,

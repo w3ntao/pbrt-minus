@@ -139,9 +139,16 @@ class Bounds3 {
     }
 
     PBRT_CPU_GPU
-    void bounding_sphere(Point3<T> *center, Real *radius) const {
-        *center = (p_min + p_max) / 2;
-        *radius = inside(*center, *this) ? (*center - p_max).length() : 0.0;
+    void bounding_sphere(Point3<T> *_center, Real *radius) const {
+        const auto center = (p_min + p_max) / 2;
+
+        if (_center) {
+            *_center = center;
+        }
+
+        if (radius) {
+            *radius = inside(center, *this) ? (center - p_max).length() : 0.0;
+        }
     }
 
     PBRT_CPU_GPU

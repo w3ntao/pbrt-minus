@@ -53,7 +53,15 @@ class Vector3fi : public Vector3<Interval> {
 
     PBRT_CPU_GPU
     Interval length() const {
-        auto squared_length = x * x + y * y + z * z;
-        return squared_length.sqrt();
+        auto squared_length = sqr(x) + sqr(y) + sqr(z);
+        if (squared_length.low < 0) {
+            squared_length.low = 0;
+        }
+        auto length = squared_length.sqrt();
+        if (length.low < 0) {
+            length.low = 0;
+        }
+
+        return length;
     }
 };

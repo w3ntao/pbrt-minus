@@ -112,13 +112,13 @@ class SceneBuilder {
 
         void add_primitive(const Primitive *_primitive) {
             primitives.push_back(_primitive);
-            bvh_build = false;
+            bvh_ready = false;
         }
 
         void build_bvh(GPUMemoryAllocator &allocator);
 
         [[nodiscard]] const Primitive *get_instanced_primitive() const {
-            if (!bvh_build || primitives.size() != 1) {
+            if (!bvh_ready || primitives.size() != 1) {
                 REPORT_FATAL_ERROR();
             }
 
@@ -126,7 +126,7 @@ class SceneBuilder {
         }
 
       private:
-        bool bvh_build = false;
+        bool bvh_ready = false;
         std::vector<const Primitive *> primitives;
     };
 
