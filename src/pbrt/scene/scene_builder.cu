@@ -164,10 +164,12 @@ void SceneBuilder::build_camera() {
             REPORT_FATAL_ERROR();
         }
 
-        const auto medium_interface = graphics_state.medium_interface;
+        const auto medium =
+            graphics_state.medium_interface ? graphics_state.medium_interface->exterior : nullptr;
+
         integrator_base->camera = Camera::create_perspective_camera(
-            film->get_resolution(), camera_transform, this->film, integrator_base->filter,
-            medium_interface ? medium_interface->exterior : nullptr, parameters, allocator);
+            film->get_resolution(), camera_transform, this->film, integrator_base->filter, medium,
+            parameters, allocator);
 
         return;
     }
@@ -493,9 +495,11 @@ void SceneBuilder::parse_light_source(const std::vector<Token> &tokens) {
 
     const auto light_source_type = tokens[1].values[0];
 
+    const auto medium =
+        graphics_state.medium_interface ? graphics_state.medium_interface->exterior : nullptr;
     const auto light =
-        Light::create(light_source_type, get_render_from_object(),
-                      graphics_state.medium_interface->exterior, parameters, allocator);
+        Light::create(light_source_type, get_render_from_object(), medium, parameters, allocator);
+
     gpu_lights.push_back(light);
 }
 

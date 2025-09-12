@@ -15,6 +15,8 @@
 #include <pbrt/util/thread_pool.h>
 #include <pbrt/util/timer.h>
 
+static constexpr int NUM_THREADS = 256;
+
 struct FrameBuffer {
     int pixel_idx;
     int sample_idx;
@@ -87,19 +89,20 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
     bool should_terminate_path = depth >= max_depth || !beta.is_positive();
 
     if (!should_terminate_path) {
-        if (path_state->skip_material_evaluation[path_idx]) {
+        auto &next_time_russian_roulette = path_state->next_time_russian_roulette[path_idx];
+        if (depth >= next_time_russian_roulette) {
+            // possibly terminate the path with Russian roulette
+            should_terminate_path |= russian_roulette(beta, &path_state->samplers[path_idx],
+                                                      &next_time_russian_roulette);
+        }
+
+        if (path_state->in_volume[path_idx]) {
+            // start a new ray without evaluating material
             queues->rays->append_path(path_idx);
             return;
         }
 
-        auto &next_time_russian_roulette = path_state->next_time_russian_roulette[path_idx];
-        if (depth >= next_time_russian_roulette) {
-            // possibly terminate the path with Russian roulette
-            should_terminate_path = russian_roulette(beta, &path_state->samplers[path_idx],
-                                                     &next_time_russian_roulette);
-        }
-
-        if (!path_state->shape_intersections[path_idx].has_value()) {
+        if (!should_terminate_path && !path_state->shape_intersections[path_idx]) {
             // sample infinite lights
             for (int idx = 0; idx < base->infinite_light_num; ++idx) {
                 const auto light = base->infinite_lights[idx];
@@ -239,9 +242,9 @@ __global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues) {
     queues->new_paths->queue_array[worker_idx] = worker_idx;
 }
 
-__global__ void generate_new_path(WavefrontPathIntegrator::PathState *path_state,
-                                  WavefrontPathIntegrator::Queues *queues,
-                                  const IntegratorBase *base) {
+__global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_state,
+                                      WavefrontPathIntegrator::Queues *queues,
+                                      const IntegratorBase *base) {
     const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= queues->new_paths->counter) {
         return;
@@ -283,6 +286,20 @@ __global__ void generate_new_path(WavefrontPathIntegrator::PathState *path_state
     queues->rays->append_path(path_idx);
 }
 
+void generate_new_path(WavefrontPathIntegrator::PathState *path_state,
+                       WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base) {
+    if (queues->new_paths->counter <= 0) {
+        return;
+    }
+
+    gpu_generate_new_path<<<divide_and_ceil(queues->new_paths->counter, NUM_THREADS),
+                            NUM_THREADS>>>(path_state, queues, base);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    queues->new_paths->counter = 0;
+}
+
 __global__ void
 gpu_evaluate_interface_material(const WavefrontPathIntegrator::Queues::SingleQueue *queue,
                                 const WavefrontPathIntegrator *integrator) {
@@ -310,89 +327,112 @@ gpu_evaluate_material(const WavefrontPathIntegrator::Queues::SingleQueue *materi
         return;
     }
 
-    auto path_state = &integrator->path_state;
+    auto &path_state = integrator->path_state;
 
     const int path_idx = material_queue->queue_array[queue_idx];
 
-    auto &lambda = path_state->lambdas[path_idx];
+    auto &lambda = path_state.lambdas[path_idx];
 
-    auto sampler = &path_state->samplers[path_idx];
+    auto &sampler = path_state.samplers[path_idx];
 
-    auto &surface_interaction = path_state->shape_intersections[path_idx]->interaction;
+    auto &surface_interaction = path_state.shape_intersections[path_idx]->interaction;
 
-    path_state->bsdf[path_idx] = surface_interaction.get_bsdf(lambda, integrator->base->camera,
-                                                              sampler->get_samples_per_pixel());
+    path_state.bsdf[path_idx] = surface_interaction.get_bsdf(lambda, integrator->base->camera,
+                                                             sampler.get_samples_per_pixel());
 
-    integrator->sample_bsdf(path_idx, path_state);
+    integrator->sample_bsdf(path_idx, &path_state);
 
     integrator->queues.rays->append_path(path_idx);
 }
 
 __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
-                         WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base,
-                         const int max_depth) {
+                         WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base) {
     const int ray_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (ray_queue_idx >= queues->rays->counter) {
         return;
     }
 
     const int path_idx = queues->rays->queue_array[ray_queue_idx];
-    path_state->skip_material_evaluation[path_idx] = false;
-    auto &ray = path_state->camera_rays[path_idx].ray;
+    const auto &ray = path_state->camera_rays[path_idx].ray;
 
     const auto optional_intersection = base->intersect(ray, Infinity);
     path_state->shape_intersections[path_idx] = optional_intersection;
+
+    path_state->in_volume[path_idx] = false;
+
     if (ray.medium) {
-        const auto &lambda = path_state->lambdas[path_idx];
-
-        auto sampler = &path_state->samplers[path_idx];
-        auto &beta = path_state->beta[path_idx];
-        auto &L = path_state->L[path_idx];
-        auto &multi_transmittance_pdf = path_state->multi_transmittance_pdf[path_idx];
-
-        const SampledSpectrum sigma_a = ray.medium->sigma_a->sample(lambda);
-        const SampledSpectrum sigma_s = ray.medium->sigma_s->sample(lambda);
-        const SampledSpectrum sigma_t = sigma_a + sigma_s;
-
-        const auto t_max = optional_intersection ? optional_intersection->t_hit : Infinity;
-        if (const auto t = sample_exponential(sampler->get_1d(), sigma_t.average()); t < t_max) {
-            // scatter in medium
-            ray.o = ray.at(t);
-            beta *= sigma_s / sigma_t;
-
-            SurfaceInteraction medium_interaction;
-            medium_interaction.pi = ray.o;
-            medium_interaction.wo = -ray.d;
-            medium_interaction.medium = ray.medium;
-
-            SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(
-                medium_interaction, nullptr, lambda, sampler, base);
-            L += beta * Ld;
-
-            auto phase_sample = ray.medium->phase.sample(-ray.d, sampler->get_2d());
-            if (!phase_sample) {
-                beta = 0;
-                return;
-            }
-
-            beta *= phase_sample->rho / phase_sample->pdf;
-
-            path_state->mis_parameters[path_idx].prev_direction_pdf = phase_sample->pdf;
-            path_state->mis_parameters[path_idx].prev_interaction = medium_interaction;
-            ray.d = phase_sample->wi;
-
-            multi_transmittance_pdf = 1;
-
-            path_state->depth[path_idx] += 1;
-            path_state->skip_material_evaluation[path_idx] = true;
-
-            path_state->mis_parameters[path_idx].specular_bounce = false;
-            path_state->mis_parameters[path_idx].any_non_specular_bounces = true;
-        } else {
-            // otherwise pass through medium
-            multi_transmittance_pdf *= SampledSpectrum::exp(-sigma_t * t_max);
-        }
+        queues->volume->append_path(path_idx);
     }
+}
+
+__global__ void volume_scatter(WavefrontPathIntegrator::PathState *path_state,
+                               WavefrontPathIntegrator::Queues *queues,
+                               const IntegratorBase *base) {
+
+    const int volume_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (volume_queue_idx >= queues->volume->counter) {
+        return;
+    }
+
+    const int path_idx = queues->volume->queue_array[volume_queue_idx];
+    auto &ray = path_state->camera_rays[path_idx].ray;
+
+    const auto optional_intersection = path_state->shape_intersections[path_idx];
+
+    const auto &lambda = path_state->lambdas[path_idx];
+
+    auto sampler = &path_state->samplers[path_idx];
+    auto &beta = path_state->beta[path_idx];
+    auto &L = path_state->L[path_idx];
+    auto &multi_transmittance_pdf = path_state->multi_transmittance_pdf[path_idx];
+
+    const SampledSpectrum sigma_a = ray.medium->sigma_a->sample(lambda);
+    const SampledSpectrum sigma_s = ray.medium->sigma_s->sample(lambda);
+    const SampledSpectrum sigma_t = sigma_a + sigma_s;
+
+    const auto t_max = optional_intersection ? optional_intersection->t_hit : Infinity;
+
+    const auto t = sample_exponential(sampler->get_1d(), sigma_t.average());
+    if (t >= t_max) {
+        // pass through medium
+        multi_transmittance_pdf *= SampledSpectrum::exp(-sigma_t * t_max);
+        return;
+    }
+
+    // otherwise scatter in medium
+    ray.o = ray.at(t);
+    beta *= sigma_s / sigma_t;
+
+    SurfaceInteraction medium_interaction;
+    medium_interaction.pi = ray.o;
+    medium_interaction.wo = -ray.d;
+    medium_interaction.medium = ray.medium;
+
+    SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(medium_interaction, nullptr,
+                                                                    lambda, sampler, base);
+    L += beta * Ld;
+
+    auto phase_sample = ray.medium->phase.sample(-ray.d, sampler->get_2d());
+    if (!phase_sample) {
+        beta = 0;
+        return;
+    }
+
+    beta *= phase_sample->rho / phase_sample->pdf;
+
+    path_state->mis_parameters[path_idx].prev_direction_pdf = phase_sample->pdf;
+    path_state->mis_parameters[path_idx].prev_interaction = medium_interaction;
+    ray.d = phase_sample->wi;
+
+    multi_transmittance_pdf = 1;
+
+    path_state->depth[path_idx] += 1;
+    path_state->in_volume[path_idx] = true;
+    // dont't add this path into ray_cast() immediately
+    // that would bypass russian roulette, leading to possibly infinite bounce
+
+    path_state->mis_parameters[path_idx].specular_bounce = false;
+    path_state->mis_parameters[path_idx].any_non_specular_bounces = true;
 }
 
 PBRT_CPU_GPU
@@ -444,6 +484,8 @@ void WavefrontPathIntegrator::evaluate_interface_material() {
                                                                         this);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    queues.interface_material->counter = 0;
 }
 
 void WavefrontPathIntegrator::evaluate_material(const Material::Type material_type) {
@@ -458,6 +500,8 @@ void WavefrontPathIntegrator::evaluate_material(const Material::Type material_ty
     gpu_evaluate_material<<<blocks, threads>>>(material_queue, this);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    material_queue->counter = 0;
 }
 
 PBRT_CPU_GPU
@@ -468,7 +512,7 @@ void WavefrontPathIntegrator::PathState::reset_path(const int path_idx) {
     L[path_idx] = 0;
     beta[path_idx] = 1;
     multi_transmittance_pdf[path_idx] = 1;
-    skip_material_evaluation[path_idx] = false;
+    in_volume[path_idx] = false;
     depth[path_idx] = 0;
     next_time_russian_roulette[path_idx] = start_russian_roulette;
     mis_parameters[path_idx].reset();
@@ -496,7 +540,7 @@ void WavefrontPathIntegrator::PathState::build_path(GPUMemoryAllocator &allocato
     beta = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
     multi_transmittance_pdf = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
     shape_intersections = allocator.allocate<pbrt::optional<ShapeIntersection>>(PATH_POOL_SIZE);
-    skip_material_evaluation = allocator.allocate<bool>(PATH_POOL_SIZE);
+    in_volume = allocator.allocate<bool>(PATH_POOL_SIZE);
 
     depth = allocator.allocate<Real>(PATH_POOL_SIZE);
     next_time_russian_roulette = allocator.allocate<int>(PATH_POOL_SIZE);
@@ -519,6 +563,7 @@ WavefrontPathIntegrator::Queues::Queues(GPUMemoryAllocator &allocator) {
     new_paths = create_new_queue();
     rays = create_new_queue();
 
+    volume = create_new_queue();
     interface_material = create_new_queue();
     conductor_material = create_new_queue();
     coated_conductor_material = create_new_queue();
@@ -557,20 +602,15 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         gl_helper.init("initializing", image_resolution);
     }
 
-    constexpr int threads = 256;
-
     // generate new paths for the whole pool
-    fill_new_path_queue<<<PATH_POOL_SIZE, threads>>>(&queues);
+    fill_new_path_queue<<<PATH_POOL_SIZE, NUM_THREADS>>>(&queues);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     queues.new_paths->counter = PATH_POOL_SIZE;
     queues.rays->counter = 0;
 
-    generate_new_path<<<divide_and_ceil(queues.new_paths->counter, threads), threads>>>(
-        &path_state, &queues, base);
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    generate_new_path(&path_state, &queues, base);
 
     if (queues.rays->counter <= 0) {
         REPORT_FATAL_ERROR();
@@ -584,7 +624,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             return false;
         }
 
-        write_frame_buffer<<<divide_and_ceil(size, threads), threads>>>(
+        write_frame_buffer<<<divide_and_ceil(size, NUM_THREADS), NUM_THREADS>>>(
             film, queues.ping_pong_buffer[ping_pong_idx], size);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
@@ -602,16 +642,22 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         if (DEBUG_MODE) {
             printf("pass: %d, ray_cast(): %d\n", pass, queues.rays->counter);
         }
-        ray_cast<<<divide_and_ceil(queues.rays->counter, threads), threads>>>(&path_state, &queues,
-                                                                              base, max_depth);
+        ray_cast<<<divide_and_ceil(queues.rays->counter, NUM_THREADS), NUM_THREADS>>>(
+            &path_state, &queues, base);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        queues.rays->counter = 0;
 
         timer.stop("stage 0 ray_cast()");
 
-        // clear all queues before control stage
-        for (const auto _queue : queues.get_all_queues()) {
-            _queue->counter = 0;
+        if (queues.volume->counter > 0) {
+            volume_scatter<<<divide_and_ceil(queues.volume->counter, NUM_THREADS), NUM_THREADS>>>(
+                &path_state, &queues, base);
+            CHECK_CUDA_ERROR(cudaGetLastError());
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+            queues.volume->counter = 0;
+
+            timer.stop("stage 1 volume_scatter()");
         }
 
         mutex[ping_pong_idx].lock();
@@ -624,19 +670,19 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             gl_helper.draw_frame(
                 GLHelper::assemble_title(Real(current_sample_idx) / samples_per_pixel));
         }
-        timer.stop("stage 1 write_frame_buffer()");
+        timer.stop("stage 2 write_frame_buffer()");
 
         if (queues.ping_pong_counter[ping_pong_idx] != 0) {
             REPORT_FATAL_ERROR();
         }
 
-        control_logic<<<divide_and_ceil(PATH_POOL_SIZE, threads), threads>>>(
+        control_logic<<<divide_and_ceil(PATH_POOL_SIZE, NUM_THREADS), NUM_THREADS>>>(
             &path_state, &queues, ping_pong_idx, base, max_depth);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         mutex[ping_pong_idx].unlock();
 
-        timer.stop("stage 2 control_logic()");
+        timer.stop("stage 3 control_logic()");
 
         if (queues.ping_pong_counter[ping_pong_idx] > 0) {
             mutex[ping_pong_idx].lock();
@@ -652,14 +698,9 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             printf("pass: %d, generate_new_path(): %d\n", pass, queues.rays->counter);
         }
 
-        if (queues.new_paths->counter > 0) {
-            generate_new_path<<<divide_and_ceil(queues.new_paths->counter, threads), threads>>>(
-                &path_state, &queues, base);
-            CHECK_CUDA_ERROR(cudaGetLastError());
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        }
+        generate_new_path(&path_state, &queues, base);
 
-        timer.stop("stage 3 generate_new_path()");
+        timer.stop("stage 4 generate_new_path()");
 
         if (DEBUG_MODE) {
             printf("pass: %d, evaluate_interface_material(): %d\n", pass,
@@ -675,7 +716,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
             evaluate_material(material_type);
         }
 
-        timer.stop("stage 4 evaluate_material()");
+        timer.stop("stage 5 evaluate_material()");
 
         pass += 1;
     }
@@ -686,7 +727,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         clear_ping_pong_buffer(ping_pong_idx);
         mutex[ping_pong_idx].unlock();
     }
-    timer.stop("stage 1 write_frame_buffer()");
+    timer.stop("stage 2 write_frame_buffer()");
 
     printf("wavefront pathtracing benchmark:\n");
     timer.print();

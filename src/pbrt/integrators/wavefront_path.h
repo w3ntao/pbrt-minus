@@ -33,7 +33,7 @@ class WavefrontPathIntegrator {
         SampledSpectrum *L = nullptr;
         SampledSpectrum *beta = nullptr;
         SampledSpectrum *multi_transmittance_pdf = nullptr;
-        bool *skip_material_evaluation = nullptr;
+        bool *in_volume = nullptr;
 
         pbrt::optional<ShapeIntersection> *shape_intersections = nullptr;
 
@@ -88,7 +88,9 @@ class WavefrontPathIntegrator {
         SingleQueue *new_paths = nullptr;
         SingleQueue *rays = nullptr;
 
+        SingleQueue *volume = nullptr;
         SingleQueue *interface_material = nullptr;
+
         SingleQueue *conductor_material = nullptr;
         SingleQueue *coated_conductor_material = nullptr;
         SingleQueue *coated_diffuse_material = nullptr;
@@ -98,17 +100,6 @@ class WavefrontPathIntegrator {
 
         int ping_pong_counter[2] = {0, 0};
         FrameBuffer *ping_pong_buffer[2] = {nullptr, nullptr};
-
-        [[nodiscard]]
-        std::vector<SingleQueue *> get_all_queues() const {
-            auto all_queues = std::vector({new_paths, rays, interface_material});
-
-            for (const auto material_type : Material::get_basic_material_types()) {
-                all_queues.push_back(get_material_queue(material_type));
-            }
-
-            return all_queues;
-        }
 
         SingleQueue *get_material_queue(const Material::Type material_type) const {
             switch (material_type) {
