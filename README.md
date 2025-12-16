@@ -69,4 +69,6 @@ More scenes at https://github.com/w3ntao/pbrt-minus-scenes.
 
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/material-testball-sequence-4096.png)
 
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/volumetric-caustic-1024.png)
 
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-specular-volume-1024.png)
