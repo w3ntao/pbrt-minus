@@ -55,6 +55,8 @@ More scenes at https://github.com/w3ntao/pbrt-minus-scenes.
 
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame300-wavefrontpath-4096.png)
 
+![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame300-horizontal-1024.png)
+
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/frame675-wavefrontpath-4096.png)
 
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/book-wavefrontpath-4096.png)
