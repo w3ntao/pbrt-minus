@@ -14,6 +14,8 @@ AmbientOcclusionIntegrator::AmbientOcclusionIntegrator(const ParameterDictionary
 
     const auto cie_y = parameters.global_spectra->cie_y;
     illuminant_scale = 1.0 / illuminant_spectrum->to_photometric(cie_y);
+
+    max_distance = parameters.get_float("maxdistance", Infinity);
 }
 
 PBRT_CPU_GPU
@@ -43,7 +45,7 @@ SampledSpectrum AmbientOcclusionIntegrator::li(const Ray &ray, SampledWavelength
     // Divide by PI so that fully visible is one.
     auto spawned_ray = isect.spawn_ray(wi);
 
-    if (base->bvh->fast_intersect(spawned_ray, Infinity)) {
+    if (base->bvh->fast_intersect(spawned_ray, max_distance)) {
         return SampledSpectrum(0.0);
     }
 

@@ -19,4 +19,5 @@ class AmbientOcclusionIntegrator {
     const IntegratorBase *base = nullptr;
     const Spectrum *illuminant_spectrum = nullptr;
     Real illuminant_scale = NAN;
+    Real max_distance = NAN;
 };
