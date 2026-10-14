@@ -11,7 +11,7 @@
 #include <pbrt/util/russian_roulette.h>
 
 PBRT_CPU_GPU
-SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray,
+SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const Ray &primary_ray,
                                                              SampledWavelengths &lambda,
                                                              Sampler *sampler,
                                                              const IntegratorBase *base,
@@ -29,10 +29,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
 
     auto ray = primary_ray;
 
-    Real depth = 0.0;
+    Real path_depth = 0.0;
     // making depth float type to counter for contribution from material-less hit
-    while (depth < max_depth && beta.is_positive()) {
-        if (depth >= next_time_russian_roulette &&
+    while (path_depth < max_depth && beta.is_positive()) {
+        if (path_depth >= next_time_russian_roulette &&
             russian_roulette(beta, sampler, &next_time_russian_roulette)) {
             break;
         }
@@ -76,7 +76,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
                 specular_bounce = false;
                 any_non_specular_bounces = true;
 
-                depth += 1;
+                path_depth += 1;
                 continue;
             }
             // otherwise pass through medium
@@ -90,7 +90,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
                 auto light = base->infinite_lights[idx];
                 auto Le = light->le(ray, lambda);
 
-                if (depth == 0 || specular_bounce) {
+                if (path_depth == 0 || specular_bounce) {
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
@@ -110,7 +110,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
         if (!surface_interaction.material) {
             // pass through material-less interface
             ray = surface_interaction.spawn_ray(ray.d);
-            depth += IntegratorBase::interface_bounce_contribution;
+            path_depth += IntegratorBase::interface_bounce_contribution;
 
             // in such case self-intersection is less worrying
             // because depth increases for every intersection
@@ -120,7 +120,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
 
         // Incorporate emission from surface hit by ray
         if (const SampledSpectrum Le = surface_interaction.le(-ray.d, lambda); Le.is_positive()) {
-            if (depth == 0 || specular_bounce) {
+            if (path_depth == 0 || specular_bounce) {
                 L += beta * Le;
             } else {
                 // Compute MIS weight for area light
@@ -135,6 +135,8 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
 
                 L += beta * w * Le;
             }
+
+            break; // TODO: this part is different from PBRT-v4, which does not break here
         }
 
         auto bsdf =
@@ -169,7 +171,11 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
         ray = surface_interaction.spawn_ray(bs->wi);
         // different with PBRT-v4: ignore the DifferentialRay
 
-        depth += 1;
+        path_depth += 1;
+    }
+
+    if (depth != nullptr) {
+        *depth = path_depth;
     }
 
     return L;
@@ -178,7 +184,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
                                              Sampler *sampler) const {
-    return evaluate_Li_volume(primary_ray, lambda, sampler, base, max_depth, regularize);
+    return evaluate_Li_volume(nullptr, primary_ray, lambda, sampler, base, max_depth, regularize);
 }
 
 PBRT_CPU_GPU

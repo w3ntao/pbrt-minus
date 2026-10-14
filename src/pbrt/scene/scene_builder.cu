@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <pbrt/accelerator/hlbvh.h>
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
@@ -26,9 +27,8 @@
 
 int next_keyword_position(const std::vector<Token> &tokens, int start) {
     for (int idx = start + 1; idx < tokens.size(); ++idx) {
-        if (const auto type = tokens[idx].type;
-            type == TokenType::Number || type == TokenType::String || type == TokenType::Variable ||
-            type == TokenType::List) {
+        if (const auto type = tokens[idx].type; type == TokenType::Number || type == TokenType::String ||
+                                                type == TokenType::Variable || type == TokenType::List) {
             continue;
         }
         return idx;
@@ -39,10 +39,8 @@ int next_keyword_position(const std::vector<Token> &tokens, int start) {
 
 std::map<std::string, int> count_light_type(const std::vector<Light *> &gpu_lights) {
     const std::map<Light::Type, std::string> lights_name = {
-        {Light::Type::diffuse_area_light, "DiffuseAreaLight"},
-        {Light::Type::distant_light, "DistantLight"},
-        {Light::Type::image_infinite_light, "ImageInfiniteLight"},
-        {Light::Type::spot_light, "SpotLight"},
+        {Light::Type::diffuse_area_light, "DiffuseAreaLight"},         {Light::Type::distant_light, "DistantLight"},
+        {Light::Type::image_infinite_light, "ImageInfiniteLight"},     {Light::Type::spot_light, "SpotLight"},
         {Light::Type::uniform_infinite_light, "UniformInfiniteLight"},
     };
 
@@ -90,47 +88,36 @@ void SceneBuilder::ActiveInstanceDefinition::build_bvh(GPUMemoryAllocator &alloc
 }
 
 SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
-    : input_filename(command_line_option.input_file),
-      integrator_name(command_line_option.integrator_name),
-      output_filename(command_line_option.output_file),
-      samples_per_pixel(command_line_option.samples_per_pixel),
+    : input_filename(command_line_option.input_file), integrator_name(command_line_option.integrator_name),
+      output_filename(command_line_option.output_file), samples_per_pixel(command_line_option.samples_per_pixel),
       preview(command_line_option.preview) {
     global_spectra = GlobalSpectra::create(RGBtoSpectrumData::Gamut::sRGB, allocator);
 
-    auto ag_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Ag_eta, false,
-                                                                              nullptr, allocator);
+    auto ag_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Ag_eta, false, nullptr, allocator);
 
-    auto ag_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Ag_k, false, nullptr,
-                                                                            allocator);
+    auto ag_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Ag_k, false, nullptr, allocator);
 
-    auto al_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Al_eta, false,
-                                                                              nullptr, allocator);
+    auto al_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Al_eta, false, nullptr, allocator);
 
-    auto al_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Al_k, false, nullptr,
-                                                                            allocator);
+    auto al_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Al_k, false, nullptr, allocator);
 
-    auto au_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Au_eta, false,
-                                                                              nullptr, allocator);
+    auto au_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Au_eta, false, nullptr, allocator);
 
-    auto au_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Au_k, false, nullptr,
-                                                                            allocator);
+    auto au_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Au_k, false, nullptr, allocator);
 
-    auto cu_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Cu_eta, false,
-                                                                              nullptr, allocator);
+    auto cu_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Cu_eta, false, nullptr, allocator);
 
-    auto cu_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Cu_k, false, nullptr,
-                                                                            allocator);
+    auto cu_k = Spectrum::create_piecewise_linear_spectrum_from_interleaved(Cu_k, false, nullptr, allocator);
 
-    auto glass_bk7_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        GlassBK7_eta, false, nullptr, allocator);
+    auto glass_bk7_eta =
+        Spectrum::create_piecewise_linear_spectrum_from_interleaved(GlassBK7_eta, false, nullptr, allocator);
 
-    auto glass_f11_eta = Spectrum::create_piecewise_linear_spectrum_from_interleaved(
-        GlassSF11_eta, false, nullptr, allocator);
+    auto glass_f11_eta =
+        Spectrum::create_piecewise_linear_spectrum_from_interleaved(GlassSF11_eta, false, nullptr, allocator);
 
     spectra = {
-        {"metal-Ag-eta", ag_eta},     {"metal-Ag-k", ag_k},         {"metal-Al-eta", al_eta},
-        {"metal-Al-k", al_k},         {"metal-Au-eta", au_eta},     {"metal-Au-k", au_k},
-        {"metal-Cu-eta", cu_eta},     {"metal-Cu-k", cu_k},
+        {"metal-Ag-eta", ag_eta},     {"metal-Ag-k", ag_k},         {"metal-Al-eta", al_eta}, {"metal-Al-k", al_k},
+        {"metal-Au-eta", au_eta},     {"metal-Au-k", au_k},         {"metal-Cu-eta", cu_eta}, {"metal-Cu-k", cu_k},
 
         {"glass-BK7", glass_bk7_eta}, {"glass-F11", glass_f11_eta},
     };
@@ -140,6 +127,8 @@ SceneBuilder::SceneBuilder(const CommandLineOption &command_line_option)
     auto texture = SpectrumTexture::create_constant_float_val_texture(0.5, allocator);
     graphics_state.material = Material::create_diffuse_material(texture, allocator);
 }
+
+SceneBuilder::~SceneBuilder() = default;
 
 void SceneBuilder::build_camera() {
     if (film == nullptr) {
@@ -155,8 +144,7 @@ void SceneBuilder::build_camera() {
 
         named_coordinate_systems["camera"] = world_from_camera;
 
-        auto camera_transform =
-            CameraTransform(world_from_camera, RenderingCoordinateSystem::CameraWorldCoordSystem);
+        auto camera_transform = CameraTransform(world_from_camera, RenderingCoordinateSystem::CameraWorldCoordSystem);
 
         render_from_world = camera_transform.render_from_world;
 
@@ -164,12 +152,11 @@ void SceneBuilder::build_camera() {
             REPORT_FATAL_ERROR();
         }
 
-        const auto medium =
-            graphics_state.medium_interface ? graphics_state.medium_interface->exterior : nullptr;
+        const auto medium = graphics_state.medium_interface ? graphics_state.medium_interface->exterior : nullptr;
 
-        integrator_base->camera = Camera::create_perspective_camera(
-            film->get_resolution(), camera_transform, this->film, integrator_base->filter, medium,
-            parameters, allocator);
+        integrator_base->camera =
+            Camera::create_perspective_camera(film->get_resolution(), camera_transform, this->film,
+                                              integrator_base->filter, medium, parameters, allocator);
 
         return;
     }
@@ -213,13 +200,12 @@ void SceneBuilder::build_film() {
 
 void SceneBuilder::build_gpu_lights() {
     auto light_array = allocator.allocate<const Light *>(gpu_lights.size());
-    CHECK_CUDA_ERROR(cudaMemcpy(light_array, gpu_lights.data(), sizeof(Light *) * gpu_lights.size(),
-                                cudaMemcpyHostToDevice));
+    CHECK_CUDA_ERROR(
+        cudaMemcpy(light_array, gpu_lights.data(), sizeof(Light *) * gpu_lights.size(), cudaMemcpyHostToDevice));
 
     integrator_base->lights = light_array;
     integrator_base->light_num = gpu_lights.size();
-    integrator_base->light_sampler =
-        allocator.create<PowerLightSampler>(light_array, gpu_lights.size(), allocator);
+    integrator_base->light_sampler = allocator.create<PowerLightSampler>(light_array, gpu_lights.size(), allocator);
 
     std::vector<const Light *> infinite_lights;
     for (const auto light : gpu_lights) {
@@ -230,8 +216,8 @@ void SceneBuilder::build_gpu_lights() {
 
     auto gpu_infinite_lights = allocator.allocate<const Light *>(infinite_lights.size());
 
-    CHECK_CUDA_ERROR(cudaMemcpy(gpu_infinite_lights, infinite_lights.data(),
-                                sizeof(Light *) * infinite_lights.size(), cudaMemcpyHostToDevice));
+    CHECK_CUDA_ERROR(cudaMemcpy(gpu_infinite_lights, infinite_lights.data(), sizeof(Light *) * infinite_lights.size(),
+                                cudaMemcpyHostToDevice));
 
     integrator_base->infinite_lights = gpu_infinite_lights;
     integrator_base->infinite_light_num = infinite_lights.size();
@@ -255,33 +241,33 @@ void SceneBuilder::build_integrator() {
     }
 
     if (integrator_name == "mlt" || integrator_name == "mltbdpt") {
-        mlt_bdpt_integrator = MLTBDPTIntegrator::create(samples_per_pixel.value(), parameters,
-                                                        integrator_base, allocator);
+        mlt_bdpt_integrator =
+            MLTBDPTIntegrator::create(samples_per_pixel.value(), parameters, integrator_base, allocator);
         return;
     }
 
     if (integrator_name == "mltpath") {
-        mlt_path_integrator = MLTPathIntegrator::create(samples_per_pixel.value(), parameters,
-                                                        integrator_base, allocator);
+        mlt_path_integrator =
+            MLTPathIntegrator::create(samples_per_pixel.value(), parameters, integrator_base, film, allocator);
         return;
     }
 
     printf("sampler: %s\n", sampler_type.c_str());
 
     if (integrator_name == "bdpt") {
-        bdpt_integrator = BDPTIntegrator::create(samples_per_pixel.value(), sampler_type,
-                                                 parameters, integrator_base, allocator);
+        bdpt_integrator =
+            BDPTIntegrator::create(samples_per_pixel.value(), sampler_type, parameters, integrator_base, allocator);
         return;
     }
 
     if (integrator_name == "path") {
-        wavefront_path_integrator = allocator.create<WavefrontPathIntegrator>(
-            samples_per_pixel.value(), sampler_type, parameters, integrator_base, allocator);
+        wavefront_path_integrator = allocator.create<WavefrontPathIntegrator>(samples_per_pixel.value(), sampler_type,
+                                                                              parameters, integrator_base, allocator);
         return;
     }
 
-    megakernel_integrator = MegakernelIntegrator::create(integrator_name.value(), parameters,
-                                                         integrator_base, allocator);
+    megakernel_integrator =
+        MegakernelIntegrator::create(integrator_name.value(), parameters, integrator_base, allocator);
 }
 
 void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
@@ -457,8 +443,7 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
         const auto interior_medium = build_medium(interior_name);
         const auto exterior_medium = build_medium(exterior_name);
 
-        const auto medium_interface =
-            allocator.create<MediumInterface>(interior_medium, exterior_medium);
+        const auto medium_interface = allocator.create<MediumInterface>(interior_medium, exterior_medium);
 
         graphics_state.medium_interface = medium_interface;
         return;
@@ -495,10 +480,8 @@ void SceneBuilder::parse_light_source(const std::vector<Token> &tokens) {
 
     const auto light_source_type = tokens[1].values[0];
 
-    const auto medium =
-        graphics_state.medium_interface ? graphics_state.medium_interface->exterior : nullptr;
-    const auto light =
-        Light::create(light_source_type, get_render_from_object(), medium, parameters, allocator);
+    const auto medium = graphics_state.medium_interface ? graphics_state.medium_interface->exterior : nullptr;
+    const auto light = Light::create(light_source_type, get_render_from_object(), medium, parameters, allocator);
 
     gpu_lights.push_back(light);
 }
@@ -539,8 +522,7 @@ void SceneBuilder::parse_make_named_medium(const std::vector<Token> &tokens) {
 
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
-    if (const auto type_of_medium = parameters.get_one_string("type");
-        type_of_medium != "homogeneous") {
+    if (const auto type_of_medium = parameters.get_one_string("type"); type_of_medium != "homogeneous") {
         printf("%s(): : only `homogeneous` supported\n");
         REPORT_FATAL_ERROR();
     }
@@ -584,8 +566,7 @@ void SceneBuilder::parse_rotate(const std::vector<Token> &tokens) {
         data.push_back(tokens[idx].to_float());
     }
 
-    graphics_state.transform =
-        graphics_state.transform * Transform::rotate(data[0], data[1], data[2], data[3]);
+    graphics_state.transform = graphics_state.transform * Transform::rotate(data[0], data[1], data[2], data[3]);
 }
 
 void SceneBuilder::parse_scale(const std::vector<Token> &tokens) {
@@ -624,16 +605,15 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
     const auto type_of_shape = tokens[1].values[0];
     const auto render_from_object = get_render_from_object();
 
-    auto [shapes, num_shapes] =
-        Shape::create(type_of_shape, render_from_object, render_from_object.inverse(),
-                      graphics_state.reverse_orientation, parameters, allocator);
+    auto [shapes, num_shapes] = Shape::create(type_of_shape, render_from_object, render_from_object.inverse(),
+                                              graphics_state.reverse_orientation, parameters, allocator);
 
     const auto area_light_entity = graphics_state.area_light_entity;
     const auto medium_interface = graphics_state.medium_interface;
 
     if (!area_light_entity && (!medium_interface || !medium_interface->is_medium_transition())) {
-        auto simple_primitives = Primitive::create_simple_primitives(
-            shapes, graphics_state.material, num_shapes, allocator);
+        auto simple_primitives =
+            Primitive::create_simple_primitives(shapes, graphics_state.material, num_shapes, allocator);
 
         if (active_instance_definition) {
             for (int idx = 0; idx < num_shapes; ++idx) {
@@ -655,22 +635,19 @@ void SceneBuilder::parse_shape(const std::vector<Token> &tokens) {
         REPORT_FATAL_ERROR();
     }
 
-    const auto medium =
-        graphics_state.medium_interface ? graphics_state.medium_interface->exterior : nullptr;
+    const auto medium = graphics_state.medium_interface ? graphics_state.medium_interface->exterior : nullptr;
     const auto diffuse_area_lights =
-        area_light_entity
-            ? Light::create_diffuse_area_lights(shapes, num_shapes, render_from_object, medium,
-                                                area_light_entity->parameters, allocator)
-            : nullptr;
+        area_light_entity ? Light::create_diffuse_area_lights(shapes, num_shapes, render_from_object, medium,
+                                                              area_light_entity->parameters, allocator)
+                          : nullptr;
     if (diffuse_area_lights) {
         for (int idx = 0; idx < num_shapes; ++idx) {
             gpu_lights.push_back(&diffuse_area_lights[idx]);
         }
     }
 
-    auto geometric_primitives =
-        Primitive::create_geometric_primitives(shapes, graphics_state.material, diffuse_area_lights,
-                                               medium_interface, num_shapes, allocator);
+    auto geometric_primitives = Primitive::create_geometric_primitives(
+        shapes, graphics_state.material, diffuse_area_lights, medium_interface, num_shapes, allocator);
     for (int idx = 0; idx < num_shapes; ++idx) {
         gpu_primitives.push_back(&geometric_primitives[idx]);
     }
@@ -693,9 +670,9 @@ void SceneBuilder::parse_texture(const std::vector<Token> &tokens) {
             SpectrumTexture::create(texture_type, SpectrumType::Albedo, get_render_from_object(),
                                     global_spectra->rgb_color_space, parameters, allocator);
 
-        illuminant_spectrum_textures[texture_name] = SpectrumTexture::create(
-            texture_type, SpectrumType::Illuminant, get_render_from_object(),
-            global_spectra->rgb_color_space, parameters, allocator);
+        illuminant_spectrum_textures[texture_name] =
+            SpectrumTexture::create(texture_type, SpectrumType::Illuminant, get_render_from_object(),
+                                    global_spectra->rgb_color_space, parameters, allocator);
 
         unbounded_spectrum_textures[texture_name] =
             SpectrumTexture::create(texture_type, SpectrumType::Unbounded, get_render_from_object(),
@@ -743,8 +720,7 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
     int last_token_idx = 0;
     auto last_time_check = std::chrono::system_clock::now();
 
-    auto report_time = [&token_idx, &last_token_idx, &last_time_check, &tokens,
-                        function_name = __func__] {
+    auto report_time = [&token_idx, &last_token_idx, &last_time_check, &tokens, function_name = __func__] {
         const auto current = std::chrono::system_clock::now();
 
         const std::chrono::duration<Real> duration{current - last_time_check};
@@ -756,9 +732,8 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
             stream << tokens[last_token_idx];
             const auto keyword = stream.str();
 
-            printf("%sSceneBuilder::%s(): parsing token `%s` took %.1f seconds%s:\n",
-                   FLAG_COLORFUL_PRINT_RED_START, function_name, keyword.c_str(), time_in_second,
-                   FLAG_COLORFUL_PRINT_END);
+            printf("%sSceneBuilder::%s(): parsing token `%s` took %.1f seconds%s:\n", FLAG_COLORFUL_PRINT_RED_START,
+                   function_name, keyword.c_str(), time_in_second, FLAG_COLORFUL_PRINT_END);
             for (int idx = last_token_idx; idx < token_idx; ++idx) {
                 std::cout << tokens[idx] << "\n";
             }
@@ -863,8 +838,8 @@ void SceneBuilder::parse_tokens(const std::vector<Token> &tokens) {
             if (render_from_instance.is_identity()) {
                 gpu_primitives.push_back(instanced_primitive);
             } else {
-                auto transformed_primitive = allocator.create<TransformedPrimitive>(
-                    instanced_primitive, render_from_instance);
+                auto transformed_primitive =
+                    allocator.create<TransformedPrimitive>(instanced_primitive, render_from_instance);
 
                 const auto primitive = allocator.create<Primitive>(transformed_primitive);
 
@@ -903,8 +878,8 @@ void SceneBuilder::parse_file(const std::string &_filename) {
     const auto time_in_seconds = duration.count();
     if (time_in_seconds > 10) {
         // report abnormal behavior
-        printf("%sSceneBuilder::%s(): took %.1f seconds%s\n", FLAG_COLORFUL_PRINT_RED_START,
-               __func__, time_in_seconds, FLAG_COLORFUL_PRINT_END);
+        printf("%sSceneBuilder::%s(): took %.1f seconds%s\n", FLAG_COLORFUL_PRINT_RED_START, __func__, time_in_seconds,
+               FLAG_COLORFUL_PRINT_END);
     }
 }
 
@@ -931,7 +906,7 @@ void SceneBuilder::preprocess() {
     } else if (mlt_bdpt_integrator != nullptr) {
         printf("Integrator: (wavefront) mlt-bdpt\n");
     } else if (mlt_path_integrator != nullptr) {
-        printf("Integrator: (wavefront) mlt-path\n");
+        printf("Integrator: (CPU) mlt-path\n");
     } else if (wavefront_path_integrator != nullptr) {
         printf("Integrator: (wavefront) path\n");
     } else if (megakernel_integrator != nullptr) {
@@ -946,8 +921,7 @@ void SceneBuilder::preprocess() {
     const auto light_size = gpu_lights.size();
     printf("total lights: %zu\n", light_size);
     for (auto const &kv : light_type_counter) {
-        printf("    %s: %d (%.2f%)\n", kv.first.c_str(), kv.second,
-               static_cast<double>(kv.second) / light_size * 100);
+        printf("    %s: %d (%.2f%)\n", kv.first.c_str(), kv.second, static_cast<double>(kv.second) / light_size * 100);
     }
     printf("\n");
 
@@ -959,8 +933,7 @@ void SceneBuilder::preprocess() {
 
     printf("total materials: %zu\n", material_type_counter.size());
     for (const auto &[name, num] : material_type_counter) {
-        printf("    %s: %d (%.2f%)\n", name.c_str(), num,
-               static_cast<double>(num) / total_material_size * 100);
+        printf("    %s: %d (%.2f%)\n", name.c_str(), num, static_cast<double>(num) / total_material_size * 100);
     }
     printf("\n");
 }
@@ -1021,18 +994,19 @@ void SceneBuilder::render() const {
         film->write_to_png(output_filename, brightness / spp);
 
         heatmap.write_to_png("heatmap-" + output_filename);
+
     } else if (mlt_path_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
                   << " with MLT-path\n"
                   << std::flush;
 
         GreyScaleFilm heatmap(film_resolution);
-
-        const auto brightness = mlt_path_integrator->render(film, heatmap, spp, preview);
+        const auto brightness = mlt_path_integrator->render(film, heatmap);
 
         film->write_to_png(output_filename, brightness / spp);
 
         heatmap.write_to_png("heatmap-" + output_filename);
+
     } else if (wavefront_path_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
                   << " with wavefront-path\n"
@@ -1041,24 +1015,23 @@ void SceneBuilder::render() const {
         wavefront_path_integrator->render(film, preview);
 
         film->write_to_png(output_filename);
+
     } else if (megakernel_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
                   << " with " + megakernel_integrator->get_name() << "\n"
                   << std::flush;
 
-        megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(),
-                                      integrator_base, preview);
+        megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(), integrator_base, preview);
 
         film->write_to_png(output_filename);
+
     } else {
         REPORT_FATAL_ERROR();
     }
 
     const std::chrono::duration<Real> duration{std::chrono::system_clock::now() - start};
 
-    std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count()
-              << " sec\n"
-              << std::flush;
+    std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count() << " sec\n" << std::flush;
 
     printf("GPU memory used: %s\n", allocator.get_allocated_memory_size().c_str());
 

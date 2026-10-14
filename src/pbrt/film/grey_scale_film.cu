@@ -32,18 +32,13 @@ const std::vector rainbow_6 = {
 
 const std::vector rainbow_7 = {black, blue, cyan, green, yellow, red, white};
 
-const std::vector palette_viridis_7 = {RGB(68, 1, 84) / 255,    RGB(68, 57, 131) / 255,
-                                       RGB(49, 104, 142) / 255, RGB(33, 145, 140) / 255,
-                                       RGB(53, 183, 121) / 255, RGB(144, 215, 67) / 251,
+const std::vector palette_viridis_7 = {RGB(68, 1, 84) / 255,    RGB(68, 57, 131) / 255,  RGB(49, 104, 142) / 255,
+                                       RGB(33, 145, 140) / 255, RGB(53, 183, 121) / 255, RGB(144, 215, 67) / 251,
                                        RGB(253, 231, 37) / 255};
 
 static RGB convert_to_heatmap_rgb(double linear) {
-    auto colors = &rainbow_6;
-
-    /*
-    const auto gamma = 2.0;
-    linear = pow(linear, 1.0 / gamma);
-    */
+    // auto colors = &rainbow_6;
+    auto colors = &palette_viridis_7;
 
     const auto gap = 1.0 / (colors->size() - 1);
 
@@ -86,8 +81,7 @@ void GreyScaleFilm::write_to_png(const std::string &filename) const {
     // Encode the image
     // if there's an error, display it
     if (unsigned error = lodepng::encode(filename, png_pixels, resolution.x, resolution.y); error) {
-        std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error)
-                  << std::endl;
+        std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error) << std::endl;
         throw std::runtime_error("lodepng::encode() fail");
     }
 }

@@ -1,3 +1,4 @@
+#include <new>
 #include <pbrt/base/filter.h>
 #include <pbrt/film/pixel_sensor.h>
 #include <pbrt/film/rgb_film.h>
@@ -45,6 +46,16 @@ RGBFilm::RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
 
     output_rgb_from_sensor_rgb =
         parameters.global_spectra->rgb_color_space->rgb_from_xyz * sensor->xyz_from_sensor_rgb;
+}
+
+RGBFilm RGBFilm::create_empty(GPUMemoryAllocator &allocator) const {
+    RGBFilm film = *this;
+    const size_t num_pixels = static_cast<size_t>(resolution.x) * resolution.y;
+    film.pixels = allocator.allocate<Pixel>(num_pixels);
+    for (size_t idx = 0; idx < num_pixels; ++idx) {
+        new (&film.pixels[idx]) Pixel();
+    }
+    return film;
 }
 
 PBRT_CPU_GPU
@@ -101,6 +112,17 @@ void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l
         auto pixel_index = pi.x + pi.y * resolution.x;
 
         pixels[pixel_index].rgb_splat += weight * rgb;
+    }
+}
+
+void RGBFilm::add_splats(const RGBFilm &other, Real scale) {
+    if (resolution != other.resolution || sensor != other.sensor || filter != other.filter) {
+        REPORT_FATAL_ERROR();
+    }
+
+    const size_t num_pixels = static_cast<size_t>(resolution.x) * resolution.y;
+    for (size_t idx = 0; idx < num_pixels; ++idx) {
+        pixels[idx].rgb_splat += scale * other.pixels[idx].rgb_splat;
     }
 }
 

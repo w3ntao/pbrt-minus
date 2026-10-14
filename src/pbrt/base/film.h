@@ -2,17 +2,25 @@
 
 #include <cuda/std/variant>
 #include <pbrt/film/rgb_film.h>
+#include <utility>
 
 namespace HIDDEN {
 using FilmVariants = cuda::std::variant<RGBFilm>;
 }
 
 class Film : public HIDDEN::FilmVariants {
-    using HIDDEN::FilmVariants::FilmVariants;
-
   public:
+    explicit Film(RGBFilm film) : HIDDEN::FilmVariants(std::move(film)) {}
+
+    Film(const Film &) = delete;
+    Film &operator=(const Film &) = delete;
+    Film(Film &&) noexcept = default;
+    Film &operator=(Film &&) noexcept = default;
+
     static Film *create_rgb_film(const Filter *filter, const ParameterDictionary &parameters,
                                  GPUMemoryAllocator &allocator);
+
+    Film *create_empty(GPUMemoryAllocator &allocator) const;
 
     PBRT_CPU_GPU
     Point2i get_resolution() const {
@@ -47,6 +55,8 @@ class Film : public HIDDEN::FilmVariants {
                    const SampledWavelengths &lambda) {
         cuda::std::visit([&](auto &x) { x.add_splat(p_film, radiance_l, lambda); }, *this);
     }
+
+    void add_splats(const Film &other, Real scale = 1);
 
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i &p, Real splat_scale = 1) const {

@@ -13,6 +13,9 @@ class Sampler {
   public:
     enum class Type { independent, mlt, stratified };
 
+    PBRT_CPU_GPU
+    Sampler() : type(Type::independent), ptr(nullptr) {}
+
     static Type parse_sampler_type(const std::string &sampler_type) {
         if (sampler_type == "independent") {
             return Type::independent;

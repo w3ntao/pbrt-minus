@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <pbrt/base/light.h>
 #include <pbrt/euclidean_space/transform.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
@@ -43,6 +44,10 @@ class GraphicsState {
 };
 
 class SceneBuilder {
+  public:
+    ~SceneBuilder();
+
+  private:
     std::string root;
 
     [[nodiscard]] std::string get_file_full_path(const std::string &relative_path) const {
@@ -67,7 +72,6 @@ class SceneBuilder {
     WavefrontPathIntegrator *wavefront_path_integrator = nullptr;
     BDPTIntegrator *bdpt_integrator = nullptr;
     MLTBDPTIntegrator *mlt_bdpt_integrator = nullptr;
-    MLTPathIntegrator *mlt_path_integrator = nullptr;
 
     IntegratorBase *integrator_base = nullptr;
 
@@ -76,6 +80,9 @@ class SceneBuilder {
     const GlobalSpectra *global_spectra = nullptr;
 
     GPUMemoryAllocator allocator;
+    // Destroy the CPU-owned MLT state before the allocator releases the
+    // shared scene objects it borrows.
+    std::unique_ptr<MLTPathIntegrator> mlt_path_integrator;
 
     std::map<std::string, const Material *> named_materials;
     std::map<std::string, const Medium *> named_medium;

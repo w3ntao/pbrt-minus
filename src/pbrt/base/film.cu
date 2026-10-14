@@ -6,9 +6,16 @@
 
 Film *Film::create_rgb_film(const Filter *filter, const ParameterDictionary &parameters,
                             GPUMemoryAllocator &allocator) {
-    auto film = allocator.allocate<Film>(1);
-    *film = RGBFilm(filter, parameters, allocator);
-    return film;
+    return allocator.create<Film>(RGBFilm(filter, parameters, allocator));
+}
+
+Film *Film::create_empty(GPUMemoryAllocator &allocator) const {
+    return cuda::std::visit(
+        [&](const auto &x) { return allocator.create<Film>(x.create_empty(allocator)); }, *this);
+}
+
+void Film::add_splats(const Film &other, Real scale) {
+    cuda::std::visit([&](auto &x, const auto &y) { x.add_splats(y, scale); }, *this, other);
 }
 
 __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, int width, int height,

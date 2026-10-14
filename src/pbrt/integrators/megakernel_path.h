@@ -16,9 +16,10 @@ class MegakernelPathIntegrator {
     }
 
     PBRT_CPU_GPU
-    static SampledSpectrum evaluate_Li_volume(const Ray &primary_ray, SampledWavelengths &lambda,
-                                              Sampler *sampler, const IntegratorBase *base,
-                                              int max_depth, bool regularize);
+    static SampledSpectrum evaluate_Li_volume(Real *depth, const Ray &primary_ray,
+                                              SampledWavelengths &lambda, Sampler *sampler,
+                                              const IntegratorBase *base, int max_depth,
+                                              bool regularize);
 
     PBRT_CPU_GPU
     static SampledSpectrum sample_Ld_volume(const SurfaceInteraction &surface_interaction,

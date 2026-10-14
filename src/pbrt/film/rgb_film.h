@@ -32,6 +32,8 @@ class RGBFilm {
     RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
             GPUMemoryAllocator &allocator);
 
+    RGBFilm create_empty(GPUMemoryAllocator &allocator) const;
+
     PBRT_CPU_GPU
     Point2i get_resolution() const {
         return resolution;
@@ -57,6 +59,8 @@ class RGBFilm {
 
     void add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
                    const SampledWavelengths &lambda);
+
+    void add_splats(const RGBFilm &other, Real scale = 1);
 
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i p, Real splat_scale = 1) const;

@@ -15,6 +15,16 @@ class GreyScaleFilm {
         pixels[coord.y * resolution.x + coord.x] += val;
     }
 
+    void add_samples(const GreyScaleFilm &other, Real scale = 1) {
+        if (resolution != other.resolution) {
+            REPORT_FATAL_ERROR();
+        }
+
+        for (size_t idx = 0; idx < pixels.size(); ++idx) {
+            pixels[idx] += scale * other.pixels[idx];
+        }
+    }
+
     void write_to_png(const std::string &filename) const;
 
   private:

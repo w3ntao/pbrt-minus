@@ -3,7 +3,7 @@ Language: Cpp
 BasedOnStyle: LLVM
 IndentWidth: 4
 SortIncludes: CaseSensitive
-ColumnLimit: 100
+ColumnLimit: 120
 AlwaysBreakTemplateDeclarations: Yes
 IndentAccessModifiers: false
 AllowShortFunctionsOnASingleLine: Empty
