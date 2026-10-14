@@ -29,9 +29,9 @@ struct PrimarySample {
 };
 
 class MLTSampler {
+  public:
     static constexpr size_t LENGTH = 256;
 
-  public:
     RNG rng;
 
     PrimarySample samples[LENGTH];
@@ -52,8 +52,8 @@ class MLTSampler {
     void ensure_ready(int index);
 
     PBRT_CPU_GPU
-    void setup_config(const int _mutation_per_pixel, const Real _sigma,
-                      const Real _large_step_probability, const int _stream_count) {
+    void setup_config(const int _mutation_per_pixel, const Real _sigma, const Real _large_step_probability,
+                      const int _stream_count) {
         mutations_per_pixel = _mutation_per_pixel;
         sigma = _sigma;
         large_step_probability = _large_step_probability;
@@ -107,4 +107,9 @@ class MLTSampler {
 
     PBRT_CPU_GPU
     Point2f get_pixel_2d();
+
+    PBRT_CPU_GPU
+    int max_samples_used() const {
+        return stream_index + stream_count * sample_index;
+    }
 };

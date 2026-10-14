@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <numeric>
 #include <pbrt/base/camera.h>
@@ -29,49 +30,55 @@ struct PathSample {
 Real MLTPathIntegrator::compute_importance(const PathSample &path) const {
     // the significance of 0.001:
     // if the depth is 0 and an area light hit: we change the depth to 0.001 to prevent degenerating
-    // yet also limit the contribution
+    // yet also keep the contribution recorded
 
     return (path.depth + 0.001) / max_depth * compute_luminance(path.radiance, path.lambda);
 }
 
-static void build_bootstrap_samples(const int worker_idx, const int num_paths_per_worker,
-                                    std::vector<double> &importance_per_path, const MLTPathIntegrator *mlt_integrator) {
-    MLTSampler mlt_sampler;
+static PathSample generate_bootstrap_path(const long bootstrap_index, MLTSampler &mlt_sampler,
+                                          const MLTPathIntegrator *mlt_integrator) {
     mlt_sampler.setup_config(mlt_integrator->mutations_per_pixel, mlt_integrator->sigma,
                              mlt_integrator->large_step_probability, 1);
-    Sampler sampler(&mlt_sampler);
-
-    for (int idx = 0; idx < num_paths_per_worker; idx++) {
-        const auto path_idx = worker_idx * num_paths_per_worker + idx;
-
-        mlt_sampler.init(path_idx);
-        mlt_sampler.start_stream(0);
-
-        const auto path_sample = mlt_integrator->generate_path_sample(&sampler);
-
-        importance_per_path[path_idx] = mlt_integrator->compute_importance(path_sample);
-    }
-}
-
-void mutate_chain(const int seed, Film *chain_film, GreyScaleFilm &chain_heat_map,
-                  const MLTPathIntegrator *mlt_integrator) {
-    MLTSampler mlt_sampler;
-    mlt_sampler.setup_config(mlt_integrator->mutations_per_pixel, mlt_integrator->sigma,
-                             mlt_integrator->large_step_probability, 1);
-    Sampler sampler(&mlt_sampler);
-    RNG rng(seed);
-
-    // Initialize each chain with a uniform large step before applying mutations.
-    // The initial paths use distinct seeds rather than bootstrap importance sampling.
-    mlt_sampler.init(seed);
+    mlt_sampler.init(bootstrap_index);
+    // Bootstrap generation and replay must consume the same RNG sequence.
     mlt_sampler.start_iteration();
     mlt_sampler.large_step = true;
     mlt_sampler.start_stream(0);
-    auto current_path = mlt_integrator->generate_path_sample(&sampler);
-    // Accept iteration 1 so unused dimensions get a uniform value on first use.
-    auto current_c = mlt_integrator->compute_importance(current_path);
+    Sampler sampler(&mlt_sampler);
 
+    const auto path = mlt_integrator->generate_path_sample(&sampler);
+    // Accept iteration 1 so unused dimensions get a uniform value on first use.
     mlt_sampler.accept();
+    return path;
+}
+
+static void build_bootstrap_samples(const int worker_idx, const int num_paths_per_worker,
+                                    std::vector<double> &importance_per_path, const MLTPathIntegrator *mlt_integrator) {
+    for (int idx = 0; idx < num_paths_per_worker; idx++) {
+        const auto path_idx = static_cast<long>(worker_idx) * num_paths_per_worker + idx;
+
+        MLTSampler mlt_sampler;
+        const auto path_sample = generate_bootstrap_path(path_idx, mlt_sampler, mlt_integrator);
+        const auto importance = mlt_integrator->compute_importance(path_sample);
+        if (importance < 0) {
+            REPORT_FATAL_ERROR();
+        }
+
+        importance_per_path[path_idx] = importance;
+    }
+}
+
+static void mutate_chain(const long bootstrap_index, const double bootstrap_importance, RNG &rng, Film *chain_film,
+                         GreyScaleFilm &chain_heat_map, const MLTPathIntegrator *mlt_integrator) {
+    MLTSampler mlt_sampler;
+    auto current_path = generate_bootstrap_path(bootstrap_index, mlt_sampler, mlt_integrator);
+    auto current_c = mlt_integrator->compute_importance(current_path);
+    if (current_c <= 0 || current_c != bootstrap_importance) {
+        printf("MLT-PATH: failed to replay bootstrap path %ld\n", bootstrap_index);
+        REPORT_FATAL_ERROR();
+    }
+
+    Sampler sampler(&mlt_sampler);
 
     const auto add_sample = [&](const PathSample &path, const Real weight, const Real sampling_density) {
         if (weight > 0) {
@@ -92,26 +99,10 @@ void mutate_chain(const int seed, Film *chain_film, GreyScaleFilm &chain_heat_ma
         const auto proposed_path = mlt_integrator->generate_path_sample(&sampler);
         const auto proposed_c = mlt_integrator->compute_importance(proposed_path);
 
-        Real accept_prob;
-        if (current_c == 0 && proposed_c == 0) {
-            accept_prob = 0.5;
-
-        } else if (current_c == 0) {
-            accept_prob = 1;
-            add_sample(proposed_path, 1.0 / proposed_c, 1);
-
-        } else if (proposed_c == 0) {
-            accept_prob = 0;
-            add_sample(current_path, 1.0 / current_c, 1);
-
-        } else {
-            accept_prob = std::min<Real>(1.0, proposed_c / current_c);
-
-            const Real proposed_path_weight = accept_prob / proposed_c;
-            const Real current_path_weight = (1 - accept_prob) / current_c;
-
-            add_sample(current_path, current_path_weight, 1 - accept_prob);
-            add_sample(proposed_path, proposed_path_weight, accept_prob);
+        const Real accept_prob = std::min<Real>(1.0, proposed_c / current_c);
+        add_sample(current_path, (1 - accept_prob) / current_c, 1 - accept_prob);
+        if (accept_prob > 0) {
+            add_sample(proposed_path, accept_prob / proposed_c, accept_prob);
         }
 
         if (rng.uniform<Real>() < accept_prob) {
@@ -123,6 +114,10 @@ void mutate_chain(const int seed, Film *chain_film, GreyScaleFilm &chain_heat_ma
         } else {
             mlt_sampler.reject();
         }
+    }
+
+    if (DEBUG_MODE) {
+        printf("    %s(): max samples used: %d/%d\n", __FUNCTION__, mlt_sampler.max_samples_used(), MLTSampler::LENGTH);
     }
 }
 
@@ -190,19 +185,27 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) const {
         build_bootstrap_samples(worker_idx, num_paths_per_worker, importance_per_path, this);
     });
 
-    const double sum_importance = std::accumulate(importance_per_path.begin(), importance_per_path.end(), 0.0);
+    const auto num_nonzero_paths =
+        static_cast<size_t>(std::count_if(importance_per_path.begin(), importance_per_path.end(),
+                                          [](const double importance) { return importance > 0.0; }));
+
+    // A CPU cumulative distribution samples the same weights as a bootstrap alias table.
+    std::vector<double> bootstrap_cdf(num_bootstrap_paths);
+    std::partial_sum(importance_per_path.begin(), importance_per_path.end(), bootstrap_cdf.begin());
+    const double sum_importance = bootstrap_cdf.back();
 
     const double normalization = sum_importance / num_bootstrap_paths;
 
     const long long total_samples = static_cast<long long>(mutations_per_pixel) * film_dimension.x * film_dimension.y;
 
     printf("MLT-PATH:\n");
-    printf("    number of bootstrap paths: %zu\n", num_bootstrap_paths);
+    printf("    bootstrap paths: %zu (nonzero: %.1f%%)\n", num_bootstrap_paths,
+           100.0 * num_nonzero_paths / num_bootstrap_paths);
     printf("    MLT samplers: %d\n", num_samplers);
     printf("    mutations per sampler: %lld\n", mutations_per_sampler);
     printf("    normalization: %.6f\n", normalization);
 
-    if (normalization <= 0.0) {
+    if (normalization <= 0.0 || num_nonzero_paths <= 0) {
         REPORT_FATAL_ERROR();
     }
 
@@ -212,7 +215,17 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) const {
     }
 
     thread_pool.parallel_execute(0, num_samplers, [&](const int worker_idx) {
-        mutate_chain(worker_idx, chain_films[worker_idx], chain_heat_maps[worker_idx], this);
+        // Chain RNGs remain independent even when they select the same bootstrap path.
+        RNG rng(worker_idx);
+        const double u = std::min(rng.uniform<double>() * sum_importance, std::nextafter(sum_importance, 0.0));
+        const auto selected = std::upper_bound(bootstrap_cdf.begin(), bootstrap_cdf.end(), u);
+        if (selected == bootstrap_cdf.end()) {
+            REPORT_FATAL_ERROR();
+        }
+
+        const auto bootstrap_index = static_cast<long>(selected - bootstrap_cdf.begin());
+        mutate_chain(bootstrap_index, importance_per_path[bootstrap_index], rng, chain_films[worker_idx],
+                     chain_heat_maps[worker_idx], this);
     });
 
     // Account for the extra mutations from rounding every chain up.

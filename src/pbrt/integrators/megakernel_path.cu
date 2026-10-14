@@ -12,10 +12,9 @@
 
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const Ray &primary_ray,
-                                                             SampledWavelengths &lambda,
-                                                             Sampler *sampler,
-                                                             const IntegratorBase *base,
-                                                             int max_depth, bool regularize) {
+                                                             SampledWavelengths &lambda, Sampler *sampler,
+                                                             const IntegratorBase *base, int max_depth,
+                                                             bool regularize) {
     SampledSpectrum L = 0;
     SampledSpectrum beta = 1;
     bool specular_bounce = false;
@@ -32,8 +31,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
     Real path_depth = 0.0;
     // making depth float type to counter for contribution from material-less hit
     while (path_depth < max_depth && beta.is_positive()) {
-        if (path_depth >= next_time_russian_roulette &&
-            russian_roulette(beta, sampler, &next_time_russian_roulette)) {
+        if (path_depth >= next_time_russian_roulette && russian_roulette(beta, sampler, &next_time_russian_roulette)) {
             break;
         }
 
@@ -45,8 +43,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
             const SampledSpectrum sigma_t = sigma_a + sigma_s;
 
             const auto t_max = optional_intersection ? optional_intersection->t_hit : Infinity;
-            if (const auto t = sample_exponential(sampler->get_1d(), sigma_t.average());
-                t < t_max) {
+            if (const auto t = sample_exponential(sampler->get_1d(), sigma_t.average()); t < t_max) {
                 // scatter in medium
                 ray.o = ray.at(t);
                 beta *= sigma_s / sigma_t;
@@ -56,8 +53,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                 medium_interaction.wo = -ray.d;
                 medium_interaction.medium = ray.medium;
 
-                SampledSpectrum Ld =
-                    sample_Ld_volume(medium_interaction, nullptr, lambda, sampler, base);
+                SampledSpectrum Ld = sample_Ld_volume(medium_interaction, nullptr, lambda, sampler, base);
                 L += beta * Ld;
 
                 auto phase_sample = ray.medium->phase.sample(-ray.d, sampler->get_2d());
@@ -94,8 +90,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
-                    Real pdf_light = base->light_sampler->pmf(light) *
-                                     light->pdf_li(*prev_interaction, ray.d, true);
+                    Real pdf_light = base->light_sampler->pmf(light) * light->pdf_li(*prev_interaction, ray.d, true);
                     Real dir_pdf = *prev_direction_pdf * multi_transmittance_pdf.average();
 
                     Real w = power_heuristic(1, dir_pdf, 1, pdf_light);
@@ -126,8 +121,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                 // Compute MIS weight for area light
                 auto area_light = surface_interaction.area_light;
 
-                Real pdf_light = base->light_sampler->pmf(area_light) *
-                                 area_light->pdf_li(*prev_interaction, ray.d);
+                Real pdf_light = base->light_sampler->pmf(area_light) * area_light->pdf_li(*prev_interaction, ray.d);
 
                 Real dir_pdf = *prev_direction_pdf * multi_transmittance_pdf.average();
 
@@ -136,11 +130,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                 L += beta * w * Le;
             }
 
-            break; // TODO: this part is different from PBRT-v4, which does not break here
+            break; // TODO wentao: this part is different from PBRT-v4, which does not break here
         }
 
-        auto bsdf =
-            surface_interaction.get_bsdf(lambda, base->camera, sampler->get_samples_per_pixel());
+        auto bsdf = surface_interaction.get_bsdf(lambda, base->camera, sampler->get_samples_per_pixel());
         if (regularize && any_non_specular_bounces) {
             bsdf.regularize();
         }
@@ -148,8 +141,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
         // Sample direct illumination from the light sources
 
         if (pbrt::is_non_specular(bsdf.flags())) {
-            SampledSpectrum Ld =
-                sample_Ld_volume(surface_interaction, &bsdf, lambda, sampler, base);
+            SampledSpectrum Ld = sample_Ld_volume(surface_interaction, &bsdf, lambda, sampler, base);
             L += beta * Ld;
         }
 
@@ -188,10 +180,9 @@ SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray, SampledWave
 }
 
 PBRT_CPU_GPU
-SampledSpectrum
-MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_interaction,
-                                           const BSDF *bsdf, const SampledWavelengths &lambda,
-                                           Sampler *sampler, const IntegratorBase *base) {
+SampledSpectrum MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_interaction,
+                                                           const BSDF *bsdf, const SampledWavelengths &lambda,
+                                                           Sampler *sampler, const IntegratorBase *base) {
     LightSampleContext ctx(surface_interaction);
     // Try to nudge the light sampling position to correct side of the surface
     if (bsdf) {
@@ -219,8 +210,7 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
         return 0;
     }
 
-    const auto transmittance =
-        base->compute_transmittance(surface_interaction, ls->p_light, lambda);
+    const auto transmittance = base->compute_transmittance(surface_interaction, ls->p_light, lambda);
 
     const auto &pdf_transmittance_dir = transmittance;
 
@@ -231,8 +221,7 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
         // Evaluate BSDF for light sample and check light visibility
         const Vector3f wo = surface_interaction.wo;
         const Vector3f wi = ls->wi;
-        const SampledSpectrum f =
-            bsdf->f(wo, wi) * wi.abs_dot(surface_interaction.shading.n.to_vector3());
+        const SampledSpectrum f = bsdf->f(wo, wi) * wi.abs_dot(surface_interaction.shading.n.to_vector3());
 
         if (!f.is_positive() || !base->unoccluded(surface_interaction, ls->p_light)) {
             return 0;
@@ -251,8 +240,7 @@ MegakernelPathIntegrator::sample_Ld_volume(const SurfaceInteraction &surface_int
     }
     // else: sample Ld in volume
 
-    auto phase_sample =
-        surface_interaction.medium->phase.sample(surface_interaction.wo, sampler->get_2d());
+    auto phase_sample = surface_interaction.medium->phase.sample(surface_interaction.wo, sampler->get_2d());
 
     if (!phase_sample) {
         return 0;
