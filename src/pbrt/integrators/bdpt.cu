@@ -5,14 +5,17 @@
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
-#include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/lights/image_infinite_light.h>
+#include <pbrt/samplers/independent.h>
+#include <pbrt/samplers/stratified.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectra/densely_sampled_spectrum.h>
-
-constexpr size_t NUM_SAMPLERS = 64 * 1024;
+#include <pbrt/util/thread_pool.h>
+#include <stack>
+#include <thread>
+#include <vector>
 
 struct FilmSample {
     Point2f p_film;
@@ -54,13 +57,6 @@ struct FilmSample {
 
         return false;
     }
-};
-
-struct BDPTSample {
-    Point2i p_pixel;
-    Real weight;
-    SampledSpectrum l_path;
-    SampledWavelengths lambda;
 };
 
 PBRT_CPU_GPU
@@ -123,8 +119,7 @@ Real Vertex::pdf_light(const IntegratorBase *integrator_base, const Vertex &v) c
 }
 
 PBRT_CPU_GPU
-Real Vertex::pdf(const IntegratorBase *integrator_base, const Vertex *prev,
-                 const Vertex &next) const {
+Real Vertex::pdf(const IntegratorBase *integrator_base, const Vertex *prev, const Vertex &next) const {
     if (type == VertexType::light) {
         return pdf_light(integrator_base, next);
     }
@@ -209,8 +204,8 @@ SampledSpectrum Vertex::Le(const Light **infinite_lights, int num_infinite_light
 }
 
 PBRT_CPU_GPU
-Real Vertex::pdf_light_origin(const Light **infinite_lights, int num_infinite_lights,
-                              const Vertex &v, const PowerLightSampler *lightSampler) {
+Real Vertex::pdf_light_origin(const Light **infinite_lights, int num_infinite_lights, const Vertex &v,
+                              const PowerLightSampler *lightSampler) {
     Vector3f w = v.p() - p();
     if (w.squared_length() == 0) {
         return 0.0;
@@ -264,7 +259,7 @@ class ScopedAssignment {
     }
 
   private:
-    Type *target;
+    Type *target = nullptr;
     Type backup;
 };
 
@@ -286,8 +281,8 @@ SampledSpectrum compute_G(const IntegratorBase *base, const Vertex &v0, const Ve
 }
 
 PBRT_CPU_GPU
-Real compute_mis_weight(const IntegratorBase *integrator_base, Vertex *lightVertices,
-                        Vertex *cameraVertices, Vertex &sampled, int s, int t) {
+Real compute_mis_weight(const IntegratorBase *integrator_base, Vertex *lightVertices, Vertex *cameraVertices,
+                        Vertex &sampled, int s, int t) {
     if (s + t == 2) {
         return 1;
     }
@@ -297,10 +292,8 @@ Real compute_mis_weight(const IntegratorBase *integrator_base, Vertex *lightVert
 
     // Temporarily update vertex properties for current strategy
     // Look up connection vertices and their predecessors
-    Vertex *qs = s > 0 ? &lightVertices[s - 1] : nullptr,
-           *pt = t > 0 ? &cameraVertices[t - 1] : nullptr,
-           *qsMinus = s > 1 ? &lightVertices[s - 2] : nullptr,
-           *ptMinus = t > 1 ? &cameraVertices[t - 2] : nullptr;
+    Vertex *qs = s > 0 ? &lightVertices[s - 1] : nullptr, *pt = t > 0 ? &cameraVertices[t - 1] : nullptr,
+           *qsMinus = s > 1 ? &lightVertices[s - 2] : nullptr, *ptMinus = t > 1 ? &cameraVertices[t - 2] : nullptr;
 
     // Update sampled vertex for $s=1$ or $t=1$ strategy
     ScopedAssignment<Vertex> a1;
@@ -322,11 +315,10 @@ Real compute_mis_weight(const IntegratorBase *integrator_base, Vertex *lightVert
     // Update reverse density of vertex $\pt{}_{t-1}$
     ScopedAssignment<Real> a4;
     if (pt) {
-        a4 = ScopedAssignment(
-            &pt->pdfRev, s > 0 ? qs->pdf(integrator_base, qsMinus, *pt)
-                               : pt->pdf_light_origin(integrator_base->infinite_lights,
-                                                      integrator_base->infinite_light_num, *ptMinus,
-                                                      integrator_base->light_sampler));
+        a4 = ScopedAssignment(&pt->pdfRev, s > 0 ? qs->pdf(integrator_base, qsMinus, *pt)
+                                                 : pt->pdf_light_origin(integrator_base->infinite_lights,
+                                                                        integrator_base->infinite_light_num, *ptMinus,
+                                                                        integrator_base->light_sampler));
     }
 
     // Update reverse density of vertex $\pt{}_{t-2}$
@@ -361,8 +353,7 @@ Real compute_mis_weight(const IntegratorBase *integrator_base, Vertex *lightVert
     ri = 1;
     for (int i = s - 1; i >= 0; --i) {
         ri *= remap0(lightVertices[i].pdfRev) / remap0(lightVertices[i].pdfFwd);
-        bool deltaLightvertex =
-            i > 0 ? lightVertices[i - 1].delta : lightVertices[0].is_delta_light();
+        bool deltaLightvertex = i > 0 ? lightVertices[i - 1].delta : lightVertices[0].is_delta_light();
         if (!lightVertices[i].delta && !deltaLightvertex) {
             sumRi += ri;
         }
@@ -380,9 +371,8 @@ Real compute_mis_weight(const IntegratorBase *integrator_base, Vertex *lightVert
 }
 
 PBRT_CPU_GPU
-int random_walk(SampledWavelengths &lambda, const Ray &initial_ray, Sampler *sampler,
-                SampledSpectrum beta, Real pdf, int maxDepth, TransportMode mode, Vertex *path,
-                const BDPTConfig *config) {
+int random_walk(SampledWavelengths &lambda, const Ray &initial_ray, Sampler *sampler, SampledSpectrum beta, Real pdf,
+                int maxDepth, TransportMode mode, Vertex *path, const BDPTConfig *config) {
     if (maxDepth == 0) {
         return 0;
     }
@@ -434,8 +424,7 @@ int random_walk(SampledWavelengths &lambda, const Ray &initial_ray, Sampler *sam
             const SampledSpectrum sigma_t = sigma_a + sigma_s;
 
             const auto t_max = optional_intersection ? optional_intersection->t_hit : Infinity;
-            if (const auto t = sample_exponential(sampler->get_1d(), sigma_t.average());
-                t < t_max) {
+            if (const auto t = sample_exponential(sampler->get_1d(), sigma_t.average()); t < t_max) {
                 // scatter in medium
                 if (sampler->get_1d() < sigma_a.average() / sigma_t.average()) {
                     return bounces;
@@ -529,9 +518,8 @@ int random_walk(SampledWavelengths &lambda, const Ray &initial_ray, Sampler *sam
 }
 
 PBRT_CPU_GPU
-int BDPTIntegrator::generate_camera_subpath(const Ray &ray, SampledWavelengths &lambda,
-                                            Sampler *sampler, int maxDepth, Vertex *path,
-                                            const BDPTConfig *config) {
+int BDPTIntegrator::generate_camera_subpath(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler, int maxDepth,
+                                            Vertex *path, const BDPTConfig *config) {
     if (maxDepth == 0) {
         return 0;
     }
@@ -545,13 +533,12 @@ int BDPTIntegrator::generate_camera_subpath(const Ray &ray, SampledWavelengths &
     Real pdfPos, pdfDir;
     camera->pdf_we(ray, &pdfPos, &pdfDir);
 
-    return 1 + random_walk(lambda, ray, sampler, beta, pdfDir, maxDepth - 1,
-                           TransportMode::Radiance, path + 1, config);
+    return 1 + random_walk(lambda, ray, sampler, beta, pdfDir, maxDepth - 1, TransportMode::Radiance, path + 1, config);
 }
 
 PBRT_CPU_GPU
-int BDPTIntegrator::generate_light_subpath(SampledWavelengths &lambda, Sampler *sampler,
-                                           int maxDepth, Vertex *path, const BDPTConfig *config) {
+int BDPTIntegrator::generate_light_subpath(SampledWavelengths &lambda, Sampler *sampler, int maxDepth, Vertex *path,
+                                           const BDPTConfig *config) {
     // Generate light subpath and initialize _path_ vertices
     if (maxDepth == 0) {
         return 0;
@@ -587,8 +574,8 @@ int BDPTIntegrator::generate_light_subpath(SampledWavelengths &lambda, Sampler *
     // Follow light subpath random walk
     const auto beta = les->L * les->abs_cos_theta(ray.d) / (p_l * les->pdfDir);
 
-    const int nVertices = random_walk(lambda, ray, sampler, beta, les->pdfDir, maxDepth - 1,
-                                      TransportMode::Importance, path + 1, config);
+    const int nVertices =
+        random_walk(lambda, ray, sampler, beta, les->pdfDir, maxDepth - 1, TransportMode::Importance, path + 1, config);
 
     // Correct subpath sampling densities for infinite area lights
     if (path[0].is_infinite_light()) {
@@ -601,18 +588,16 @@ int BDPTIntegrator::generate_light_subpath(SampledWavelengths &lambda, Sampler *
         }
 
         // Set spatial density of _path[0]_ for infinite area light
-        path[0].pdfFwd = infinite_light_density(integrator_base->infinite_lights,
-                                                integrator_base->infinite_light_num,
+        path[0].pdfFwd = infinite_light_density(integrator_base->infinite_lights, integrator_base->infinite_light_num,
                                                 integrator_base->light_sampler, ray.d);
     }
 
     return nVertices + 1;
 }
 
-PBRT_GPU
-SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex *lightVertices,
-                                             Vertex *cameraVertices, int s, int t, Sampler *sampler,
-                                             pbrt::optional<Point2f> *pRaster,
+PBRT_CPU_GPU
+SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex *lightVertices, Vertex *cameraVertices,
+                                             int s, int t, Sampler *sampler, pbrt::optional<Point2f> *pRaster,
                                              const BDPTConfig *config) {
     // Ignore invalid connections related to infinite area lights
     if (t > 1 && s != 0 && cameraVertices[t - 1].type == Vertex::VertexType::light) {
@@ -630,9 +615,7 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
         // Interpret the camera subpath as a complete path
         const Vertex &pt = cameraVertices[t - 1];
         if (pt.is_light()) {
-            L = pt.Le(base->infinite_lights, base->infinite_light_num, cameraVertices[t - 2],
-                      lambda) *
-                pt.beta;
+            L = pt.Le(base->infinite_lights, base->infinite_light_num, cameraVertices[t - 2], lambda) * pt.beta;
         }
     } else if (t == 1) {
         // Sample a point on the camera and connect it to the light subpath
@@ -680,10 +663,9 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
                 if (lightWeight && lightWeight->l.is_positive() && lightWeight->pdf > 0) {
                     EndpointInteraction ei(light, lightWeight->p_light);
 
-                    sampled =
-                        Vertex::create_light(ei, lightWeight->l / (lightWeight->pdf * p_l), 0);
-                    sampled.pdfFwd = sampled.pdf_light_origin(
-                        base->infinite_lights, base->infinite_light_num, pt, base->light_sampler);
+                    sampled = Vertex::create_light(ei, lightWeight->l / (lightWeight->pdf * p_l), 0);
+                    sampled.pdfFwd = sampled.pdf_light_origin(base->infinite_lights, base->infinite_light_num, pt,
+                                                              base->light_sampler);
 
                     L = pt.beta * pt.f(sampled, TransportMode::Radiance) * sampled.beta;
 
@@ -692,8 +674,7 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
                     }
 
                     if (L.is_positive()) {
-                        L *= base->compute_transmittance(pt.get_interaction(), lightWeight->p_light,
-                                                         lambda);
+                        L *= base->compute_transmittance(pt.get_interaction(), lightWeight->p_light, lambda);
                     }
                 }
             }
@@ -703,8 +684,7 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
         const auto &qs = lightVertices[s - 1];
         const auto &pt = cameraVertices[t - 1];
         if (qs.is_connectible() && pt.is_connectible()) {
-            L = qs.beta * qs.f(pt, TransportMode::Importance) * pt.f(qs, TransportMode::Radiance) *
-                pt.beta;
+            L = qs.beta * qs.f(pt, TransportMode::Importance) * pt.f(qs, TransportMode::Radiance) * pt.beta;
 
             if (L.is_positive()) {
                 L *= compute_G(base, qs, pt, lambda, config->max_depth);
@@ -720,145 +700,116 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, Vertex 
     return L * compute_mis_weight(base, lightVertices, cameraVertices, sampled, s, t);
 }
 
+SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, std::vector<Vertex> &light_vertices,
+                                             std::vector<Vertex> &camera_vertices, int s, int t, Sampler *sampler,
+                                             pbrt::optional<Point2f> *pRaster, const BDPTConfig *config) {
+    return connect_bdpt(lambda, light_vertices.data(), camera_vertices.data(), s, t, sampler, pRaster, config);
+}
+
 BDPTIntegrator *BDPTIntegrator::create(const int samples_per_pixel, const std::string &sampler_type,
-                                       const ParameterDictionary &parameters,
-                                       const IntegratorBase *integrator_base,
+                                       const ParameterDictionary &parameters, const IntegratorBase *integrator_base,
                                        GPUMemoryAllocator &allocator) {
     const auto max_depth = parameters.get_integer("maxdepth", 5);
-    const auto film_sample_size = max_depth * NUM_SAMPLERS;
+    if (max_depth < 0) {
+        REPORT_FATAL_ERROR();
+    }
+    const auto film_sample_size = max_depth;
     const auto regularize = parameters.get_bool("regularize", false);
 
-    const auto config =
-        allocator.create<BDPTConfig>(integrator_base, max_depth, film_sample_size, regularize);
+    const auto config = allocator.create<BDPTConfig>(integrator_base, max_depth, film_sample_size, regularize);
 
-    auto samplers =
-        Sampler::create_samplers(sampler_type, samples_per_pixel, NUM_SAMPLERS, allocator);
+    Sampler *sampler = nullptr;
+    switch (Sampler::parse_sampler_type(sampler_type)) {
+    case Sampler::Type::independent:
+        sampler = allocator.create<Sampler>(allocator.create<IndependentSampler>(samples_per_pixel));
+        break;
+    case Sampler::Type::stratified:
+        sampler = allocator.create<Sampler>(allocator.create<StratifiedSampler>(samples_per_pixel));
+        break;
+    default:
+        REPORT_FATAL_ERROR();
+    }
 
-    return allocator.create<BDPTIntegrator>(config, samplers);
+    return allocator.create<BDPTIntegrator>(config, sampler);
 }
 
-__global__ void wavefront_render(BDPTSample *bdpt_samples, FilmSample *film_samples,
-                                 int *film_sample_counter, Vertex *global_camera_vertices,
-                                 Vertex *global_light_vertices, const int pass,
-                                 const int samples_per_pixel, const Point2i film_resolution,
-                                 const BDPTIntegrator *bdpt_integrator) {
-    const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= NUM_SAMPLERS) {
-        return;
-    }
+void BDPTIntegrator::render(Film *film, int samples_per_pixel) {
+    const auto film_resolution = film->get_resolution();
+    const auto num_pixels = static_cast<long long>(film_resolution.x) * film_resolution.y;
 
     const auto width = film_resolution.x;
-    const auto height = film_resolution.y;
 
-    const auto global_idx = static_cast<long long>(pass) * NUM_SAMPLERS + worker_idx;
+    const auto num_workers = std::thread::hardware_concurrency();
+    const auto sampler_type = sampler->get_type();
 
-    const auto pixel_idx = global_idx % (width * height);
-    const auto sample_idx = global_idx / (width * height);
-    if (sample_idx >= samples_per_pixel) {
-        return;
+    std::vector<std::stack<int>> pixel_stacks(num_workers);
+    for (long long pixel_idx = 0; pixel_idx < num_pixels; ++pixel_idx) {
+        pixel_stacks[pixel_idx % num_workers].push(static_cast<int>(pixel_idx));
     }
 
-    const auto config = bdpt_integrator->config;
-
-    auto local_sampler = &bdpt_integrator->samplers[worker_idx];
-    local_sampler->start_pixel_sample(pixel_idx, sample_idx, 0);
-
-    auto p_pixel = Point2i(pixel_idx % width, pixel_idx / width);
-
-    auto camera_sample = local_sampler->get_camera_sample(p_pixel, config->base->filter);
-
-    auto lu = local_sampler->get_1d();
-    auto lambda = SampledWavelengths::sample_visible(lu);
-
-    auto camera_ray = config->base->camera->generate_ray(camera_sample, local_sampler);
-
-    auto local_camera_vertices = &global_camera_vertices[worker_idx * (config->max_depth + 2)];
-    auto local_light_vertices = &global_light_vertices[worker_idx * (config->max_depth + 1)];
-
-    auto radiance_l =
-        camera_ray.weight * bdpt_integrator->Li(film_samples, film_sample_counter, camera_ray.ray,
-                                                lambda, local_sampler, local_camera_vertices,
-                                                local_light_vertices, config);
-
-    auto rendered_sample = &bdpt_samples[worker_idx];
-    rendered_sample->p_pixel = p_pixel;
-    rendered_sample->weight = camera_sample.filter_weight;
-    rendered_sample->l_path = radiance_l;
-    rendered_sample->lambda = lambda;
-}
-
-void BDPTIntegrator::render(Film *film, int samples_per_pixel, const bool preview) {
-    const auto image_resolution = film->get_resolution();
-
-    GPUMemoryAllocator local_allocator;
-
-    GLHelper gl_helper;
-    if (preview) {
-        gl_helper.init("initializing", image_resolution);
+    GPUMemoryAllocator allocator;
+    std::vector<Film *> sub_films(num_workers);
+    std::vector<Sampler *> samplers(num_workers);
+    for (int i = 0; i < num_workers; ++i) {
+        sub_films[i] = film->create_empty(allocator);
+        switch (sampler_type) {
+        case Sampler::Type::independent:
+            samplers[i] = allocator.create<Sampler>(allocator.create<IndependentSampler>(samples_per_pixel));
+            break;
+        case Sampler::Type::stratified:
+            samplers[i] = allocator.create<Sampler>(allocator.create<StratifiedSampler>(samples_per_pixel));
+            break;
+        default:
+            REPORT_FATAL_ERROR();
+        }
     }
 
-    auto bdpt_samples = local_allocator.allocate<BDPTSample>(NUM_SAMPLERS);
+    ThreadPool thread_pool(num_workers);
+    thread_pool.parallel_execute(0, num_workers, [&](const int worker_idx) {
+        std::vector<FilmSample> film_samples;
+        auto local_film = sub_films[worker_idx];
+        auto local_sampler = samplers[worker_idx];
+        auto &local_stack = pixel_stacks[worker_idx];
+        while (!local_stack.empty()) {
+            const auto pixel_idx = local_stack.top();
+            local_stack.pop();
+            const auto p_pixel = Point2i(pixel_idx % width, pixel_idx / width);
 
-    auto film_samples = local_allocator.allocate<FilmSample>(config->film_sample_size);
+            for (int sample_idx = 0; sample_idx < samples_per_pixel; ++sample_idx) {
+                film_samples.clear();
+                local_sampler->start_pixel_sample(pixel_idx, sample_idx, 0);
+                const auto camera_sample = local_sampler->get_camera_sample(p_pixel, config->base->filter);
 
-    auto film_sample_counter = local_allocator.create<int>(0);
+                const auto lu = local_sampler->get_1d();
+                auto lambda = SampledWavelengths::sample_visible(lu);
 
-    auto global_camera_vertices =
-        local_allocator.allocate<Vertex>(NUM_SAMPLERS * (config->max_depth + 2));
-    auto global_light_vertices =
-        local_allocator.allocate<Vertex>(NUM_SAMPLERS * (config->max_depth + 1));
+                const auto camera_ray = config->base->camera->generate_ray(camera_sample, local_sampler);
 
-    auto num_pixels = image_resolution.x * image_resolution.y;
+                const auto radiance_l =
+                    camera_ray.weight * Li(film_samples, camera_ray.ray, lambda, local_sampler, config);
+                local_film->add_sample(p_pixel, radiance_l, lambda, camera_sample.filter_weight);
 
-    constexpr int threads = 32;
-    const int blocks = divide_and_ceil<int>(NUM_SAMPLERS, threads);
-
-    auto total_pass = divide_and_ceil<long long>(num_pixels * samples_per_pixel, NUM_SAMPLERS);
-
-    for (int pass = 0; pass < total_pass; ++pass) {
-        *film_sample_counter = 0;
-        wavefront_render<<<blocks, threads>>>(bdpt_samples, film_samples, film_sample_counter,
-                                              global_camera_vertices, global_light_vertices, pass,
-                                              samples_per_pixel, film->get_resolution(), this);
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-        for (int idx = 0; idx < NUM_SAMPLERS; ++idx) {
-            const auto global_idx = (long long)(pass)*NUM_SAMPLERS + idx;
-            const auto sample_idx = global_idx / num_pixels;
-            if (sample_idx >= samples_per_pixel) {
-                return;
+                for (const auto &sample : film_samples) {
+                    local_film->add_splat(sample.p_film, sample.l_path, sample.lambda);
+                }
             }
-
-            const auto sample = &bdpt_samples[idx];
-            film->add_sample(sample->p_pixel, sample->l_path, sample->lambda, sample->weight);
         }
+    });
 
-        if (*film_sample_counter > 0) {
-            // sort to make film writing deterministic
-            std::sort(film_samples + 0, film_samples + (*film_sample_counter), std::less{});
-        }
-
-        for (int idx = 0; idx < *film_sample_counter; ++idx) {
-            const auto sample = &film_samples[idx];
-            film->add_splat(sample->p_film, sample->l_path, sample->lambda);
-        }
-
-        if (preview) {
-            film->copy_to_frame_buffer(gl_helper.gpu_frame_buffer, 1.0 / samples_per_pixel);
-            gl_helper.draw_frame(GLHelper::assemble_title(Real(pass + 1) / total_pass));
-        }
+    // Merge raw sums in worker order; normalization happens when Film produces RGB.
+    for (const auto local_film : sub_films) {
+        film->merge(*local_film);
     }
 }
 
-PBRT_GPU
-SampledSpectrum BDPTIntegrator::Li(FilmSample *film_samples, int *film_sample_counter,
-                                   const Ray &ray, SampledWavelengths &lambda, Sampler *sampler,
-                                   Vertex *camera_vertices, Vertex *light_vertices,
-                                   const BDPTConfig *config) {
-    const int nCamera = generate_camera_subpath(ray, lambda, sampler, config->max_depth + 2,
-                                                camera_vertices, config);
-    const int nLight =
-        generate_light_subpath(lambda, sampler, config->max_depth + 1, light_vertices, config);
+SampledSpectrum BDPTIntegrator::Li(std::vector<FilmSample> &film_samples, const Ray &ray, SampledWavelengths &lambda,
+                                   Sampler *sampler, const BDPTConfig *config) {
+    std::vector<Vertex> camera_vertices(config->max_depth + 2);
+    std::vector<Vertex> light_vertices(config->max_depth + 1);
+
+    const int nCamera =
+        generate_camera_subpath(ray, lambda, sampler, config->max_depth + 2, camera_vertices.data(), config);
+    const int nLight = generate_light_subpath(lambda, sampler, config->max_depth + 1, light_vertices.data(), config);
 
     SampledSpectrum L(0);
 
@@ -872,8 +823,8 @@ SampledSpectrum BDPTIntegrator::Li(FilmSample *film_samples, int *film_sample_co
 
             // Execute the $(s, t)$ connection strategy and update _L_
             pbrt::optional<Point2f> optional_p_film_new;
-            SampledSpectrum Lpath = connect_bdpt(lambda, light_vertices, camera_vertices, s, t,
-                                                 sampler, &optional_p_film_new, config);
+            SampledSpectrum Lpath =
+                connect_bdpt(lambda, light_vertices, camera_vertices, s, t, sampler, &optional_p_film_new, config);
 
             if (t != 1) {
                 L += Lpath;
@@ -882,15 +833,7 @@ SampledSpectrum BDPTIntegrator::Li(FilmSample *film_samples, int *film_sample_co
                     REPORT_FATAL_ERROR();
                 }
 
-                const auto film_sample_idx = atomicAdd(film_sample_counter, 1);
-
-                if (film_sample_idx >= config->film_sample_size) {
-                    REPORT_FATAL_ERROR();
-                }
-
-                film_samples[film_sample_idx].p_film = optional_p_film_new.value();
-                film_samples[film_sample_idx].l_path = Lpath;
-                film_samples[film_sample_idx].lambda = lambda;
+                film_samples.push_back({optional_p_film_new.value(), Lpath, lambda});
             }
         }
     }

@@ -980,7 +980,7 @@ void SceneBuilder::render() const {
 
         auto splat_scale = 1.0 / spp;
 
-        bdpt_integrator->render(film, spp, preview);
+        bdpt_integrator->render(film, spp);
 
         film->write_to_png(output_filename, splat_scale);
     } else if (mlt_bdpt_integrator != nullptr) {

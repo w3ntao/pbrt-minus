@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pbrt/base/light.h>
+#include <vector>
 
 struct IntegratorBase;
 struct FilmSample;
@@ -13,10 +14,8 @@ struct BDPTConfig {
 
     bool regularize = true;
 
-    BDPTConfig(const IntegratorBase *_base, const int _max_depth, const int _film_sample_size,
-               const bool _regularize)
-        : base(_base), max_depth(_max_depth), film_sample_size(_film_sample_size),
-          regularize(_regularize) {}
+    BDPTConfig(const IntegratorBase *_base, const int _max_depth, const int _film_sample_size, const bool _regularize)
+        : base(_base), max_depth(_max_depth), film_sample_size(_film_sample_size), regularize(_regularize) {}
 };
 
 struct EndpointInteraction : Interaction {
@@ -27,12 +26,10 @@ struct EndpointInteraction : Interaction {
     EndpointInteraction() {}
 
     PBRT_CPU_GPU
-    EndpointInteraction(const Light *_light, const Ray &ray)
-        : Interaction(ray.o, ray.medium), light(_light) {}
+    EndpointInteraction(const Light *_light, const Ray &ray) : Interaction(ray.o, ray.medium), light(_light) {}
 
     PBRT_CPU_GPU
-    EndpointInteraction(const Camera *_camera, const Ray &ray)
-        : Interaction(ray.o, ray.medium), camera(_camera) {}
+    EndpointInteraction(const Camera *_camera, const Ray &ray) : Interaction(ray.o, ray.medium), camera(_camera) {}
 
     PBRT_CPU_GPU
     EndpointInteraction(const Light *_light, const Interaction &_interaction)
@@ -43,8 +40,7 @@ struct EndpointInteraction : Interaction {
         : Interaction(_interaction), camera(_camera) {}
 
     PBRT_CPU_GPU
-    explicit EndpointInteraction(const Ray &ray)
-        : Interaction(ray.at(1), Normal3f(-ray.d), ray.medium) {}
+    explicit EndpointInteraction(const Ray &ray) : Interaction(ray.at(1), Normal3f(-ray.d), ray.medium) {}
 };
 
 struct Vertex {
@@ -74,19 +70,16 @@ struct Vertex {
         : type(VertexType::surface), si(_si), bsdf(_bsdf), beta(_beta) {}
 
     PBRT_CPU_GPU
-    Vertex(const Interaction &mi, const SampledSpectrum &beta)
-        : type(VertexType::medium), mi(mi), beta(beta) {}
+    Vertex(const Interaction &mi, const SampledSpectrum &beta) : type(VertexType::medium), mi(mi), beta(beta) {}
 
     PBRT_CPU_GPU
     bool is_light() const {
-        return type == VertexType::light ||
-               (type == VertexType::surface && si.area_light != nullptr);
+        return type == VertexType::light || (type == VertexType::surface && si.area_light != nullptr);
     }
 
     PBRT_CPU_GPU
     bool is_delta_light() const {
-        return type == VertexType::light && ei.light &&
-               pbrt::is_delta_light(ei.light->get_light_type());
+        return type == VertexType::light && ei.light && pbrt::is_delta_light(ei.light->get_light_type());
     }
 
     PBRT_CPU_GPU
@@ -95,38 +88,35 @@ struct Vertex {
     }
 
     PBRT_CPU_GPU
-    static Vertex create_camera(const Camera *camera, const Interaction &it,
-                                const SampledSpectrum &beta) {
+    static Vertex create_camera(const Camera *camera, const Interaction &it, const SampledSpectrum &beta) {
         return Vertex(VertexType::camera, EndpointInteraction(it, camera), beta);
     }
 
     PBRT_CPU_GPU
-    static Vertex create_light(const EndpointInteraction &ei, const SampledSpectrum &beta,
-                               const Real pdf) {
+    static Vertex create_light(const EndpointInteraction &ei, const SampledSpectrum &beta, const Real pdf) {
         Vertex v(VertexType::light, ei, beta);
         v.pdfFwd = pdf;
         return v;
     }
 
     PBRT_CPU_GPU
-    static Vertex create_light(const Light *light, const Interaction &intractopm,
-                               const SampledSpectrum &Le, const Real pdf) {
+    static Vertex create_light(const Light *light, const Interaction &intractopm, const SampledSpectrum &Le,
+                               const Real pdf) {
         Vertex v(VertexType::light, EndpointInteraction(light, intractopm), Le);
         v.pdfFwd = pdf;
         return v;
     }
 
     PBRT_CPU_GPU
-    static Vertex create_light(const Light *light, const Ray &ray, const SampledSpectrum &Le,
-                               const Real pdf) {
+    static Vertex create_light(const Light *light, const Ray &ray, const SampledSpectrum &Le, const Real pdf) {
         Vertex v(VertexType::light, EndpointInteraction(light, ray), Le);
         v.pdfFwd = pdf;
         return v;
     }
 
     PBRT_CPU_GPU
-    static Vertex create_surface(const SurfaceInteraction &si, const BSDF &bsdf,
-                                 const SampledSpectrum &beta, Real pdf, const Vertex &prev) {
+    static Vertex create_surface(const SurfaceInteraction &si, const BSDF &bsdf, const SampledSpectrum &beta, Real pdf,
+                                 const Vertex &prev) {
         Vertex v(si, bsdf, beta);
         v.pdfFwd = prev.convert_density(pdf, v);
         return v;
@@ -238,9 +228,8 @@ struct Vertex {
 
     PBRT_CPU_GPU
     bool is_infinite_light() const {
-        return type == VertexType::light &&
-               (!ei.light || ei.light->get_light_type() == LightType::infinite ||
-                ei.light->get_light_type() == LightType::delta_direction);
+        return type == VertexType::light && (!ei.light || ei.light->get_light_type() == LightType::infinite ||
+                                             ei.light->get_light_type() == LightType::delta_direction);
     }
 
     PBRT_CPU_GPU
@@ -280,34 +269,36 @@ struct Vertex {
 
 class BDPTIntegrator {
   public:
-    BDPTIntegrator(const BDPTConfig *_config, Sampler *_samplers)
-        : config(_config), samplers(_samplers) {}
+    BDPTIntegrator(const BDPTConfig *_config, Sampler *_sampler) : config(_config), sampler(_sampler) {}
 
     static BDPTIntegrator *create(int samples_per_pixel, const std::string &sampler_type,
-                                  const ParameterDictionary &parameters,
-                                  const IntegratorBase *integrator_base,
+                                  const ParameterDictionary &parameters, const IntegratorBase *integrator_base,
                                   GPUMemoryAllocator &allocator);
 
-    void render(Film *film, int samples_per_pixel, bool preview);
+    void render(Film *film, int samples_per_pixel);
 
     PBRT_CPU_GPU
-    static int generate_camera_subpath(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler,
-                                       int maxDepth, Vertex *path, const BDPTConfig *config);
+    static int generate_camera_subpath(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler, int maxDepth,
+                                       Vertex *path, const BDPTConfig *config);
 
     PBRT_CPU_GPU
-    static int generate_light_subpath(SampledWavelengths &lambda, Sampler *sampler, int maxDepth,
-                                      Vertex *path, const BDPTConfig *config);
+    static int generate_light_subpath(SampledWavelengths &lambda, Sampler *sampler, int maxDepth, Vertex *path,
+                                      const BDPTConfig *config);
 
-    PBRT_GPU
-    static SampledSpectrum connect_bdpt(SampledWavelengths &lambda, Vertex *lightVertices,
-                                        Vertex *cameraVertices, int s, int t, Sampler *sampler,
+    // CPU BDPT keeps its path vertices in std::vector.
+    static SampledSpectrum connect_bdpt(SampledWavelengths &lambda, std::vector<Vertex> &light_vertices,
+                                        std::vector<Vertex> &camera_vertices, int s, int t, Sampler *sampler,
                                         pbrt::optional<Point2f> *pRaster, const BDPTConfig *config);
 
-    PBRT_GPU
-    static SampledSpectrum Li(FilmSample *film_samples, int *film_sample_counter, const Ray &ray,
-                              SampledWavelengths &lambda, Sampler *sampler, Vertex *camera_vertices,
-                              Vertex *light_vertices, const BDPTConfig *config);
+    // GPU MLT-BDPT uses the shared raw-pointer implementation.
+    PBRT_CPU_GPU
+    static SampledSpectrum connect_bdpt(SampledWavelengths &lambda, Vertex *lightVertices, Vertex *cameraVertices,
+                                        int s, int t, Sampler *sampler, pbrt::optional<Point2f> *pRaster,
+                                        const BDPTConfig *config);
+
+    static SampledSpectrum Li(std::vector<FilmSample> &film_samples, const Ray &ray, SampledWavelengths &lambda,
+                              Sampler *sampler, const BDPTConfig *config);
 
     const BDPTConfig *config = nullptr;
-    Sampler *samplers = nullptr;
+    Sampler *sampler = nullptr;
 };

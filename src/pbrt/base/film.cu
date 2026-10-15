@@ -18,6 +18,10 @@ void Film::add_splats(const Film &other, Real scale) {
     cuda::std::visit([&](auto &x, const auto &y) { x.add_splats(y, scale); }, *this, other);
 }
 
+void Film::merge(const Film &other) {
+    cuda::std::visit([&](auto &x, const auto &y) { x.merge(y); }, *this, other);
+}
+
 __global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, int width, int height,
                             Real splat_scale) {
     const auto x = blockIdx.x * blockDim.x + threadIdx.x;

@@ -58,6 +58,8 @@ class Film : public HIDDEN::FilmVariants {
 
     void add_splats(const Film &other, Real scale = 1);
 
+    void merge(const Film &other);
+
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i &p, Real splat_scale = 1) const {
         return cuda::std::visit([&](auto &x) { return x.get_pixel_rgb(p, splat_scale); }, *this);

@@ -126,6 +126,19 @@ void RGBFilm::add_splats(const RGBFilm &other, Real scale) {
     }
 }
 
+void RGBFilm::merge(const RGBFilm &other) {
+    if (resolution != other.resolution || sensor != other.sensor || filter != other.filter) {
+        REPORT_FATAL_ERROR();
+    }
+
+    const size_t num_pixels = static_cast<size_t>(resolution.x) * resolution.y;
+    for (size_t idx = 0; idx < num_pixels; ++idx) {
+        pixels[idx].rgb_sum += other.pixels[idx].rgb_sum;
+        pixels[idx].weight_sum += other.pixels[idx].weight_sum;
+        pixels[idx].rgb_splat += other.pixels[idx].rgb_splat;
+    }
+}
+
 PBRT_CPU_GPU
 RGB RGBFilm::get_pixel_rgb(const Point2i p, Real splat_scale) const {
     const int idx = p.x + p.y * resolution.x;

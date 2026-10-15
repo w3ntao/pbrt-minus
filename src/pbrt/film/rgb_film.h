@@ -62,6 +62,8 @@ class RGBFilm {
 
     void add_splats(const RGBFilm &other, Real scale = 1);
 
+    void merge(const RGBFilm &other);
+
     PBRT_CPU_GPU
     RGB get_pixel_rgb(const Point2i p, Real splat_scale = 1) const;
 
