@@ -32,6 +32,11 @@ class MLTSampler {
   public:
     static constexpr size_t LENGTH = 256;
 
+    static Real compute_importance(int depth, int max_depth, Real luminance) {
+        // Keep a nonzero importance for depth-zero paths that directly hit an area light.
+        return (depth + 0.001) / max_depth * std::sqrt(luminance);
+    }
+
     RNG rng;
 
     PrimarySample samples[LENGTH];

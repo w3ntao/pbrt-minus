@@ -10,12 +10,11 @@ struct BDPTConfig {
     const IntegratorBase *base = nullptr;
 
     int max_depth = 0;
-    int film_sample_size = 0;
 
     bool regularize = true;
 
-    BDPTConfig(const IntegratorBase *_base, const int _max_depth, const int _film_sample_size, const bool _regularize)
-        : base(_base), max_depth(_max_depth), film_sample_size(_film_sample_size), regularize(_regularize) {}
+    BDPTConfig(const IntegratorBase *_base, const int _max_depth, const bool _regularize)
+        : base(_base), max_depth(_max_depth), regularize(_regularize) {}
 };
 
 struct EndpointInteraction : Interaction {

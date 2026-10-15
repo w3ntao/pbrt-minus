@@ -28,11 +28,9 @@ struct PathSample {
 };
 
 Real MLTPathIntegrator::compute_importance(const PathSample &path) const {
-    // the significance of 0.001:
-    // if the depth is 0 and an area light hit: we change the depth to 0.001 to prevent degenerating
-    // yet also keep the contribution recorded
+    const auto luminance = path.radiance.y(path.lambda, cie_y);
 
-    return (path.depth + 0.001) / max_depth * compute_luminance(path.radiance, path.lambda);
+    return MLTSampler::compute_importance(path.depth, max_depth, luminance);
 }
 
 static PathSample generate_bootstrap_path(const long bootstrap_index, MLTSampler &mlt_sampler,
@@ -68,11 +66,11 @@ static void build_bootstrap_samples(const int worker_idx, const int num_paths_pe
     }
 }
 
-static void mutate_chain(const long bootstrap_index, const double bootstrap_importance, RNG &rng, Film *chain_film,
-                         GreyScaleFilm &chain_heat_map, const MLTPathIntegrator *mlt_integrator) {
+void MLTPathIntegrator::mutate_markov_chain(const long bootstrap_index, const double bootstrap_importance, RNG &rng,
+                                            Film *chain_film, GreyScaleFilm &chain_heat_map) const {
     MLTSampler mlt_sampler;
-    auto current_path = generate_bootstrap_path(bootstrap_index, mlt_sampler, mlt_integrator);
-    auto current_c = mlt_integrator->compute_importance(current_path);
+    auto current_path = generate_bootstrap_path(bootstrap_index, mlt_sampler, this);
+    auto current_c = compute_importance(current_path);
     if (current_c <= 0 || current_c != bootstrap_importance) {
         printf("MLT-PATH: failed to replay bootstrap path %ld\n", bootstrap_index);
         REPORT_FATAL_ERROR();
@@ -86,18 +84,18 @@ static void mutate_chain(const long bootstrap_index, const double bootstrap_impo
         }
         if (sampling_density > 0) {
             auto p_discrete = (path.p_film + Vector2f(0.5, 0.5)).floor();
-            p_discrete.x = clamp<int>(p_discrete.x, 0, mlt_integrator->film_dimension.x - 1);
-            p_discrete.y = clamp<int>(p_discrete.y, 0, mlt_integrator->film_dimension.y - 1);
+            p_discrete.x = clamp<int>(p_discrete.x, 0, film_dimension.x - 1);
+            p_discrete.y = clamp<int>(p_discrete.y, 0, film_dimension.y - 1);
             chain_heat_map.add_sample(p_discrete, sampling_density);
         }
     };
 
-    for (long long idx = 0; idx < mlt_integrator->mutations_per_sampler; ++idx) {
+    for (long long idx = 0; idx < mutations_per_sampler; ++idx) {
         mlt_sampler.start_iteration();
         mlt_sampler.start_stream(0);
 
-        const auto proposed_path = mlt_integrator->generate_path_sample(&sampler);
-        const auto proposed_c = mlt_integrator->compute_importance(proposed_path);
+        const auto proposed_path = generate_path_sample(&sampler);
+        const auto proposed_c = compute_importance(proposed_path);
 
         const Real accept_prob = std::min<Real>(1.0, proposed_c / current_c);
         add_sample(current_path, (1 - accept_prob) / current_c, 1 - accept_prob);
@@ -133,7 +131,7 @@ std::unique_ptr<MLTPathIntegrator> MLTPathIntegrator::create(const int mutations
     integrator->sigma = parameters.get_float("sigma", 0.01);
 
     integrator->film_dimension = integrator->base->camera->get_camera_base()->resolution;
-    integrator->cie_y = std::make_unique<Spectrum>(*parameters.global_spectra->cie_y);
+    integrator->cie_y = parameters.global_spectra->cie_y;
 
     const long long total_samples =
         static_cast<long long>(mutations_per_pixel) * integrator->film_dimension.x * integrator->film_dimension.y;
@@ -219,8 +217,8 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) const {
         }
 
         const auto bootstrap_index = static_cast<long>(selected - bootstrap_cdf.begin());
-        mutate_chain(bootstrap_index, importance_per_path[bootstrap_index], rng, chain_films[worker_idx],
-                     chain_heat_maps[worker_idx], this);
+        mutate_markov_chain(bootstrap_index, importance_per_path[bootstrap_index], rng, chain_films[worker_idx],
+                            chain_heat_maps[worker_idx]);
     });
 
     // Account for the extra mutations from rounding every chain up.

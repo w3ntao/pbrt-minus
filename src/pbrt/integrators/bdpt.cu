@@ -713,10 +713,9 @@ BDPTIntegrator *BDPTIntegrator::create(const int samples_per_pixel, const std::s
     if (max_depth < 0) {
         REPORT_FATAL_ERROR();
     }
-    const auto film_sample_size = max_depth;
     const auto regularize = parameters.get_bool("regularize", false);
 
-    const auto config = allocator.create<BDPTConfig>(integrator_base, max_depth, film_sample_size, regularize);
+    const auto config = allocator.create<BDPTConfig>(integrator_base, max_depth, regularize);
 
     Sampler *sampler = nullptr;
     switch (Sampler::parse_sampler_type(sampler_type)) {

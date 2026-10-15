@@ -10,6 +10,7 @@ class Film;
 class GPUMemoryAllocator;
 class GreyScaleFilm;
 class ParameterDictionary;
+class RNG;
 class Sampler;
 struct PathSample;
 
@@ -20,10 +21,6 @@ class MLTPathIntegrator {
                                                      GPUMemoryAllocator &allocator);
 
     double render(Film *film, GreyScaleFilm &heat_map) const;
-
-    Real compute_luminance(const SampledSpectrum &radiance, const SampledWavelengths &lambda) const {
-        return radiance.y(lambda, cie_y.get());
-    }
 
     Real compute_importance(const PathSample &path) const;
 
@@ -48,5 +45,9 @@ class MLTPathIntegrator {
     bool regularize;
 
     // Keep the Spectrum wrapper on the CPU while borrowing its sampled data.
-    std::unique_ptr<Spectrum> cie_y;
+    const Spectrum *cie_y = nullptr;
+
+  private:
+    void mutate_markov_chain(long bootstrap_index, double bootstrap_importance, RNG &rng, Film *chain_film,
+                             GreyScaleFilm &chain_heat_map) const;
 };
