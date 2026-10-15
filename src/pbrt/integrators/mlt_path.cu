@@ -172,12 +172,7 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) const {
     ThreadPool thread_pool(num_samplers);
 
     const auto num_paths_per_worker = divide_and_ceil<int>(film_dimension.x * film_dimension.y, num_samplers);
-
     const auto num_bootstrap_paths = static_cast<size_t>(num_paths_per_worker) * num_samplers;
-
-    if (num_paths_per_worker <= 0) {
-        REPORT_FATAL_ERROR();
-    }
 
     std::vector<double> importance_per_path(num_bootstrap_paths);
 

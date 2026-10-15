@@ -989,7 +989,7 @@ void SceneBuilder::render() const {
                   << std::flush;
 
         GreyScaleFilm heatmap(film_resolution);
-        const auto brightness = mlt_bdpt_integrator->render(film, heatmap, spp, preview);
+        const auto brightness = mlt_bdpt_integrator->render(film, heatmap, spp);
 
         film->write_to_png(output_filename, brightness / spp);
 

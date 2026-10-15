@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pbrt/base/spectrum.h>
+#include <vector>
 
 class Film;
 class GPUMemoryAllocator;
@@ -20,12 +21,10 @@ struct BDPTPathSample {
     SampledSpectrum radiance;
     SampledWavelengths lambda;
 
-    PBRT_CPU_GPU
     static BDPTPathSample zero() {
         return BDPTPathSample(Point2f(NAN, NAN), 0, SampledWavelengths::zero());
     }
 
-    PBRT_CPU_GPU
     BDPTPathSample(const Point2f &_p_film, const SampledSpectrum &_radiance,
                    const SampledWavelengths &_lambda)
         : p_film(_p_film), radiance(_radiance), lambda(_lambda) {}
@@ -38,21 +37,20 @@ class MLTBDPTIntegrator {
     static constexpr int connectionStreamIndex = 2;
     static constexpr int nSampleStreams = 3;
 
-    MLTBDPTIntegrator(const BDPTConfig *_config, Sampler *_samplers, MLTSampler *_mlt_samplers,
-                      const Point2i &_film_dimension, const Spectrum *_cie_y)
-        : config(_config), samplers(_samplers), mlt_samplers(_mlt_samplers),
-          film_dimension(_film_dimension), cie_y(_cie_y) {}
+    MLTBDPTIntegrator(const BDPTConfig *_config, const Point2i &_film_dimension,
+                      const Spectrum *_cie_y, int _mutations_per_pixel, int _num_samplers, Real _sigma,
+                      Real _large_step_probability)
+        : config(_config), film_dimension(_film_dimension), cie_y(_cie_y),
+          mutations_per_pixel(_mutations_per_pixel), num_samplers(_num_samplers), sigma(_sigma),
+          large_step_probability(_large_step_probability) {}
 
     static MLTBDPTIntegrator *create(int mutations_per_pixel, const ParameterDictionary &parameters,
                                      const IntegratorBase *base, GPUMemoryAllocator &allocator);
 
-    double render(Film *film, GreyScaleFilm &heat_map, int mutations_per_pixel, bool preview);
+    double render(Film *film, GreyScaleFilm &heat_map, int mutations_per_pixel);
 
-    PBRT_GPU
-    BDPTPathSample li(int depth, Sampler *sampler, Vertex *camera_vertices,
-                      Vertex *light_vertices) const;
+    BDPTPathSample li(int depth, Sampler *sampler) const;
 
-    PBRT_CPU_GPU
     Real compute_luminance(const SampledSpectrum &radiance,
                            const SampledWavelengths &lambda) const {
         return radiance.y(lambda, cie_y);
@@ -60,11 +58,22 @@ class MLTBDPTIntegrator {
 
     const BDPTConfig *config = nullptr;
 
-    Sampler *samplers = nullptr;
-    MLTSampler *mlt_samplers = nullptr;
-
   private:
+    BDPTPathSample generate_path_sample(MLTSampler &mlt_sampler) const;
+    BDPTPathSample generate_bootstrap_path(long bootstrap_index, MLTSampler &mlt_sampler) const;
+
+    void build_bootstrap_samples(int worker_idx, int num_paths_per_worker,
+                                 std::vector<double> &luminance_per_path) const;
+    void mutate_chain(int worker_idx, Film *sub_film, GreyScaleFilm &sub_heat_map,
+                      long long num_mutations, const std::vector<double> &luminance_per_path,
+                      const std::vector<double> &bootstrap_cdf) const;
+
     Point2i film_dimension = {0, 0};
 
     const Spectrum *cie_y = nullptr;
+
+    int mutations_per_pixel = 0;
+    int num_samplers = 1;
+    Real sigma = 0.01;
+    Real large_step_probability = 0.3;
 };
