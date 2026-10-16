@@ -20,26 +20,27 @@
 Real MLTBDPTIntegrator::compute_importance(const BDPTPathSample &path) const {
     const auto luminance = path.radiance.y(path.lambda, cie_y);
 
-    return MLTSampler::compute_importance(path.depth, config->max_depth, luminance);
+    return MLTSampler::compute_importance(path.depth, bdpt.max_depth, luminance);
 }
 
-BDPTPathSample MLTBDPTIntegrator::generate_path_sample(MLTSampler &mlt_sampler) const {
+BDPTPathSample MLTBDPTIntegrator::generate_path_sample(Sampler *sampler) const {
+    auto mlt_sampler = sampler->get_mlt_sampler();
     // Reserve the first connection-stream dimension for depth selection.
-    mlt_sampler.start_stream(connectionStreamIndex);
-    const auto depth = clamp<int>(mlt_sampler.get_1d() * (config->max_depth + 1), 0, config->max_depth);
-    Sampler sampler(&mlt_sampler);
-    return li(depth, &sampler);
+    mlt_sampler->start_stream(connectionStreamIndex);
+    const auto depth = clamp<int>(mlt_sampler->get_1d() * (bdpt.max_depth + 1), 0, bdpt.max_depth);
+    return li(depth, sampler);
 }
 
-BDPTPathSample MLTBDPTIntegrator::generate_bootstrap_path(const long bootstrap_index, MLTSampler &mlt_sampler) const {
-    mlt_sampler.setup_config(mutations_per_pixel, sigma, large_step_probability, nSampleStreams);
-    mlt_sampler.init(bootstrap_index);
+BDPTPathSample MLTBDPTIntegrator::generate_bootstrap_path(const long bootstrap_index, Sampler *sampler) const {
+    auto mlt_sampler = sampler->get_mlt_sampler();
+    mlt_sampler->setup_config(mutations_per_pixel, sigma, large_step_probability, nSampleStreams);
+    mlt_sampler->init(bootstrap_index);
     // Bootstrap generation and replay must consume the same RNG sequence.
-    mlt_sampler.start_iteration();
-    mlt_sampler.large_step = true;
-    const auto path = generate_path_sample(mlt_sampler);
+    mlt_sampler->start_iteration();
+    mlt_sampler->large_step = true;
+    const auto path = generate_path_sample(sampler);
     // Commit iteration 1 so unused dimensions get a uniform value on first use.
-    mlt_sampler.accept();
+    mlt_sampler->accept();
     return path;
 }
 
@@ -49,7 +50,8 @@ void MLTBDPTIntegrator::build_bootstrap_samples(const int worker_idx, const int 
         const auto path_idx = static_cast<long>(worker_idx) * num_paths_per_worker + idx;
         // init() does not clear PrimarySample state; each bootstrap needs a fresh sampler.
         MLTSampler mlt_sampler;
-        const auto path = generate_bootstrap_path(path_idx, mlt_sampler);
+        Sampler sampler(&mlt_sampler);
+        const auto path = generate_bootstrap_path(path_idx, &sampler);
         const auto importance = compute_importance(path);
         if (importance < 0 || !std::isfinite(importance)) {
             printf("MLT-BDPT: invalid bootstrap importance at path %ld\n", path_idx);
@@ -59,26 +61,25 @@ void MLTBDPTIntegrator::build_bootstrap_samples(const int worker_idx, const int 
     }
 }
 
-MLTBDPTIntegrator *MLTBDPTIntegrator::create(const int mutations_per_pixel, const ParameterDictionary &parameters,
-                                             const IntegratorBase *base, GPUMemoryAllocator &allocator) {
+std::unique_ptr<MLTBDPTIntegrator> MLTBDPTIntegrator::create(const int mutations_per_pixel,
+                                                             const ParameterDictionary &parameters,
+                                                             const IntegratorBase *base) {
     const auto max_depth = parameters.get_integer("maxdepth", 5);
 
     const auto regularize = parameters.get_bool("regularize", false);
     // hardware_concurrency() may return zero when the thread count is unknown.
     const int num_samplers = std::thread::hardware_concurrency();
 
-    const auto config = allocator.create<BDPTConfig>(base, max_depth, regularize);
-
     const auto large_step_probability = parameters.get_float("largestepprobability", 0.3);
     const auto sigma = parameters.get_float("sigma", 0.01);
 
-    return allocator.create<MLTBDPTIntegrator>(config, base->camera->get_camera_base()->resolution,
+    return std::make_unique<MLTBDPTIntegrator>(base, max_depth, regularize, base->camera->get_camera_base()->resolution,
                                                parameters.global_spectra->cie_y, mutations_per_pixel, num_samplers,
                                                sigma, large_step_probability);
 }
 
 BDPTPathSample MLTBDPTIntegrator::li(const int depth, Sampler *sampler) const {
-    if (config->base->light_num == 0) {
+    if (bdpt.base->light_num == 0) {
         return BDPTPathSample::zero(depth);
     }
 
@@ -105,18 +106,17 @@ BDPTPathSample MLTBDPTIntegrator::li(const int depth, Sampler *sampler) const {
     auto p_film = Point2f(u.x * film_dimension.x, u.y * film_dimension.y);
     const auto camera_sample = CameraSample(p_film, 1);
 
-    const auto camera_ray = config->base->camera->generate_ray(camera_sample, sampler);
+    const auto camera_ray = bdpt.base->camera->generate_ray(camera_sample, sampler);
 
     std::vector<Vertex> camera_vertices(t);
     std::vector<Vertex> light_vertices(s);
 
-    if (BDPTIntegrator::generate_camera_subpath(camera_ray.ray, lambda, sampler, t, camera_vertices.data(), config) !=
-        t) {
+    if (bdpt.generate_camera_subpath(camera_ray.ray, lambda, sampler, t, camera_vertices) != t) {
         return BDPTPathSample::zero(depth);
     }
 
     mlt_sampler->start_stream(lightStreamIndex);
-    if (BDPTIntegrator::generate_light_subpath(lambda, sampler, s, light_vertices.data(), config) != s) {
+    if (bdpt.generate_light_subpath(lambda, sampler, s, light_vertices) != s) {
         return BDPTPathSample::zero(depth);
     }
 
@@ -126,8 +126,7 @@ BDPTPathSample MLTBDPTIntegrator::li(const int depth, Sampler *sampler) const {
     mlt_sampler->sample_index = 1;
     pbrt::optional<Point2f> p_raster_new;
     const auto radiance_l =
-        BDPTIntegrator::connect_bdpt(lambda, light_vertices, camera_vertices, s, t, sampler, &p_raster_new, config) *
-        nStrategies;
+        bdpt.connect_bdpt(lambda, light_vertices, camera_vertices, s, t, sampler, &p_raster_new) * nStrategies;
 
     if (p_raster_new.has_value()) {
         p_film = p_raster_new.value();
@@ -152,7 +151,8 @@ void MLTBDPTIntegrator::mutate_markov_chain(const int worker_idx, Film *sub_film
 
     const auto bootstrap_index = static_cast<long>(selected - bootstrap_cdf.begin());
     MLTSampler mlt_sampler;
-    auto current_path = generate_bootstrap_path(bootstrap_index, mlt_sampler);
+    Sampler sampler(&mlt_sampler);
+    auto current_path = generate_bootstrap_path(bootstrap_index, &sampler);
     auto current_c = compute_importance(current_path);
     if (current_c <= 0 || current_c != importance_per_path[bootstrap_index]) {
         printf("MLT-BDPT: failed to replay bootstrap path %ld\n", bootstrap_index);
@@ -177,7 +177,7 @@ void MLTBDPTIntegrator::mutate_markov_chain(const int worker_idx, Film *sub_film
 
     for (long long mutation_idx = 0; mutation_idx < num_mutations; ++mutation_idx) {
         mlt_sampler.start_iteration();
-        const auto proposed_path = generate_path_sample(mlt_sampler);
+        const auto proposed_path = generate_path_sample(&sampler);
         const auto proposed_c = compute_importance(proposed_path);
 
         const auto accept_prob = std::min<Real>(1.0, proposed_c / current_c);
@@ -215,7 +215,7 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, int mutati
     std::partial_sum(importance_per_path.begin(), importance_per_path.end(), bootstrap_cdf.begin());
     const double sum_importance = bootstrap_cdf.back();
     // li() compensates for strategy sampling; uniform depth selection needs this factor too.
-    const double normalization = (config->max_depth + 1) * (sum_importance / num_bootstrap_paths);
+    const double normalization = (bdpt.max_depth + 1) * (sum_importance / num_bootstrap_paths);
 
     const long long total_mutations = static_cast<long long>(mutations_per_pixel) * film_dimension.x * film_dimension.y;
 
@@ -223,12 +223,15 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, int mutati
     for (int idx = 0; idx < total_mutations % num_samplers; ++idx) {
         ++num_mutations[idx];
     }
+    if (std::accumulate(num_mutations.begin(), num_mutations.end(), 0LL) != total_mutations) {
+        REPORT_FATAL_ERROR();
+    }
 
     printf("MLT-BDPT:\n");
     printf("    bootstrap paths: %zu (nonzero: %.1f%%)\n", num_bootstrap_paths,
            100.0 * num_nonzero_paths / num_bootstrap_paths);
     printf("    MLT samplers: %d\n", num_samplers);
-    printf("    mutations per samplers: %.1f\n", double(total_mutations) / num_samplers);
+    printf("    mutations per samplers: %d\n", total_mutations / num_samplers);
     printf("    normalization: %.6f\n", normalization);
 
     if (normalization <= 0 || !std::isfinite(normalization) || num_nonzero_paths == 0) {
@@ -242,10 +245,6 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, int mutati
     for (int idx = 0; idx < num_samplers; ++idx) {
         sub_films[idx] = film->create_empty(allocator);
         sub_heat_maps.emplace_back(film_dimension);
-    }
-
-    if (std::accumulate(num_mutations.begin(), num_mutations.end(), 0LL) != total_mutations) {
-        REPORT_FATAL_ERROR();
     }
 
     thread_pool.parallel_execute(0, num_samplers, [&](const int worker_idx) {

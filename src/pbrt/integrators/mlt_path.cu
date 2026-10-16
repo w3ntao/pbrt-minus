@@ -33,20 +33,20 @@ Real MLTPathIntegrator::compute_importance(const PathSample &path) const {
     return MLTSampler::compute_importance(path.depth, max_depth, luminance);
 }
 
-static PathSample generate_bootstrap_path(const long bootstrap_index, MLTSampler &mlt_sampler,
+static PathSample generate_bootstrap_path(const long bootstrap_index, Sampler *sampler,
                                           const MLTPathIntegrator *mlt_integrator) {
-    mlt_sampler.setup_config(mlt_integrator->mutations_per_pixel, mlt_integrator->sigma,
-                             mlt_integrator->large_step_probability, 1);
-    mlt_sampler.init(bootstrap_index);
+    auto mlt_sampler = sampler->get_mlt_sampler();
+    mlt_sampler->setup_config(mlt_integrator->mutations_per_pixel, mlt_integrator->sigma,
+                              mlt_integrator->large_step_probability, 1);
+    mlt_sampler->init(bootstrap_index);
     // Bootstrap generation and replay must consume the same RNG sequence.
-    mlt_sampler.start_iteration();
-    mlt_sampler.large_step = true;
-    mlt_sampler.start_stream(0);
-    Sampler sampler(&mlt_sampler);
+    mlt_sampler->start_iteration();
+    mlt_sampler->large_step = true;
+    mlt_sampler->start_stream(0);
 
-    const auto path = mlt_integrator->generate_path_sample(&sampler);
+    const auto path = mlt_integrator->generate_path_sample(sampler);
     // Accept iteration 1 so unused dimensions get a uniform value on first use.
-    mlt_sampler.accept();
+    mlt_sampler->accept();
     return path;
 }
 
@@ -56,7 +56,8 @@ static void build_bootstrap_samples(const int worker_idx, const int num_paths_pe
         const auto path_idx = static_cast<long>(worker_idx) * num_paths_per_worker + idx;
 
         MLTSampler mlt_sampler;
-        const auto path_sample = generate_bootstrap_path(path_idx, mlt_sampler, mlt_integrator);
+        Sampler sampler(&mlt_sampler);
+        const auto path_sample = generate_bootstrap_path(path_idx, &sampler, mlt_integrator);
         const auto importance = mlt_integrator->compute_importance(path_sample);
         if (importance < 0) {
             REPORT_FATAL_ERROR();
@@ -67,16 +68,16 @@ static void build_bootstrap_samples(const int worker_idx, const int num_paths_pe
 }
 
 void MLTPathIntegrator::mutate_markov_chain(const long bootstrap_index, const double bootstrap_importance, RNG &rng,
-                                            Film *chain_film, GreyScaleFilm &chain_heat_map) const {
+                                            Film *chain_film, GreyScaleFilm &chain_heat_map,
+                                            const long long num_mutations) const {
     MLTSampler mlt_sampler;
-    auto current_path = generate_bootstrap_path(bootstrap_index, mlt_sampler, this);
+    Sampler sampler(&mlt_sampler);
+    auto current_path = generate_bootstrap_path(bootstrap_index, &sampler, this);
     auto current_c = compute_importance(current_path);
     if (current_c <= 0 || current_c != bootstrap_importance) {
         printf("MLT-PATH: failed to replay bootstrap path %ld\n", bootstrap_index);
         REPORT_FATAL_ERROR();
     }
-
-    Sampler sampler(&mlt_sampler);
 
     const auto add_sample = [&](const PathSample &path, const Real weight, const Real sampling_density) {
         if (weight > 0) {
@@ -90,7 +91,7 @@ void MLTPathIntegrator::mutate_markov_chain(const long bootstrap_index, const do
         }
     };
 
-    for (long long idx = 0; idx < mutations_per_sampler; ++idx) {
+    for (long long idx = 0; idx < num_mutations; ++idx) {
         mlt_sampler.start_iteration();
         mlt_sampler.start_stream(0);
 
@@ -113,10 +114,6 @@ void MLTPathIntegrator::mutate_markov_chain(const long bootstrap_index, const do
             mlt_sampler.reject();
         }
     }
-
-    if (DEBUG_MODE) {
-        printf("    %s(): max samples used: %d/%d\n", __FUNCTION__, mlt_sampler.max_samples_used(), MLTSampler::LENGTH);
-    }
 }
 
 std::unique_ptr<MLTPathIntegrator> MLTPathIntegrator::create(const int mutations_per_pixel,
@@ -133,10 +130,7 @@ std::unique_ptr<MLTPathIntegrator> MLTPathIntegrator::create(const int mutations
     integrator->film_dimension = integrator->base->camera->get_camera_base()->resolution;
     integrator->cie_y = parameters.global_spectra->cie_y;
 
-    const long long total_samples =
-        static_cast<long long>(mutations_per_pixel) * integrator->film_dimension.x * integrator->film_dimension.y;
     integrator->num_samplers = std::thread::hardware_concurrency();
-    integrator->mutations_per_sampler = divide_and_ceil<long long>(total_samples, integrator->num_samplers);
 
     integrator->max_depth = parameters.get_integer("maxdepth", 5);
     integrator->regularize = parameters.get_bool("regularize", false);
@@ -189,13 +183,22 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) const {
 
     const double normalization = sum_importance / num_bootstrap_paths;
 
-    const long long total_samples = static_cast<long long>(mutations_per_pixel) * film_dimension.x * film_dimension.y;
+    const long long total_mutations = static_cast<long long>(mutations_per_pixel) * film_dimension.x * film_dimension.y;
+
+    std::vector<long long> num_mutations(num_samplers, total_mutations / num_samplers);
+    for (int idx = 0; idx < total_mutations % num_samplers; ++idx) {
+        ++num_mutations[idx];
+    }
+
+    if (std::accumulate(num_mutations.begin(), num_mutations.end(), 0LL) != total_mutations) {
+        REPORT_FATAL_ERROR();
+    }
 
     printf("MLT-PATH:\n");
     printf("    bootstrap paths: %zu (nonzero: %.1f%%)\n", num_bootstrap_paths,
            100.0 * num_nonzero_paths / num_bootstrap_paths);
     printf("    MLT samplers: %d\n", num_samplers);
-    printf("    mutations per sampler: %lld\n", mutations_per_sampler);
+    printf("    mutations per sampler: %.1f\n", double(total_mutations) / num_samplers);
     printf("    normalization: %.6f\n", normalization);
 
     if (normalization <= 0.0 || num_nonzero_paths <= 0) {
@@ -218,15 +221,13 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) const {
 
         const auto bootstrap_index = static_cast<long>(selected - bootstrap_cdf.begin());
         mutate_markov_chain(bootstrap_index, importance_per_path[bootstrap_index], rng, chain_films[worker_idx],
-                            chain_heat_maps[worker_idx]);
+                            chain_heat_maps[worker_idx], num_mutations[worker_idx]);
     });
 
-    // Account for the extra mutations from rounding every chain up.
-    const Real merge_scale = static_cast<Real>(double(total_samples) / (double(mutations_per_sampler) * num_samplers));
     // Merge in worker order on the CPU; Film accumulation is not thread-safe.
     for (int i = 0; i < num_samplers; ++i) {
-        film->add_splats(*chain_films[i], merge_scale);
-        heat_map.add_samples(chain_heat_maps[i], merge_scale);
+        film->add_splats(*chain_films[i]);
+        heat_map.add_samples(chain_heat_maps[i]);
     }
 
     return normalization;

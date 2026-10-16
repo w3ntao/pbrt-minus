@@ -70,8 +70,6 @@ class SceneBuilder {
 
     const MegakernelIntegrator *megakernel_integrator = nullptr;
     WavefrontPathIntegrator *wavefront_path_integrator = nullptr;
-    BDPTIntegrator *bdpt_integrator = nullptr;
-    MLTBDPTIntegrator *mlt_bdpt_integrator = nullptr;
 
     IntegratorBase *integrator_base = nullptr;
 
@@ -80,8 +78,10 @@ class SceneBuilder {
     const GlobalSpectra *global_spectra = nullptr;
 
     GPUMemoryAllocator allocator;
-    // Destroy the CPU-owned MLT state before the allocator releases the
-    // shared scene objects it borrows.
+    // Destroy the CPU-owned integrators before the allocator releases the
+    // shared scene objects they borrow.
+    std::unique_ptr<BDPTIntegrator> bdpt_integrator;
+    std::unique_ptr<MLTBDPTIntegrator> mlt_bdpt_integrator;
     std::unique_ptr<MLTPathIntegrator> mlt_path_integrator;
 
     std::map<std::string, const Material *> named_materials;

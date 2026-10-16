@@ -44,14 +44,12 @@ class Sampler {
     explicit Sampler(IndependentSampler *independent_sampler)
         : type(Type::independent), ptr(independent_sampler) {}
 
-    PBRT_CPU_GPU
     explicit Sampler(MLTSampler *mlt_sampler) : type(Type::mlt), ptr(mlt_sampler) {}
 
     PBRT_CPU_GPU
     explicit Sampler(StratifiedSampler *stratified_sampler)
         : type(Type::stratified), ptr(stratified_sampler) {}
 
-    PBRT_CPU_GPU
     MLTSampler *get_mlt_sampler() const;
 
     PBRT_CPU_GPU

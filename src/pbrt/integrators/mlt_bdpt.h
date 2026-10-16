@@ -1,17 +1,16 @@
 #pragma once
 
+#include <memory>
 #include <pbrt/base/spectrum.h>
+#include <pbrt/integrators/bdpt.h>
 #include <vector>
 
 class Film;
-class GPUMemoryAllocator;
 class GreyScaleFilm;
 class ParameterDictionary;
 
-class MLTSampler;
 class Sampler;
 
-struct BDPTConfig;
 struct FilmSample;
 struct IntegratorBase;
 struct Vertex;
@@ -38,13 +37,15 @@ class MLTBDPTIntegrator {
     static constexpr int connectionStreamIndex = 2;
     static constexpr int nSampleStreams = 3;
 
-    MLTBDPTIntegrator(const BDPTConfig *_config, const Point2i &_film_dimension, const Spectrum *_cie_y,
-                      int _mutations_per_pixel, int _num_samplers, Real _sigma, Real _large_step_probability)
-        : config(_config), film_dimension(_film_dimension), cie_y(_cie_y), mutations_per_pixel(_mutations_per_pixel),
-          num_samplers(_num_samplers), sigma(_sigma), large_step_probability(_large_step_probability) {}
+    MLTBDPTIntegrator(const IntegratorBase *_base, int _max_depth, bool _regularize,
+                      const Point2i &_film_dimension, const Spectrum *_cie_y, int _mutations_per_pixel,
+                      int _num_samplers, Real _sigma, Real _large_step_probability)
+        : bdpt(_base, _max_depth, _regularize), film_dimension(_film_dimension), cie_y(_cie_y),
+          mutations_per_pixel(_mutations_per_pixel), num_samplers(_num_samplers), sigma(_sigma),
+          large_step_probability(_large_step_probability) {}
 
-    static MLTBDPTIntegrator *create(int mutations_per_pixel, const ParameterDictionary &parameters,
-                                     const IntegratorBase *base, GPUMemoryAllocator &allocator);
+    static std::unique_ptr<MLTBDPTIntegrator> create(int mutations_per_pixel, const ParameterDictionary &parameters,
+                                                    const IntegratorBase *base);
 
     double render(Film *film, GreyScaleFilm &heat_map, int mutations_per_pixel);
 
@@ -52,11 +53,11 @@ class MLTBDPTIntegrator {
 
     Real compute_importance(const BDPTPathSample &path) const;
 
-    const BDPTConfig *config = nullptr;
+    const BDPTIntegrator bdpt;
 
   private:
-    BDPTPathSample generate_path_sample(MLTSampler &mlt_sampler) const;
-    BDPTPathSample generate_bootstrap_path(long bootstrap_index, MLTSampler &mlt_sampler) const;
+    BDPTPathSample generate_path_sample(Sampler *sampler) const;
+    BDPTPathSample generate_bootstrap_path(long bootstrap_index, Sampler *sampler) const;
 
     void build_bootstrap_samples(int worker_idx, int num_paths_per_worker,
                                  std::vector<double> &importance_per_path) const;

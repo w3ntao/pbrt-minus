@@ -242,7 +242,7 @@ void SceneBuilder::build_integrator() {
 
     if (integrator_name == "mlt" || integrator_name == "mltbdpt") {
         mlt_bdpt_integrator =
-            MLTBDPTIntegrator::create(samples_per_pixel.value(), parameters, integrator_base, allocator);
+            MLTBDPTIntegrator::create(samples_per_pixel.value(), parameters, integrator_base);
         return;
     }
 
@@ -255,8 +255,7 @@ void SceneBuilder::build_integrator() {
     printf("sampler: %s\n", sampler_type.c_str());
 
     if (integrator_name == "bdpt") {
-        bdpt_integrator =
-            BDPTIntegrator::create(samples_per_pixel.value(), sampler_type, parameters, integrator_base, allocator);
+        bdpt_integrator = BDPTIntegrator::create(sampler_type, parameters, integrator_base);
         return;
     }
 

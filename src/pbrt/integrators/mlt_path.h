@@ -37,7 +37,6 @@ class MLTPathIntegrator {
     int mutations_per_pixel;
     // More samplers give more, shallower Markov chains for the same sample budget.
     int num_samplers;
-    long long mutations_per_sampler;
     Real sigma;
     Real large_step_probability;
 
@@ -49,5 +48,5 @@ class MLTPathIntegrator {
 
   private:
     void mutate_markov_chain(long bootstrap_index, double bootstrap_importance, RNG &rng, Film *chain_film,
-                             GreyScaleFilm &chain_heat_map) const;
+                             GreyScaleFilm &chain_heat_map, long long num_mutations) const;
 };

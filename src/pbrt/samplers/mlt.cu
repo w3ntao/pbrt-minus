@@ -1,11 +1,10 @@
 #include <pbrt/samplers/mlt.h>
 #include <pbrt/util/sampling.h>
 
-PBRT_CPU_GPU
 void MLTSampler::ensure_ready(const int index) {
     // Enlarge _MLTSampler::X_ if necessary and get current $\VEC{X}_i$
-    if (index >= LENGTH) {
-        REPORT_FATAL_ERROR();
+    if (static_cast<size_t>(index) >= samples.size()) {
+        samples.resize(static_cast<size_t>(index) + 1);
     }
     PrimarySample &sample_i = samples[index];
 
@@ -40,20 +39,17 @@ void MLTSampler::ensure_ready(const int index) {
     sample_i.last_modification_iteration = current_iteration;
 }
 
-PBRT_CPU_GPU
 void MLTSampler::start_iteration() {
     current_iteration++;
     large_step = rng.uniform<Real>() < large_step_probability;
 }
 
-PBRT_CPU_GPU
 void MLTSampler::accept() {
     if (large_step) {
         last_large_step_iteration = current_iteration;
     }
 }
 
-PBRT_CPU_GPU
 void MLTSampler::reject() {
     for (auto &sample_i : samples) {
         if (sample_i.last_modification_iteration == current_iteration) {
@@ -64,25 +60,21 @@ void MLTSampler::reject() {
     --current_iteration;
 }
 
-PBRT_CPU_GPU
 void MLTSampler::start_stream(int index) {
     stream_index = index;
     sample_index = 0;
 }
 
-PBRT_CPU_GPU
 Real MLTSampler::get_1d() {
     const int index = get_next_index();
     ensure_ready(index);
     return samples[index].value;
 }
 
-PBRT_CPU_GPU
 Point2f MLTSampler::get_2d() {
     return Point2f(get_1d(), get_1d());
 }
 
-PBRT_CPU_GPU
 Point2f MLTSampler::get_pixel_2d() {
     return get_2d();
 }

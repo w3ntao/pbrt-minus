@@ -50,7 +50,6 @@ Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
     return nullptr;
 }
 
-PBRT_CPU_GPU
 MLTSampler *Sampler::get_mlt_sampler() const {
     if (type != Type::mlt) {
         REPORT_FATAL_ERROR();
@@ -91,7 +90,12 @@ int Sampler::get_samples_per_pixel() const {
     }
 
     case Type::mlt: {
+#if defined(__CUDA_ARCH__)
+        REPORT_FATAL_ERROR();
+        return 0;
+#else
         return static_cast<const MLTSampler *>(ptr)->get_samples_per_pixel();
+#endif
     }
 
     case Type::stratified: {
@@ -111,7 +115,12 @@ Real Sampler::get_1d() {
     }
 
     case Type::mlt: {
+#if defined(__CUDA_ARCH__)
+        REPORT_FATAL_ERROR();
+        return NAN;
+#else
         return static_cast<MLTSampler *>(ptr)->get_1d();
+#endif
     }
 
     case Type::stratified: {
@@ -131,7 +140,12 @@ Point2f Sampler::get_2d() {
     }
 
     case Type::mlt: {
+#if defined(__CUDA_ARCH__)
+        REPORT_FATAL_ERROR();
+        return Point2f(NAN, NAN);
+#else
         return static_cast<MLTSampler *>(ptr)->get_2d();
+#endif
     }
 
     case Type::stratified: {
@@ -151,7 +165,12 @@ Point2f Sampler::get_pixel_2d() {
     }
 
     case Type::mlt: {
+#if defined(__CUDA_ARCH__)
+        REPORT_FATAL_ERROR();
+        return Point2f(NAN, NAN);
+#else
         return static_cast<MLTSampler *>(ptr)->get_pixel_2d();
+#endif
     }
 
     case Type::stratified: {
