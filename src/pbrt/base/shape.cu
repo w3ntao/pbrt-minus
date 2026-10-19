@@ -210,10 +210,7 @@ Real Shape::pdf(const Interaction &in) const {
     }
 
     case Type::sphere: {
-        REPORT_FATAL_ERROR();
-        return NAN;
-
-        // return static_cast<const Sphere *>(ptr)->pdf(in);
+        return static_cast<const Sphere *>(ptr)->pdf(in);
     }
 
     case Type::triangle: {

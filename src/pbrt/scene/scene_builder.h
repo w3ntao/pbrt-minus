@@ -19,6 +19,7 @@ class MLTBDPTIntegrator;
 class MLTPathIntegrator;
 class Primitive;
 class Renderer;
+class SelectiveMLTIntegrator;
 class WavefrontPathIntegrator;
 struct IntegratorBase;
 struct GlobalSpectra;
@@ -85,6 +86,7 @@ class SceneBuilder {
     std::unique_ptr<BDPTIntegrator> bdpt_integrator;
     std::unique_ptr<MLTBDPTIntegrator> mlt_bdpt_integrator;
     std::unique_ptr<MLTPathIntegrator> mlt_path_integrator;
+    std::unique_ptr<SelectiveMLTIntegrator> selective_mlt_integrator;
 
     std::map<std::string, const Material *> named_materials;
     std::map<std::string, const Medium *> named_medium;

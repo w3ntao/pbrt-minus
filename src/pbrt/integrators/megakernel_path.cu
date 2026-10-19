@@ -1,6 +1,6 @@
-#include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cuda/atomic>
 #include <pbrt/accelerator/hlbvh.h>
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
@@ -19,25 +19,26 @@
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/util/russian_roulette.h>
+#include <thread>
 
-__global__ static void megakernel_path_render(Film *film, uint8_t *gpu_frame_buffer, const int first_pixel,
-                                              const int pixel_count, const int first_sample, const int sample_count,
-                                              Sampler *samplers, const MegakernelPathIntegrator *integrator,
-                                              const IntegratorBase *base, const Spectrum *cie_y,
-                                              const firefly::CascadeView detector) {
+using PreviewCounter = cuda::atomic<int, cuda::thread_scope_system>;
+
+__global__ static void megakernel_path_render(Film *film, uint8_t *gpu_frame_buffer, PreviewCounter *counter,
+                                              const int samples_per_pixel, Sampler *samplers,
+                                              const MegakernelPathIntegrator *integrator, const IntegratorBase *base,
+                                              const Spectrum *cie_y, const firefly::CascadeView detector) {
     const auto resolution = film->get_resolution();
-    const int local_pixel = threadIdx.x + blockIdx.x * blockDim.x;
-    if (local_pixel >= pixel_count) {
+    const int pixel_index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (pixel_index >= resolution.x * resolution.y) {
         return;
     }
 
-    const int pixel_index = first_pixel + local_pixel;
     const int x = pixel_index % resolution.x;
     const int y = pixel_index / resolution.x;
     const Point2i p_pixel(x, y);
     auto sampler = &samplers[pixel_index];
 
-    for (int sample_idx = first_sample; sample_idx < first_sample + sample_count; ++sample_idx) {
+    for (int sample_idx = 0; sample_idx < samples_per_pixel; ++sample_idx) {
         sampler->start_pixel_sample(pixel_index, sample_idx, 0);
         const auto camera_sample = sampler->get_camera_sample(p_pixel, base->filter);
         auto lambda = SampledWavelengths::sample_visible(sampler->get_1d());
@@ -55,7 +56,7 @@ __global__ static void megakernel_path_render(Film *film, uint8_t *gpu_frame_buf
         detector.record(pixel_index, luminance);
     }
 
-    if (gpu_frame_buffer == nullptr) {
+    if (gpu_frame_buffer == nullptr || counter == nullptr) {
         return;
     }
 
@@ -64,6 +65,9 @@ __global__ static void megakernel_path_render(Film *film, uint8_t *gpu_frame_buf
     gpu_frame_buffer[pixel_index * 3 + 0] = rgb.has_nan() ? 0 : srgb_encoding.from_linear(rgb.r);
     gpu_frame_buffer[pixel_index * 3 + 1] = rgb.has_nan() ? 0 : srgb_encoding.from_linear(rgb.g);
     gpu_frame_buffer[pixel_index * 3 + 2] = rgb.has_nan() ? 0 : srgb_encoding.from_linear(rgb.b);
+
+    // Publish completion only after this pixel's preview color has been written.
+    counter->fetch_add(1, cuda::memory_order_release);
 }
 
 MegakernelPathIntegrator::MegakernelPathIntegrator(const int samples_per_pixel, const std::string &sampler_type,
@@ -85,41 +89,30 @@ void MegakernelPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, c
 
     GPUMemoryAllocator local_allocator;
     GLHelper gl_helper;
+    PreviewCounter *counter = nullptr;
     if (preview) {
         gl_helper.init("initializing", resolution);
+        counter = local_allocator.create<PreviewCounter>(0);
     }
 
     firefly::Cascade cascade(resolution, local_allocator);
 
-    // Bound render batches independently of image size and total spp.
     constexpr int threads = 256;
-    constexpr int max_batch_samples = 16;
-    constexpr int batch_capacity = 1 << 18;
-    const int batch_samples = std::min(samples_per_pixel, max_batch_samples);
-    const int batch_pixels = std::min(num_pixels, batch_capacity / batch_samples);
+    megakernel_path_render<<<divide_and_ceil(num_pixels, threads), threads>>>(
+        film, gl_helper.gpu_frame_buffer, counter, samples_per_pixel, samplers, this, base, cie_y, cascade.view());
+    CHECK_CUDA_ERROR(cudaGetLastError());
 
-    size_t completed_samples = 0;
-    const size_t total_samples = static_cast<size_t>(num_pixels) * samples_per_pixel;
-    auto last_preview = std::chrono::steady_clock::now();
-    for (int first_sample = 0; first_sample < samples_per_pixel; first_sample += batch_samples) {
-        const int sample_count = std::min(batch_samples, samples_per_pixel - first_sample);
-        for (int first_pixel = 0; first_pixel < num_pixels; first_pixel += batch_pixels) {
-            const int pixel_count = std::min(batch_pixels, num_pixels - first_pixel);
-            megakernel_path_render<<<divide_and_ceil(pixel_count, threads), threads>>>(
-                film, gl_helper.gpu_frame_buffer, first_pixel, pixel_count, first_sample, sample_count, samplers, this,
-                base, cie_y, cascade.view());
-            CHECK_CUDA_ERROR(cudaGetLastError());
-            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
-            completed_samples += static_cast<size_t>(pixel_count) * sample_count;
-            const auto now = std::chrono::steady_clock::now();
-            if (preview &&
-                (now - last_preview >= std::chrono::milliseconds(200) || completed_samples == total_samples)) {
-                gl_helper.draw_frame(GLHelper::assemble_title(double(completed_samples) / total_samples));
-                last_preview = now;
-            }
+    if (preview) {
+        cudaError_t render_status;
+        while ((render_status = cudaStreamQuery(nullptr)) == cudaErrorNotReady) {
+            const int completed_pixels = counter->load(cuda::memory_order_acquire);
+            gl_helper.draw_frame(GLHelper::assemble_title(double(completed_pixels) / num_pixels));
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
+        CHECK_CUDA_ERROR(render_status);
     }
+
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     cascade.finalize(firefly_mask, samples_per_pixel, output_filename);
 }
@@ -127,8 +120,8 @@ void MegakernelPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, c
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const Ray &primary_ray,
                                                              SampledWavelengths &lambda, Sampler *sampler,
-                                                             const IntegratorBase *base, int max_depth,
-                                                             bool regularize) {
+                                                             const IntegratorBase *base, int max_depth, bool regularize,
+                                                             bool match_bdpt_depth) {
     SampledSpectrum L = 0;
     SampledSpectrum beta = 1;
     bool specular_bounce = false;
@@ -143,8 +136,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
     auto ray = primary_ray;
 
     Real path_depth = 0.0;
-    // making depth float type to counter for contribution from material-less hit
-    while (path_depth < max_depth && beta.is_positive()) {
+    int consecutive_interfaces = 0;
+    // Legacy depth includes fractional interface hits. Selective mode counts
+    // scattering events and still traces the final segment to an emitter.
+    while ((match_bdpt_depth ? path_depth <= max_depth : path_depth < max_depth) && beta.is_positive()) {
         if (path_depth >= next_time_russian_roulette && russian_roulette(beta, sampler, &next_time_russian_roulette)) {
             break;
         }
@@ -158,6 +153,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
 
             const auto t_max = optional_intersection ? optional_intersection->t_hit : Infinity;
             if (const auto t = sample_exponential(sampler->get_1d(), sigma_t.average()); t < t_max) {
+                if (match_bdpt_depth && path_depth >= max_depth) {
+                    // Another medium interaction would exceed the path limit.
+                    break;
+                }
                 // scatter in medium
                 ray.o = ray.at(t);
                 beta *= sigma_s / sigma_t;
@@ -187,6 +186,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                 any_non_specular_bounces = true;
 
                 path_depth += 1;
+                consecutive_interfaces = 0;
                 continue;
             }
             // otherwise pass through medium
@@ -219,10 +219,15 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
         if (!surface_interaction.material) {
             // pass through material-less interface
             ray = surface_interaction.spawn_ray(ray.d);
-            path_depth += IntegratorBase::interface_bounce_contribution;
-
-            // in such case self-intersection is less worrying
-            // because depth increases for every intersection
+            if (match_bdpt_depth) {
+                // Interfaces consume no scattering depth, but repeated self-hits
+                // still need an independent finite traversal bound.
+                if (++consecutive_interfaces >= IntegratorBase::MAX_VOLUME_BOUNCES) {
+                    break;
+                }
+            } else {
+                path_depth += IntegratorBase::interface_bounce_contribution;
+            }
 
             continue;
         }
@@ -244,7 +249,15 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                 L += beta * w * Le;
             }
 
-            break; // TODO wentao: this part is different from PBRT-v4, which does not break here
+            if (!match_bdpt_depth) {
+                break;
+            }
+        }
+
+        if (match_bdpt_depth && path_depth >= max_depth) {
+            // Emission on the terminal segment is included above; scattering
+            // and next-event estimation here would add an extra path vertex.
+            break;
         }
 
         auto bsdf = surface_interaction.get_bsdf(lambda, base->camera, sampler->get_samples_per_pixel());
@@ -278,6 +291,7 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
         // different with PBRT-v4: ignore the DifferentialRay
 
         path_depth += 1;
+        consecutive_interfaces = 0;
     }
 
     if (depth != nullptr) {

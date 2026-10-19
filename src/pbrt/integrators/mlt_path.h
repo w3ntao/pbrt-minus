@@ -20,7 +20,7 @@ class MLTPathIntegrator {
                                                      const IntegratorBase *base, const Film *film_prototype,
                                                      GPUMemoryAllocator &allocator);
 
-    double render(Film *film, GreyScaleFilm &heat_map) const;
+    double render(Film *film, GreyScaleFilm &density_map) const;
 
     Real compute_importance(const PathSample &path) const;
 
@@ -48,5 +48,5 @@ class MLTPathIntegrator {
 
   private:
     void mutate_markov_chain(long bootstrap_index, double bootstrap_importance, RNG &rng, Film *chain_film,
-                             GreyScaleFilm &chain_heat_map, long long num_mutations) const;
+                             GreyScaleFilm &chain_density_map, long long num_mutations) const;
 };

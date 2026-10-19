@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <pbrt/base/spectrum.h>
 #include <pbrt/integrators/bdpt.h>
@@ -37,21 +38,27 @@ class MLTBDPTIntegrator {
     static constexpr int connectionStreamIndex = 2;
     static constexpr int nSampleStreams = 3;
 
-    MLTBDPTIntegrator(const IntegratorBase *_base, int _max_depth, bool _regularize,
-                      const Point2i &_film_dimension, const Spectrum *_cie_y, int _mutations_per_pixel,
-                      int _num_samplers, Real _sigma, Real _large_step_probability)
+    MLTBDPTIntegrator(const IntegratorBase *_base, int _max_depth, bool _regularize, const Point2i &_film_dimension,
+                      const Spectrum *_cie_y, int _mutations_per_pixel, int _num_samplers, Real _sigma,
+                      Real _large_step_probability)
         : bdpt(_base, _max_depth, _regularize), film_dimension(_film_dimension), cie_y(_cie_y),
           mutations_per_pixel(_mutations_per_pixel), num_samplers(_num_samplers), sigma(_sigma),
           large_step_probability(_large_step_probability) {}
 
     static std::unique_ptr<MLTBDPTIntegrator> create(int mutations_per_pixel, const ParameterDictionary &parameters,
-                                                    const IntegratorBase *base);
+                                                     const IntegratorBase *base);
 
-    double render(Film *film, GreyScaleFilm &heat_map, int mutations_per_pixel);
+    double render(Film *film, GreyScaleFilm &density_map, int mutations_per_pixel);
+
+    // A frozen pixel mask selects the destination splats of this separate estimator.
+    double render_firefly(Film *film, GreyScaleFilm &density_map, const uint8_t *mask, int mutations_per_pixel,
+                         int bootstrap_samples, int num_chains) const;
 
     BDPTPathSample li(int depth, Sampler *sampler) const;
 
     Real compute_importance(const BDPTPathSample &path) const;
+
+    Real compute_selective_mlt_importance(const BDPTPathSample &path, const Film *film, const uint8_t *mask) const;
 
     const BDPTIntegrator bdpt;
 
@@ -61,7 +68,7 @@ class MLTBDPTIntegrator {
 
     void build_bootstrap_samples(int worker_idx, int num_paths_per_worker,
                                  std::vector<double> &importance_per_path) const;
-    void mutate_markov_chain(int worker_idx, Film *sub_film, GreyScaleFilm &sub_heat_map, long long num_mutations,
+    void mutate_markov_chain(int worker_idx, Film *sub_film, GreyScaleFilm &sub_density, long long num_mutations,
                              const std::vector<double> &importance_per_path,
                              const std::vector<double> &bootstrap_cdf) const;
 

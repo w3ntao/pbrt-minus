@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cmath>
 #include <new>
 #include <pbrt/base/filter.h>
 #include <pbrt/film/pixel_sensor.h>
@@ -112,6 +114,68 @@ void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l
         auto pixel_index = pi.x + pi.y * resolution.x;
 
         pixels[pixel_index].rgb_splat += weight * rgb;
+    }
+}
+
+Bounds2i RGBFilm::masked_splat_bounds(const Point2f &p_film) const {
+    if (!std::isfinite(p_film.x) || !std::isfinite(p_film.y)) {
+        return Bounds2i(Point2i(0, 0));
+    }
+
+    const Point2f p_discrete = p_film + Vector2f(0.5, 0.5);
+    const Vector2f radius = filter->get_radius();
+    // Clamp before conversion to int, including for finite points far outside the
+    // image. Bounds2::intersect represents disjoint bounds using NaN integers.
+    Point2i lower, upper;
+    for (int axis = 0; axis < 2; ++axis) {
+        lower[axis] = int(std::clamp(std::floor(p_discrete[axis] - radius[axis]), Real(0),
+                                   Real(resolution[axis])));
+        upper[axis] = int(std::clamp(std::floor(p_discrete[axis] + radius[axis]) + Real(1),
+                                   Real(0), Real(resolution[axis])));
+    }
+    return Bounds2i(lower, upper);
+}
+
+Real RGBFilm::masked_splat_weight(const Point2f &p_film, const uint8_t *mask) const {
+    if (!mask) {
+        return 0;
+    }
+    const auto bounds = masked_splat_bounds(p_film);
+    Real total = 0;
+    for (int y = bounds.p_min.y; y < bounds.p_max.y; ++y) {
+        for (int x = bounds.p_min.x; x < bounds.p_max.x; ++x) {
+            if (mask[x + y * resolution.x]) {
+                const Real weight = filter->evaluate(
+                    Point2f(p_film - Point2i(x, y).to_point2f() - Vector2f(0.5, 0.5)));
+                total += std::abs(weight);
+            }
+        }
+    }
+    return total;
+}
+
+void RGBFilm::add_masked_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
+                              const SampledWavelengths &lambda, const uint8_t *mask) {
+    if (!mask) {
+        return;
+    }
+    const auto bounds = masked_splat_bounds(p_film);
+    if (bounds.is_empty()) {
+        return;
+    }
+    const auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
+    for (int y = bounds.p_min.y; y < bounds.p_max.y; ++y) {
+        for (int x = bounds.p_min.x; x < bounds.p_max.x; ++x) {
+            const int pixel_index = x + y * resolution.x;
+            if (!mask[pixel_index]) {
+                continue;
+            }
+            const Real weight = filter->evaluate(
+                Point2f(p_film - Point2i(x, y).to_point2f() - Vector2f(0.5, 0.5)));
+            if (weight != 0) {
+                pixels[pixel_index].rgb_splat += weight * rgb;
+            }
+        }
     }
 }
 

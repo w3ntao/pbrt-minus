@@ -70,7 +70,7 @@ static void build_bootstrap_samples(const int worker_idx, const int num_paths_pe
 }
 
 void MLTPathIntegrator::mutate_markov_chain(const long bootstrap_index, const double bootstrap_importance, RNG &rng,
-                                            Film *chain_film, GreyScaleFilm &chain_heat_map,
+                                            Film *chain_film, GreyScaleFilm &chain_sampling_density,
                                             const long long num_mutations) const {
     MLTSampler mlt_sampler;
     Sampler sampler(&mlt_sampler);
@@ -89,7 +89,7 @@ void MLTPathIntegrator::mutate_markov_chain(const long bootstrap_index, const do
             auto p_discrete = (path.p_film + Vector2f(0.5, 0.5)).floor();
             p_discrete.x = clamp<int>(p_discrete.x, 0, film_dimension.x - 1);
             p_discrete.y = clamp<int>(p_discrete.y, 0, film_dimension.y - 1);
-            chain_heat_map.add_sample(p_discrete, sampling_density);
+            chain_sampling_density.add_sample(p_discrete, sampling_density);
         }
     };
 
@@ -161,7 +161,7 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
     return PathSample(p_film, radiance, lambda, depth);
 }
 
-double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) const {
+double MLTPathIntegrator::render(Film *film, GreyScaleFilm &sampling_density) const {
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     ThreadPool thread_pool(num_samplers);
 
@@ -207,9 +207,9 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) const {
         REPORT_FATAL_ERROR();
     }
 
-    std::vector<GreyScaleFilm> chain_heat_maps;
+    std::vector<GreyScaleFilm> chain_density_maps;
     for (int i = 0; i < num_samplers; ++i) {
-        chain_heat_maps.emplace_back(film_dimension);
+        chain_density_maps.emplace_back(film_dimension);
     }
 
     thread_pool.parallel_execute(0, num_samplers, [&](const int worker_idx) {
@@ -223,13 +223,13 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &heat_map) const {
 
         const auto bootstrap_index = static_cast<long>(selected - bootstrap_cdf.begin());
         mutate_markov_chain(bootstrap_index, importance_per_path[bootstrap_index], rng, chain_films[worker_idx],
-                            chain_heat_maps[worker_idx], num_mutations[worker_idx]);
+                            chain_density_maps[worker_idx], num_mutations[worker_idx]);
     });
 
     // Merge in worker order on the CPU; Film accumulation is not thread-safe.
     for (int i = 0; i < num_samplers; ++i) {
         film->add_splats(*chain_films[i]);
-        heat_map.add_samples(chain_heat_maps[i]);
+        sampling_density.add_samples(chain_density_maps[i]);
     }
 
     return normalization;

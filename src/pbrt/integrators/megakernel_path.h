@@ -20,9 +20,11 @@ class MegakernelPathIntegrator {
                   bool preview) const;
 
     PBRT_CPU_GPU
+    // Selective PT can match BDPT's scattering-depth limit while legacy callers
+    // retain their existing truncation and emissive-surface behavior.
     static SampledSpectrum evaluate_Li_volume(Real *depth, const Ray &primary_ray, SampledWavelengths &lambda,
                                               Sampler *sampler, const IntegratorBase *base, int max_depth,
-                                              bool regularize);
+                                              bool regularize, bool match_bdpt_depth = false);
 
     PBRT_CPU_GPU
     static SampledSpectrum sample_Ld_volume(const SurfaceInteraction &surface_interaction, const BSDF *bsdf,

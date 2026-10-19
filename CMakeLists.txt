@@ -102,6 +102,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/integrators/megakernel_path.cu
         src/pbrt/integrators/mlt_bdpt.cu
         src/pbrt/integrators/mlt_path.cu
+        src/pbrt/integrators/selective_mlt.cu
         src/pbrt/integrators/surface_normal.cu
         src/pbrt/integrators/wavefront_path.cu
 

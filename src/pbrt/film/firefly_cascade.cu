@@ -9,17 +9,21 @@ namespace firefly {
 static void write_firefly_cascade(Real *const *counts, const Point2i resolution, const std::string &output_filename) {
     const auto image_path = std::filesystem::path(output_filename);
     const int num_pixels = resolution.x * resolution.y;
+    printf("cascaded frame mask - nonzero pixels:\n");
     for (int layer_index = 0; layer_index < layer_count; ++layer_index) {
         GreyScaleFilm layer(resolution);
+        size_t nonzero_pixels = 0;
         for (int pixel_index = 0; pixel_index < num_pixels; ++pixel_index) {
             // Bitterli's buffers store sample counts, rather than layer radiance.
-            layer.add_sample(Point2i(pixel_index % resolution.x, pixel_index / resolution.x),
-                             counts[layer_index][pixel_index]);
+            const Real count = counts[layer_index][pixel_index];
+            layer.add_sample(Point2i(pixel_index % resolution.x, pixel_index / resolution.x), count);
+            nonzero_pixels += count != 0;
         }
 
         const auto layer_path = image_path.parent_path() / (image_path.stem().string() + "-cascaded-frame-" +
                                                             std::to_string(layer_index) + ".png");
         layer.write_to_png(layer_path.string());
+        printf("    level %d: %6.2f%%\n", layer_index, double(nonzero_pixels) / num_pixels * 100);
     }
 }
 
@@ -80,7 +84,7 @@ void Cascade::finalize(GreyScaleFilm &firefly_mask, const int samples_per_pixel,
         firefly_mask.add_sample(Point2i(pixel_index % resolution.x, pixel_index / resolution.x), value);
         candidate_pixels += value;
     }
-    printf("firefly detector: %d layers (alpha %.3g, beta %d, tau %.6g, max %.1f), candidate: %.1f%\n", layer_count,
+    printf("firefly detector: %d layers (alpha %.3g, beta %d, tau %.6g, max %.1f), candidate: %.1f%%\n", layer_count,
            double(alpha), beta, double(threshold), double(max_luminance), float(candidate_pixels) / num_pixels * 100);
 
     // Export all count layers, including empty ones, before the allocator releases them.

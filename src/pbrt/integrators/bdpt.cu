@@ -100,7 +100,7 @@ Real BDPTIntegrator::pdf_light(const Vertex &vertex, const Vertex &v) const {
 
         const auto light = vertex.type == Vertex::VertexType::light ? vertex.ei.light : vertex.si.area_light;
         Real pdfPos, pdfDir;
-        light->pdf_le(vertex.ei, w, &pdfPos, &pdfDir);
+        light->pdf_le(vertex.get_interaction(), w, &pdfPos, &pdfDir);
         pdf = pdfDir * invDist2;
     } else {
         if (DEBUG_MODE) {
@@ -223,7 +223,7 @@ Real BDPTIntegrator::pdf_light_origin(const Vertex &vertex, const Vertex &v) con
     auto pdfChoice = base->light_sampler->pmf(light);
 
     if (vertex.is_on_surface()) {
-        light->pdf_le(vertex.ei, w, &pdfPos, &pdfDir);
+        light->pdf_le(vertex.get_interaction(), w, &pdfPos, &pdfDir);
     } else {
         light->pdf_le(Ray(vertex.p(), w), &pdfPos, &pdfDir);
     }

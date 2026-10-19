@@ -12,25 +12,23 @@ namespace firefly {
     parameters configured with https://benedikt-bitterli.me/smlt/bitterli19selectively.pdf
 */
 
-// Match SampledSpectrum::y() units while preserving the original raw-CIE-Y bounds.
+// Match SampledSpectrum::y() units for the first log-luminance center.
 constexpr Real alpha = Real(0.5) / CIE_Y_integral;
 constexpr int beta = 2;
-constexpr Real max_luminance = Real(1000) / CIE_Y_integral;
+constexpr int layer_count = 10;
 static_assert(beta > 1 && (beta & (beta - 1)) == 0, "firefly::beta must be a power of two greater than one");
+static_assert(layer_count >= 2, "firefly cascade requires at least two layers");
 constexpr int beta_log2 = std::countr_zero(static_cast<unsigned int>(beta));
-static_assert(alpha > 0 && max_luminance > alpha);
 
-// Use the actual number of buffers for m in tau, including both endpoints.
-// With beta=2, twelve buffers cover centers (0.5 through 1024) / CIE_Y_integral.
-constexpr int layer_count = [] {
-    int count = 1;
+// The final layer center sets the cutoff: alpha * beta^(layer_count - 1).
+constexpr Real max_luminance = [] {
     Real center = alpha;
-    while (center < max_luminance) {
+    for (int layer = 1; layer < layer_count; ++layer) {
         center *= beta;
-        ++count;
     }
-    return count;
+    return center;
 }();
+static_assert(alpha > 0 && max_luminance > alpha);
 
 PBRT_CPU_GPU
 inline Real tau(const int samples_per_pixel) {
@@ -62,6 +60,10 @@ inline Sample split(Real luminance) {
     }
 
     const Real coordinate = std::log2(luminance / alpha) / Real(beta_log2);
+    // The final center (or a value rounded to it) has no following layer.
+    if (coordinate >= layer_count - 1) {
+        return {layer_count - 2, 0, 1, false};
+    }
     const int lower_layer = static_cast<int>(coordinate);
     // Follow the printed weights in Bitterli and Jarosz 2019, Section 6.1:
     // w = frac(log_beta(x/alpha)) goes to B_j, and 1-w to B_(j+1).

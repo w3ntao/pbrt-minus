@@ -1,5 +1,8 @@
 #include <algorithm>
 #include <cmath>
+#include <exception>
+#include <limits>
+#include <mutex>
 #include <numeric>
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
@@ -14,6 +17,7 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/util/thread_pool.h>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 
@@ -21,6 +25,16 @@ Real MLTBDPTIntegrator::compute_importance(const BDPTPathSample &path) const {
     const auto luminance = path.radiance.y(path.lambda, cie_y);
 
     return MLTSampler::compute_importance(path.depth, bdpt.max_depth, luminance);
+}
+
+Real MLTBDPTIntegrator::compute_selective_mlt_importance(const BDPTPathSample &path, const Film *film,
+                                                         const uint8_t *mask) const {
+    const Real masked_weight = film->masked_splat_weight(path.p_film, mask);
+    if (masked_weight <= 0) {
+        return 0;
+    }
+
+    return masked_weight * compute_importance(path);
 }
 
 BDPTPathSample MLTBDPTIntegrator::generate_path_sample(Sampler *sampler) const {
@@ -136,7 +150,7 @@ BDPTPathSample MLTBDPTIntegrator::li(const int depth, Sampler *sampler) const {
     return BDPTPathSample(p_film, radiance_l, lambda, depth);
 }
 
-void MLTBDPTIntegrator::mutate_markov_chain(const int worker_idx, Film *sub_film, GreyScaleFilm &sub_heat_map,
+void MLTBDPTIntegrator::mutate_markov_chain(const int worker_idx, Film *sub_film, GreyScaleFilm &sub_density_map,
                                             const long long num_mutations,
                                             const std::vector<double> &importance_per_path,
                                             const std::vector<double> &bootstrap_cdf) const {
@@ -171,7 +185,7 @@ void MLTBDPTIntegrator::mutate_markov_chain(const int worker_idx, Film *sub_film
             p_discrete.x = clamp<int>(p_discrete.x, 0, sub_film_dimension.x - 1);
             p_discrete.y = clamp<int>(p_discrete.y, 0, sub_film_dimension.y - 1);
 
-            sub_heat_map.add_sample(p_discrete, sampling_density);
+            sub_density_map.add_sample(p_discrete, sampling_density);
         }
     };
 
@@ -198,7 +212,7 @@ void MLTBDPTIntegrator::mutate_markov_chain(const int worker_idx, Film *sub_film
     }
 }
 
-double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, int mutations_per_pixel) {
+double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &density_map, int mutations_per_pixel) {
     ThreadPool thread_pool(num_samplers);
     const auto num_paths_per_worker = divide_and_ceil<int>(film_dimension.x * film_dimension.y, num_samplers);
     const auto num_bootstrap_paths = static_cast<size_t>(num_paths_per_worker) * num_samplers;
@@ -241,22 +255,183 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &heat_map, int mutati
 
     GPUMemoryAllocator allocator;
     std::vector<Film *> sub_films(num_samplers);
-    std::vector<GreyScaleFilm> sub_heat_maps;
+    std::vector<GreyScaleFilm> sub_density_maps;
     for (int idx = 0; idx < num_samplers; ++idx) {
         sub_films[idx] = film->create_empty(allocator);
-        sub_heat_maps.emplace_back(film_dimension);
+        sub_density_maps.emplace_back(film_dimension);
     }
 
     thread_pool.parallel_execute(0, num_samplers, [&](const int worker_idx) {
-        mutate_markov_chain(worker_idx, sub_films[worker_idx], sub_heat_maps[worker_idx], num_mutations[worker_idx],
+        mutate_markov_chain(worker_idx, sub_films[worker_idx], sub_density_maps[worker_idx], num_mutations[worker_idx],
                             importance_per_path, bootstrap_cdf);
     });
 
     // Merge raw chain contributions once; output normalization uses normalization / mutations_per_pixel.
     for (int idx = 0; idx < num_samplers; ++idx) {
         film->add_splats(*sub_films[idx]);
-        heat_map.add_samples(sub_heat_maps[idx]);
+        density_map.add_samples(sub_density_maps[idx]);
     }
 
+    return normalization;
+}
+
+double MLTBDPTIntegrator::render_firefly(Film *film, GreyScaleFilm &density_map, const uint8_t *firefly_mask,
+                                         const int selective_mutations_per_pixel, const int bootstrap_samples,
+                                         const int requested_chains) const {
+    if (film == nullptr || firefly_mask == nullptr) {
+        throw std::invalid_argument("MLT-BDPT selective render requires a film and pixel mask");
+    }
+    if (film->get_resolution() != film_dimension || film_dimension.x <= 0 || film_dimension.y <= 0) {
+        throw std::invalid_argument("MLT-BDPT selective render requires matching, positive film dimensions");
+    }
+
+    const size_t num_pixels = static_cast<size_t>(film_dimension.x) * film_dimension.y;
+    const bool any_masked_pixel =
+        std::any_of(firefly_mask, firefly_mask + num_pixels, [](uint8_t value) { return value != 0; });
+    if (!any_masked_pixel) {
+        REPORT_FATAL_ERROR();
+    }
+    if (bootstrap_samples <= 0 || selective_mutations_per_pixel <= 0 || requested_chains <= 0) {
+        throw std::invalid_argument(
+            "MLT-BDPT selective render requires positive bootstrap, mutation, and chain counts");
+    }
+    if (num_pixels > static_cast<size_t>(std::numeric_limits<long long>::max() / selective_mutations_per_pixel)) {
+        throw std::invalid_argument("MLT-BDPT selective mutation count exceeds the supported range");
+    }
+
+    const long long total_mutations = static_cast<long long>(selective_mutations_per_pixel) * num_pixels;
+    const int num_chains = static_cast<int>(std::min<long long>(requested_chains, total_mutations));
+    const int num_workers = std::thread::hardware_concurrency();
+    ThreadPool thread_pool(num_workers);
+
+    // The bootstrap denominator deliberately includes zero-importance paths. This
+    // preserves the sampling density of the full image even when the mask is sparse.
+    const size_t num_bootstrap_paths = static_cast<size_t>(bootstrap_samples);
+    std::vector<double> importance_per_path(num_bootstrap_paths, 0);
+    thread_pool.parallel_execute(0, num_workers, [&](const int worker_idx) {
+        MLTSampler mlt_sampler;
+        Sampler sampler(&mlt_sampler);
+        for (size_t path_idx = static_cast<size_t>(worker_idx); path_idx < num_bootstrap_paths;
+             path_idx += static_cast<size_t>(num_workers)) {
+            const auto path = generate_bootstrap_path(static_cast<long>(path_idx), &sampler);
+            importance_per_path[path_idx] = compute_selective_mlt_importance(path, film, firefly_mask);
+        }
+    });
+
+    std::vector<double> bootstrap_cdf(num_bootstrap_paths, 0);
+    std::partial_sum(importance_per_path.begin(), importance_per_path.end(), bootstrap_cdf.begin());
+    const double sum_importance = bootstrap_cdf.back();
+    const size_t num_nonzero_paths = static_cast<size_t>(std::count_if(
+        importance_per_path.begin(), importance_per_path.end(), [](double importance) { return importance > 0; }));
+    const double normalization = (bdpt.max_depth + 1) * (sum_importance / num_bootstrap_paths);
+
+    if (num_nonzero_paths == 0 || !(normalization > 0) || !std::isfinite(normalization)) {
+        throw std::runtime_error(
+            "Selective MLT-BDPT bootstrap found no positive, finite masked energy. Increase bootstrapsamples "
+            "to discover rare paths, or inspect the frozen mask and scene lighting; no PT fallback was applied.");
+    }
+
+    std::vector<long long> mutations_per_chain(num_chains, total_mutations / num_chains);
+    for (int idx = 0; idx < total_mutations % num_chains; ++idx) {
+        ++mutations_per_chain[idx];
+    }
+
+    GPUMemoryAllocator allocator;
+    std::vector<Film *> sub_films(num_workers, nullptr);
+    std::vector<GreyScaleFilm> sub_density_maps;
+    sub_density_maps.reserve(num_workers);
+    for (int idx = 0; idx < num_workers; ++idx) {
+        sub_films[idx] = film->create_empty(allocator);
+        sub_density_maps.emplace_back(film_dimension);
+    }
+
+    const auto mutate_chain = [&](const int chain_idx, const int worker_idx) {
+        if (mutations_per_chain[chain_idx] == 0) {
+            return;
+        }
+
+        RNG rng(static_cast<uint64_t>(chain_idx) + 0x9e3779b97f4a7c15ULL);
+        const double u = std::min(rng.uniform<double>() * sum_importance, std::nextafter(sum_importance, 0.0));
+        const auto selected = std::upper_bound(bootstrap_cdf.begin(), bootstrap_cdf.end(), u);
+        if (selected == bootstrap_cdf.end()) {
+            throw std::runtime_error("MLT-BDPT selective render failed to select a bootstrap state");
+        }
+        const auto bootstrap_index = static_cast<size_t>(selected - bootstrap_cdf.begin());
+
+        MLTSampler mlt_sampler;
+        Sampler sampler(&mlt_sampler);
+        auto current_path = generate_bootstrap_path(static_cast<long>(bootstrap_index), &sampler);
+        auto current_c = compute_selective_mlt_importance(current_path, film, firefly_mask);
+        if (!(current_c > 0) || current_c != importance_per_path[bootstrap_index]) {
+            throw std::runtime_error("MLT-BDPT selective render failed to replay bootstrap state");
+        }
+        // Chains that selected the same bootstrap state still need independent
+        // proposal streams. Keep its primary values, but reseed future mutations.
+        mlt_sampler.rng.set_sequence(MixBits(static_cast<uint64_t>(chain_idx) + 0xd1b54a32d192ed03ULL));
+
+        for (long long mutation_idx = 0; mutation_idx < mutations_per_chain[chain_idx]; ++mutation_idx) {
+            mlt_sampler.start_iteration();
+            const auto proposed_path = generate_path_sample(&sampler);
+            const auto proposed_c = compute_selective_mlt_importance(proposed_path, film, firefly_mask);
+            const Real accept_prob = std::min<Real>(1, proposed_c / current_c);
+
+            if (accept_prob < 1) {
+                sub_films[worker_idx]->add_masked_splat(current_path.p_film,
+                                                        (current_path.radiance / current_c) * (1 - accept_prob),
+                                                        current_path.lambda, firefly_mask);
+            }
+            if (accept_prob > 0) {
+                sub_films[worker_idx]->add_masked_splat(proposed_path.p_film,
+                                                        (proposed_path.radiance / proposed_c) * accept_prob,
+                                                        proposed_path.lambda, firefly_mask);
+            }
+
+            // The map is a diagnostic of the selected-chain density. Only
+            // paths with a nonzero masked footprint are meaningful here.
+            const auto record_density = [&](const BDPTPathSample &path, const Real density) {
+                if (!(density > 0) || !std::isfinite(path.p_film.x) || !std::isfinite(path.p_film.y)) {
+                    return;
+                }
+                // Keep this diagnostic aligned with the exact destination
+                // footprint used by masked splats, including image edges.
+                if (!(film->masked_splat_weight(path.p_film, firefly_mask) > 0)) {
+                    return;
+                }
+                auto p = path.p_film.floor();
+                p.x = clamp<int>(p.x, 0, film_dimension.x - 1);
+                p.y = clamp<int>(p.y, 0, film_dimension.y - 1);
+                if (firefly_mask[p.x + p.y * film_dimension.x]) {
+                    sub_density_maps[worker_idx].add_sample(p, density);
+                }
+            };
+            record_density(current_path, 1 - accept_prob);
+            record_density(proposed_path, accept_prob);
+
+            if (rng.uniform<Real>() < accept_prob) {
+                current_path = proposed_path;
+                current_c = proposed_c;
+                mlt_sampler.accept();
+            } else {
+                mlt_sampler.reject();
+            }
+        }
+    };
+
+    thread_pool.parallel_execute(0, num_workers, [&](const int worker_idx) {
+        for (int chain_idx = worker_idx; chain_idx < num_chains; chain_idx += num_workers) {
+            mutate_chain(chain_idx, worker_idx);
+        }
+    });
+
+    for (int idx = 0; idx < num_workers; ++idx) {
+        film->add_splats(*sub_films[idx]);
+        density_map.add_samples(sub_density_maps[idx]);
+    }
+
+    printf("Selective MLT-BDPT:\n");
+    printf("    bootstrap paths: %zu (nonzero: %.1f%%)\n", num_bootstrap_paths,
+           100.0 * num_nonzero_paths / num_bootstrap_paths);
+    printf("    chains: %d, workers: %d, mutations: %lld\n", num_chains, num_workers, total_mutations);
+    printf("    normalization: %.6f\n", normalization);
     return normalization;
 }

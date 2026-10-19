@@ -15,6 +15,7 @@
 #include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/mlt_bdpt.h>
 #include <pbrt/integrators/mlt_path.h>
+#include <pbrt/integrators/selective_mlt.h>
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/light_samplers/uniform_light_sampler.h>
@@ -239,6 +240,12 @@ void SceneBuilder::build_integrator() {
 
     if (integrator_name == "volpath") {
         integrator_name = "path";
+    }
+
+    if (integrator_name == "selectivemlt") {
+        selective_mlt_integrator =
+            std::make_unique<SelectiveMLTIntegrator>(samples_per_pixel.value(), parameters, integrator_base, film);
+        return;
     }
 
     if (integrator_name == "mlt" || integrator_name == "mltbdpt") {
@@ -905,7 +912,9 @@ void SceneBuilder::preprocess() {
 
     build_integrator();
 
-    if (bdpt_integrator != nullptr) {
+    if (selective_mlt_integrator != nullptr) {
+        printf("Integrator: selective PT + MLT-BDPT\n");
+    } else if (bdpt_integrator != nullptr) {
         printf("Integrator: (wavefront) bdpt\n");
     } else if (mlt_bdpt_integrator != nullptr) {
         printf("Integrator: (wavefront) mlt-bdpt\n");
@@ -969,7 +978,7 @@ void SceneBuilder::render() const {
 
     const auto film_resolution = film->get_resolution();
     const auto image_path = std::filesystem::path(output_filename);
-    const auto heatmap_path = image_path.parent_path() / (image_path.stem().string() + "-heatmap.png");
+    const auto density_path = image_path.parent_path() / (image_path.stem().string() + "-density.png");
 
     auto start = std::chrono::system_clock::now();
 
@@ -981,7 +990,16 @@ void SceneBuilder::render() const {
         REPORT_FATAL_ERROR();
     }
 
-    if (bdpt_integrator != nullptr) {
+    if (selective_mlt_integrator != nullptr) {
+        std::cout << " (production PT samples per pixel: " << spp << ") with selective MLT\n" << std::flush;
+        GreyScaleFilm firefly_mask(film_resolution);
+        GreyScaleFilm sampling_density(film_resolution);
+        const auto splat_scale =
+            selective_mlt_integrator->render(film, firefly_mask, sampling_density, output_filename);
+        film->write_to_png(output_filename, splat_scale);
+        sampling_density.write_to_png(density_path.string());
+
+    } else if (bdpt_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
                   << " with BDPT\n"
                   << std::flush;
@@ -991,29 +1009,30 @@ void SceneBuilder::render() const {
         bdpt_integrator->render(film, spp);
 
         film->write_to_png(output_filename, splat_scale);
+
     } else if (mlt_bdpt_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
                   << " with MLT-BDPT\n"
                   << std::flush;
 
-        GreyScaleFilm heatmap(film_resolution);
-        const auto brightness = mlt_bdpt_integrator->render(film, heatmap, spp);
+        GreyScaleFilm sampling_density(film_resolution);
+        const auto brightness = mlt_bdpt_integrator->render(film, sampling_density, spp);
 
         film->write_to_png(output_filename, brightness / spp);
 
-        heatmap.write_to_png(heatmap_path.string());
+        sampling_density.write_to_png(density_path.string());
 
     } else if (mlt_path_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
                   << " with MLT-path\n"
                   << std::flush;
 
-        GreyScaleFilm heatmap(film_resolution);
-        const auto brightness = mlt_path_integrator->render(film, heatmap);
+        GreyScaleFilm sampling_density(film_resolution);
+        const auto brightness = mlt_path_integrator->render(film, sampling_density);
 
         film->write_to_png(output_filename, brightness / spp);
 
-        heatmap.write_to_png(heatmap_path.string());
+        sampling_density.write_to_png(density_path.string());
 
     } else if (wavefront_path_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"

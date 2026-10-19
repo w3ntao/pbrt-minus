@@ -44,6 +44,11 @@ class Sphere {
     pbrt::optional<ShapeSample> sample(const Point2f &u) const;
 
     PBRT_CPU_GPU
+    Real pdf(const Interaction &) const {
+        return 1 / area();
+    }
+
+    PBRT_CPU_GPU
     pbrt::optional<ShapeSample> sample(const ShapeSampleContext &ctx, const Point2f &u) const;
 
     PBRT_CPU_GPU

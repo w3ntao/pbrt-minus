@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <pbrt/euclidean_space/bounds2.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/euclidean_space/squared_matrix.h>
@@ -60,6 +61,12 @@ class RGBFilm {
     void add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
                    const SampledWavelengths &lambda);
 
+    // CPU only. Mask entries select destination pixels in the filter footprint.
+    Real masked_splat_weight(const Point2f &p_film, const uint8_t *mask) const;
+
+    void add_masked_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
+                         const SampledWavelengths &lambda, const uint8_t *mask);
+
     void add_splats(const RGBFilm &other, Real scale = 1);
 
     void merge(const RGBFilm &other);
@@ -68,6 +75,8 @@ class RGBFilm {
     RGB get_pixel_rgb(const Point2i p, Real splat_scale = 1) const;
 
   private:
+    Bounds2i masked_splat_bounds(const Point2f &p_film) const;
+
     Pixel *pixels = nullptr;
     const PixelSensor *sensor = nullptr;
     Point2i resolution = {0, 0};

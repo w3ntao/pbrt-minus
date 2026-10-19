@@ -10,7 +10,8 @@
 
 PBRT_CPU_GPU
 inline Real cosine_hemisphere_pdf(Real cos_theta) {
-    return cos_theta / pbrt::PI;
+    // Directions outside the emitting hemisphere have zero probability.
+    return std::max<Real>(0, cos_theta) / pbrt::PI;
 }
 
 PBRT_CPU_GPU
