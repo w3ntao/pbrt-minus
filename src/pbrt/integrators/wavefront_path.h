@@ -5,6 +5,7 @@
 #include <pbrt/gpu/gpu_memory_allocator.h>
 
 class Film;
+class GreyScaleFilm;
 class ParameterDictionary;
 class Sampler;
 class SampledSpectrum;
@@ -137,13 +138,15 @@ class WavefrontPathIntegrator {
                             const ParameterDictionary &parameters, const IntegratorBase *_base,
                             GPUMemoryAllocator &allocator);
 
-    void render(Film *film, bool preview);
+    void render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename,
+                  bool preview);
 
     PathState path_state;
 
     Queues queues;
 
     const IntegratorBase *base = nullptr;
+    const Spectrum *cie_y = nullptr;
     const int samples_per_pixel = 0;
 
     const int max_depth = 0;

@@ -13,10 +13,10 @@ inline int _ConvertSMVer2Cores(int major, int minor) {
         int Cores;
     } sSMtoCores;
 
-    sSMtoCores nGpuArchCoresPerSM[] = {
-        {0x30, 192}, {0x32, 192}, {0x35, 192}, {0x37, 192}, {0x50, 128}, {0x52, 128}, {0x53, 128},
-        {0x60, 64},  {0x61, 128}, {0x62, 128}, {0x70, 64},  {0x72, 64},  {0x75, 64},  {0x80, 64},
-        {0x86, 128}, {0x87, 128}, {0x89, 128}, {0x90, 128}, {-1, -1}};
+    sSMtoCores nGpuArchCoresPerSM[] = {{0x30, 192}, {0x32, 192}, {0x35, 192}, {0x37, 192}, {0x50, 128},
+                                       {0x52, 128}, {0x53, 128}, {0x60, 64},  {0x61, 128}, {0x62, 128},
+                                       {0x70, 64},  {0x72, 64},  {0x75, 64},  {0x80, 64},  {0x86, 128},
+                                       {0x87, 128}, {0x89, 128}, {0x90, 128}, {-1, -1}};
 
     int index = 0;
 
@@ -85,8 +85,7 @@ void display_system_info() {
         printf("    device %d: %s\n", i, props.name);
         printf("        compute capability: %d.%d\n", props.major, props.minor);
         printf("        cuda cores:         %u\n", cuda_cores);
-        printf("        total memory:       %.2f GB\n",
-               float(props.totalGlobalMem / 1024 / 1024) / 1024.0f);
+        printf("        total memory:       %.1f GB\n", float(props.totalGlobalMem / 1024 / 1024) / 1024.0f);
         printf("        max threads per block: %u\n", props.maxThreadsPerBlock);
         printf("        wrap size:             %u\n", props.warpSize);
     }

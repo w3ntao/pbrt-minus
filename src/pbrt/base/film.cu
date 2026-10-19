@@ -10,8 +10,7 @@ Film *Film::create_rgb_film(const Filter *filter, const ParameterDictionary &par
 }
 
 Film *Film::create_empty(GPUMemoryAllocator &allocator) const {
-    return cuda::std::visit(
-        [&](const auto &x) { return allocator.create<Film>(x.create_empty(allocator)); }, *this);
+    return cuda::std::visit([&](const auto &x) { return allocator.create<Film>(x.create_empty(allocator)); }, *this);
 }
 
 void Film::add_splats(const Film &other, Real scale) {
@@ -22,8 +21,7 @@ void Film::merge(const Film &other) {
     cuda::std::visit([&](auto &x, const auto &y) { x.merge(y); }, *this, other);
 }
 
-__global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, int width, int height,
-                            Real splat_scale) {
+__global__ void copy_pixels(uint8_t *gpu_frame_buffer, const Film *film, int width, int height, Real splat_scale) {
     const auto x = blockIdx.x * blockDim.x + threadIdx.x;
     const auto y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -59,8 +57,7 @@ void Film::copy_to_frame_buffer(uint8_t *gpu_frame_buffer, Real splat_scale) con
                 divide_and_ceil(int(image_resolution.y), thread_height));
     dim3 threads(thread_width, thread_height);
 
-    copy_pixels<<<blocks, threads>>>(gpu_frame_buffer, this, image_resolution.x, image_resolution.y,
-                                     splat_scale);
+    copy_pixels<<<blocks, threads>>>(gpu_frame_buffer, this, image_resolution.x, image_resolution.y, splat_scale);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
@@ -80,8 +77,8 @@ void Film::write_to_png(const std::string &filename, Real splat_scale) const {
             const int index = y * width + x;
             const auto rgb = get_pixel_rgb(Point2i(x, y), splat_scale);
             if (rgb.has_nan()) {
-                printf("%sFilm::%s(): pixel (%d, %d) carries NAN components%s\n",
-                       FLAG_COLORFUL_PRINT_RED_START, __func__, x, y, FLAG_COLORFUL_PRINT_END);
+                printf("%sFilm::%s(): pixel (%d, %d) carries NAN components%s\n", FLAG_COLORFUL_PRINT_RED_START,
+                       __func__, x, y, FLAG_COLORFUL_PRINT_END);
                 nan_pixels += 1;
             }
 
@@ -93,9 +90,9 @@ void Film::write_to_png(const std::string &filename, Real splat_scale) const {
     }
 
     if (nan_pixels > 0) {
-        printf("%sFilm::%s(): %d/%d (%.2f%) pixels carry NAN components%s\n",
-               FLAG_COLORFUL_PRINT_RED_START, __func__, nan_pixels, width * height,
-               static_cast<Real>(nan_pixels) / (width * height) * 100, FLAG_COLORFUL_PRINT_END);
+        printf("%sFilm::%s(): %d/%d (%.1f%) pixels carry NAN components%s\n", FLAG_COLORFUL_PRINT_RED_START, __func__,
+               nan_pixels, width * height, static_cast<Real>(nan_pixels) / (width * height) * 100,
+               FLAG_COLORFUL_PRINT_END);
 
         REPORT_FATAL_ERROR();
     }
@@ -103,8 +100,7 @@ void Film::write_to_png(const std::string &filename, Real splat_scale) const {
     // Encode the image
     // if there's an error, display it
     if (unsigned error = lodepng::encode(filename, png_pixels, width, height); error) {
-        std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error)
-                  << std::endl;
+        std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error) << std::endl;
         throw std::runtime_error("lodepng::encode() fail");
     }
 }

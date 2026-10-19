@@ -927,7 +927,7 @@ void SceneBuilder::preprocess() {
     const auto light_size = gpu_lights.size();
     printf("total lights: %zu\n", light_size);
     for (auto const &kv : light_type_counter) {
-        printf("    %s: %d (%.2f%)\n", kv.first.c_str(), kv.second, static_cast<double>(kv.second) / light_size * 100);
+        printf("    %s: %d (%.1f%)\n", kv.first.c_str(), kv.second, static_cast<double>(kv.second) / light_size * 100);
     }
     printf("\n");
 
@@ -939,7 +939,7 @@ void SceneBuilder::preprocess() {
 
     printf("total materials: %zu\n", material_type_counter.size());
     for (const auto &[name, num] : material_type_counter) {
-        printf("    %s: %d (%.2f%)\n", name.c_str(), num, static_cast<double>(num) / total_material_size * 100);
+        printf("    %s: %d (%.1f%)\n", name.c_str(), num, static_cast<double>(num) / total_material_size * 100);
     }
     printf("\n");
 }
@@ -1020,9 +1020,13 @@ void SceneBuilder::render() const {
                   << " with wavefront-path\n"
                   << std::flush;
 
-        wavefront_path_integrator->render(film, preview);
+        GreyScaleFilm firefly_mask(film_resolution);
+        wavefront_path_integrator->render(film, firefly_mask, output_filename, preview);
 
         film->write_to_png(output_filename);
+
+        const auto mask_path = image_path.parent_path() / (image_path.stem().string() + "-firefly.png");
+        firefly_mask.write_mask_to_png(mask_path.string());
 
     } else if (megakernel_path_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
@@ -1036,7 +1040,6 @@ void SceneBuilder::render() const {
 
         const auto mask_path = image_path.parent_path() / (image_path.stem().string() + "-firefly.png");
         firefly_mask.write_mask_to_png(mask_path.string());
-        std::cout << "firefly mask saved to `" << mask_path.string() << "`\n";
 
     } else if (debugger_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"

@@ -52,14 +52,16 @@ static PathSample generate_bootstrap_path(const long bootstrap_index, Sampler *s
 
 static void build_bootstrap_samples(const int worker_idx, const int num_paths_per_worker,
                                     std::vector<double> &importance_per_path, const MLTPathIntegrator *mlt_integrator) {
+    MLTSampler mlt_sampler;
+    Sampler sampler(&mlt_sampler);
+
     for (int idx = 0; idx < num_paths_per_worker; idx++) {
         const auto path_idx = static_cast<long>(worker_idx) * num_paths_per_worker + idx;
 
-        MLTSampler mlt_sampler;
-        Sampler sampler(&mlt_sampler);
         const auto path_sample = generate_bootstrap_path(path_idx, &sampler, mlt_integrator);
         const auto importance = mlt_integrator->compute_importance(path_sample);
-        if (importance < 0) {
+        if (importance < 0 || !std::isfinite(importance)) {
+            printf("MLT-PATH: invalid bootstrap importance at path %ld\n", path_idx);
             REPORT_FATAL_ERROR();
         }
 

@@ -31,18 +31,17 @@ class Timer {
     void print() const {
         const Real all_time = std::chrono::duration<Real>({click - time_zero}).count();
 
-        printf("total time: %.2f sec\n", all_time);
+        printf("total time: %.1f sec\n", all_time);
 
         Real examine_time = 0;
         for (auto const &[tag, value] : recorder) {
-            printf("    %s: %.2f sec (%.1f%)\n", tag.c_str(), value, value * 100.f / all_time);
+            printf("    %s: %.1f sec (%.1f%)\n", tag.c_str(), value, value * 100.f / all_time);
 
             examine_time += value;
         }
 
         constexpr auto tolerance = 0.001;
-        if (const auto error_rate = std::abs(examine_time - all_time) / all_time;
-            error_rate > tolerance) {
+        if (const auto error_rate = std::abs(examine_time - all_time) / all_time; error_rate > tolerance) {
             printf("error rate: %f > %f\n", error_rate, tolerance);
 
             REPORT_FATAL_ERROR();

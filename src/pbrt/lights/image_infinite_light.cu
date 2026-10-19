@@ -14,21 +14,19 @@
 #include <pbrt/util/sampling.h>
 
 ImageInfiniteLight::ImageInfiniteLight(const Transform &render_from_light, const Real _scale,
-                                       const RGBColorSpace *_color_space,
-                                       const GPUImage *_image_ptr, GPUMemoryAllocator &allocator)
-    : LightBase(LightType::infinite, render_from_light, nullptr), scale(_scale),
-      color_space(_color_space), image_ptr(_image_ptr) {
+                                       const RGBColorSpace *_color_space, const GPUImage *_image_ptr,
+                                       GPUMemoryAllocator &allocator)
+    : LightBase(LightType::infinite, render_from_light, nullptr), scale(_scale), color_space(_color_space),
+      image_ptr(_image_ptr) {
 
     image_resolution = image_ptr->get_resolution();
 
     Real max_luminance = 0.0;
-    auto image_luminance_array =
-        std::vector(image_resolution.x, std::vector<Real>(image_resolution.y));
+    auto image_luminance_array = std::vector(image_resolution.x, std::vector<Real>(image_resolution.y));
 
     for (int x = 0; x < image_resolution.x; ++x) {
         for (int y = 0; y < image_resolution.y; ++y) {
-            const auto rgb = image_ptr->fetch_pixel(Point2i(x, y), WrapMode::OctahedralSphere)
-                                 .clamp(0, Infinity);
+            const auto rgb = image_ptr->fetch_pixel(Point2i(x, y), WrapMode::OctahedralSphere).clamp(0, Infinity);
 
             auto luminance = rgb.avg();
             image_luminance_array[x][y] = luminance;
@@ -43,12 +41,12 @@ ImageInfiniteLight::ImageInfiniteLight(const Transform &render_from_light, const
 
     // ignore minimal values
     // those pixels with luminance smaller than 0.001 * max_luminance are ignored
-    constexpr auto ignore_ratio = 0.001;
+    constexpr auto ignore_threshold = 0.001;
     auto num_ignore = 0;
-    const auto ignore_threshold = ignore_ratio * max_luminance;
+    const auto luminance_bar = ignore_threshold * max_luminance;
     for (int x = 0; x < image_resolution.x; ++x) {
         for (int y = 0; y < image_resolution.y; ++y) {
-            if (image_luminance_array[x][y] < ignore_threshold) {
+            if (image_luminance_array[x][y] < luminance_bar) {
                 image_luminance_array[x][y] = 0.0;
                 num_ignore += 1;
             }
@@ -56,34 +54,31 @@ ImageInfiniteLight::ImageInfiniteLight(const Transform &render_from_light, const
     }
 
     auto num_pixels = image_resolution.x * image_resolution.y;
-    if (num_ignore == num_pixels) {
+    if (num_ignore >= num_pixels) {
         REPORT_FATAL_ERROR();
     }
 
     if (num_ignore > 0) {
-        printf("ImageInfiniteLight::%s(): %d/%d (%.2f%) pixels ignored (ignored ratio: %f)\n",
-               __func__, num_ignore, num_pixels, Real(num_ignore) / num_pixels * 100, ignore_ratio);
+        printf("ImageInfiniteLight::%s(): %d/%d (%.1f%) pixels ignored (ignored threshold: %.1f%)\n", __func__,
+               num_ignore, num_pixels, Real(num_ignore) / num_pixels * 100, ignore_threshold * 100);
     }
 
     image_le_distribution = allocator.create<Distribution2D>(image_luminance_array, allocator);
 }
 
 ImageInfiniteLight *ImageInfiniteLight::create(const Transform &render_from_light,
-                                               const ParameterDictionary &parameters,
-                                               GPUMemoryAllocator &allocator) {
+                                               const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
     const auto cie_y = parameters.global_spectra->cie_y;
 
-    const auto scale =
-        parameters.get_float("scale", 1.0) /
-        parameters.global_spectra->rgb_color_space->illuminant->to_photometric(cie_y);
+    const auto scale = parameters.get_float("scale", 1.0) /
+                       parameters.global_spectra->rgb_color_space->illuminant->to_photometric(cie_y);
 
     const auto color_space = parameters.global_spectra->rgb_color_space;
 
     const auto texture_file = parameters.root + "/" + parameters.get_one_string("filename");
     const auto image_ptr = GPUImage::create_from_file(texture_file, allocator);
 
-    return allocator.create<ImageInfiniteLight>(render_from_light, scale, color_space, image_ptr,
-                                                allocator);
+    return allocator.create<ImageInfiniteLight>(render_from_light, scale, color_space, image_ptr, allocator);
 }
 
 PBRT_CPU_GPU
@@ -94,9 +89,8 @@ SampledSpectrum ImageInfiniteLight::le(const Ray &ray, const SampledWavelengths 
 }
 
 PBRT_CPU_GPU
-pbrt::optional<LightLiSample>
-ImageInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
-                              const SampledWavelengths &lambda) const {
+pbrt::optional<LightLiSample> ImageInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
+                                                            const SampledWavelengths &lambda) const {
     const auto [uv, pixel_pdf] = image_le_distribution->sample(u);
     const auto map_pdf = pixel_pdf * image_resolution.x * image_resolution.y;
 
@@ -113,8 +107,8 @@ ImageInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
 }
 
 PBRT_CPU_GPU
-pbrt::optional<LightLeSample>
-ImageInfiniteLight::sample_le(Point2f u1, Point2f u2, const SampledWavelengths &lambda) const {
+pbrt::optional<LightLeSample> ImageInfiniteLight::sample_le(Point2f u1, Point2f u2,
+                                                            const SampledWavelengths &lambda) const {
     const auto [uv, pixel_pdf] = image_le_distribution->sample(u1);
     if (pixel_pdf == 0) {
         return {};
@@ -125,8 +119,7 @@ ImageInfiniteLight::sample_le(Point2f u1, Point2f u2, const SampledWavelengths &
     const Vector3f w = -render_from_light(EqualAreaSquareToSphere(uv));
     const Frame w_frame = Frame::from_z(-w);
     const Point2f cd = sample_uniform_disk_concentric(u2);
-    const Point3f p_disk =
-        scene_center + scene_radius * w_frame.from_local(Vector3f(cd.x, cd.y, 0));
+    const Point3f p_disk = scene_center + scene_radius * w_frame.from_local(Vector3f(cd.x, cd.y, 0));
     const Ray ray(p_disk - scene_radius * w, w);
 
     const Real pdf_pos = 1 / (pbrt::PI * sqr(scene_radius));
@@ -154,8 +147,7 @@ SampledSpectrum ImageInfiniteLight::phi(const SampledWavelengths &lambda) const 
 }
 
 PBRT_CPU_GPU
-Real ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &w,
-                                bool allow_incomplete_pdf) const {
+Real ImageInfiniteLight::pdf_li(const LightSampleContext &ctx, const Vector3f &w, bool allow_incomplete_pdf) const {
     Vector3f wLight = render_from_light.apply_inverse(w);
     Point2f uv = EqualAreaSphereToSquare(wLight);
 

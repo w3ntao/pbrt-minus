@@ -5,12 +5,15 @@
 #include <pbrt/base/light.h>
 #include <pbrt/base/material.h>
 #include <pbrt/base/sampler.h>
+#include <pbrt/base/spectrum.h>
+#include <pbrt/film/firefly_cascade.h>
 #include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/wavefront_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectra/densely_sampled_spectrum.h>
+#include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/util/russian_roulette.h>
 #include <pbrt/util/thread_pool.h>
 #include <pbrt/util/timer.h>
@@ -214,7 +217,7 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
 }
 
 __global__ void write_frame_buffer(Film *film, const FrameBuffer *frame_buffer_queue,
-                                   const int num) {
+                                   const int num, const Spectrum *cie_y, const firefly::CascadeView cascade) {
     const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= num) {
         return;
@@ -230,6 +233,12 @@ __global__ void write_frame_buffer(Film *film, const FrameBuffer *frame_buffer_q
         const auto &frame_buffer = frame_buffer_queue[idx];
         film->add_sample(frame_buffer.pixel_idx, frame_buffer.radiance, frame_buffer.lambda,
                          frame_buffer.weight);
+
+        // Completed paths are sorted by pixel, so one thread records all samples
+        // for a pixel in this buffer. Sequential buffer flushes need no atomics.
+        // Use normalized, unfiltered CIE Y, matching the megakernel detector and MLT.
+        const Real luminance = frame_buffer.radiance.y(frame_buffer.lambda, cie_y);
+        cascade.record(pixel_idx, luminance);
     }
 }
 
@@ -585,17 +594,22 @@ WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel,
                                                  GPUMemoryAllocator &allocator)
     : path_state(PathState(_base->camera->get_camera_base()->resolution, _samples_per_pixel,
                            sampler_type)),
-      queues(allocator), base(_base), samples_per_pixel(_samples_per_pixel),
+      queues(allocator), base(_base), cie_y(parameters.global_spectra->cie_y), samples_per_pixel(_samples_per_pixel),
       max_depth(parameters.get_integer("maxdepth", 5)),
       regularize(parameters.get_bool("regularize", false)) {
     path_state.build_path(allocator);
 }
 
-void WavefrontPathIntegrator::render(Film *film, const bool preview) {
+void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask,
+                                      const std::string &output_filename, const bool preview) {
     printf("wavefront pathtracing: path pool size: %u\n", PATH_POOL_SIZE);
 
     const auto image_resolution = this->path_state.image_resolution;
     const auto num_pixels = image_resolution.x * image_resolution.y;
+
+    GPUMemoryAllocator local_allocator;
+    firefly::Cascade firefly_cascade(image_resolution, local_allocator);
+    const auto cascade_view = firefly_cascade.view();
 
     GLHelper gl_helper;
     if (preview) {
@@ -625,7 +639,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
         }
 
         write_frame_buffer<<<divide_and_ceil(size, NUM_THREADS), NUM_THREADS>>>(
-            film, queues.ping_pong_buffer[ping_pong_idx], size);
+            film, queues.ping_pong_buffer[ping_pong_idx], size, cie_y, cascade_view);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -732,4 +746,7 @@ void WavefrontPathIntegrator::render(Film *film, const bool preview) {
     printf("wavefront pathtracing benchmark:\n");
     timer.print();
     printf("\n");
+
+    // Both ping-pong buffers have been drained; classify against all rendered spp.
+    firefly_cascade.finalize(firefly_mask, samples_per_pixel, output_filename);
 }

@@ -1,21 +1,27 @@
 #pragma once
 
 #include "pbrt/gpu/macro.h"
+#include "pbrt/spectrum_util/spectrum_constants_cie.h"
 
 #include <bit>
 #include <cmath>
 
 namespace firefly {
+/*
+    originally from https://cg.ivd.kit.edu/publications/2018/rwmc/reweighting-fireflies-preprint.pdf
+    parameters configured with https://benedikt-bitterli.me/smlt/bitterli19selectively.pdf
+*/
 
-constexpr Real alpha = Real(0.5);
+// Match SampledSpectrum::y() units while preserving the original raw-CIE-Y bounds.
+constexpr Real alpha = Real(0.5) / CIE_Y_integral;
 constexpr int beta = 2;
-constexpr Real max_luminance = Real(1000);
+constexpr Real max_luminance = Real(1000) / CIE_Y_integral;
 static_assert(beta > 1 && (beta & (beta - 1)) == 0, "firefly::beta must be a power of two greater than one");
 constexpr int beta_log2 = std::countr_zero(static_cast<unsigned int>(beta));
 static_assert(alpha > 0 && max_luminance > alpha);
 
 // Use the actual number of buffers for m in tau, including both endpoints.
-// With alpha=1/2 and beta=2, twelve buffers cover centers 0.5 through 1024.
+// With beta=2, twelve buffers cover centers (0.5 through 1024) / CIE_Y_integral.
 constexpr int layer_count = [] {
     int count = 1;
     Real center = alpha;

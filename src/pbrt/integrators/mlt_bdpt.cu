@@ -46,11 +46,11 @@ BDPTPathSample MLTBDPTIntegrator::generate_bootstrap_path(const long bootstrap_i
 
 void MLTBDPTIntegrator::build_bootstrap_samples(const int worker_idx, const int num_paths_per_worker,
                                                 std::vector<double> &importance_per_path) const {
+    MLTSampler mlt_sampler;
+    Sampler sampler(&mlt_sampler);
+
     for (int idx = 0; idx < num_paths_per_worker; ++idx) {
         const auto path_idx = static_cast<long>(worker_idx) * num_paths_per_worker + idx;
-        // init() does not clear PrimarySample state; each bootstrap needs a fresh sampler.
-        MLTSampler mlt_sampler;
-        Sampler sampler(&mlt_sampler);
         const auto path = generate_bootstrap_path(path_idx, &sampler);
         const auto importance = compute_importance(path);
         if (importance < 0 || !std::isfinite(importance)) {
