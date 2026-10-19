@@ -19,9 +19,8 @@ static __global__ void init_lights(Light *lights, TypeOfLight *concrete_lights, 
     lights[worker_idx] = Light(&concrete_lights[worker_idx]);
 }
 
-Light *Light::create(const std::string &type_of_light, const Transform &render_from_light,
-                     const Medium *medium, const ParameterDictionary &parameters,
-                     GPUMemoryAllocator &allocator) {
+Light *Light::create(const std::string &type_of_light, const Transform &render_from_light, const Medium *medium,
+                     const ParameterDictionary &parameters, GPUMemoryAllocator &allocator) {
     if (type_of_light == "distant") {
         auto distant_light = DistantLight::create(render_from_light, parameters, allocator);
         return allocator.create<Light>(distant_light);
@@ -29,15 +28,13 @@ Light *Light::create(const std::string &type_of_light, const Transform &render_f
 
     if (type_of_light == "infinite") {
         if (parameters.has_string("filename")) {
-            auto image_infinite_light =
-                ImageInfiniteLight::create(render_from_light, parameters, allocator);
+            auto image_infinite_light = ImageInfiniteLight::create(render_from_light, parameters, allocator);
 
             return allocator.create<Light>(image_infinite_light);
         }
         // otherwise it's UniformInfiniteLight
 
-        auto uniform_infinite_light =
-            UniformInfiniteLight::create(render_from_light, parameters, allocator);
+        auto uniform_infinite_light = UniformInfiniteLight::create(render_from_light, parameters, allocator);
 
         return allocator.create<Light>(uniform_infinite_light);
     }
@@ -53,9 +50,8 @@ Light *Light::create(const std::string &type_of_light, const Transform &render_f
     return nullptr;
 }
 
-Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num,
-                                         const Transform &render_from_light, const Medium *medium,
-                                         const ParameterDictionary &parameters,
+Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num, const Transform &render_from_light,
+                                         const Medium *medium, const ParameterDictionary &parameters,
                                          GPUMemoryAllocator &allocator) {
     const int blocks = divide_and_ceil(num, MAX_THREADS_PER_BLOCKS);
 
@@ -63,8 +59,7 @@ Light *Light::create_diffuse_area_lights(const Shape *shapes, const int num,
     auto lights = allocator.allocate<Light>(num);
 
     for (int idx = 0; idx < num; idx++) {
-        diffuse_area_lights[idx] =
-            DiffuseAreaLight(&shapes[idx], render_from_light, medium, parameters, allocator);
+        diffuse_area_lights[idx] = DiffuseAreaLight(&shapes[idx], render_from_light, medium, parameters, allocator);
     }
 
     init_lights<<<blocks, MAX_THREADS_PER_BLOCKS>>>(lights, diffuse_area_lights, num);
@@ -103,8 +98,7 @@ LightType Light::get_light_type() const {
 }
 
 PBRT_CPU_GPU
-SampledSpectrum Light::l(Point3f p, Normal3f n, Point2f uv, Vector3f w,
-                         const SampledWavelengths &lambda) const {
+SampledSpectrum Light::l(Point3f p, Normal3f n, Point2f uv, Vector3f w, const SampledWavelengths &lambda) const {
     switch (type) {
     case Type::diffuse_area_light: {
         return static_cast<const DiffuseAreaLight *>(ptr)->l(p, n, uv, w, lambda);
@@ -161,11 +155,14 @@ pbrt::optional<LightLiSample> Light::sample_li(const LightSampleContext &ctx, co
 }
 
 PBRT_CPU_GPU
-pbrt::optional<LightLeSample> Light::sample_le(Point2f u1, Point2f u2,
-                                               const SampledWavelengths &lambda) const {
+pbrt::optional<LightLeSample> Light::sample_le(Point2f u1, Point2f u2, const SampledWavelengths &lambda) const {
     switch (type) {
     case Type::diffuse_area_light: {
         return static_cast<const DiffuseAreaLight *>(ptr)->sample_le(u1, u2, lambda);
+    }
+
+    case Type::image_infinite_light: {
+        return static_cast<const ImageInfiniteLight *>(ptr)->sample_le(u1, u2, lambda);
     }
 
     case Type::spot_light: {
@@ -177,13 +174,14 @@ pbrt::optional<LightLeSample> Light::sample_le(Point2f u1, Point2f u2,
     }
     }
 
+    printf("\nERROR: %s(): light type %d not handled\n", __func__, type);
+
     REPORT_FATAL_ERROR();
     return {};
 }
 
 PBRT_CPU_GPU
-Real Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
-                   bool allow_incomplete_pdf) const {
+Real Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi, bool allow_incomplete_pdf) const {
     switch (type) {
     case Type::diffuse_area_light: {
         return static_cast<const DiffuseAreaLight *>(ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
@@ -198,8 +196,7 @@ Real Light::pdf_li(const LightSampleContext &ctx, const Vector3f &wi,
     }
 
     case Type::uniform_infinite_light: {
-        return static_cast<const UniformInfiniteLight *>(ptr)->pdf_li(ctx, wi,
-                                                                      allow_incomplete_pdf);
+        return static_cast<const UniformInfiniteLight *>(ptr)->pdf_li(ctx, wi, allow_incomplete_pdf);
     }
     }
 

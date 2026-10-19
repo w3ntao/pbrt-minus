@@ -11,7 +11,6 @@ class SampledWavelengths;
 class Sampler;
 
 class AmbientOcclusionIntegrator;
-class MegakernelPathIntegrator;
 class SurfaceNormalIntegrator;
 
 struct IntegratorBase;
@@ -20,32 +19,22 @@ class MegakernelIntegrator {
   public:
     enum class Type {
         ambient_occlusion,
-        megakernel_path,
         surface_normal,
     };
 
     explicit MegakernelIntegrator(const AmbientOcclusionIntegrator *ambient_occlusion_integrator)
         : type(Type::ambient_occlusion), ptr(ambient_occlusion_integrator) {}
 
-    explicit MegakernelIntegrator(const MegakernelPathIntegrator *megakernel_path_integrator)
-        : type(Type::megakernel_path), ptr(megakernel_path_integrator) {}
-
     explicit MegakernelIntegrator(const SurfaceNormalIntegrator *surface_normal_integrator)
         : type(Type::surface_normal), ptr(surface_normal_integrator) {}
 
-    static const MegakernelIntegrator *create(const std::string &integrator_name,
-                                              const ParameterDictionary &parameters,
-                                              const IntegratorBase *integrator_base,
-                                              GPUMemoryAllocator &allocator);
+    static const MegakernelIntegrator *create(const std::string &integrator_name, const ParameterDictionary &parameters,
+                                              const IntegratorBase *integrator_base, GPUMemoryAllocator &allocator);
 
     std::string get_name() const {
         switch (type) {
         case Type::ambient_occlusion: {
             return "ambientocclusion";
-        }
-
-        case Type::megakernel_path: {
-            return "megakernelpath";
         }
 
         case Type::surface_normal: {

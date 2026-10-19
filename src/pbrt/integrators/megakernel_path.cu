@@ -1,14 +1,216 @@
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <filesystem>
 #include <pbrt/accelerator/hlbvh.h>
+#include <pbrt/base/camera.h>
+#include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/sampler.h>
+#include <pbrt/base/spectrum.h>
+#include <pbrt/film/firefly_detector.h>
+#include <pbrt/film/grey_scale_film.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/lights/image_infinite_light.h>
 #include <pbrt/medium/homogeneous_medium.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectra/densely_sampled_spectrum.h>
+#include <pbrt/spectrum_util/color_encoding.h>
+#include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/util/russian_roulette.h>
+
+static void write_firefly_cascade(Real *const *counts, const Point2i resolution, const std::string &output_filename) {
+    const auto image_path = std::filesystem::path(output_filename);
+    const int num_pixels = resolution.x * resolution.y;
+    for (int layer_index = 0; layer_index < firefly::layer_count; ++layer_index) {
+        GreyScaleFilm layer(resolution);
+        for (int pixel_index = 0; pixel_index < num_pixels; ++pixel_index) {
+            // Bitterli's buffers store sample counts, rather than layer radiance.
+            layer.add_sample(Point2i(pixel_index % resolution.x, pixel_index / resolution.x),
+                             counts[layer_index][pixel_index]);
+        }
+
+        const auto layer_path = image_path.parent_path() / (image_path.stem().string() + "-cascaded-frame-" +
+                                                            std::to_string(layer_index) + ".png");
+        layer.write_to_png(layer_path.string());
+    }
+    std::cout << firefly::layer_count << " cascaded framebuffers saved alongside `" << output_filename << "`\n";
+}
+
+__global__ static void megakernel_path_render(Film *film, uint8_t *gpu_frame_buffer, const int first_pixel,
+                                              const int pixel_count, const int first_sample, const int sample_count,
+                                              Sampler *samplers, const MegakernelPathIntegrator *integrator,
+                                              const IntegratorBase *base, const Spectrum *cie_y, Real **counts,
+                                              firefly::WeightRange **ranges, uint8_t *forced_outliers) {
+    const auto resolution = film->get_resolution();
+    const int local_pixel = threadIdx.x + blockIdx.x * blockDim.x;
+    if (local_pixel >= pixel_count) {
+        return;
+    }
+
+    const int pixel_index = first_pixel + local_pixel;
+    const int x = pixel_index % resolution.x;
+    const int y = pixel_index / resolution.x;
+    const Point2i p_pixel(x, y);
+    auto sampler = &samplers[pixel_index];
+
+    for (int sample_idx = first_sample; sample_idx < first_sample + sample_count; ++sample_idx) {
+        sampler->start_pixel_sample(pixel_index, sample_idx, 0);
+        const auto camera_sample = sampler->get_camera_sample(p_pixel, base->filter);
+        auto lambda = SampledWavelengths::sample_visible(sampler->get_1d());
+        const auto ray = base->camera->generate_ray(camera_sample, sampler);
+        const auto radiance_l = ray.weight * integrator->li(ray.ray, lambda, sampler);
+
+        if (DEBUG_MODE && radiance_l.has_nan()) {
+            printf("%s(): pixel(%d, %d), samples %d: has NAN\n", __func__, p_pixel.x, p_pixel.y, sample_idx);
+        }
+
+        film->add_sample(p_pixel, radiance_l, lambda, camera_sample.filter_weight);
+
+        // Unfiltered CIE Y, including wavelength PDF compensation, in the same
+        // units as RGBFilm's default CIE sensor (before averaging over camera samples).
+        const Real luminance =
+            (radiance_l * cie_y->sample(lambda)).safe_div(lambda.pdf_as_sampled_spectrum()).average();
+        const auto sample = firefly::split(luminance);
+        if (sample.lower_layer < 0) {
+            continue;
+        }
+
+        // One thread owns each pixel. All positive finite camera samples,
+        // including forced outliers, contribute one total histogram count.
+        counts[sample.lower_layer][pixel_index] += sample.lower_count;
+        counts[sample.lower_layer + 1][pixel_index] += sample.upper_count;
+        ranges[sample.lower_layer][pixel_index].record(sample.lower_count);
+        if (sample.forced_outlier) {
+            forced_outliers[pixel_index] = 1;
+        }
+    }
+
+    if (gpu_frame_buffer == nullptr) {
+        return;
+    }
+
+    const auto rgb = film->get_pixel_rgb(p_pixel);
+    const SRGBColorEncoding srgb_encoding;
+    gpu_frame_buffer[pixel_index * 3 + 0] = rgb.has_nan() ? 0 : srgb_encoding.from_linear(rgb.r);
+    gpu_frame_buffer[pixel_index * 3 + 1] = rgb.has_nan() ? 0 : srgb_encoding.from_linear(rgb.g);
+    gpu_frame_buffer[pixel_index * 3 + 2] = rgb.has_nan() ? 0 : srgb_encoding.from_linear(rgb.b);
+}
+
+__global__ static void init_firefly_ranges(firefly::WeightRange **ranges, const int num_pixels) {
+    const int pixel_index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (pixel_index >= num_pixels) {
+        return;
+    }
+    for (int layer = 0; layer < firefly::layer_count - 1; ++layer) {
+        ranges[layer][pixel_index] = {};
+    }
+}
+
+__global__ static void detect_fireflies(uint8_t *mask, Real **counts, firefly::WeightRange **ranges,
+                                        const Real threshold, const Point2i resolution) {
+    const int pixel_index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (pixel_index >= resolution.x * resolution.y) {
+        return;
+    }
+
+    mask[pixel_index] = firefly::is_candidate(counts, ranges, pixel_index, threshold, mask[pixel_index] != 0);
+}
+
+MegakernelPathIntegrator::MegakernelPathIntegrator(const int samples_per_pixel, const std::string &sampler_type,
+                                                   const ParameterDictionary &parameters,
+                                                   const IntegratorBase *integrator_base, GPUMemoryAllocator &allocator)
+    : base(integrator_base), cie_y(parameters.global_spectra->cie_y), samples_per_pixel(samples_per_pixel),
+      max_depth(parameters.get_integer("maxdepth", 5)), regularize(parameters.get_bool("regularize", false)) {
+    const auto resolution = base->camera->get_camera_base()->resolution;
+    samplers = Sampler::create_samplers(sampler_type, samples_per_pixel, resolution.x * resolution.y, allocator);
+}
+
+void MegakernelPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename,
+                                      const bool preview) const {
+    const auto resolution = film->get_resolution();
+    const auto num_pixels = resolution.x * resolution.y;
+    if (samples_per_pixel <= 0) {
+        REPORT_FATAL_ERROR();
+    }
+
+    GPUMemoryAllocator local_allocator;
+    GLHelper gl_helper;
+    if (preview) {
+        gl_helper.init("initializing", resolution);
+    }
+
+    // Fixed-size log-luminance count buffers covering alpha through the first
+    // center above 1000. Per-interval observed weight ranges suffice to classify
+    // every actual sample against the final frozen histogram without retracing.
+    auto counts = local_allocator.allocate<Real *>(firefly::layer_count);
+    auto ranges = local_allocator.allocate<firefly::WeightRange *>(firefly::layer_count - 1);
+    for (int layer = 0; layer < firefly::layer_count; ++layer) {
+        counts[layer] = local_allocator.allocate<Real>(num_pixels);
+        CHECK_CUDA_ERROR(cudaMemset(counts[layer], 0, sizeof(Real) * num_pixels));
+        if (layer + 1 < firefly::layer_count) {
+            ranges[layer] = local_allocator.allocate<firefly::WeightRange>(num_pixels);
+        }
+    }
+    auto mask = local_allocator.allocate<uint8_t>(num_pixels);
+    CHECK_CUDA_ERROR(cudaMemset(mask, 0, sizeof(uint8_t) * num_pixels));
+    constexpr int threads = 256;
+    init_firefly_ranges<<<divide_and_ceil(num_pixels, threads), threads>>>(ranges, num_pixels);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    // Bound render batches independently of image size and total spp.
+    constexpr int max_batch_samples = 16;
+    constexpr int batch_capacity = 1 << 18;
+    const int batch_samples = std::min(samples_per_pixel, max_batch_samples);
+    const int batch_pixels = std::min(num_pixels, batch_capacity / batch_samples);
+
+    size_t completed_samples = 0;
+    const size_t total_samples = static_cast<size_t>(num_pixels) * samples_per_pixel;
+    auto last_preview = std::chrono::steady_clock::now();
+    for (int first_sample = 0; first_sample < samples_per_pixel; first_sample += batch_samples) {
+        const int sample_count = std::min(batch_samples, samples_per_pixel - first_sample);
+        for (int first_pixel = 0; first_pixel < num_pixels; first_pixel += batch_pixels) {
+            const int pixel_count = std::min(batch_pixels, num_pixels - first_pixel);
+            megakernel_path_render<<<divide_and_ceil(pixel_count, threads), threads>>>(
+                film, gl_helper.gpu_frame_buffer, first_pixel, pixel_count, first_sample, sample_count, samplers, this,
+                base, cie_y, counts, ranges, mask);
+            CHECK_CUDA_ERROR(cudaGetLastError());
+            CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+            completed_samples += static_cast<size_t>(pixel_count) * sample_count;
+            const auto now = std::chrono::steady_clock::now();
+            if (preview &&
+                (now - last_preview >= std::chrono::milliseconds(200) || completed_samples == total_samples)) {
+                gl_helper.draw_frame(GLHelper::assemble_title(double(completed_samples) / total_samples));
+                last_preview = now;
+            }
+        }
+    }
+
+    // Classification sees a read-only snapshot containing all rendered spp.
+    const Real threshold = firefly::tau(samples_per_pixel);
+    detect_fireflies<<<divide_and_ceil(num_pixels, threads), threads>>>(mask, counts, ranges, threshold, resolution);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+    size_t candidate_pixels = 0;
+    for (int pixel_index = 0; pixel_index < num_pixels; ++pixel_index) {
+        const auto value = mask[pixel_index];
+        firefly_mask.add_sample(Point2i(pixel_index % resolution.x, pixel_index / resolution.x), value);
+        candidate_pixels += value;
+    }
+    printf("firefly detector (Bitterli 2019): %d layers (alpha %.3g, beta %d, tau %.6g, max %.6g), "
+           "%zu/%d candidate pixels\n",
+           firefly::layer_count, double(firefly::alpha), firefly::beta, double(threshold),
+           double(firefly::max_luminance), candidate_pixels, num_pixels);
+
+    // Export all count layers, including empty ones, before releasing the cascade.
+    write_firefly_cascade(counts, resolution, output_filename);
+}
 
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const Ray &primary_ray,

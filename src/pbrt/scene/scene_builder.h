@@ -14,6 +14,7 @@
 class BDPTIntegrator;
 class Film;
 class MegakernelIntegrator;
+class MegakernelPathIntegrator;
 class MLTBDPTIntegrator;
 class MLTPathIntegrator;
 class Primitive;
@@ -68,7 +69,8 @@ class SceneBuilder {
     std::optional<std::string> integrator_name;
     bool preview = false;
 
-    const MegakernelIntegrator *megakernel_integrator = nullptr;
+    const MegakernelIntegrator *debugger_integrator = nullptr;
+    const MegakernelPathIntegrator *megakernel_path_integrator = nullptr;
     WavefrontPathIntegrator *wavefront_path_integrator = nullptr;
 
     IntegratorBase *integrator_base = nullptr;
@@ -145,9 +147,8 @@ class SceneBuilder {
     explicit SceneBuilder(const CommandLineOption &command_line_option);
 
     [[nodiscard]] ParameterDictionary build_parameter_dictionary(const std::vector<Token> &tokens) {
-        return ParameterDictionary(tokens, root, global_spectra, spectra, named_materials,
-                                   float_textures, albedo_spectrum_textures,
-                                   illuminant_spectrum_textures, unbounded_spectrum_textures,
+        return ParameterDictionary(tokens, root, global_spectra, spectra, named_materials, float_textures,
+                                   albedo_spectrum_textures, illuminant_spectrum_textures, unbounded_spectrum_textures,
                                    allocator);
     }
 

@@ -1,5 +1,6 @@
 #include <pbrt/distribution/distribution_2d.h>
 #include <pbrt/euclidean_space/bounds3.h>
+#include <pbrt/euclidean_space/frame.h>
 #include <pbrt/euclidean_space/vector3.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gpu/macro.h>
@@ -109,6 +110,28 @@ ImageInfiniteLight::sample_li(const LightSampleContext &ctx, const Point2f &u,
 
     // Return radiance value for infinite light direction
     return LightLiSample(ImageLe(uv, lambda), wi, pdf, interaction);
+}
+
+PBRT_CPU_GPU
+pbrt::optional<LightLeSample>
+ImageInfiniteLight::sample_le(Point2f u1, Point2f u2, const SampledWavelengths &lambda) const {
+    const auto [uv, pixel_pdf] = image_le_distribution->sample(u1);
+    if (pixel_pdf == 0) {
+        return {};
+    }
+    const auto map_pdf = pixel_pdf * image_resolution.x * image_resolution.y;
+
+    // Emit toward the scene, opposite to the sampled environment direction.
+    const Vector3f w = -render_from_light(EqualAreaSquareToSphere(uv));
+    const Frame w_frame = Frame::from_z(-w);
+    const Point2f cd = sample_uniform_disk_concentric(u2);
+    const Point3f p_disk =
+        scene_center + scene_radius * w_frame.from_local(Vector3f(cd.x, cd.y, 0));
+    const Ray ray(p_disk - scene_radius * w, w);
+
+    const Real pdf_pos = 1 / (pbrt::PI * sqr(scene_radius));
+    const Real pdf_dir = map_pdf / (4 * pbrt::PI);
+    return LightLeSample(ImageLe(uv, lambda), ray, pdf_pos, pdf_dir);
 }
 
 PBRT_CPU_GPU

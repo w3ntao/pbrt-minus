@@ -7,8 +7,7 @@
 class GreyScaleFilm {
   public:
     GreyScaleFilm(const Point2i &_resolution)
-        : resolution(_resolution),
-          pixel_bound(Bounds2i(Point2i(0, 0), Point2i(_resolution.x, _resolution.y))),
+        : resolution(_resolution), pixel_bound(Bounds2i(Point2i(0, 0), Point2i(_resolution.x, _resolution.y))),
           pixels(std::vector<Real>(_resolution.x * _resolution.y, 0)) {}
 
     void add_sample(const Point2i &coord, Real val) {
@@ -25,7 +24,9 @@ class GreyScaleFilm {
         }
     }
 
-    void write_to_png(const std::string &filename) const;
+    void write_to_png(const std::string &filename, bool grey = false) const;
+
+    void write_mask_to_png(const std::string &filename) const;
 
   private:
     Point2i resolution;

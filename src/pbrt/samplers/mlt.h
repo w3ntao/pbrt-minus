@@ -37,7 +37,7 @@ class MLTSampler {
 
     static Real compute_importance(int depth, int max_depth, Real luminance) {
         // Keep a nonzero importance for depth-zero paths that directly hit an area light.
-        return (depth + 0.001) / max_depth * std::sqrt(luminance);
+        return (depth + 0.01) / max_depth * std::sqrt(luminance);
     }
 
     RNG rng;

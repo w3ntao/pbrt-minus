@@ -33,6 +33,10 @@ class ImageInfiniteLight : public LightBase {
                                             const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU
+    pbrt::optional<LightLeSample> sample_le(Point2f u1, Point2f u2,
+                                            const SampledWavelengths &lambda) const;
+
+    PBRT_CPU_GPU
     SampledSpectrum phi(const SampledWavelengths &lambda) const;
 
     PBRT_CPU_GPU

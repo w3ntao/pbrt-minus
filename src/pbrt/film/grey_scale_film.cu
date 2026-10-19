@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <ext/lodepng/lodepng.h>
 #include <pbrt/base/filter.h>
 #include <pbrt/film/grey_scale_film.h>
@@ -52,23 +53,46 @@ static RGB convert_to_heatmap_rgb(double linear) {
     return colors->at(colors->size() - 1);
 }
 
-void GreyScaleFilm::write_to_png(const std::string &filename) const {
+void GreyScaleFilm::write_to_png(const std::string &filename, bool grey) const {
+    if (grey) {
+        Real maximum = 0;
+        for (const auto value : pixels) {
+            if (std::isfinite(value) && value > maximum) {
+                maximum = value;
+            }
+        }
+
+        GreyScaleFilm normalized(resolution);
+        if (maximum > 0) {
+            for (size_t idx = 0; idx < pixels.size(); ++idx) {
+                const auto value = pixels[idx];
+                if (std::isfinite(value) && value > 0) {
+                    normalized.pixels[idx] = value / maximum;
+                }
+            }
+        }
+        normalized.write_mask_to_png(filename);
+        return;
+    }
+
     auto sorted_value = pixels;
     std::sort(sorted_value.begin(), sorted_value.end(), std::greater{});
 
     const auto one_percent = 0.01;
-    const double top_one_percent_max_intensity = sorted_value[pixels.size() * one_percent];
 
-    if (top_one_percent_max_intensity <= 0) {
-        REPORT_FATAL_ERROR();
+    double max_intensity_threshold = 1;
+    for (int i = pixels.size() * one_percent; i >= 0; i--) {
+        if (sorted_value[i] > 0) {
+            max_intensity_threshold = sorted_value[i];
+            break;
+        }
     }
-
-    SRGBColorEncoding srgb_encoding;
 
     std::vector<unsigned char> png_pixels(pixels.size() * 4);
 
+    SRGBColorEncoding srgb_encoding;
     for (int idx = 0; idx < pixels.size(); ++idx) {
-        auto val = clamp<double>(pixels[idx] / top_one_percent_max_intensity, 0, 1);
+        auto val = clamp<double>(pixels[idx] / max_intensity_threshold, 0, 1);
 
         auto rgb = convert_to_heatmap_rgb(val);
 
@@ -81,6 +105,19 @@ void GreyScaleFilm::write_to_png(const std::string &filename) const {
     // Encode the image
     // if there's an error, display it
     if (unsigned error = lodepng::encode(filename, png_pixels, resolution.x, resolution.y); error) {
+        std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error) << std::endl;
+        throw std::runtime_error("lodepng::encode() fail");
+    }
+}
+
+void GreyScaleFilm::write_mask_to_png(const std::string &filename) const {
+    std::vector<unsigned char> png_pixels(pixels.size());
+    for (size_t idx = 0; idx < pixels.size(); ++idx) {
+        const auto value = std::isnan(pixels[idx]) ? 0.0 : clamp<double>(pixels[idx], 0, 1);
+        png_pixels[idx] = static_cast<unsigned char>(std::lround(value * 255));
+    }
+
+    if (unsigned error = lodepng::encode(filename, png_pixels, resolution.x, resolution.y, LCT_GREY, 8); error) {
         std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error) << std::endl;
         throw std::runtime_error("lodepng::encode() fail");
     }

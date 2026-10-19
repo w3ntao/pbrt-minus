@@ -8,7 +8,6 @@
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/ambient_occlusion.h>
-#include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/surface_normal.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <thread>
@@ -95,13 +94,6 @@ const MegakernelIntegrator *MegakernelIntegrator::create(const std::string &inte
         return allocator.create<MegakernelIntegrator>(ambient_occlusion_integrator);
     }
 
-    if (integrator_name == "megakernelpath") {
-        auto path_integrator =
-            allocator.create<MegakernelPathIntegrator>(parameters, integrator_base);
-
-        return allocator.create<MegakernelIntegrator>(path_integrator);
-    }
-
     if (integrator_name == "surfacenormal") {
         auto surface_normal_integrator =
             allocator.create<SurfaceNormalIntegrator>(parameters, integrator_base);
@@ -120,10 +112,6 @@ SampledSpectrum MegakernelIntegrator::li(const Ray &ray, SampledWavelengths &lam
     switch (type) {
     case Type::ambient_occlusion: {
         return static_cast<const AmbientOcclusionIntegrator *>(ptr)->li(ray, lambda, sampler);
-    }
-
-    case Type::megakernel_path: {
-        return static_cast<const MegakernelPathIntegrator *>(ptr)->li(ray, lambda, sampler);
     }
 
     case Type::surface_normal: {

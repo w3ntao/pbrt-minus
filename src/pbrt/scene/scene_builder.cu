@@ -12,6 +12,7 @@
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/film/grey_scale_film.h>
 #include <pbrt/integrators/bdpt.h>
+#include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/mlt_bdpt.h>
 #include <pbrt/integrators/mlt_path.h>
 #include <pbrt/integrators/wavefront_path.h>
@@ -241,8 +242,7 @@ void SceneBuilder::build_integrator() {
     }
 
     if (integrator_name == "mlt" || integrator_name == "mltbdpt") {
-        mlt_bdpt_integrator =
-            MLTBDPTIntegrator::create(samples_per_pixel.value(), parameters, integrator_base);
+        mlt_bdpt_integrator = MLTBDPTIntegrator::create(samples_per_pixel.value(), parameters, integrator_base);
         return;
     }
 
@@ -265,8 +265,13 @@ void SceneBuilder::build_integrator() {
         return;
     }
 
-    megakernel_integrator =
-        MegakernelIntegrator::create(integrator_name.value(), parameters, integrator_base, allocator);
+    if (integrator_name == "megakernelpath") {
+        megakernel_path_integrator = allocator.create<MegakernelPathIntegrator>(samples_per_pixel.value(), sampler_type,
+                                                                                parameters, integrator_base, allocator);
+        return;
+    }
+
+    debugger_integrator = MegakernelIntegrator::create(integrator_name.value(), parameters, integrator_base, allocator);
 }
 
 void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
@@ -908,8 +913,10 @@ void SceneBuilder::preprocess() {
         printf("Integrator: (CPU) mlt-path\n");
     } else if (wavefront_path_integrator != nullptr) {
         printf("Integrator: (wavefront) path\n");
-    } else if (megakernel_integrator != nullptr) {
-        printf("Integrator: (megakernel) %s\n", megakernel_integrator->get_name().c_str());
+    } else if (megakernel_path_integrator != nullptr) {
+        printf("Integrator: (megakernel) path\n");
+    } else if (debugger_integrator != nullptr) {
+        printf("Integrator: (megakernel) %s\n", debugger_integrator->get_name().c_str());
     } else {
         REPORT_FATAL_ERROR();
     }
@@ -961,6 +968,8 @@ void SceneBuilder::render() const {
     }
 
     const auto film_resolution = film->get_resolution();
+    const auto image_path = std::filesystem::path(output_filename);
+    const auto heatmap_path = image_path.parent_path() / (image_path.stem().string() + "-heatmap.png");
 
     auto start = std::chrono::system_clock::now();
 
@@ -992,7 +1001,7 @@ void SceneBuilder::render() const {
 
         film->write_to_png(output_filename, brightness / spp);
 
-        heatmap.write_to_png("heatmap-" + output_filename);
+        heatmap.write_to_png(heatmap_path.string());
 
     } else if (mlt_path_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
@@ -1004,7 +1013,7 @@ void SceneBuilder::render() const {
 
         film->write_to_png(output_filename, brightness / spp);
 
-        heatmap.write_to_png("heatmap-" + output_filename);
+        heatmap.write_to_png(heatmap_path.string());
 
     } else if (wavefront_path_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
@@ -1015,12 +1024,26 @@ void SceneBuilder::render() const {
 
         film->write_to_png(output_filename);
 
-    } else if (megakernel_integrator != nullptr) {
+    } else if (megakernel_path_integrator != nullptr) {
         std::cout << " (samples per pixel: " << spp << ")"
-                  << " with " + megakernel_integrator->get_name() << "\n"
+                  << " with megakernel-path\n"
                   << std::flush;
 
-        megakernel_integrator->render(film, sampler_type, samples_per_pixel.value(), integrator_base, preview);
+        GreyScaleFilm firefly_mask(film_resolution);
+        megakernel_path_integrator->render(film, firefly_mask, output_filename, preview);
+
+        film->write_to_png(output_filename);
+
+        const auto mask_path = image_path.parent_path() / (image_path.stem().string() + "-firefly.png");
+        firefly_mask.write_mask_to_png(mask_path.string());
+        std::cout << "firefly mask saved to `" << mask_path.string() << "`\n";
+
+    } else if (debugger_integrator != nullptr) {
+        std::cout << " (samples per pixel: " << spp << ")"
+                  << " with " + debugger_integrator->get_name() << "\n"
+                  << std::flush;
+
+        debugger_integrator->render(film, sampler_type, samples_per_pixel.value(), integrator_base, preview);
 
         film->write_to_png(output_filename);
 
