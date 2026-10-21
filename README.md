@@ -8,14 +8,9 @@ A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT
 ## feature
 
 * CUDA acceleration
-* HLBVH with work queues ([Pantaleoni et al. 2010](https://research.nvidia.com/publication/2010-06_hlbvh-hierarchical-lbvh-construction-real-time-ray-tracing), [Garanzha et al. 2011](https://research.nvidia.com/publication/simpler-and-faster-hlbvh-work-queues))
-* uni-directional path tracing: wavefront path tracing ([Laine et al. 2013](https://research.nvidia.com/sites/default/files/pubs/2013-07_Megakernels-Considered-Harmful/laine2013hpg_paper.pdf)), light sampling, multiple importance sampling, russian roulette
-* bi-directional path tracing
-* metropolis light transport: on uni-directional and bi-directional path tracing
-* spectral rendering
-* power light sampler
-* stratified sampler
-* visualize progressive rendering with OpenGL
+* wavefront path tracing, BDPT, MLT-path, MLT-BDPT
+* HLBVH with work queues
+* spectral rendering, multiple importance sampling, light sampling (by power), stratified sampler, russian roulett
 
 
 ## set up environment
@@ -61,8 +56,6 @@ More scenes at https://github.com/w3ntao/pbrt-minus-scenes.
 
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/book-wavefrontpath-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/caustic-glass-v4-bdpt-4096.png)
-
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/bathroom-4096.png)
 
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/staircase-4096.png)
@@ -71,6 +64,12 @@ More scenes at https://github.com/w3ntao/pbrt-minus-scenes.
 
 ![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/material-testball-sequence-4096.png)
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/volumetric-caustic-1024.png)
+<p align="center">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/caustic-glass-v4-1024-mlt.png" width="48%">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/caustic-glass-v4-1024-density.png" width="48%">
+</p>
 
-![](https://github.com/w3ntao/pbrt-minus-gallery/blob/main/cornell-box-specular-volume-1024.png)
+<p align="center">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/volumetric-caustic-1024-mlt.png" width="48%">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/volumetric-caustic-1024-density.png" width="48%">
+</p>

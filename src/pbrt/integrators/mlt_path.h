@@ -10,6 +10,7 @@ class Film;
 class GPUMemoryAllocator;
 class GreyScaleFilm;
 class ParameterDictionary;
+class ProgressReporter;
 class RNG;
 class Sampler;
 struct PathSample;
@@ -48,5 +49,6 @@ class MLTPathIntegrator {
 
   private:
     void mutate_markov_chain(long bootstrap_index, double bootstrap_importance, RNG &rng, Film *chain_film,
-                             GreyScaleFilm &chain_density_map, long long num_mutations) const;
+                             GreyScaleFilm &chain_density_map, long long num_mutations,
+                             ProgressReporter &progress_reporter) const;
 };

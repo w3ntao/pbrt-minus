@@ -9,6 +9,7 @@
 class Film;
 class GreyScaleFilm;
 class ParameterDictionary;
+class ProgressReporter;
 
 class Sampler;
 
@@ -70,7 +71,7 @@ class MLTBDPTIntegrator {
                                  std::vector<double> &importance_per_path) const;
     void mutate_markov_chain(int worker_idx, Film *sub_film, GreyScaleFilm &sub_density, long long num_mutations,
                              const std::vector<double> &importance_per_path,
-                             const std::vector<double> &bootstrap_cdf) const;
+                             const std::vector<double> &bootstrap_cdf, ProgressReporter &progress_reporter) const;
 
     Point2i film_dimension = {0, 0};
 

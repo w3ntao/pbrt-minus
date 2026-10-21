@@ -12,6 +12,7 @@
 #include <pbrt/samplers/stratified.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectra/densely_sampled_spectrum.h>
+#include <pbrt/util/progress_reporter.h>
 #include <pbrt/util/thread_pool.h>
 #include <stack>
 #include <thread>
@@ -729,6 +730,10 @@ void BDPTIntegrator::render(Film *film, int samples_per_pixel) const {
         }
     }
 
+    const long long total_samples = static_cast<long long>(film_resolution.x) * film_resolution.y * samples_per_pixel;
+    ProgressReporter progress_reporter(total_samples);
+    progress_reporter.run();
+
     ThreadPool thread_pool(num_workers);
     thread_pool.parallel_execute(0, num_workers, [&](const int worker_idx) {
         std::vector<FilmSample> film_samples;
@@ -756,9 +761,11 @@ void BDPTIntegrator::render(Film *film, int samples_per_pixel) const {
                 for (const auto &sample : film_samples) {
                     local_film->add_splat(sample.p_film, sample.l_path, sample.lambda);
                 }
+                progress_reporter.increase(1);
             }
         }
     });
+    progress_reporter.join();
 
     // Merge raw sums in worker order; normalization happens when Film produces RGB.
     for (const auto local_film : sub_films) {

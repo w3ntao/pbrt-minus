@@ -13,6 +13,7 @@
 #include <pbrt/samplers/mlt.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/util/progress_reporter.h>
 #include <pbrt/util/thread_pool.h>
 #include <thread>
 #include <vector>
@@ -71,7 +72,7 @@ static void build_bootstrap_samples(const int worker_idx, const int num_paths_pe
 
 void MLTPathIntegrator::mutate_markov_chain(const long bootstrap_index, const double bootstrap_importance, RNG &rng,
                                             Film *chain_film, GreyScaleFilm &chain_sampling_density,
-                                            const long long num_mutations) const {
+                                            const long long num_mutations, ProgressReporter &progress_reporter) const {
     MLTSampler mlt_sampler;
     Sampler sampler(&mlt_sampler);
     auto current_path = generate_bootstrap_path(bootstrap_index, &sampler, this);
@@ -115,6 +116,8 @@ void MLTPathIntegrator::mutate_markov_chain(const long bootstrap_index, const do
         } else {
             mlt_sampler.reject();
         }
+
+        progress_reporter.increase(1);
     }
 }
 
@@ -212,6 +215,9 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &sampling_density) co
         chain_density_maps.emplace_back(film_dimension);
     }
 
+    ProgressReporter progress_reporter(total_mutations);
+    progress_reporter.run();
+
     thread_pool.parallel_execute(0, num_samplers, [&](const int worker_idx) {
         // Chain RNGs remain independent even when they select the same bootstrap path.
         RNG rng(worker_idx);
@@ -223,8 +229,10 @@ double MLTPathIntegrator::render(Film *film, GreyScaleFilm &sampling_density) co
 
         const auto bootstrap_index = static_cast<long>(selected - bootstrap_cdf.begin());
         mutate_markov_chain(bootstrap_index, importance_per_path[bootstrap_index], rng, chain_films[worker_idx],
-                            chain_density_maps[worker_idx], num_mutations[worker_idx]);
+                            chain_density_maps[worker_idx], num_mutations[worker_idx], progress_reporter);
     });
+
+    progress_reporter.join();
 
     // Merge in worker order on the CPU; Film accumulation is not thread-safe.
     for (int i = 0; i < num_samplers; ++i) {

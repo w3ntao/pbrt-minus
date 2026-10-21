@@ -16,6 +16,7 @@
 #include <pbrt/samplers/mlt.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/util/progress_reporter.h>
 #include <pbrt/util/thread_pool.h>
 #include <stdexcept>
 #include <thread>
@@ -82,7 +83,7 @@ std::unique_ptr<MLTBDPTIntegrator> MLTBDPTIntegrator::create(const int mutations
 
     const auto regularize = parameters.get_bool("regularize", false);
     // hardware_concurrency() may return zero when the thread count is unknown.
-    const int num_samplers = std::thread::hardware_concurrency();
+    const int num_samplers = std::max(1u, std::thread::hardware_concurrency());
 
     const auto large_step_probability = parameters.get_float("largestepprobability", 0.3);
     const auto sigma = parameters.get_float("sigma", 0.01);
@@ -153,7 +154,8 @@ BDPTPathSample MLTBDPTIntegrator::li(const int depth, Sampler *sampler) const {
 void MLTBDPTIntegrator::mutate_markov_chain(const int worker_idx, Film *sub_film, GreyScaleFilm &sub_density_map,
                                             const long long num_mutations,
                                             const std::vector<double> &importance_per_path,
-                                            const std::vector<double> &bootstrap_cdf) const {
+                                            const std::vector<double> &bootstrap_cdf,
+                                            ProgressReporter &progress_reporter) const {
     // Independent chain RNGs can select the same bootstrap path and still diverge.
     RNG rng(worker_idx + num_samplers);
     const double sum_importance = bootstrap_cdf.back();
@@ -209,6 +211,8 @@ void MLTBDPTIntegrator::mutate_markov_chain(const int worker_idx, Film *sub_film
         } else {
             mlt_sampler.reject();
         }
+
+        progress_reporter.increase(1);
     }
 }
 
@@ -245,7 +249,7 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &density_map, int mut
     printf("    bootstrap paths: %zu (nonzero: %.1f%%)\n", num_bootstrap_paths,
            100.0 * num_nonzero_paths / num_bootstrap_paths);
     printf("    MLT samplers: %d\n", num_samplers);
-    printf("    mutations per samplers: %d\n", total_mutations / num_samplers);
+    printf("    mutations per samplers: %lld\n", total_mutations / num_samplers);
     printf("    normalization: %.6f\n", normalization);
 
     if (normalization <= 0 || !std::isfinite(normalization) || num_nonzero_paths == 0) {
@@ -261,10 +265,13 @@ double MLTBDPTIntegrator::render(Film *film, GreyScaleFilm &density_map, int mut
         sub_density_maps.emplace_back(film_dimension);
     }
 
+    ProgressReporter progress_reporter(total_mutations);
+    progress_reporter.run();
     thread_pool.parallel_execute(0, num_samplers, [&](const int worker_idx) {
         mutate_markov_chain(worker_idx, sub_films[worker_idx], sub_density_maps[worker_idx], num_mutations[worker_idx],
-                            importance_per_path, bootstrap_cdf);
+                            importance_per_path, bootstrap_cdf, progress_reporter);
     });
+    progress_reporter.join();
 
     // Merge raw chain contributions once; output normalization uses normalization / mutations_per_pixel.
     for (int idx = 0; idx < num_samplers; ++idx) {
