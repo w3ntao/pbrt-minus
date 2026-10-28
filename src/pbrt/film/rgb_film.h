@@ -14,6 +14,10 @@ class RGBColorSpace;
 class SampledSpectrum;
 class SampledWavelengths;
 
+namespace statmc {
+struct PixelStatistics;
+}
+
 struct Pixel {
     RGB rgb_sum = RGB(0, 0, 0);
     Real weight_sum = 0;
@@ -34,6 +38,9 @@ class RGBFilm {
             GPUMemoryAllocator &allocator);
 
     RGBFilm create_empty(GPUMemoryAllocator &allocator) const;
+
+    // The caller owns this optional buffer and synchronizes access to it.
+    void attach_statistics(statmc::PixelStatistics *statistics);
 
     PBRT_CPU_GPU
     Point2i get_resolution() const {
@@ -78,6 +85,7 @@ class RGBFilm {
     Bounds2i masked_splat_bounds(const Point2f &p_film) const;
 
     Pixel *pixels = nullptr;
+    statmc::PixelStatistics *statistics = nullptr;
     const PixelSensor *sensor = nullptr;
     Point2i resolution = {0, 0};
     Bounds2i pixel_bound;

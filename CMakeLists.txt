@@ -88,6 +88,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/film/grey_scale_film.cu
         src/pbrt/film/rgb_film.cu
         src/pbrt/film/pixel_sensor.cu
+        src/pbrt/film/statistical_denoiser.cu
 
         src/pbrt/filters/box.cu
         src/pbrt/filters/mitchell.cu

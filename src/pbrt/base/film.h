@@ -22,6 +22,8 @@ class Film : public HIDDEN::FilmVariants {
 
     Film *create_empty(GPUMemoryAllocator &allocator) const;
 
+    void attach_statistics(statmc::PixelStatistics *statistics);
+
     PBRT_CPU_GPU
     Point2i get_resolution() const {
         return cuda::std::visit([&](auto &x) { return x.get_resolution(); }, *this);
@@ -80,6 +82,13 @@ class Film : public HIDDEN::FilmVariants {
 
     // CPU only
     void copy_to_frame_buffer(uint8_t *gpu_frame_buffer, Real splat_scale = 1) const;
+
+    // The destination must be GPU-accessible. This call synchronizes the copy.
+    void copy_to_linear_rgb(RGB *pixels, Real splat_scale = 1) const;
+
+    // The input must be CPU-accessible and ready to read.
+    static void write_linear_rgb_to_png(const std::string &filename, Point2i resolution,
+                                        const RGB *pixels);
 
     // CPU only
     void write_to_png(const std::string &filename, Real splat_scale = 1) const;

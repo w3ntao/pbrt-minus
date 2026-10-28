@@ -4,6 +4,7 @@
 #include <pbrt/base/filter.h>
 #include <pbrt/film/pixel_sensor.h>
 #include <pbrt/film/rgb_film.h>
+#include <pbrt/film/statistical_denoiser.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
@@ -52,12 +53,17 @@ RGBFilm::RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
 
 RGBFilm RGBFilm::create_empty(GPUMemoryAllocator &allocator) const {
     RGBFilm film = *this;
+    film.statistics = nullptr;
     const size_t num_pixels = static_cast<size_t>(resolution.x) * resolution.y;
     film.pixels = allocator.allocate<Pixel>(num_pixels);
     for (size_t idx = 0; idx < num_pixels; ++idx) {
         new (&film.pixels[idx]) Pixel();
     }
     return film;
+}
+
+void RGBFilm::attach_statistics(statmc::PixelStatistics *statistics) {
+    this->statistics = statistics;
 }
 
 PBRT_CPU_GPU
@@ -77,10 +83,17 @@ PBRT_CPU_GPU
 void RGBFilm::add_sample(int pixel_index, const SampledSpectrum &radiance_l,
                          const SampledWavelengths &lambda, Real weight) {
     if (weight == 0) {
+        if (statistics) {
+            statistics[pixel_index].add(RGB(0), 0);
+        }
         return;
     }
 
     auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
+
+    if (statistics) {
+        statistics[pixel_index].add(rgb, weight);
+    }
 
     if (DEBUG_MODE && rgb.has_nan()) {
         printf("RGBFilm::%s(): pixel (%d): carries NAN components\n", __func__, pixel_index);
@@ -191,6 +204,10 @@ void RGBFilm::add_splats(const RGBFilm &other, Real scale) {
 }
 
 void RGBFilm::merge(const RGBFilm &other) {
+    if (statistics || other.statistics) {
+        printf("RGBFilm::%s(): merging films with sample statistics is not supported\n", __func__);
+        REPORT_FATAL_ERROR();
+    }
     if (resolution != other.resolution || sensor != other.sensor || filter != other.filter) {
         REPORT_FATAL_ERROR();
     }

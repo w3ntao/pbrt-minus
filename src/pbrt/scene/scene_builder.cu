@@ -11,6 +11,7 @@
 #include <pbrt/base/shape.h>
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/film/grey_scale_film.h>
+#include <pbrt/film/statistical_denoiser.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/mlt_bdpt.h>
@@ -990,6 +991,13 @@ void SceneBuilder::render() const {
         REPORT_FATAL_ERROR();
     }
 
+    GPUMemoryAllocator denoiser_allocator;
+    std::unique_ptr<statmc::Denoiser> statistical_denoiser;
+    if (wavefront_path_integrator != nullptr || megakernel_path_integrator != nullptr) {
+        statistical_denoiser = std::make_unique<statmc::Denoiser>(film_resolution, denoiser_allocator);
+        film->attach_statistics(statistical_denoiser->statistics());
+    }
+
     if (selective_mlt_integrator != nullptr) {
         std::cout << " (production PT samples per pixel: " << spp << ") with selective MLT\n" << std::flush;
         GreyScaleFilm firefly_mask(film_resolution);
@@ -1042,8 +1050,6 @@ void SceneBuilder::render() const {
         GreyScaleFilm firefly_mask(film_resolution);
         wavefront_path_integrator->render(film, firefly_mask, output_filename, preview);
 
-        film->write_to_png(output_filename);
-
         const auto mask_path = image_path.parent_path() / (image_path.stem().string() + "-firefly.png");
         firefly_mask.write_mask_to_png(mask_path.string());
 
@@ -1054,8 +1060,6 @@ void SceneBuilder::render() const {
 
         GreyScaleFilm firefly_mask(film_resolution);
         megakernel_path_integrator->render(film, firefly_mask, output_filename, preview);
-
-        film->write_to_png(output_filename);
 
         const auto mask_path = image_path.parent_path() / (image_path.stem().string() + "-firefly.png");
         firefly_mask.write_mask_to_png(mask_path.string());
@@ -1071,6 +1075,21 @@ void SceneBuilder::render() const {
 
     } else {
         REPORT_FATAL_ERROR();
+    }
+
+    if (statistical_denoiser) {
+        film->attach_statistics(nullptr);
+        const auto before_path = image_path.parent_path() / (image_path.stem().string() + "-before-denoise.png");
+        film->write_to_png(before_path.string());
+        auto *linear_rgb = denoiser_allocator.allocate<RGB>(size_t(film_resolution.x) * film_resolution.y);
+        film->copy_to_linear_rgb(linear_rgb);
+        const auto denoise_start = std::chrono::steady_clock::now();
+        const auto *denoised_rgb = statistical_denoiser->denoise(linear_rgb);
+        const std::chrono::duration<double, std::milli> denoise_duration =
+            std::chrono::steady_clock::now() - denoise_start;
+        Film::write_linear_rgb_to_png(output_filename, film_resolution, denoised_rgb);
+        printf("statistical denoising took %.2f ms; image saved to `%s`\n", denoise_duration.count(),
+               output_filename.c_str());
     }
 
     const std::chrono::duration<Real> duration{std::chrono::system_clock::now() - start};
