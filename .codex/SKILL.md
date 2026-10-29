@@ -62,7 +62,7 @@ src/pbrt/main.cu::main
 |---|---|
 | `scene/` | 命令行、分词、参数字典、场景状态与对象构建；全局调度中心是 `SceneBuilder`。 |
 | `base/` | Camera、Film、Filter、Material、BxDF、Shape、Primitive、Light、Sampler、Spectrum、Texture 等统一接口、工厂和类型分发；也包含 Ray、Interaction、BSDF 和积分器共享上下文。 |
-| `integrators/` | 路径追踪、BDPT、MLT，以及环境遮蔽和表面法线等诊断积分器。 |
+| `integrators/` | 路径追踪、BDPT 和 MLT；G-buffer 诊断属性由 `base/gbuffer_integrator.*` 统一计算。 |
 | `accelerator/` | 自实现 HLBVH：构建层次包围盒，提供详细求交和快速遮挡测试。 |
 | `gpu/` | 统一内存分配与释放、CPU/GPU 函数标记、浮点精度和 CUDA 错误检查。 |
 | `shapes/`、`primitives/` | Shape 负责几何求交、面积与表面采样；Primitive 将几何绑定到材质、面光源、介质或实例变换。 |
@@ -95,16 +95,20 @@ HLBVH 构建也横跨 CPU/GPU：GPU 计算 Morton 编码并建立下层 treelet�
 
 ## 积分器与输出
 
-名称映射以 `SceneBuilder::build_integrator` 和 `MegakernelIntegrator::create` 为准：
+名称映射以 `SceneBuilder::build_integrator` 为准：
 
 | 场景或 `--integrator` 名称 | 实现与执行方式 |
 |---|---|
 | `path`、`volpath` | `WavefrontPathIntegrator`；`volpath` 映射为 `path`。路径状态按字段存放在数组中，按射线、介质、无材质界面和具体材质分队列，分阶段启动 kernel。 |
-| `megakernelpath` | `MegakernelPathIntegrator`，由 `base/megakernel_integrator.*` 包装和调度；一个线程完成一个像素的样本与完整路径计算。 |
+| `megakernelpath` | `MegakernelPathIntegrator` 独立调度；一个线程完成一个像素的样本与完整路径计算。 |
 | `bdpt` | `BDPTIntegrator` 生成相机/光源子路径并连接，使用分批 GPU 计算与 CPU 累积。 |
 | `mlt`、`mltbdpt` | `MLTBDPTIntegrator`，以 bootstrap、变异和接受/拒绝流程驱动采样，复用 BDPT 子路径与连接函数。 |
 | `mltpath` | `MLTPathIntegrator`，复用 `MegakernelPathIntegrator::evaluate_Li_volume` 计算路径贡献。 |
-| `ambientocclusion`、`surfacenormal` | 对应诊断积分器，由 `MegakernelIntegrator` 调度。 |
+| `gbuffer` | `base/gbuffer_integrator.*` 的 `GBufferIntegrator` 通过单次渲染 kernel 同时计算环境遮蔽、表面法线、albedo 和深度；主 PNG 显示 AO，不提供窗口预览。 |
+
+G-buffer 原始值保存在 `film/gbuffer.*` 的浮点数组及 `*-gbuffer.exr` 中；独立生成 `*-ao.png`、`*-normal.png`、`*-albedo.png`、`*-depth.png` 可视化，绕过 Film 的光谱辐射转换。法线为世界空间 shading normal，深度为相机空间 Z；albedo 模仿 pbrt-v4，在每个首表面交点固定观察方向 `wo`，使用相同 16 组固定 BSDF 样本，以 Radiance 模式同时采样反射和透射并平均 `f * abs_cos / pdf`，失败样本贡献 0，分母仍为 16，再按 reference white 转为线性 RGB；玻璃包含折射率对应的 Radiance 缩放，结果不是简单的 `R + T = 1`，低 SPP 仍有波长采样噪声。未命中深度为正无穷，并记录 coverage。
+
+AO 的最大射线距离自动固定为世界空间场景包围盒对角线长度的 2%，用于估计局部遮蔽；不再读取场景中的 `maxdistance` 参数。环境遮蔽和表面法线不再使用独立积分器。
 
 BDPT 内部的 `wavefront_render` kernel 是其批处理实现，阅读时不要据此推断它复用了 `WavefrontPathIntegrator` 的材质队列。
 

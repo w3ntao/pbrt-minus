@@ -4,9 +4,9 @@
 #include <pbrt/base/film.h>
 #include <pbrt/base/filter.h>
 #include <pbrt/base/float_texture.h>
+#include <pbrt/base/gbuffer_integrator.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/material.h>
-#include <pbrt/base/megakernel_integrator.h>
 #include <pbrt/base/primitive.h>
 #include <pbrt/base/shape.h>
 #include <pbrt/base/spectrum_texture.h>
@@ -279,7 +279,13 @@ void SceneBuilder::build_integrator() {
         return;
     }
 
-    debugger_integrator = MegakernelIntegrator::create(integrator_name.value(), parameters, integrator_base, allocator);
+    if (integrator_name == "gbuffer") {
+        gbuffer_integrator = allocator.create<GBufferIntegrator>(parameters, integrator_base, allocator);
+
+        return;
+    }
+
+    REPORT_FATAL_ERROR();
 }
 
 void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
@@ -925,8 +931,8 @@ void SceneBuilder::preprocess() {
         printf("Integrator: (wavefront) path\n");
     } else if (megakernel_path_integrator != nullptr) {
         printf("Integrator: (megakernel) path\n");
-    } else if (debugger_integrator != nullptr) {
-        printf("Integrator: (megakernel) %s\n", debugger_integrator->get_name().c_str());
+    } else if (gbuffer_integrator != nullptr) {
+        printf("Integrator: G-buffer\n");
     } else {
         REPORT_FATAL_ERROR();
     }
@@ -1064,14 +1070,11 @@ void SceneBuilder::render() const {
         const auto mask_path = image_path.parent_path() / (image_path.stem().string() + "-firefly.png");
         firefly_mask.write_mask_to_png(mask_path.string());
 
-    } else if (debugger_integrator != nullptr) {
-        std::cout << " (samples per pixel: " << spp << ")"
-                  << " with " + debugger_integrator->get_name() << "\n"
-                  << std::flush;
+    } else if (gbuffer_integrator != nullptr) {
+        std::cout << " (samples per pixel: " << spp << ") with G-buffer\n" << std::flush;
 
-        debugger_integrator->render(film, sampler_type, samples_per_pixel.value(), integrator_base, preview);
-
-        film->write_to_png(output_filename);
+        gbuffer_integrator->render(sampler_type, samples_per_pixel.value());
+        gbuffer_integrator->write_images(output_filename);
 
     } else {
         REPORT_FATAL_ERROR();

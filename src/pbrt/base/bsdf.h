@@ -29,6 +29,12 @@ class BSDF {
     SampledSpectrum f(const Vector3f &woRender, const Vector3f &wiRender,
                       TransportMode mode = TransportMode::Radiance) const;
 
+    // Average BSDF sample weights, including reflection and transmission,
+    // to estimate an unlit albedo as in pbrt-v4.
+    PBRT_CPU_GPU
+    SampledSpectrum rho(const Vector3f &wo_render, const Real *uc, const Point2f *u,
+                         int sample_count) const;
+
     PBRT_CPU_GPU
     pbrt::optional<BSDFSample>
     sample_f(const Vector3f &wo_render, Real u, const Point2f &u2,

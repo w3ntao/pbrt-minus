@@ -21,6 +21,27 @@ SampledSpectrum BSDF::f(const Vector3f &woRender, const Vector3f &wiRender,
 }
 
 PBRT_CPU_GPU
+SampledSpectrum BSDF::rho(const Vector3f &wo_render, const Real *uc, const Point2f *u,
+                           const int sample_count) const {
+    const auto wo = render_to_local(wo_render);
+    if (wo.z == 0 || sample_count <= 0) {
+        return SampledSpectrum(0);
+    }
+
+    SampledSpectrum result(0);
+    for (int i = 0; i < sample_count; ++i) {
+        const auto bs = bxdf.sample_f(wo, uc[i], u[i], TransportMode::Radiance,
+                                      BxDFReflTransFlags::All);
+        if (bs && bs->pdf > 0) {
+            // Keep delta events and layered path weights; do not evaluate
+            // f() or pdf() again. Failed samples contribute zero to the mean.
+            result += bs->f * bs->wi.abs_cos_theta() / bs->pdf;
+        }
+    }
+    return result / sample_count;
+}
+
+PBRT_CPU_GPU
 pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, Real u, const Point2f &u2,
                                           TransportMode mode,
                                           BxDFReflTransFlags sample_flags) const {

@@ -63,7 +63,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/interaction.cu
         src/pbrt/base/light.cu
         src/pbrt/base/material.cu
-        src/pbrt/base/megakernel_integrator.cu
+        src/pbrt/base/gbuffer_integrator.cu
         src/pbrt/base/primitive.cu
         src/pbrt/base/sampler.cu
         src/pbrt/base/shape.cu
@@ -85,6 +85,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/euclidean_space/transform.cu
 
         src/pbrt/film/firefly_cascade.cu
+        src/pbrt/film/gbuffer.cu
         src/pbrt/film/grey_scale_film.cu
         src/pbrt/film/rgb_film.cu
         src/pbrt/film/pixel_sensor.cu
@@ -98,13 +99,11 @@ add_executable(${PROJ_NAME}
 
         src/pbrt/gpu/gpu_memory_allocator.cu
 
-        src/pbrt/integrators/ambient_occlusion.cu
         src/pbrt/integrators/bdpt.cu
         src/pbrt/integrators/megakernel_path.cu
         src/pbrt/integrators/mlt_bdpt.cu
         src/pbrt/integrators/mlt_path.cu
         src/pbrt/integrators/selective_mlt.cu
-        src/pbrt/integrators/surface_normal.cu
         src/pbrt/integrators/wavefront_path.cu
 
         src/pbrt/lights/diffuse_area_light.cu
