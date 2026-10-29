@@ -118,6 +118,8 @@ BDPT 内部的 `wavefront_render` kernel 是其批处理实现，阅读时不要
 
 渲染贡献沿 `SampledSpectrum + SampledWavelengths → PixelSensor → RGBFilm` 转为输出 RGB；`Film::write_to_png` 编码为 sRGB PNG，`copy_to_frame_buffer` 为预览提供 RGB 数据。BDPT 的 splat 按 `1 / spp` 缩放，MLT 按返回亮度与变异次数归一化，并额外输出 `heatmap-` 前缀的 PNG。
 
+所有 radiance integrator（`path`、`megakernelpath`、`bdpt`、`mltbdpt`、`mltpath`、`selectivemlt`）默认在最终输出前执行完整 StatMC 图像降噪：`RGBFilm` 对完整 camera sample 的未乘重建 filter 权重、未乘输出 RGB 矩阵的 CIE 1931 sensor XYZ 做 Box–Cox 变换，在线保存均值、二阶和三阶中心矩；负数或非有限 XYZ 样本会报错，转换后的负 RGB 分量不截断。这里使用 XYZ 检验是对论文 RGB 检验的光谱适配。Megakernel 和 wavefront path 使用实际逐像素 camera sample；BDPT 将统计指针传给独占像素的 worker film，但统计不包含其 light-to-camera splats；MLT 和 Selective MLT 使用额外的独立相机路径追踪 pass 生成逐像素统计引导，Markov-chain splats 不作为独立样本。后两类统计对最终图像是近似，且增加一次 PT pass 开销。`SceneBuilder::render` 用 `GBufferIntegrator::render_denoising_guides` 收集 normal、albedo、coverage，跳过 AO 和 depth。`film/statistical_denoiser.*` 组合联合双边权重与偏度修正统计检验，再滤原始线性 RGB；albedo 引导保持 RGB。默认参数按作者实现：半径 20、空间标准差 10、albedo 标准差 0.02、normal 标准差 0.1、显著性 0.005。非 Box filter、分层采样及 MLT 引导下统计检验为近似处理。输出保留 `*-before-denoise.png`，完整版本还输出 `*-denoise-neighbors.png` 和 `*-denoise-weights.png` 诊断图。
+
 ## 常见阅读或修改入口
 
 | 任务 | 优先检查 |

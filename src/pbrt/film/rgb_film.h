@@ -16,6 +16,7 @@ class SampledWavelengths;
 
 namespace statmc {
 struct PixelStatistics;
+struct TransformedStatistics;
 }
 
 struct Pixel {
@@ -41,6 +42,7 @@ class RGBFilm {
 
     // The caller owns this optional buffer and synchronizes access to it.
     void attach_statistics(statmc::PixelStatistics *statistics);
+    void attach_transformed_statistics(statmc::TransformedStatistics *statistics);
 
     PBRT_CPU_GPU
     Point2i get_resolution() const {
@@ -86,6 +88,7 @@ class RGBFilm {
 
     Pixel *pixels = nullptr;
     statmc::PixelStatistics *statistics = nullptr;
+    statmc::TransformedStatistics *transformed_statistics = nullptr;
     const PixelSensor *sensor = nullptr;
     Point2i resolution = {0, 0};
     Bounds2i pixel_bound;

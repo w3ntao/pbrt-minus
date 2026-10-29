@@ -7,6 +7,9 @@
 
 struct IntegratorBase;
 struct FilmSample;
+namespace statmc {
+struct TransformedStatistics;
+}
 
 struct EndpointInteraction : Interaction {
     const Camera *camera = nullptr;
@@ -222,7 +225,8 @@ class BDPTIntegrator {
     static std::unique_ptr<BDPTIntegrator> create(const std::string &sampler_type, const ParameterDictionary &parameters,
                                                  const IntegratorBase *integrator_base);
 
-    void render(Film *film, int samples_per_pixel) const;
+    void render(Film *film, int samples_per_pixel,
+                statmc::TransformedStatistics *transformed_statistics = nullptr) const;
 
     int generate_camera_subpath(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler, int maxDepth,
                                 std::vector<Vertex> &path) const;

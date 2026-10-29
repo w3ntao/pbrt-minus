@@ -54,6 +54,7 @@ RGBFilm::RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
 RGBFilm RGBFilm::create_empty(GPUMemoryAllocator &allocator) const {
     RGBFilm film = *this;
     film.statistics = nullptr;
+    film.transformed_statistics = nullptr;
     const size_t num_pixels = static_cast<size_t>(resolution.x) * resolution.y;
     film.pixels = allocator.allocate<Pixel>(num_pixels);
     for (size_t idx = 0; idx < num_pixels; ++idx) {
@@ -64,6 +65,10 @@ RGBFilm RGBFilm::create_empty(GPUMemoryAllocator &allocator) const {
 
 void RGBFilm::attach_statistics(statmc::PixelStatistics *statistics) {
     this->statistics = statistics;
+}
+
+void RGBFilm::attach_transformed_statistics(statmc::TransformedStatistics *statistics) {
+    transformed_statistics = statistics;
 }
 
 PBRT_CPU_GPU
@@ -82,7 +87,7 @@ Bounds2f RGBFilm::sample_bounds() const {
 PBRT_CPU_GPU
 void RGBFilm::add_sample(int pixel_index, const SampledSpectrum &radiance_l,
                          const SampledWavelengths &lambda, Real weight) {
-    if (weight == 0) {
+    if (weight == 0 && !transformed_statistics) {
         if (statistics) {
             statistics[pixel_index].add(RGB(0), 0);
         }
@@ -91,8 +96,21 @@ void RGBFilm::add_sample(int pixel_index, const SampledSpectrum &radiance_l,
 
     auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
 
+    if (transformed_statistics) {
+        // radiance_l already includes the camera-ray weight. Test complete
+        // CIE 1931 sensor XYZ samples, before signed reconstruction weights
+        // and the output RGB matrix (which can produce negative channels).
+        // Under non-box reconstruction this is a guide for the Film ratio,
+        // rather than an exact test of that ratio's sampling distribution.
+        transformed_statistics[pixel_index].add(rgb);
+    }
+
     if (statistics) {
         statistics[pixel_index].add(rgb, weight);
+    }
+
+    if (weight == 0) {
+        return;
     }
 
     if (DEBUG_MODE && rgb.has_nan()) {

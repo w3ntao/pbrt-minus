@@ -85,10 +85,10 @@ struct AttributeSum {
 };
 
 __global__ void render_gbuffer(const GBufferIntegrator *integrator, Sampler *samplers, const int samples_per_pixel,
-                               const int num_pixels) {
+                               const int num_pixels, const bool denoising_guides_only) {
     const int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < num_pixels) {
-        integrator->render_pixel(index, samplers + index, samples_per_pixel);
+        integrator->render_pixel(index, samplers + index, samples_per_pixel, denoising_guides_only);
     }
 }
 
@@ -96,7 +96,13 @@ __global__ void render_gbuffer(const GBufferIntegrator *integrator, Sampler *sam
 
 GBufferIntegrator::GBufferIntegrator(const ParameterDictionary &parameters, const IntegratorBase *base,
                                      GPUMemoryAllocator &allocator)
-    : base(base), spectra(parameters.global_spectra), max_distance(0) {
+    : GBufferIntegrator(parameters.global_spectra, base, allocator) {
+    printf("G-buffer AO maxdistance: %.6g (2%% of world-space scene bounds diagonal)\n", double(max_distance));
+}
+
+GBufferIntegrator::GBufferIntegrator(const GlobalSpectra *spectra, const IntegratorBase *base,
+                                     GPUMemoryAllocator &allocator)
+    : base(base), spectra(spectra), max_distance(0) {
     const auto render_bounds = base->bvh->bounds();
     // Accept flat bounds (e.g. a single plane), but skip an empty scene's bounds.
     if (render_bounds.p_min.x <= render_bounds.p_max.x && render_bounds.p_min.y <= render_bounds.p_max.y &&
@@ -108,13 +114,12 @@ GBufferIntegrator::GBufferIntegrator(const ParameterDictionary &parameters, cons
             throw std::invalid_argument("GBufferIntegrator requires finite scene bounds");
         }
     }
-    printf("G-buffer AO maxdistance: %.6g (2%% of world-space scene bounds diagonal)\n", double(max_distance));
     gbuffer = allocator.create<GBuffer>(base->camera->get_camera_base()->resolution, allocator);
 }
 
 PBRT_CPU_GPU
 GBufferPixel GBufferIntegrator::evaluate_sample(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler,
-                                                const int samples_per_pixel) const {
+                                                const int samples_per_pixel, const bool denoising_guides_only) const {
     GBufferPixel sample;
     auto hit = intersect_surface(base, ray);
     if (!hit) {
@@ -127,14 +132,18 @@ GBufferPixel GBufferIntegrator::evaluate_sample(const Ray &ray, SampledWavelengt
     // Keep the signed, world-space shading normal. Only the visualization is
     // mapped into RGB; AO separately orients its hemisphere toward the camera.
     sample.normal = transform.world_from_render(surface.shading.n).to_vector3().normalize();
-    sample.depth = transform.camera_from_render(surface.p()).z;
+    // Keep the unused guide depth finite for the shared hit-only accumulator.
+    sample.depth = 0;
     sample.coverage = 1;
 
-    const Vector3f ao_normal = sample.normal.face_forward(-transform.world_from_render(ray.d));
-    const Vector3f local_wi = sample_cosine_hemisphere(sampler->get_2d());
-    const Vector3f world_wi = Frame::from_z(ao_normal).from_local(local_wi);
-    const Ray shadow_ray = surface.spawn_ray(transform.render_from_world(world_wi));
-    sample.ambient_occlusion = intersect_surface(base, shadow_ray, max_distance) ? 0 : 1;
+    if (!denoising_guides_only) {
+        sample.depth = transform.camera_from_render(surface.p()).z;
+        const Vector3f ao_normal = sample.normal.face_forward(-transform.world_from_render(ray.d));
+        const Vector3f local_wi = sample_cosine_hemisphere(sampler->get_2d());
+        const Vector3f world_wi = Frame::from_z(ao_normal).from_local(local_wi);
+        const Ray shadow_ray = surface.spawn_ray(transform.render_from_world(world_wi));
+        sample.ambient_occlusion = intersect_surface(base, shadow_ray, max_distance) ? 0 : 1;
+    }
 
     // Match PBRT-v4's albedo estimate: average 16 fixed BSDF samples with
     // reflection and transmission enabled, in radiance mode.
@@ -168,7 +177,8 @@ GBufferPixel GBufferIntegrator::evaluate_sample(const Ray &ray, SampledWavelengt
 }
 
 PBRT_CPU_GPU
-void GBufferIntegrator::render_pixel(const int pixel_index, Sampler *sampler, const int samples_per_pixel) const {
+void GBufferIntegrator::render_pixel(const int pixel_index, Sampler *sampler, const int samples_per_pixel,
+                                      const bool denoising_guides_only) const {
     const auto resolution = gbuffer->get_resolution();
     const Point2i pixel(pixel_index % resolution.x, pixel_index / resolution.x);
     AttributeSum weighted, unweighted;
@@ -178,7 +188,7 @@ void GBufferIntegrator::render_pixel(const int pixel_index, Sampler *sampler, co
         const auto camera_sample = sampler->get_camera_sample(pixel, base->filter);
         auto lambda = SampledWavelengths::sample_visible(sampler->get_1d());
         const auto camera_ray = base->camera->generate_ray(camera_sample, sampler);
-        const auto sample = evaluate_sample(camera_ray.ray, lambda, sampler, samples_per_pixel);
+        const auto sample = evaluate_sample(camera_ray.ray, lambda, sampler, samples_per_pixel, denoising_guides_only);
         if (sample.coverage == 0) {
             continue;
         }
@@ -200,6 +210,15 @@ void GBufferIntegrator::render_pixel(const int pixel_index, Sampler *sampler, co
 }
 
 void GBufferIntegrator::render(const std::string &sampler_type, const int samples_per_pixel) const {
+    render_pass(sampler_type, samples_per_pixel, false);
+}
+
+void GBufferIntegrator::render_denoising_guides(const std::string &sampler_type, const int samples_per_pixel) const {
+    render_pass(sampler_type, samples_per_pixel, true);
+}
+
+void GBufferIntegrator::render_pass(const std::string &sampler_type, const int samples_per_pixel,
+                                    const bool denoising_guides_only) const {
     if (samples_per_pixel <= 0) {
         throw std::invalid_argument("GBufferIntegrator requires positive samples per pixel");
     }
@@ -209,7 +228,8 @@ void GBufferIntegrator::render(const std::string &sampler_type, const int sample
     auto *samplers = Sampler::create_samplers(sampler_type, samples_per_pixel, num_pixels, local_allocator);
 
     constexpr int threads = 128;
-    render_gbuffer<<<divide_and_ceil(num_pixels, threads), threads>>>(this, samplers, samples_per_pixel, num_pixels);
+    render_gbuffer<<<divide_and_ceil(num_pixels, threads), threads>>>(this, samplers, samples_per_pixel, num_pixels,
+                                                                    denoising_guides_only);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

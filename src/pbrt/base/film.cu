@@ -17,6 +17,10 @@ void Film::attach_statistics(statmc::PixelStatistics *statistics) {
     cuda::std::visit([&](auto &x) { x.attach_statistics(statistics); }, *this);
 }
 
+void Film::attach_transformed_statistics(statmc::TransformedStatistics *statistics) {
+    cuda::std::visit([&](auto &x) { x.attach_transformed_statistics(statistics); }, *this);
+}
+
 void Film::add_splats(const Film &other, Real scale) {
     cuda::std::visit([&](auto &x, const auto &y) { x.add_splats(y, scale); }, *this, other);
 }

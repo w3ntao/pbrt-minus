@@ -23,6 +23,7 @@ class Film : public HIDDEN::FilmVariants {
     Film *create_empty(GPUMemoryAllocator &allocator) const;
 
     void attach_statistics(statmc::PixelStatistics *statistics);
+    void attach_transformed_statistics(statmc::TransformedStatistics *statistics);
 
     PBRT_CPU_GPU
     Point2i get_resolution() const {

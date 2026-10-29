@@ -58,7 +58,7 @@ PBRT_CPU_GPU constexpr float pow(float v) {
     }
 
     float n2 = pow<n / 2>(v);
-    return n2 * n2 * pow < n & 1 > (v);
+    return n2 * n2 * pow<n & 1>(v);
 }
 
 template <>
@@ -119,11 +119,7 @@ PBRT_CPU_GPU std::enable_if_t<std::is_floating_point_v<T>, bool> is_inf(T v) {
 
 template <typename T>
 PBRT_CPU_GPU T divide_and_ceil(T dividend, T divisor) {
-    if (dividend % divisor == 0) {
-        return dividend / divisor;
-    }
-
-    return dividend / divisor + 1;
+    return dividend / divisor + (dividend % divisor == 0 ? 0 : 1);
 }
 
 template <typename Predicate>
@@ -218,8 +214,7 @@ inline Real smooth_step(Real x, Real a, Real b) {
 }
 
 template <typename Func>
-PBRT_CPU_GPU inline Real NewtonBisection(Real x0, Real x1, Func f, Real xEps = 1e-6f,
-                                         Real fEps = 1e-6f) {
+PBRT_CPU_GPU inline Real NewtonBisection(Real x0, Real x1, Func f, Real xEps = 1e-6f, Real fEps = 1e-6f) {
     // Check function endpoints for roots
     Real fx0 = f(x0).first;
     Real fx1 = f(x1).first;

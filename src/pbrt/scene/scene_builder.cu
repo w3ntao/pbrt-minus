@@ -229,7 +229,8 @@ void SceneBuilder::build_gpu_lights() {
 void SceneBuilder::build_integrator() {
     build_gpu_lights();
 
-    const auto parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
+    integrator_parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
+    const auto &parameters = integrator_parameters;
 
     if (!integrator_name.has_value()) {
         integrator_name = parameters.get_one_string("Integrator", "path");
@@ -999,10 +1000,21 @@ void SceneBuilder::render() const {
 
     GPUMemoryAllocator denoiser_allocator;
     std::unique_ptr<statmc::Denoiser> statistical_denoiser;
-    if (wavefront_path_integrator != nullptr || megakernel_path_integrator != nullptr) {
+    statmc::TransformedStatistics *transformed_statistics = nullptr;
+    const bool radiance_integrator = selective_mlt_integrator != nullptr || bdpt_integrator != nullptr ||
+                                     mlt_bdpt_integrator != nullptr || mlt_path_integrator != nullptr ||
+                                     wavefront_path_integrator != nullptr || megakernel_path_integrator != nullptr;
+    if (radiance_integrator) {
         statistical_denoiser = std::make_unique<statmc::Denoiser>(film_resolution, denoiser_allocator);
-        film->attach_statistics(statistical_denoiser->statistics());
+        transformed_statistics = statistical_denoiser->transformed_statistics();
+        // These two renderers emit ordinary per-pixel camera samples directly
+        // into the main Film. BDPT writes to worker Films and MLT uses splats.
+        if (megakernel_path_integrator != nullptr || wavefront_path_integrator != nullptr) {
+            film->attach_transformed_statistics(transformed_statistics);
+        }
     }
+
+    Real output_splat_scale = 1;
 
     if (selective_mlt_integrator != nullptr) {
         std::cout << " (production PT samples per pixel: " << spp << ") with selective MLT\n" << std::flush;
@@ -1010,6 +1022,7 @@ void SceneBuilder::render() const {
         GreyScaleFilm sampling_density(film_resolution);
         const auto splat_scale =
             selective_mlt_integrator->render(film, firefly_mask, sampling_density, output_filename);
+        output_splat_scale = splat_scale;
         film->write_to_png(output_filename, splat_scale);
         sampling_density.write_to_png(density_path.string());
 
@@ -1018,11 +1031,11 @@ void SceneBuilder::render() const {
                   << " with BDPT\n"
                   << std::flush;
 
-        auto splat_scale = 1.0 / spp;
+        output_splat_scale = Real(1.0 / spp);
 
-        bdpt_integrator->render(film, spp);
+        bdpt_integrator->render(film, spp, transformed_statistics);
 
-        film->write_to_png(output_filename, splat_scale);
+        film->write_to_png(output_filename, output_splat_scale);
 
     } else if (mlt_bdpt_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
@@ -1032,7 +1045,8 @@ void SceneBuilder::render() const {
         GreyScaleFilm sampling_density(film_resolution);
         const auto brightness = mlt_bdpt_integrator->render(film, sampling_density, spp);
 
-        film->write_to_png(output_filename, brightness / spp);
+        output_splat_scale = Real(brightness / spp);
+        film->write_to_png(output_filename, output_splat_scale);
 
         sampling_density.write_to_png(density_path.string());
 
@@ -1044,7 +1058,8 @@ void SceneBuilder::render() const {
         GreyScaleFilm sampling_density(film_resolution);
         const auto brightness = mlt_path_integrator->render(film, sampling_density);
 
-        film->write_to_png(output_filename, brightness / spp);
+        output_splat_scale = Real(brightness / spp);
+        film->write_to_png(output_filename, output_splat_scale);
 
         sampling_density.write_to_png(density_path.string());
 
@@ -1082,15 +1097,54 @@ void SceneBuilder::render() const {
 
     if (statistical_denoiser) {
         film->attach_statistics(nullptr);
+        film->attach_transformed_statistics(nullptr);
+
+        if (selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr ||
+            mlt_path_integrator != nullptr) {
+            // MLT chains are correlated splat sequences, so collect the
+            // statistical guide from independent per-pixel camera paths.
+            // Zero film weights leave the already rendered MLT image intact.
+            const auto statistics_sampler_type = std::string("independent");
+            const bool match_bdpt_depth = selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr;
+            auto *statistics_integrator = denoiser_allocator.create<MegakernelPathIntegrator>(
+                spp, statistics_sampler_type, integrator_parameters, integrator_base, denoiser_allocator);
+            film->attach_transformed_statistics(transformed_statistics);
+            statistics_integrator->render_denoising_statistics(film, match_bdpt_depth);
+            film->attach_transformed_statistics(nullptr);
+        }
+
         const auto before_path = image_path.parent_path() / (image_path.stem().string() + "-before-denoise.png");
-        film->write_to_png(before_path.string());
+        film->write_to_png(before_path.string(), output_splat_scale);
         auto *linear_rgb = denoiser_allocator.allocate<RGB>(size_t(film_resolution.x) * film_resolution.y);
-        film->copy_to_linear_rgb(linear_rgb);
+        film->copy_to_linear_rgb(linear_rgb, output_splat_scale);
+        const GBufferPixel *guides = nullptr;
+        printf("rendering denoising guides (normal, albedo)\n");
+        // MLT's mutation count need not be a square number, so use independent
+        // guide samples there just as in its statistics-only camera pass.
+        const auto guide_sampler_type =
+            (selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr || mlt_path_integrator != nullptr)
+                ? std::string("independent")
+                : sampler_type;
+        auto *guide_integrator =
+            denoiser_allocator.create<GBufferIntegrator>(global_spectra, integrator_base, denoiser_allocator);
+        guide_integrator->render_denoising_guides(guide_sampler_type, spp);
+        guides = guide_integrator->get_gbuffer().data();
         const auto denoise_start = std::chrono::steady_clock::now();
-        const auto *denoised_rgb = statistical_denoiser->denoise(linear_rgb);
+        const auto *denoised_rgb = statistical_denoiser->denoise(linear_rgb, guides);
         const std::chrono::duration<double, std::milli> denoise_duration =
             std::chrono::steady_clock::now() - denoise_start;
         Film::write_linear_rgb_to_png(output_filename, film_resolution, denoised_rgb);
+        if (guides) {
+            GreyScaleFilm neighbors(film_resolution), weights(film_resolution);
+            for (int index = 0; index < film_resolution.x * film_resolution.y; ++index) {
+                const Point2i pixel(index % film_resolution.x, index / film_resolution.x);
+                neighbors.add_sample(pixel, Real(statistical_denoiser->accepted_neighbors()[index]));
+                weights.add_sample(pixel, statistical_denoiser->weight_sums()[index]);
+            }
+            const auto prefix = image_path.parent_path() / image_path.stem();
+            neighbors.write_to_png(prefix.string() + "-denoise-neighbors.png", true);
+            weights.write_to_png(prefix.string() + "-denoise-weights.png", true);
+        }
         printf("statistical denoising took %.2f ms; image saved to `%s`\n", denoise_duration.count(),
                output_filename.c_str());
     }

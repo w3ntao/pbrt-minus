@@ -19,6 +19,7 @@
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/util/russian_roulette.h>
+#include <stdexcept>
 #include <thread>
 
 using PreviewCounter = cuda::atomic<int, cuda::thread_scope_system>;
@@ -70,6 +71,30 @@ __global__ static void megakernel_path_render(Film *film, uint8_t *gpu_frame_buf
     counter->fetch_add(1, cuda::memory_order_release);
 }
 
+static __global__ void path_denoising_statistics(Film *film, const int samples_per_pixel, Sampler *samplers,
+                                                 const IntegratorBase *base, const int max_depth,
+                                                 const bool regularize, const bool match_bdpt_depth) {
+    const auto resolution = film->get_resolution();
+    const int pixel_index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (pixel_index >= resolution.x * resolution.y) {
+        return;
+    }
+
+    const Point2i pixel(pixel_index % resolution.x, pixel_index / resolution.x);
+    auto *sampler = &samplers[pixel_index];
+    for (int sample_idx = 0; sample_idx < samples_per_pixel; ++sample_idx) {
+        sampler->start_pixel_sample(pixel_index, sample_idx, 0);
+        const auto camera_sample = sampler->get_camera_sample(pixel, base->filter);
+        auto lambda = SampledWavelengths::sample_visible(sampler->get_1d());
+        const auto camera_ray = base->camera->generate_ray(camera_sample, sampler);
+        const auto radiance = camera_ray.weight * MegakernelPathIntegrator::evaluate_Li_volume(
+                                                      nullptr, camera_ray.ray, lambda, sampler, base, max_depth,
+                                                      regularize, match_bdpt_depth);
+        // RGBFilm records transformed sensor XYZ before returning for weight 0.
+        film->add_sample(pixel_index, radiance, lambda, 0);
+    }
+}
+
 MegakernelPathIntegrator::MegakernelPathIntegrator(const int samples_per_pixel, const std::string &sampler_type,
                                                    const ParameterDictionary &parameters,
                                                    const IntegratorBase *integrator_base, GPUMemoryAllocator &allocator)
@@ -115,6 +140,19 @@ void MegakernelPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, c
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     cascade.finalize(firefly_mask, samples_per_pixel, output_filename);
+}
+
+void MegakernelPathIntegrator::render_denoising_statistics(Film *film, const bool match_bdpt_depth) const {
+    if (film == nullptr || samples_per_pixel <= 0) {
+        throw std::invalid_argument("denoising statistics require a Film and positive samples per pixel");
+    }
+    const auto resolution = film->get_resolution();
+    const int num_pixels = resolution.x * resolution.y;
+    constexpr int threads = 256;
+    path_denoising_statistics<<<divide_and_ceil(num_pixels, threads), threads>>>(
+        film, samples_per_pixel, samplers, base, max_depth, regularize, match_bdpt_depth);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 PBRT_CPU_GPU

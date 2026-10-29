@@ -4,6 +4,7 @@
 #include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/sampler.h>
+#include <pbrt/film/statistical_denoiser.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/light_samplers/power_light_sampler.h>
@@ -701,7 +702,8 @@ std::unique_ptr<BDPTIntegrator> BDPTIntegrator::create(const std::string &sample
     return std::make_unique<BDPTIntegrator>(integrator_base, max_depth, regularize, type);
 }
 
-void BDPTIntegrator::render(Film *film, int samples_per_pixel) const {
+void BDPTIntegrator::render(Film *film, int samples_per_pixel,
+                            statmc::TransformedStatistics *transformed_statistics) const {
     const auto film_resolution = film->get_resolution();
     const auto num_pixels = film_resolution.x * film_resolution.y;
 
@@ -718,6 +720,11 @@ void BDPTIntegrator::render(Film *film, int samples_per_pixel) const {
     std::vector<Sampler *> samplers(num_workers);
     for (int i = 0; i < num_workers; ++i) {
         sub_films[i] = film->create_empty(allocator);
+        if (transformed_statistics != nullptr) {
+            // Each pixel belongs to one worker, so updates to its shared
+            // transformed-statistics entry are serialized.
+            sub_films[i]->attach_transformed_statistics(transformed_statistics);
+        }
         switch (sampler_type) {
         case Sampler::Type::independent:
             samplers[i] = allocator.create<Sampler>(allocator.create<IndependentSampler>(samples_per_pixel));

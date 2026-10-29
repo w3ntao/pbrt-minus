@@ -19,6 +19,10 @@ class MegakernelPathIntegrator {
     void render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename,
                   bool preview) const;
 
+    // Renders independent camera paths that only update transformed Film
+    // statistics. Zero reconstruction weight leaves image pixels untouched.
+    void render_denoising_statistics(Film *film, bool match_bdpt_depth = false) const;
+
     PBRT_CPU_GPU
     // Selective PT can match BDPT's scattering-depth limit while legacy callers
     // retain their existing truncation and emissive-surface behavior.
