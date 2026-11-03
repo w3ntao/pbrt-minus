@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <pbrt/accelerator/hlbvh.h>
 #include <pbrt/base/camera.h>
@@ -1007,16 +1009,24 @@ void SceneBuilder::render() const {
     if (radiance_integrator) {
         statistical_denoiser = std::make_unique<statmc::Denoiser>(film_resolution, denoiser_allocator);
         transformed_statistics = statistical_denoiser->transformed_statistics();
+    }
+
+    if (megakernel_path_integrator != nullptr || wavefront_path_integrator != nullptr) {
         // These two renderers emit ordinary per-pixel camera samples directly
         // into the main Film. BDPT writes to worker Films and MLT uses splats.
-        if (megakernel_path_integrator != nullptr || wavefront_path_integrator != nullptr) {
-            film->attach_transformed_statistics(transformed_statistics);
-        }
+
+        film->attach_transformed_statistics(transformed_statistics);
     }
 
     Real output_splat_scale = 1;
 
-    if (selective_mlt_integrator != nullptr) {
+    if (gbuffer_integrator != nullptr) {
+        std::cout << " (samples per pixel: " << spp << ") with G-buffer\n" << std::flush;
+
+        gbuffer_integrator->render(sampler_type, samples_per_pixel.value());
+        gbuffer_integrator->write_images(output_filename);
+
+    } else if (selective_mlt_integrator != nullptr) {
         std::cout << " (production PT samples per pixel: " << spp << ") with selective MLT\n" << std::flush;
         GreyScaleFilm firefly_mask(film_resolution);
         GreyScaleFilm sampling_density(film_resolution);
@@ -1085,29 +1095,29 @@ void SceneBuilder::render() const {
         const auto mask_path = image_path.parent_path() / (image_path.stem().string() + "-firefly.png");
         firefly_mask.write_mask_to_png(mask_path.string());
 
-    } else if (gbuffer_integrator != nullptr) {
-        std::cout << " (samples per pixel: " << spp << ") with G-buffer\n" << std::flush;
-
-        gbuffer_integrator->render(sampler_type, samples_per_pixel.value());
-        gbuffer_integrator->write_images(output_filename);
-
     } else {
         REPORT_FATAL_ERROR();
     }
 
     if (statistical_denoiser) {
+        const auto denoise_start = std::chrono::steady_clock::now();
         film->attach_statistics(nullptr);
         film->attach_transformed_statistics(nullptr);
 
-        if (selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr ||
-            mlt_path_integrator != nullptr) {
+        // Round down to a complete stratification grid for both auxiliary passes.
+        const int denoising_samples_per_dimension = static_cast<int>(std::sqrt(std::min(spp / 4, 64)));
+        const int denoising_spp = denoising_samples_per_dimension * denoising_samples_per_dimension;
+        const auto denoising_sampler_type = std::string("stratified");
+
+        if (selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr || mlt_path_integrator != nullptr) {
             // MLT chains are correlated splat sequences, so collect the
-            // statistical guide from independent per-pixel camera paths.
+            // statistical guide from a separate stratified camera-path pass.
             // Zero film weights leave the already rendered MLT image intact.
-            const auto statistics_sampler_type = std::string("independent");
+            printf("preparing denoising statistics (%s sampler, %d samples per pixel)\n",
+                   denoising_sampler_type.c_str(), denoising_spp);
             const bool match_bdpt_depth = selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr;
             auto *statistics_integrator = denoiser_allocator.create<MegakernelPathIntegrator>(
-                spp, statistics_sampler_type, integrator_parameters, integrator_base, denoiser_allocator);
+                denoising_spp, denoising_sampler_type, integrator_parameters, integrator_base, denoiser_allocator);
             film->attach_transformed_statistics(transformed_statistics);
             statistics_integrator->render_denoising_statistics(film, match_bdpt_depth);
             film->attach_transformed_statistics(nullptr);
@@ -1118,21 +1128,16 @@ void SceneBuilder::render() const {
         auto *linear_rgb = denoiser_allocator.allocate<RGB>(size_t(film_resolution.x) * film_resolution.y);
         film->copy_to_linear_rgb(linear_rgb, output_splat_scale);
         const GBufferPixel *guides = nullptr;
-        printf("rendering denoising guides (normal, albedo)\n");
-        // MLT's mutation count need not be a square number, so use independent
-        // guide samples there just as in its statistics-only camera pass.
-        const auto guide_sampler_type =
-            (selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr || mlt_path_integrator != nullptr)
-                ? std::string("independent")
-                : sampler_type;
+        printf("preparing denoising guides (normal, albedo, luminance; %s sampler, %d samples per pixel)\n",
+               denoising_sampler_type.c_str(), denoising_spp);
         auto *guide_integrator =
             denoiser_allocator.create<GBufferIntegrator>(global_spectra, integrator_base, denoiser_allocator);
-        guide_integrator->render_denoising_guides(guide_sampler_type, spp);
+        guide_integrator->render_denoising_guides(denoising_sampler_type, denoising_spp);
+        // Use the actual beauty image, including normalized light splats,
+        // without tracing another radiance pass for the luminance guide.
+        guide_integrator->set_luminance_guide(linear_rgb);
         guides = guide_integrator->get_gbuffer().data();
-        const auto denoise_start = std::chrono::steady_clock::now();
         const auto *denoised_rgb = statistical_denoiser->denoise(linear_rgb, guides);
-        const std::chrono::duration<double, std::milli> denoise_duration =
-            std::chrono::steady_clock::now() - denoise_start;
         Film::write_linear_rgb_to_png(output_filename, film_resolution, denoised_rgb);
         if (guides) {
             GreyScaleFilm neighbors(film_resolution), weights(film_resolution);
@@ -1145,8 +1150,10 @@ void SceneBuilder::render() const {
             neighbors.write_to_png(prefix.string() + "-denoise-neighbors.png", true);
             weights.write_to_png(prefix.string() + "-denoise-weights.png", true);
         }
-        printf("statistical denoising took %.2f ms; image saved to `%s`\n", denoise_duration.count(),
-               output_filename.c_str());
+        const std::chrono::duration<double, std::milli> denoise_duration =
+            std::chrono::steady_clock::now() - denoise_start;
+        printf("statistical denoising took %.1f sec\n", denoise_duration.count() / 1000.0);
+        printf("image saved to `%s`\n", output_filename.c_str());
     }
 
     const std::chrono::duration<Real> duration{std::chrono::system_clock::now() - start};

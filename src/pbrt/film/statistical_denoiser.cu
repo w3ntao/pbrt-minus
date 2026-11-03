@@ -22,6 +22,9 @@ constexpr int statmc_max_degrees_of_freedom = 1024;
 constexpr Real statmc_spatial_sd = 10;
 constexpr Real statmc_albedo_sd = Real(0.02);
 constexpr Real statmc_normal_sd = Real(0.1);
+// Additional a-trous-inspired luminance guide, expressed as a fraction of
+// the brighter magnitude in each pair. This is not a StatMC author parameter.
+constexpr Real statmc_luminance_relative_sd = Real(0.4); // original value: 0.2
 
 // Modified Lentz continued fraction for the regularized incomplete beta.
 // Only construction uses this host-side calculation, never the pixel kernel.
@@ -204,7 +207,7 @@ __global__ void prepare_transformed(const TransformedStatistics *statistics, RGB
 
 PBRT_GPU
 bool valid_guide(const GBufferPixel &guide) {
-    if (!std::isfinite(guide.coverage) || guide.coverage < 0 || guide.coverage > 1) {
+    if (!std::isfinite(guide.luminance) || !std::isfinite(guide.coverage) || guide.coverage < 0 || guide.coverage > 1) {
         return false;
     }
     if (guide.coverage == 0) {
@@ -222,19 +225,28 @@ Real guide_distance(const GBufferPixel &a, const GBufferPixel &b) {
     if ((a.coverage == 0) != (b.coverage == 0)) {
         return Infinity;
     }
+    // Compare the raw linear Y values, not the diagnostic 3x3 edge image.
+    // Normalize before subtraction to avoid overflow for finite HDR values;
+    // the zero case also handles entirely black images without an epsilon
+    // tied to exposure. Signed reconstruction-filter results remain valid.
+    const Real luminance_scale = std::max(std::abs(a.luminance), std::abs(b.luminance));
+    const Real luminance_delta =
+        luminance_scale == 0
+            ? 0
+            : (a.luminance / luminance_scale - b.luminance / luminance_scale) / statmc_luminance_relative_sd;
+    const Real luminance_d2 = luminance_delta * luminance_delta;
     if (a.coverage == 0) {
-        return 0;
+        return luminance_d2;
     }
     const RGB albedo = (a.albedo - b.albedo) / statmc_albedo_sd;
     // Preserve raw averaged normals; renormalizing would change the guides.
     const Vector3f normal = (a.normal - b.normal) / statmc_normal_sd;
-    return albedo.r * albedo.r + albedo.g * albedo.g + albedo.b * albedo.b + normal.squared_length();
+    return luminance_d2 + albedo.r * albedo.r + albedo.g * albedo.g + albedo.b * albedo.b + normal.squared_length();
 }
 
 PBRT_GPU
-bool transformed_compatible(const RGB &mean_a, const RGB &variance_a, const uint32_t n_a,
-                             const RGB &mean_b, const RGB &variance_b, const uint32_t n_b,
-                             const Real *critical) {
+bool transformed_compatible(const RGB &mean_a, const RGB &variance_a, const uint32_t n_a, const RGB &mean_b,
+                            const RGB &variance_b, const uint32_t n_b, const Real *critical) {
     // Paper / reference implementation uses the upper-bound df. Use a wide
     // addition because the counters themselves are 32-bit.
     const uint64_t nu = uint64_t(n_a) + uint64_t(n_b) - 2;
@@ -256,9 +268,9 @@ bool transformed_compatible(const RGB &mean_a, const RGB &variance_a, const uint
 }
 
 __global__ void filter_transformed(const RGB *input, RGB *output, const TransformedStatistics *statistics,
-                                    const RGB *means, const RGB *variances, const GBufferPixel *guides,
-                                    const Point2i resolution, const Real *critical,
-                                    uint32_t *accepted_neighbors, Real *weight_sums) {
+                                   const RGB *means, const RGB *variances, const GBufferPixel *guides,
+                                   const Point2i resolution, const Real *critical, uint32_t *accepted_neighbors,
+                                   Real *weight_sums) {
     const int index = threadIdx.x + blockIdx.x * blockDim.x;
     if (index >= resolution.x * resolution.y) {
         return;
@@ -292,12 +304,12 @@ __global__ void filter_transformed(const RGB *input, RGB *output, const Transfor
             }
             const Real guide_d2 = guide_distance(guides[index], guides[neighbor]);
             if (!std::isfinite(guide_d2) ||
-                !transformed_compatible(means[index], variances[index], statistics[index].n,
-                                        means[neighbor], variances[neighbor], statistics[neighbor].n, critical)) {
+                !transformed_compatible(means[index], variances[index], statistics[index].n, means[neighbor],
+                                        variances[neighbor], statistics[neighbor].n, critical)) {
                 continue;
             }
-            const Real weight = std::exp(-Real(0.5) * (Real(distance_squared) /
-                                                       (statmc_spatial_sd * statmc_spatial_sd) + guide_d2));
+            const Real weight =
+                std::exp(-Real(0.5) * (Real(distance_squared) / (statmc_spatial_sd * statmc_spatial_sd) + guide_d2));
             if (weight == 0) {
                 continue;
             }
@@ -343,7 +355,8 @@ TransformedStatistics *Denoiser::transformed_statistics() {
         mean_variances = allocator->allocate<RGB>(count);
         neighbor_counts = allocator->allocate<uint32_t>(count);
         total_weights = allocator->allocate<Real>(count);
-        initialize_transformed<<<divide_and_ceil(count, threads), threads>>>(transformed, neighbor_counts, total_weights, count);
+        initialize_transformed<<<divide_and_ceil(count, threads), threads>>>(transformed, neighbor_counts,
+                                                                             total_weights, count);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     }
@@ -391,11 +404,12 @@ const RGB *Denoiser::denoise(const RGB *linear_rgb, const GBufferPixel *guides) 
                 << "); samples observed: " << s.n;
         throw std::runtime_error(message.str());
     }
-    prepare_transformed<<<divide_and_ceil(count, threads), threads>>>(transformed, corrected_means, mean_variances, count);
+    prepare_transformed<<<divide_and_ceil(count, threads), threads>>>(transformed, corrected_means, mean_variances,
+                                                                      count);
     CHECK_CUDA_ERROR(cudaGetLastError());
-    filter_transformed<<<divide_and_ceil(count, threads), threads>>>(linear_rgb, output, transformed,
-                                                                   corrected_means, mean_variances, guides,
-                                                                   resolution, critical_values, neighbor_counts, total_weights);
+    filter_transformed<<<divide_and_ceil(count, threads), threads>>>(linear_rgb, output, transformed, corrected_means,
+                                                                     mean_variances, guides, resolution,
+                                                                     critical_values, neighbor_counts, total_weights);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     return output;

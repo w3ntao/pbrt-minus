@@ -8,6 +8,7 @@
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/rgb_color_space.h>
@@ -92,11 +93,62 @@ __global__ void render_gbuffer(const GBufferIntegrator *integrator, Sampler *sam
     }
 }
 
+__global__ void store_luminance_guide(GBufferPixel *pixels, const RGB *linear_rgb,
+                                      const SquareMatrix<3> xyz_from_rgb, const int num_pixels) {
+    const int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= num_pixels) {
+        return;
+    }
+    const RGB rgb = linear_rgb[index];
+    pixels[index].luminance = rgb.has_nan() ? NAN : (xyz_from_rgb * rgb).g;
+}
+
+__global__ void compute_luminance_differences(GBufferPixel *pixels, const Point2i resolution) {
+    const int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= resolution.x * resolution.y) {
+        return;
+    }
+
+    const int x = index % resolution.x;
+    const int y = index / resolution.x;
+    const Real center = pixels[index].luminance;
+    if (!std::isfinite(center)) {
+        pixels[index].luminance_difference = NAN;
+        return;
+    }
+
+    Real max_difference = 0;
+    for (int dy = -1; dy <= 1; ++dy) {
+        const int ny = y + dy;
+        if (ny < 0 || ny >= resolution.y) {
+            continue;
+        }
+        for (int dx = -1; dx <= 1; ++dx) {
+            const int nx = x + dx;
+            if (nx < 0 || nx >= resolution.x) {
+                continue;
+            }
+            const Real neighbor = pixels[ny * resolution.x + nx].luminance;
+            if (!std::isfinite(neighbor)) {
+                pixels[index].luminance_difference = NAN;
+                return;
+            }
+            max_difference = std::max(max_difference, std::abs(center - neighbor));
+        }
+    }
+    pixels[index].luminance_difference = max_difference;
+}
+
 } // namespace
 
 GBufferIntegrator::GBufferIntegrator(const ParameterDictionary &parameters, const IntegratorBase *base,
                                      GPUMemoryAllocator &allocator)
     : GBufferIntegrator(parameters.global_spectra, base, allocator) {
+    max_depth = parameters.get_integer("maxdepth", 5);
+    regularize = parameters.get_bool("regularize", false);
+    if (max_depth < 0) {
+        throw std::invalid_argument("GBufferIntegrator requires nonnegative maxdepth");
+    }
     printf("G-buffer AO maxdistance: %.6g (2%% of world-space scene bounds diagonal)\n", double(max_distance));
 }
 
@@ -115,6 +167,23 @@ GBufferIntegrator::GBufferIntegrator(const GlobalSpectra *spectra, const Integra
         }
     }
     gbuffer = allocator.create<GBuffer>(base->camera->get_camera_base()->resolution, allocator);
+}
+
+void GBufferIntegrator::set_luminance_guide(const RGB *linear_rgb) {
+    if (!linear_rgb) {
+        throw std::invalid_argument("GBufferIntegrator requires a linear RGB luminance guide");
+    }
+    const auto resolution = gbuffer->get_resolution();
+    const int num_pixels = resolution.x * resolution.y;
+    constexpr int threads = 256;
+    const auto *color_space = spectra->rgb_color_space;
+    store_luminance_guide<<<divide_and_ceil(num_pixels, threads), threads>>>(
+        gbuffer->data(), linear_rgb, color_space->xyz_from_rgb, num_pixels);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    compute_luminance_differences<<<divide_and_ceil(num_pixels, threads), threads>>>(gbuffer->data(), resolution);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    luminance_guide_ready = true;
 }
 
 PBRT_CPU_GPU
@@ -182,6 +251,8 @@ void GBufferIntegrator::render_pixel(const int pixel_index, Sampler *sampler, co
     const auto resolution = gbuffer->get_resolution();
     const Point2i pixel(pixel_index % resolution.x, pixel_index / resolution.x);
     AttributeSum weighted, unweighted;
+    Real luminance_sum = 0, unweighted_luminance_sum = 0;
+    Real luminance_weight = 0, absolute_luminance_weight = 0;
     int hits = 0;
     for (int i = 0; i < samples_per_pixel; ++i) {
         sampler->start_pixel_sample(pixel_index, i, 0);
@@ -189,12 +260,35 @@ void GBufferIntegrator::render_pixel(const int pixel_index, Sampler *sampler, co
         auto lambda = SampledWavelengths::sample_visible(sampler->get_1d());
         const auto camera_ray = base->camera->generate_ray(camera_sample, sampler);
         const auto sample = evaluate_sample(camera_ray.ray, lambda, sampler, samples_per_pixel, denoising_guides_only);
-        if (sample.coverage == 0) {
-            continue;
+        if (sample.coverage > 0) {
+            ++hits;
+            weighted.add(sample, camera_sample.filter_weight);
+            unweighted.add(sample, 1);
         }
-        ++hits;
-        weighted.add(sample, camera_sample.filter_weight);
-        unweighted.add(sample, 1);
+
+        if (!denoising_guides_only) {
+            // Replay the camera prefix so the path uses the same samples as
+            // megakernelpath, independently of AO's sampler consumption and
+            // any wavelength termination during the albedo estimate.
+            sampler->start_pixel_sample(pixel_index, i, 0);
+            const auto radiance_camera_sample = sampler->get_camera_sample(pixel, base->filter);
+            auto radiance_lambda = SampledWavelengths::sample_visible(sampler->get_1d());
+            const auto radiance_ray = base->camera->generate_ray(radiance_camera_sample, sampler);
+            const auto radiance = radiance_ray.weight * MegakernelPathIntegrator::evaluate_Li_volume(
+                nullptr, radiance_ray.ray, radiance_lambda, sampler, base, max_depth, regularize);
+            // Match Film's linear XYZ Y units (before sRGB encoding), including
+            // black / background samples. SampledSpectrum::y() additionally
+            // divides by CIE_Y_integral, which the Film sensor does not do.
+            const Real luminance = (radiance.safe_div(radiance_lambda.pdf_as_sampled_spectrum()) *
+                                    spectra->cie_y->sample(radiance_lambda)).average();
+            const Real w = radiance_camera_sample.filter_weight;
+            if (w != 0) {
+                luminance_sum += w * luminance;
+            }
+            unweighted_luminance_sum += luminance;
+            luminance_weight += w;
+            absolute_luminance_weight += std::abs(w);
+        }
     }
 
     GBufferPixel result;
@@ -205,6 +299,12 @@ void GBufferIntegrator::render_pixel(const int pixel_index, Sampler *sampler, co
         const bool valid_weight =
             std::abs(weighted.weight) > 32 * std::numeric_limits<Real>::epsilon() * weighted.absolute_weight;
         result = (valid_weight ? weighted : unweighted).average(Real(hits) / samples_per_pixel);
+    }
+    if (!denoising_guides_only) {
+        const bool valid_weight = std::abs(luminance_weight) >
+                                  32 * std::numeric_limits<Real>::epsilon() * absolute_luminance_weight;
+        result.luminance = valid_weight ? luminance_sum / luminance_weight
+                                        : unweighted_luminance_sum / samples_per_pixel;
     }
     gbuffer->data()[pixel_index] = result;
 }
@@ -222,6 +322,7 @@ void GBufferIntegrator::render_pass(const std::string &sampler_type, const int s
     if (samples_per_pixel <= 0) {
         throw std::invalid_argument("GBufferIntegrator requires positive samples per pixel");
     }
+    luminance_guide_ready = false;
     const auto resolution = gbuffer->get_resolution();
     const int num_pixels = resolution.x * resolution.y;
     GPUMemoryAllocator local_allocator;
@@ -231,7 +332,14 @@ void GBufferIntegrator::render_pass(const std::string &sampler_type, const int s
     render_gbuffer<<<divide_and_ceil(num_pixels, threads), threads>>>(this, samplers, samples_per_pixel, num_pixels,
                                                                     denoising_guides_only);
     CHECK_CUDA_ERROR(cudaGetLastError());
+    if (!denoising_guides_only) {
+        // Luminance differences require every pixel's radiance to be ready.
+        // This kernel only reads the completed image; it traces no rays.
+        compute_luminance_differences<<<divide_and_ceil(num_pixels, threads), threads>>>(gbuffer->data(), resolution);
+        CHECK_CUDA_ERROR(cudaGetLastError());
+    }
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    luminance_guide_ready = !denoising_guides_only;
 }
 
 void GBufferIntegrator::write_images(const std::string &output_filename) const {
@@ -249,7 +357,11 @@ void GBufferIntegrator::write_images(const std::string &output_filename) const {
     for (const auto &[suffix, output_channel] : outputs) {
         gbuffer->write_to_png(prefix.string() + "-" + suffix + ".png", output_channel);
     }
+    if (luminance_guide_ready) {
+        gbuffer->write_to_png(prefix.string() + "-luminance.png", GBufferChannel::Luminance);
+        gbuffer->write_to_png(prefix.string() + "-luminance-difference.png", GBufferChannel::LuminanceDifference);
+    }
     gbuffer->write_to_png(output_filename, GBufferChannel::AmbientOcclusion);
-    printf("raw G-buffer saved to `%s`; AO, normal, albedo, depth visualizations saved alongside\n",
-           raw_filename.c_str());
+    printf("raw G-buffer saved to `%s`; AO, normal, albedo, depth%s visualizations saved alongside\n",
+           raw_filename.c_str(), luminance_guide_ready ? ", luminance, luminance-difference" : "");
 }

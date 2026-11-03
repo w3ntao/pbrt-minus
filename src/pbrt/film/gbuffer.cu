@@ -25,10 +25,11 @@ GBuffer::GBuffer(Point2i resolution, GPUMemoryAllocator &allocator) : resolution
 }
 
 void GBuffer::write_to_exr(const std::string &filename) const {
-    constexpr int num_channels = 9;
+    constexpr int num_channels = 11;
     // EXR channels are stored in lexicographic order, with matching planar data.
     constexpr std::array<const char *, num_channels> names = {
-        "albedo.B", "albedo.G", "albedo.R", "ao", "coverage", "depth", "normal.X", "normal.Y", "normal.Z",
+        "albedo.B", "albedo.G", "albedo.R", "ao", "coverage", "depth", "luminance",
+        "luminance_difference", "normal.X", "normal.Y", "normal.Z",
     };
 
     const size_t num_pixels = size_t(resolution.x) * resolution.y;
@@ -44,9 +45,11 @@ void GBuffer::write_to_exr(const std::string &filename) const {
         channel_pixels[3][i] = float(pixel.ambient_occlusion);
         channel_pixels[4][i] = float(pixel.coverage);
         channel_pixels[5][i] = float(pixel.depth);
-        channel_pixels[6][i] = float(pixel.normal.x);
-        channel_pixels[7][i] = float(pixel.normal.y);
-        channel_pixels[8][i] = float(pixel.normal.z);
+        channel_pixels[6][i] = float(pixel.luminance);
+        channel_pixels[7][i] = float(pixel.luminance_difference);
+        channel_pixels[8][i] = float(pixel.normal.x);
+        channel_pixels[9][i] = float(pixel.normal.y);
+        channel_pixels[10][i] = float(pixel.normal.z);
     }
 
     std::array<unsigned char *, num_channels> image_data;
@@ -113,6 +116,7 @@ void GBuffer::copy_to_frame_buffer(uint8_t *frame_buffer, GBufferChannel channel
     const size_t num_pixels = size_t(resolution.x) * resolution.y;
     double min_log_depth = std::numeric_limits<double>::infinity();
     double max_log_depth = -std::numeric_limits<double>::infinity();
+    double luminance_reference = 0;
     if (channel == GBufferChannel::Depth) {
         for (size_t i = 0; i < num_pixels; ++i) {
             if (has_depth(pixels[i])) {
@@ -121,6 +125,23 @@ void GBuffer::copy_to_frame_buffer(uint8_t *frame_buffer, GBufferChannel channel
                 max_log_depth = std::max(max_log_depth, log_depth);
             }
         }
+    } else if (channel == GBufferChannel::Luminance || channel == GBufferChannel::LuminanceDifference) {
+        std::vector<double> positive_values;
+        positive_values.reserve(num_pixels);
+        for (size_t i = 0; i < num_pixels; ++i) {
+            const double value = channel == GBufferChannel::Luminance ? double(pixels[i].luminance)
+                                                                      : double(pixels[i].luminance_difference);
+            if (std::isfinite(value) && value > 0) {
+                positive_values.push_back(value);
+            }
+        }
+        if (!positive_values.empty()) {
+            // Keep a few emissive pixels / fireflies from hiding weak shadow
+            // edges. The original HDR values remain untouched in the EXR.
+            const size_t percentile = size_t(0.99 * double(positive_values.size() - 1));
+            std::nth_element(positive_values.begin(), positive_values.begin() + percentile, positive_values.end());
+            luminance_reference = positive_values[percentile];
+        }
     }
 
     const SRGBColorEncoding srgb_encoding;
@@ -128,7 +149,8 @@ void GBuffer::copy_to_frame_buffer(uint8_t *frame_buffer, GBufferChannel channel
         auto *encoded = frame_buffer + 3 * i;
         encoded[0] = encoded[1] = encoded[2] = 0;
         const auto &pixel = pixels[i];
-        if (!has_surface(pixel)) {
+        if (channel != GBufferChannel::Luminance && channel != GBufferChannel::LuminanceDifference &&
+            !has_surface(pixel)) {
             continue;
         }
 
@@ -160,6 +182,17 @@ void GBuffer::copy_to_frame_buffer(uint8_t *frame_buffer, GBufferChannel channel
                     value = 1 - (std::log1p(double(pixel.depth)) - min_log_depth) /
                                     (max_log_depth - min_log_depth);
                 }
+                encoded[0] = encoded[1] = encoded[2] = encode_unit(value);
+            }
+            break;
+        }
+        case GBufferChannel::Luminance:
+        case GBufferChannel::LuminanceDifference: {
+            const double raw = channel == GBufferChannel::Luminance ? double(pixel.luminance)
+                                                                    : double(pixel.luminance_difference);
+            if (std::isfinite(raw) && raw > 0 && luminance_reference > 0) {
+                constexpr double compression = 100;
+                const double value = std::log1p(compression * raw / luminance_reference) / std::log1p(compression);
                 encoded[0] = encoded[1] = encoded[2] = encode_unit(value);
             }
             break;

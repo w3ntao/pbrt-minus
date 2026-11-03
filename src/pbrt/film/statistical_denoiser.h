@@ -218,8 +218,10 @@ class Denoiser {
     // be finished. Returns a synchronized, separately allocated managed image.
     const RGB *denoise(const RGB *linear_rgb);
 
-    // Full mode uses Box-Cox / skewness-corrected XYZ moments and raw albedo
-    // and normal guides. Non-unit reconstruction filters use the unweighted
+    // Full mode uses Box-Cox / skewness-corrected XYZ moments, raw albedo and
+    // normal guides, and pairwise linear luminance differences. Populate guide
+    // luminance from this input image; the diagnostic luminance_difference
+    // field is unused. Non-unit reconstruction filters use the unweighted
     // observation stream as an approximate gate for the weighted Film image.
     // Throws on any recorded negative, NaN, or infinite XYZ camera sample.
     const RGB *denoise(const RGB *linear_rgb, const GBufferPixel *guides);

@@ -5,11 +5,20 @@ description: 用中文理解和导航 pbrt-minus CUDA 光谱渲染器，说明�
 
 # pbrt-minus 工程结构与代码导航
 
+## 维护元规则
+
+- Skill 只记录工程结构、模块职责、关键语义和代码定位，不记录具体算法的数值参数（如采样数量、滤波半径、标准差、阈值或距离比例）；需要这些数值时读取当前源码。
+- CUDA kernel 启动（如 `<<<...>>>`）一般不应放在循环里：单层循环内启动可能是设计失误；双重或更深层嵌套循环内启动大概率是设计错误。
+- 阅读、审查或生成代码时，若发现循环内启动 CUDA kernel，必须指出代码位置并提醒作者；若位于双重或更深层嵌套循环内，必须明确警告作者，并说明可能的设计问题。
+- 修改代码后不主动修改根目录 `README.md`；只有用户明确要求时才编辑。可以向用户指出已核实的明显偏差，并说明对应的代码位置。
+- 主要参考实现是 [pbrt-v4](https://github.com/mmp/pbrt-v4/)。对照实现时优先查阅本地 clone `~/Desktop/pbrt-v4`；本地不可用或需要核对上游时再查阅 GitHub。
+- 场景文件主要来自 [pbrt-minus-scenes](https://github.com/w3ntao/pbrt-minus-scenes)。查找场景时优先使用本地 clone `~/Desktop/pbrt-minus-scenes`；本地不可用或需要核对上游时再查阅 GitHub。
+
 ## 使用范围
 
 这是一份轻量的工程地图。解释工程或定位改动时，先沿下面的主流程找到负责模块，再读取相关实现；具体接口和支持范围以当前源码为准。
 
-- 已扫描的仓库：`/home/wentao/Dropbox/developer/graphics/pbrt-minus`。在其他 checkout 中使用时，以实际仓库根目录解析本文路径。
+- 仓库根目录以本文件所在目录的上一级为准；在其他 checkout 中也按本文件位置解析，不使用固定绝对路径。
 - 构建入口是根目录 `CMakeLists.txt`，项目说明是根目录 `README.md`；当前仓库没有单独的 `pbrt/CMakeLists.txt`。
 - 代码阅读默认限定在 `src/pbrt/`。`src/ext/` 是第三方依赖边界，仅根据根 CMake 和调用位置了解其作用，不展开其实现；用户明确调整范围时按新要求处理。
 - 本文记录结构，不代表已经编译或验证渲染结果。代码变化后重新核对工厂、类型分发和积分器调度。
@@ -106,19 +115,19 @@ HLBVH 构建也横跨 CPU/GPU：GPU 计算 Morton 编码并建立下层 treelet�
 | `mltpath` | `MLTPathIntegrator`，复用 `MegakernelPathIntegrator::evaluate_Li_volume` 计算路径贡献。 |
 | `gbuffer` | `base/gbuffer_integrator.*` 的 `GBufferIntegrator` 通过单次渲染 kernel 同时计算环境遮蔽、表面法线、albedo 和深度；主 PNG 显示 AO，不提供窗口预览。 |
 
-G-buffer 原始值保存在 `film/gbuffer.*` 的浮点数组及 `*-gbuffer.exr` 中；独立生成 `*-ao.png`、`*-normal.png`、`*-albedo.png`、`*-depth.png` 可视化，绕过 Film 的光谱辐射转换。法线为世界空间 shading normal，深度为相机空间 Z；albedo 模仿 pbrt-v4，在每个首表面交点固定观察方向 `wo`，使用相同 16 组固定 BSDF 样本，以 Radiance 模式同时采样反射和透射并平均 `f * abs_cos / pdf`，失败样本贡献 0，分母仍为 16，再按 reference white 转为线性 RGB；玻璃包含折射率对应的 Radiance 缩放，结果不是简单的 `R + T = 1`，低 SPP 仍有波长采样噪声。未命中深度为正无穷，并记录 coverage。
+G-buffer 原始值保存在 `film/gbuffer.*` 的浮点数组及 `*-gbuffer.exr` 中；独立生成 `*-ao.png`、`*-normal.png`、`*-albedo.png`、`*-depth.png` 可视化，绕过 Film 的光谱辐射转换。法线为世界空间 shading normal，深度为相机空间 Z；albedo 模仿 pbrt-v4，在每个首表面交点固定观察方向 `wo`，使用相同的固定 BSDF 样本组，以 Radiance 模式同时采样反射和透射并平均 `f * abs_cos / pdf`，失败样本贡献 0，仍按完整样本组数量求平均，再按 reference white 转为线性 RGB；玻璃包含折射率对应的 Radiance 缩放，结果不是简单的 `R + T = 1`，低 SPP 仍有波长采样噪声。未命中深度为正无穷，并记录 coverage。
 
-AO 的最大射线距离自动固定为世界空间场景包围盒对角线长度的 2%，用于估计局部遮蔽；不再读取场景中的 `maxdistance` 参数。环境遮蔽和表面法线不再使用独立积分器。
+AO 的最大射线距离按世界空间场景包围盒的尺度自动确定，用于估计局部遮蔽；不再读取场景中的 `maxdistance` 参数。环境遮蔽和表面法线不再使用独立积分器。
 
 BDPT 内部的 `wavefront_render` kernel 是其批处理实现，阅读时不要据此推断它复用了 `WavefrontPathIntegrator` 的材质队列。
 
-目前默认积分器是 `path`，默认样本数为 4。场景 `Sampler` 指定采样器和样本数，命令行 `--spp` 可以覆盖样本数；当前支持 `independent` 和 `stratified`，默认使用分层采样，其他采样器名称回退为分层采样。分层采样要求样本数为完全平方数，如 4、16、64；MLT 使用自己的采样器，`--spp` 在 MLT 中表示每像素变异次数。
+目前默认积分器是 `path`。场景 `Sampler` 指定采样器和样本数，命令行 `--spp` 可以覆盖样本数；当前支持 `independent` 和 `stratified`，默认使用分层采样，其他采样器名称回退为分层采样。分层采样要求样本数为完全平方数；MLT 使用自己的采样器，`--spp` 在 MLT 中表示每像素变异次数。
 
 当前传入 `--integrator` 会让 `parse_keyword` 跳过场景中的整条 `Integrator` 配置，包括其附带参数。比较自定义积分器参数时，优先在场景中修改积分器名称，或核对命令行覆盖后实际使用的默认参数。
 
 渲染贡献沿 `SampledSpectrum + SampledWavelengths → PixelSensor → RGBFilm` 转为输出 RGB；`Film::write_to_png` 编码为 sRGB PNG，`copy_to_frame_buffer` 为预览提供 RGB 数据。BDPT 的 splat 按 `1 / spp` 缩放，MLT 按返回亮度与变异次数归一化，并额外输出 `heatmap-` 前缀的 PNG。
 
-所有 radiance integrator（`path`、`megakernelpath`、`bdpt`、`mltbdpt`、`mltpath`、`selectivemlt`）默认在最终输出前执行完整 StatMC 图像降噪：`RGBFilm` 对完整 camera sample 的未乘重建 filter 权重、未乘输出 RGB 矩阵的 CIE 1931 sensor XYZ 做 Box–Cox 变换，在线保存均值、二阶和三阶中心矩；负数或非有限 XYZ 样本会报错，转换后的负 RGB 分量不截断。这里使用 XYZ 检验是对论文 RGB 检验的光谱适配。Megakernel 和 wavefront path 使用实际逐像素 camera sample；BDPT 将统计指针传给独占像素的 worker film，但统计不包含其 light-to-camera splats；MLT 和 Selective MLT 使用额外的独立相机路径追踪 pass 生成逐像素统计引导，Markov-chain splats 不作为独立样本。后两类统计对最终图像是近似，且增加一次 PT pass 开销。`SceneBuilder::render` 用 `GBufferIntegrator::render_denoising_guides` 收集 normal、albedo、coverage，跳过 AO 和 depth。`film/statistical_denoiser.*` 组合联合双边权重与偏度修正统计检验，再滤原始线性 RGB；albedo 引导保持 RGB。默认参数按作者实现：半径 20、空间标准差 10、albedo 标准差 0.02、normal 标准差 0.1、显著性 0.005。非 Box filter、分层采样及 MLT 引导下统计检验为近似处理。输出保留 `*-before-denoise.png`，完整版本还输出 `*-denoise-neighbors.png` 和 `*-denoise-weights.png` 诊断图。
+所有 radiance integrator（`path`、`megakernelpath`、`bdpt`、`mltbdpt`、`mltpath`、`selectivemlt`）默认在最终输出前执行完整 StatMC 图像降噪：`RGBFilm` 对完整 camera sample 的未乘重建 filter 权重、未乘输出 RGB 矩阵的 CIE 1931 sensor XYZ 做 Box–Cox 变换，在线保存均值、二阶和三阶中心矩；负数或非有限 XYZ 样本会报错，转换后的负 RGB 分量不截断。这里使用 XYZ 检验是对论文 RGB 检验的光谱适配。Megakernel 和 wavefront path 使用实际逐像素 camera sample；BDPT 将统计指针传给独占像素的 worker film，但统计不包含其 light-to-camera splats；MLT 和 Selective MLT 使用额外的独立相机路径追踪 pass 生成逐像素统计引导，Markov-chain splats 不作为独立样本。后两类统计对最终图像是近似，且增加一次 PT pass 开销。`SceneBuilder::render` 用 `GBufferIntegrator::render_denoising_guides` 收集 normal、albedo、coverage，跳过 AO 和 depth。`film/statistical_denoiser.*` 组合联合双边权重与偏度修正统计检验，再滤原始线性 RGB；albedo 引导保持 RGB。非 Box filter、分层采样及 MLT 引导下统计检验为近似处理。输出保留 `*-before-denoise.png`，完整版本还输出 `*-denoise-neighbors.png` 和 `*-denoise-weights.png` 诊断图。
 
 ## 常见阅读或修改入口
 
