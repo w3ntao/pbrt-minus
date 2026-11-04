@@ -1,12 +1,12 @@
 #pragma once
 
+#include <pbrt/base/sampler.h>
 #include <pbrt/film/gbuffer.h>
 
 class GPUMemoryAllocator;
 class ParameterDictionary;
 class Ray;
 class SampledWavelengths;
-class Sampler;
 struct GlobalSpectra;
 struct IntegratorBase;
 
@@ -28,10 +28,10 @@ class GBufferIntegrator {
         return luminance_guide_ready;
     }
 
-    void render(const std::string &sampler_type, int samples_per_pixel) const;
+    void render(Sampler::Type sampler_type, int samples_per_pixel) const;
     // Replays camera samples with an independent sampler, computing only raw
     // normal, albedo, and coverage. AO, depth, and radiance are not evaluated.
-    void render_denoising_guides(const std::string &sampler_type, int samples_per_pixel) const;
+    void render_denoising_guides(Sampler::Type sampler_type, int samples_per_pixel) const;
     void write_images(const std::string &output_filename) const;
 
     // One thread owns all camera samples and raw attributes for this pixel.
@@ -40,7 +40,7 @@ class GBufferIntegrator {
                        bool denoising_guides_only = false) const;
 
   private:
-    void render_pass(const std::string &sampler_type, int samples_per_pixel, bool denoising_guides_only) const;
+    void render_pass(Sampler::Type sampler_type, int samples_per_pixel, bool denoising_guides_only) const;
 
     PBRT_CPU_GPU
     GBufferPixel evaluate_sample(const Ray &ray, SampledWavelengths &lambda, Sampler *sampler,

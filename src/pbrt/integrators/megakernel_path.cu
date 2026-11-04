@@ -95,7 +95,7 @@ static __global__ void path_denoising_statistics(Film *film, const int samples_p
     }
 }
 
-MegakernelPathIntegrator::MegakernelPathIntegrator(const int samples_per_pixel, const std::string &sampler_type,
+MegakernelPathIntegrator::MegakernelPathIntegrator(const int samples_per_pixel, const Sampler::Type sampler_type,
                                                    const ParameterDictionary &parameters,
                                                    const IntegratorBase *integrator_base, GPUMemoryAllocator &allocator)
     : base(integrator_base), cie_y(parameters.global_spectra->cie_y), samples_per_pixel(samples_per_pixel),

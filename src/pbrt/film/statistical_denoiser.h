@@ -169,6 +169,27 @@ struct TransformedStatistics {
         }
     }
 
+    // Apply the same radiance factor to all observations without replaying
+    // samples: T(scale * XYZ) = sqrt(scale) * (T(XYZ) + 2) - 2.
+    // This keeps the statistical guide consistent with a scaled beauty pixel.
+    PBRT_CPU_GPU
+    void rescale(const Real scale) {
+        if (n == 0 || error != Error::None || scale == 1) {
+            return;
+        }
+        if (!std::isfinite(scale) || scale < 0) {
+            record_error(RGB(scale), Error::InvalidSample);
+            return;
+        }
+        const Real root = std::sqrt(scale);
+        mean = root * (mean + RGB(2)) - RGB(2);
+        m2 = m2 * scale;
+        m3 = m3 * (scale * root);
+        if (mean.has_nan() || m2.has_nan() || m3.has_nan()) {
+            record_error(RGB(NAN), Error::MomentOverflow);
+        }
+    }
+
     // Paper Algorithm 2 / the reference johnson_mean_corrs_kernel: M3/n is
     // the third central moment; M2/(n-1) is the sample variance.
     PBRT_CPU_GPU

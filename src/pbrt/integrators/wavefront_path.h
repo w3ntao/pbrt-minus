@@ -1,13 +1,13 @@
 #pragma once
 
 #include <pbrt/base/material.h>
+#include <pbrt/base/sampler.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 
 class Film;
 class GreyScaleFilm;
 class ParameterDictionary;
-class Sampler;
 class SampledSpectrum;
 class SampledWavelengths;
 class Spectrum;
@@ -55,13 +55,12 @@ class WavefrontPathIntegrator {
 
         const Point2i image_resolution = {0, 0};
         const int samples_per_pixel;
-        const std::string sampler_type;
+        const Sampler::Type sampler_type;
         const unsigned long long int total_path_num = 0;
 
         unsigned long long int global_path_counter = 0;
 
-        PathState(const Point2i &_resolution, int _samples_per_pixel,
-                  const std::string &sampler_type);
+        PathState(const Point2i &_resolution, int _samples_per_pixel, Sampler::Type sampler_type);
 
         void build_path(GPUMemoryAllocator &allocator);
 
@@ -134,12 +133,10 @@ class WavefrontPathIntegrator {
         }
     };
 
-    WavefrontPathIntegrator(int _samples_per_pixel, const std::string &sampler_type,
-                            const ParameterDictionary &parameters, const IntegratorBase *_base,
-                            GPUMemoryAllocator &allocator);
+    WavefrontPathIntegrator(int _samples_per_pixel, Sampler::Type sampler_type, const ParameterDictionary &parameters,
+                            const IntegratorBase *_base, GPUMemoryAllocator &allocator);
 
-    void render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename,
-                  bool preview);
+    void render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename, bool preview);
 
     PathState path_state;
 
@@ -157,5 +154,5 @@ class WavefrontPathIntegrator {
 
     void evaluate_interface_material();
 
-    void evaluate_material(Material::Type material_type);
+    inline void evaluate_material(Material::Type material_type);
 };

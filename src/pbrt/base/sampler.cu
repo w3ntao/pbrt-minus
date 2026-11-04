@@ -6,6 +6,35 @@
 #include <pbrt/samplers/mlt.h>
 #include <pbrt/samplers/stratified.h>
 
+Sampler::Type Sampler::sampler_string_to_type(const std::string &sampler_name) {
+    if (sampler_name == "independent") {
+        return Type::independent;
+    }
+    if (sampler_name == "mlt") {
+        return Type::mlt;
+    }
+    if (sampler_name == "stratified") {
+        return Type::stratified;
+    }
+
+    REPORT_FATAL_ERROR();
+    return Type::independent;
+}
+
+std::string Sampler::sampler_type_to_string(const Type sampler_type) {
+    switch (sampler_type) {
+    case Type::independent:
+        return "independent";
+    case Type::mlt:
+        return "mlt";
+    case Type::stratified:
+        return "stratified";
+    }
+
+    REPORT_FATAL_ERROR();
+    return "";
+}
+
 template <typename TypeOfSampler>
 static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers,
                                      int samples_per_pixel, int size) {
@@ -17,14 +46,12 @@ static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers
     samplers[idx] = Sampler(&_samplers[idx]);
 }
 
-Sampler *Sampler::create_samplers(const std::string &string_sampler_type,
+Sampler *Sampler::create_samplers(const Type sampler_type,
                                   const int samples_per_pixel, const int size,
                                   GPUMemoryAllocator &allocator) {
     const int blocks = divide_and_ceil(size, MAX_THREADS_PER_BLOCKS);
 
     auto samplers = allocator.allocate<Sampler>(size);
-
-    auto sampler_type = parse_sampler_type(string_sampler_type);
 
     if (sampler_type == Type::independent) {
         auto independent_samplers = allocator.allocate<IndependentSampler>(size);

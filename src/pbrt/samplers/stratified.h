@@ -7,6 +7,16 @@
 
 class StratifiedSampler {
   public:
+    // Largest perfect square <= n; nonpositive budgets return zero.
+    PBRT_CPU_GPU
+    static int round_down_samples_per_pixel(const int n) {
+        if (n <= 0) {
+            return 0;
+        }
+        const int samples_per_dimension = static_cast<int>(std::sqrt(static_cast<double>(n)));
+        return samples_per_dimension * samples_per_dimension;
+    }
+
     PBRT_CPU_GPU
     StratifiedSampler(int samples_per_pixel)
         : samples_per_dimension(static_cast<int>(std::sqrt(samples_per_pixel))) {

@@ -309,15 +309,15 @@ void GBufferIntegrator::render_pixel(const int pixel_index, Sampler *sampler, co
     gbuffer->data()[pixel_index] = result;
 }
 
-void GBufferIntegrator::render(const std::string &sampler_type, const int samples_per_pixel) const {
+void GBufferIntegrator::render(const Sampler::Type sampler_type, const int samples_per_pixel) const {
     render_pass(sampler_type, samples_per_pixel, false);
 }
 
-void GBufferIntegrator::render_denoising_guides(const std::string &sampler_type, const int samples_per_pixel) const {
+void GBufferIntegrator::render_denoising_guides(const Sampler::Type sampler_type, const int samples_per_pixel) const {
     render_pass(sampler_type, samples_per_pixel, true);
 }
 
-void GBufferIntegrator::render_pass(const std::string &sampler_type, const int samples_per_pixel,
+void GBufferIntegrator::render_pass(const Sampler::Type sampler_type, const int samples_per_pixel,
                                     const bool denoising_guides_only) const {
     if (samples_per_pixel <= 0) {
         throw std::invalid_argument("GBufferIntegrator requires positive samples per pixel");

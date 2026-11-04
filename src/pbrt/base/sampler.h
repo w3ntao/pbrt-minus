@@ -13,42 +13,29 @@ class Sampler {
   public:
     enum class Type { independent, mlt, stratified };
 
+    static const Type default_sampler_type = Type::stratified;
+
+    static Type sampler_string_to_type(const std::string &sampler_name);
+
+    static std::string sampler_type_to_string(Type sampler_type);
+
     PBRT_CPU_GPU
     Sampler() : type(Type::independent), ptr(nullptr) {}
 
-    static Type parse_sampler_type(const std::string &sampler_type) {
-        if (sampler_type == "independent") {
-            return Type::independent;
-        }
-
-        if (sampler_type == "mlt") {
-            return Type::mlt;
-        }
-
-        if (sampler_type == "stratified") {
-            return Type::stratified;
-        }
-
-        REPORT_FATAL_ERROR();
-        return Type::independent;
-    }
-
-    static Sampler *create_samplers(const std::string &string_sampler_type, int samples_per_pixel,
-                                    int size, GPUMemoryAllocator &allocator);
+    static Sampler *create_samplers(Type sampler_type, int samples_per_pixel, int size,
+                                    GPUMemoryAllocator &allocator);
 
     Type get_type() const {
         return type;
     }
 
     PBRT_CPU_GPU
-    explicit Sampler(IndependentSampler *independent_sampler)
-        : type(Type::independent), ptr(independent_sampler) {}
+    explicit Sampler(IndependentSampler *independent_sampler) : type(Type::independent), ptr(independent_sampler) {}
 
     explicit Sampler(MLTSampler *mlt_sampler) : type(Type::mlt), ptr(mlt_sampler) {}
 
     PBRT_CPU_GPU
-    explicit Sampler(StratifiedSampler *stratified_sampler)
-        : type(Type::stratified), ptr(stratified_sampler) {}
+    explicit Sampler(StratifiedSampler *stratified_sampler) : type(Type::stratified), ptr(stratified_sampler) {}
 
     MLTSampler *get_mlt_sampler() const;
 

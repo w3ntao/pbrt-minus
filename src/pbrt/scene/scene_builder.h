@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <pbrt/base/light.h>
+#include <pbrt/base/sampler.h>
 #include <pbrt/euclidean_space/transform.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/scene/command_line_option.h>
@@ -65,7 +66,7 @@ class SceneBuilder {
         throw std::runtime_error("get_dirname() fails");
     }
 
-    std::string sampler_type = "stratified"; // TODO: read this from PBRT file
+    Sampler::Type sampler_type = Sampler::default_sampler_type;
     std::optional<int> samples_per_pixel;
     std::optional<std::string> integrator_name;
     bool preview = false;

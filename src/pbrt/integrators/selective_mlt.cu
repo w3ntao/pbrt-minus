@@ -23,7 +23,7 @@
 namespace {
 
 // The pilot only trains the detector; its radiance never enters the final Film.
-__global__ void selective_pt_pilot(const Point2i resolution, const int spp, const IntegratorBase *base,
+__global__ void selective_pt_pilot(const Point2i resolution, const int spp, Sampler *samplers, const IntegratorBase *base,
                                    const Spectrum *cie_y, const int max_depth, const bool regularize,
                                    const firefly::CascadeView detector) {
     const int pixel_index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -32,17 +32,16 @@ __global__ void selective_pt_pilot(const Point2i resolution, const int spp, cons
     }
 
     const Point2i p_pixel(pixel_index % resolution.x, pixel_index / resolution.x);
-    StratifiedSampler stratified(spp);
-    Sampler sampler(&stratified);
+    auto *sampler = &samplers[pixel_index];
     // Negative pilot IDs keep its jitter and stratum permutations independent
     // of production PT. They never index the image or detector buffers.
     for (int sample = 0; sample < spp; ++sample) {
-        sampler.start_pixel_sample(~pixel_index, sample, 0);
-        const auto camera_sample = sampler.get_camera_sample(p_pixel, base->filter);
-        auto lambda = SampledWavelengths::sample_visible(sampler.get_1d());
-        const auto ray = base->camera->generate_ray(camera_sample, &sampler);
+        sampler->start_pixel_sample(~pixel_index, sample, 0);
+        const auto camera_sample = sampler->get_camera_sample(p_pixel, base->filter);
+        auto lambda = SampledWavelengths::sample_visible(sampler->get_1d());
+        const auto ray = base->camera->generate_ray(camera_sample, sampler);
         const auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_Li_volume(
-                                               nullptr, ray.ray, lambda, &sampler, base, max_depth, regularize, true);
+                                               nullptr, ray.ray, lambda, sampler, base, max_depth, regularize, true);
         detector.record(pixel_index, radiance.y(lambda, cie_y));
     }
 }
@@ -106,16 +105,16 @@ SelectiveMLTIntegrator::SelectiveMLTIntegrator(const int samples_per_pixel, cons
     if (samples_per_pixel <= 0) {
         throw std::invalid_argument("selectivemlt requires a positive production PT spp");
     }
-    const int production_samples_per_dimension = static_cast<int>(std::sqrt(samples_per_pixel));
-    if (production_samples_per_dimension * production_samples_per_dimension != samples_per_pixel) {
+    if (StratifiedSampler::round_down_samples_per_pixel(samples_per_pixel) != samples_per_pixel) {
         throw std::invalid_argument("selectivemlt requires a perfect-square production PT spp for stratified sampling");
     }
 
     // At tiny production budgets the one-sample minimum takes precedence.
     const int pilot_limit = std::max(1, samples_per_pixel / 4);
-    const int pilot_samples_per_dimension =
-        static_cast<int>(std::sqrt(std::clamp(pilot_samples_per_pixel, 1, pilot_limit)));
-    pilot_samples_per_pixel = pilot_samples_per_dimension * pilot_samples_per_dimension;
+    pilot_samples_per_pixel = std::clamp(pilot_samples_per_pixel, 1, pilot_limit);
+    if (Sampler::default_sampler_type == Sampler::Type::stratified) {
+        pilot_samples_per_pixel = StratifiedSampler::round_down_samples_per_pixel(pilot_samples_per_pixel);
+    }
 
     const auto resolution = film->get_resolution();
     const auto num_pixels = static_cast<long long>(resolution.x) * resolution.y;
@@ -144,11 +143,14 @@ double SelectiveMLTIntegrator::render(Film *film, GreyScaleFilm &film_firefly, G
     {
         GPUMemoryAllocator pilot_allocator;
         firefly::Cascade cascade(resolution, pilot_allocator);
-        printf("Selective MLT: stratified PT pilot (%d spp; excluded from final image)\n", pilot_samples_per_pixel);
+        auto *pilot_samplers = Sampler::create_samplers(Sampler::default_sampler_type, pilot_samples_per_pixel,
+                                                       num_pixels, pilot_allocator);
+        printf("Selective MLT: %s PT pilot (%d spp; excluded from final image)\n",
+               Sampler::sampler_type_to_string(Sampler::default_sampler_type).c_str(), pilot_samples_per_pixel);
         fflush(stdout);
         constexpr int threads = 256;
         selective_pt_pilot<<<divide_and_ceil(num_pixels, threads), threads>>>(
-            resolution, pilot_samples_per_pixel, base, cie_y, max_depth, regularize, cascade.view());
+            resolution, pilot_samples_per_pixel, pilot_samplers, base, cie_y, max_depth, regularize, cascade.view());
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         cascade.finalize(film_firefly, pilot_samples_per_pixel, output_filename);

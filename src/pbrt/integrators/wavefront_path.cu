@@ -529,7 +529,7 @@ void WavefrontPathIntegrator::PathState::reset_path(const int path_idx) {
 
 WavefrontPathIntegrator::PathState::PathState(const Point2i &_resolution,
                                               const int _samples_per_pixel,
-                                              const std::string &sampler_type)
+                                              const Sampler::Type sampler_type)
     : image_resolution(_resolution), samples_per_pixel(_samples_per_pixel),
       sampler_type(sampler_type), total_path_num(static_cast<long long int>(_samples_per_pixel) *
                                                  image_resolution.x * image_resolution.y) {
@@ -588,7 +588,7 @@ WavefrontPathIntegrator::Queues::Queues(GPUMemoryAllocator &allocator) {
 }
 
 WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel,
-                                                 const std::string &sampler_type,
+                                                 const Sampler::Type sampler_type,
                                                  const ParameterDictionary &parameters,
                                                  const IntegratorBase *_base,
                                                  GPUMemoryAllocator &allocator)

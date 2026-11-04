@@ -85,6 +85,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/euclidean_space/transform.cu
 
         src/pbrt/film/firefly_cascade.cu
+        src/pbrt/film/firefly_filter.cu
         src/pbrt/film/gbuffer.cu
         src/pbrt/film/grey_scale_film.cu
         src/pbrt/film/rgb_film.cu

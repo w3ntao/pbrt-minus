@@ -222,7 +222,7 @@ class BDPTIntegrator {
     BDPTIntegrator(const IntegratorBase *_base, int _max_depth, bool _regularize,
                    Sampler::Type _sampler_type = Sampler::Type::independent);
 
-    static std::unique_ptr<BDPTIntegrator> create(const std::string &sampler_type, const ParameterDictionary &parameters,
+    static std::unique_ptr<BDPTIntegrator> create(Sampler::Type sampler_type, const ParameterDictionary &parameters,
                                                  const IntegratorBase *integrator_base);
 
     void render(Film *film, int samples_per_pixel,

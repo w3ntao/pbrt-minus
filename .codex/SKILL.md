@@ -1,12 +1,14 @@
 ---
 name: pbrt-minus
-description: 用中文理解和导航 pbrt-minus CUDA 光谱渲染器，说明构建入口、场景解析、GPU 积分器及模块关系，并为该工程的代码阅读与修改定位文件。适用于 pbrt-minus 的结构说明、执行流程分析和功能定位；默认只关注 src/pbrt，不展开 src/ext。
+description: 用中文理解和导航 pbrt-minus CUDA 光谱渲染器，说明构建入口、场景解析、GPU 积分器及模块关系，为代码阅读与修改定位文件，并以 pbrt-minus/pbrt-v4 代码为基础解释渲染论文与相关问题。适用于工程结构说明、执行流程分析、功能定位和渲染论文解读；默认只关注 src/pbrt，不展开 src/ext。
 ---
 
 # pbrt-minus 工程结构与代码导航
 
 ## 维护元规则
 
+- 回答用户问题时（尤其是论文相关问题），默认以 pbrt-minus 作为用户的知识边界，从本工程已有的概念和实现出发解释；超出此边界的术语、背景或算法，先补充必要的前置知识，再建立联系。用户明确说明其知识背景时，以该说明为准。
+- 解释时尽量以 pbrt-minus/pbrt-v4 的相关代码为基础，优先引用 pbrt-minus 中已核实的文件、类或函数；解读论文时，将关键概念、公式符号和算法步骤对应到具体实现。借助 pbrt-v4 补充或只能类比时，明确说明与本工程实现的差异；没有对应实现时如实指出，不暗示工程已支持。
 - Skill 只记录工程结构、模块职责、关键语义和代码定位，不记录具体算法的数值参数（如采样数量、滤波半径、标准差、阈值或距离比例）；需要这些数值时读取当前源码。
 - CUDA kernel 启动（如 `<<<...>>>`）一般不应放在循环里：单层循环内启动可能是设计失误；双重或更深层嵌套循环内启动大概率是设计错误。
 - 阅读、审查或生成代码时，若发现循环内启动 CUDA kernel，必须指出代码位置并提醒作者；若位于双重或更深层嵌套循环内，必须明确警告作者，并说明可能的设计问题。
@@ -128,6 +130,8 @@ BDPT 内部的 `wavefront_render` kernel 是其批处理实现，阅读时不要
 渲染贡献沿 `SampledSpectrum + SampledWavelengths → PixelSensor → RGBFilm` 转为输出 RGB；`Film::write_to_png` 编码为 sRGB PNG，`copy_to_frame_buffer` 为预览提供 RGB 数据。BDPT 的 splat 按 `1 / spp` 缩放，MLT 按返回亮度与变异次数归一化，并额外输出 `heatmap-` 前缀的 PNG。
 
 所有 radiance integrator（`path`、`megakernelpath`、`bdpt`、`mltbdpt`、`mltpath`、`selectivemlt`）默认在最终输出前执行完整 StatMC 图像降噪：`RGBFilm` 对完整 camera sample 的未乘重建 filter 权重、未乘输出 RGB 矩阵的 CIE 1931 sensor XYZ 做 Box–Cox 变换，在线保存均值、二阶和三阶中心矩；负数或非有限 XYZ 样本会报错，转换后的负 RGB 分量不截断。这里使用 XYZ 检验是对论文 RGB 检验的光谱适配。Megakernel 和 wavefront path 使用实际逐像素 camera sample；BDPT 将统计指针传给独占像素的 worker film，但统计不包含其 light-to-camera splats；MLT 和 Selective MLT 使用额外的独立相机路径追踪 pass 生成逐像素统计引导，Markov-chain splats 不作为独立样本。后两类统计对最终图像是近似，且增加一次 PT pass 开销。`SceneBuilder::render` 用 `GBufferIntegrator::render_denoising_guides` 收集 normal、albedo、coverage，跳过 AO 和 depth。`film/statistical_denoiser.*` 组合联合双边权重与偏度修正统计检验，再滤原始线性 RGB；albedo 引导保持 RGB。非 Box filter、分层采样及 MLT 引导下统计检验为近似处理。输出保留 `*-before-denoise.png`，完整版本还输出 `*-denoise-neighbors.png` 和 `*-denoise-weights.png` 诊断图。
+
+调用 StatMC 前，`SceneBuilder::render` 使用 `film/firefly_filter.*` 的 `firefly::Prefilter` 在完整线性 RGB（含已归一化的 splat）上抑制孤立异常亮点，以 normal、albedo 和 coverage 限制可参考的邻居，并保留有稳定相机样本统计支持的亮点。这是图像空间预处理，不是论文的逐样本重加权；小而孤立的真实高光仍可能被衰减。处理时统一缩放像素 RGB，并通过 `TransformedStatistics::rescale` 对 Box–Cox 均值及中心矩做相应变换，随后从处理后的图像更新 luminance 引导，再调用降噪器。`*-before-firefly.png` 保留原始渲染，`*-before-denoise.png` 保存实际送入 StatMC 的清理后图像。
 
 ## 常见阅读或修改入口
 

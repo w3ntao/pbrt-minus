@@ -10,7 +10,7 @@ class ParameterDictionary;
 class Spectrum;
 struct IntegratorBase;
 
-// Pixel-selective PT / MLT-BDPT. The independently randomized stratified pilot
+// Pixel-selective PT / MLT-BDPT. The independently randomized pilot
 // only trains a frozen mask; it never contributes samples to the final image.
 class SelectiveMLTIntegrator {
   public:

@@ -22,9 +22,14 @@ constexpr int statmc_max_degrees_of_freedom = 1024;
 constexpr Real statmc_spatial_sd = 10;
 constexpr Real statmc_albedo_sd = Real(0.02);
 constexpr Real statmc_normal_sd = Real(0.1);
-// Additional a-trous-inspired luminance guide, expressed as a fraction of
-// the brighter magnitude in each pair. This is not a StatMC author parameter.
-constexpr Real statmc_luminance_relative_sd = Real(0.4); // original value: 0.2
+
+/*
+statmc_luminance_relative_sd:
+    additional a-trous-inspired luminance guide,
+    expressed as a fraction of the brighter magnitude in each pair.
+  original value: 0.2
+*/
+constexpr Real statmc_luminance_relative_sd = Real(0.4);
 
 // Modified Lentz continued fraction for the regularized incomplete beta.
 // Only construction uses this host-side calculation, never the pixel kernel.

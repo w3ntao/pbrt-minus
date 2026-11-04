@@ -681,7 +681,7 @@ SampledSpectrum BDPTIntegrator::connect_bdpt(SampledWavelengths &lambda, std::ve
     return L * compute_mis_weight(lightVertices, cameraVertices, sampled, s, t);
 }
 
-std::unique_ptr<BDPTIntegrator> BDPTIntegrator::create(const std::string &sampler_type,
+std::unique_ptr<BDPTIntegrator> BDPTIntegrator::create(const Sampler::Type sampler_type,
                                                        const ParameterDictionary &parameters,
                                                        const IntegratorBase *integrator_base) {
     const auto max_depth = parameters.get_integer("maxdepth", 5);
@@ -690,8 +690,7 @@ std::unique_ptr<BDPTIntegrator> BDPTIntegrator::create(const std::string &sample
     }
     const auto regularize = parameters.get_bool("regularize", false);
 
-    const auto type = Sampler::parse_sampler_type(sampler_type);
-    switch (type) {
+    switch (sampler_type) {
     case Sampler::Type::independent:
     case Sampler::Type::stratified:
         break;
@@ -699,7 +698,7 @@ std::unique_ptr<BDPTIntegrator> BDPTIntegrator::create(const std::string &sample
         REPORT_FATAL_ERROR();
     }
 
-    return std::make_unique<BDPTIntegrator>(integrator_base, max_depth, regularize, type);
+    return std::make_unique<BDPTIntegrator>(integrator_base, max_depth, regularize, sampler_type);
 }
 
 void BDPTIntegrator::render(Film *film, int samples_per_pixel,

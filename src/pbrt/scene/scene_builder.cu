@@ -12,6 +12,7 @@
 #include <pbrt/base/primitive.h>
 #include <pbrt/base/shape.h>
 #include <pbrt/base/spectrum_texture.h>
+#include <pbrt/film/firefly_filter.h>
 #include <pbrt/film/grey_scale_film.h>
 #include <pbrt/film/statistical_denoiser.h>
 #include <pbrt/integrators/bdpt.h>
@@ -23,6 +24,7 @@
 #include <pbrt/light_samplers/power_light_sampler.h>
 #include <pbrt/light_samplers/uniform_light_sampler.h>
 #include <pbrt/primitives/transformed_primitive.h>
+#include <pbrt/samplers/stratified.h>
 #include <pbrt/scene/scene_builder.h>
 #include <pbrt/spectrum_util/global_spectra.h>
 #include <pbrt/spectrum_util/spectrum_constants_glass.h>
@@ -263,7 +265,7 @@ void SceneBuilder::build_integrator() {
         return;
     }
 
-    printf("sampler: %s\n", sampler_type.c_str());
+    printf("sampler: %s\n", Sampler::sampler_type_to_string(sampler_type).c_str());
 
     if (integrator_name == "bdpt") {
         bdpt_integrator = BDPTIntegrator::create(sampler_type, parameters, integrator_base);
@@ -399,11 +401,13 @@ void SceneBuilder::parse_keyword(const std::vector<Token> &tokens) {
     if (keyword == "Sampler") {
         const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
-        sampler_type = tokens[1].values[0];
-        if (!(sampler_type == "independent" || sampler_type == "stratified")) {
+        const auto &sampler_name = tokens[1].values[0];
+        if (sampler_name == "independent" || sampler_name == "stratified") {
+            sampler_type = Sampler::sampler_string_to_type(sampler_name);
+        } else {
             printf("\n%sWARNING: Sampler `%s` not supported, changed to stratified%s\n\n",
-                   FLAG_COLORFUL_PRINT_RED_START, sampler_type.c_str(), FLAG_COLORFUL_PRINT_END);
-            sampler_type = "stratified";
+                   FLAG_COLORFUL_PRINT_RED_START, sampler_name.c_str(), FLAG_COLORFUL_PRINT_END);
+            sampler_type = Sampler::Type::stratified;
         }
 
         if (!samples_per_pixel.has_value()) {
@@ -1104,17 +1108,20 @@ void SceneBuilder::render() const {
         film->attach_statistics(nullptr);
         film->attach_transformed_statistics(nullptr);
 
-        // Round down to a complete stratification grid for both auxiliary passes.
-        const int denoising_samples_per_dimension = static_cast<int>(std::sqrt(std::min(spp / 4, 64)));
-        const int denoising_spp = denoising_samples_per_dimension * denoising_samples_per_dimension;
-        const auto denoising_sampler_type = std::string("stratified");
+        const int denoising_budget = std::clamp(spp / 4, 1, 64);
+        const auto denoising_sampler_type = Sampler::default_sampler_type;
+
+        const int denoising_spp = denoising_sampler_type == Sampler::Type::stratified
+                                      ? StratifiedSampler::round_down_samples_per_pixel(denoising_budget)
+                                      : denoising_budget;
+        const auto denoising_sampler_name = Sampler::sampler_type_to_string(denoising_sampler_type);
 
         if (selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr || mlt_path_integrator != nullptr) {
             // MLT chains are correlated splat sequences, so collect the
-            // statistical guide from a separate stratified camera-path pass.
+            // statistical guide from a separate camera-path pass.
             // Zero film weights leave the already rendered MLT image intact.
             printf("preparing denoising statistics (%s sampler, %d samples per pixel)\n",
-                   denoising_sampler_type.c_str(), denoising_spp);
+                   denoising_sampler_name.c_str(), denoising_spp);
             const bool match_bdpt_depth = selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr;
             auto *statistics_integrator = denoiser_allocator.create<MegakernelPathIntegrator>(
                 denoising_spp, denoising_sampler_type, integrator_parameters, integrator_base, denoiser_allocator);
@@ -1123,21 +1130,28 @@ void SceneBuilder::render() const {
             film->attach_transformed_statistics(nullptr);
         }
 
-        const auto before_path = image_path.parent_path() / (image_path.stem().string() + "-before-denoise.png");
-        film->write_to_png(before_path.string(), output_splat_scale);
+        const auto raw_path = image_path.parent_path() / (image_path.stem().string() + "-before-firefly.png");
+        film->write_to_png(raw_path.string(), output_splat_scale);
         auto *linear_rgb = denoiser_allocator.allocate<RGB>(size_t(film_resolution.x) * film_resolution.y);
         film->copy_to_linear_rgb(linear_rgb, output_splat_scale);
-        const GBufferPixel *guides = nullptr;
         printf("preparing denoising guides (normal, albedo, luminance; %s sampler, %d samples per pixel)\n",
-               denoising_sampler_type.c_str(), denoising_spp);
+               denoising_sampler_name.c_str(), denoising_spp);
         auto *guide_integrator =
             denoiser_allocator.create<GBufferIntegrator>(global_spectra, integrator_base, denoiser_allocator);
         guide_integrator->render_denoising_guides(denoising_sampler_type, denoising_spp);
         // Use the actual beauty image, including normalized light splats,
         // without tracing another radiance pass for the luminance guide.
         guide_integrator->set_luminance_guide(linear_rgb);
-        guides = guide_integrator->get_gbuffer().data();
-        const auto *denoised_rgb = statistical_denoiser->denoise(linear_rgb, guides);
+        const auto *guides = guide_integrator->get_gbuffer().data();
+        firefly::Prefilter firefly_filter(film_resolution, denoiser_allocator);
+        const auto *cleaned_rgb = firefly_filter.filter(linear_rgb, guides, transformed_statistics);
+        printf("firefly prefilter: attenuated %zu pixels\n", firefly_filter.modified_pixels());
+        // Both the luminance guide and Box-Cox moments must describe the
+        // attenuated image before StatMC computes its neighborhood weights.
+        guide_integrator->set_luminance_guide(cleaned_rgb);
+        const auto before_path = image_path.parent_path() / (image_path.stem().string() + "-before-denoise.png");
+        Film::write_linear_rgb_to_png(before_path.string(), film_resolution, cleaned_rgb);
+        const auto *denoised_rgb = statistical_denoiser->denoise(cleaned_rgb, guides);
         Film::write_linear_rgb_to_png(output_filename, film_resolution, denoised_rgb);
         if (guides) {
             GreyScaleFilm neighbors(film_resolution), weights(film_resolution);

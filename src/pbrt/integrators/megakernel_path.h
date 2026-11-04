@@ -1,18 +1,18 @@
 #pragma once
 
 #include <pbrt/base/ray.h>
+#include <pbrt/base/sampler.h>
 #include <pbrt/scene/parameter_dictionary.h>
 
 class Film;
 class GreyScaleFilm;
 class GPUMemoryAllocator;
-class Sampler;
 class Spectrum;
 struct IntegratorBase;
 
 class MegakernelPathIntegrator {
   public:
-    MegakernelPathIntegrator(int samples_per_pixel, const std::string &sampler_type,
+    MegakernelPathIntegrator(int samples_per_pixel, Sampler::Type sampler_type,
                              const ParameterDictionary &parameters, const IntegratorBase *integrator_base,
                              GPUMemoryAllocator &allocator);
 
