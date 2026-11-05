@@ -327,7 +327,8 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
         Vector3f wo = -ray.d;
         // ray split:
         // trace both reflection and refraction (rather than sampling one) for the first bounce
-        if (path_depth == 0.0 && surface_interaction.material->get_material_type() == Material::Type::dielectric) {
+        if (path_depth < RAY_SPLIT_DEPTH &&
+            surface_interaction.material->get_material_type() == Material::Type::dielectric) {
             const auto samples = bsdf.sample_dielectric_f(wo, sampler->get_2d());
             const pbrt::optional<BSDFSample> *branches[] = {&samples.reflection, &samples.transmission};
             const Real direction_pdfs[] = {samples.reflection_direction_pdf, samples.transmission_direction_pdf};

@@ -4,6 +4,7 @@
 #include <pbrt/base/sampler.h>
 #include <pbrt/euclidean_space/point2.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
+#include <pbrt/integrators/megakernel_path.h>
 
 class Film;
 class GreyScaleFilm;
@@ -24,17 +25,20 @@ struct ShapeIntersection;
 
 class WavefrontPathIntegrator {
   public:
+    static constexpr int RAY_SPLIT_DEPTH = MegakernelPathIntegrator::RAY_SPLIT_DEPTH;
     static constexpr int PATH_POOL_SIZE = 2 * 1024 * 1024;
-    static constexpr int INITIAL_RAY_POOL_SIZE = PATH_POOL_SIZE / 2;
-    static_assert(PATH_POOL_SIZE == 2 * INITIAL_RAY_POOL_SIZE, "Each camera sample needs two path slots");
+    static constexpr int RAY_NUM_PER_SAMPLE = 1 << RAY_SPLIT_DEPTH;
+    static constexpr int INITIAL_RAY_POOL_SIZE = PATH_POOL_SIZE / RAY_NUM_PER_SAMPLE;
+    static_assert(PATH_POOL_SIZE % INITIAL_RAY_POOL_SIZE == 0, "The path pool must hold complete camera sample groups");
 
     struct PathState {
         CameraSample *camera_samples = nullptr;
         CameraRay *camera_rays = nullptr;
         SampledWavelengths *lambdas = nullptr;
 
-        // One entry per camera sample pair; these survive both branches.
+        // One entry per camera sample, shared by its branches.
         SampledWavelengths *camera_lambdas = nullptr;
+        // Per-slot prefixes converted to the camera wavelength PDF before splitting.
         SampledSpectrum *camera_L = nullptr;
 
         SampledSpectrum *L = nullptr;
