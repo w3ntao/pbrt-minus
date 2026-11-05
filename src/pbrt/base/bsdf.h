@@ -42,6 +42,12 @@ class BSDF {
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
 
     PBRT_CPU_GPU
+    DielectricBSDFSample
+    sample_dielectric_f(const Vector3f &wo_render, const Point2f &u2,
+                        TransportMode mode = TransportMode::Radiance,
+                        BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
+
+    PBRT_CPU_GPU
     Real pdf(const Vector3f &woRender, const Vector3f &wiRender,
              TransportMode mode = TransportMode::Radiance,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const;

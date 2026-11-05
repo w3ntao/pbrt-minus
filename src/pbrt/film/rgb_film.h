@@ -84,6 +84,15 @@ class RGBFilm {
     RGB get_pixel_rgb(const Point2i p, Real splat_scale = 1) const;
 
   private:
+    PBRT_CPU_GPU
+    RGB clamp_sensor_rgb(RGB rgb) const {
+        const Real max_component = rgb.max_component();
+        if (max_component > max_component_value) {
+            rgb = rgb * (max_component_value / max_component);
+        }
+        return rgb;
+    }
+
     Bounds2i masked_splat_bounds(const Point2f &p_film) const;
 
     Pixel *pixels = nullptr;
@@ -96,6 +105,7 @@ class RGBFilm {
     const Filter *filter = nullptr;
 
     Real filter_integral = NAN;
+    Real max_component_value = Infinity;
 
     SquareMatrix<3> output_rgb_from_sensor_rgb;
 };

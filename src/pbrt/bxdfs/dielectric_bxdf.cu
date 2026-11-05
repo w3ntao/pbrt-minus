@@ -114,6 +114,37 @@ pbrt::optional<BSDFSample> DielectricBxDF::sample_f(Vector3f wo, Real uc, Point2
 }
 
 PBRT_CPU_GPU
+DielectricBSDFSample DielectricBxDF::sample_dielectric_f(Vector3f wo, Point2f u,
+                                                         TransportMode mode,
+                                                         BxDFReflTransFlags sample_flags) const {
+    const bool smooth = eta == 1 || mfDistrib.effectively_smooth();
+    const Real R = FrDielectric(smooth ? wo.cos_theta() : wo.dot(mfDistrib.sample_wm(wo, u)), eta);
+    const Real pr = (sample_flags & BxDFReflTransFlags::Reflection) ? R : 0;
+    const Real pt = (sample_flags & BxDFReflTransFlags::Transmission) ? 1 - R : 0;
+
+    DielectricBSDFSample result;
+    if (pr == 0 && pt == 0) {
+        return result;
+    }
+
+    // Both branches use the same u, so rough dielectric samples share a microfacet normal.
+    // A fixed uc suffices because each call enables only one branch.
+    if (pr > 0) {
+        result.reflection = sample_f(wo, 0, u, mode, BxDFReflTransFlags::Reflection);
+        if (result.reflection) {
+            result.reflection->pdf = pr / (pr + pt);
+        }
+    }
+    if (pt > 0) {
+        result.transmission = sample_f(wo, 0, u, mode, BxDFReflTransFlags::Transmission);
+        if (result.transmission) {
+            result.transmission->pdf = pt / (pr + pt);
+        }
+    }
+    return result;
+}
+
+PBRT_CPU_GPU
 SampledSpectrum DielectricBxDF::f(Vector3f wo, Vector3f wi, TransportMode mode) const {
     if (eta == 1 || mfDistrib.effectively_smooth()) {
         return SampledSpectrum(0.0);

@@ -95,8 +95,8 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
         auto &next_time_russian_roulette = path_state->next_time_russian_roulette[path_idx];
         if (depth >= next_time_russian_roulette) {
             // possibly terminate the path with Russian roulette
-            should_terminate_path |= russian_roulette(beta, &path_state->samplers[path_idx],
-                                                      &next_time_russian_roulette);
+            should_terminate_path |=
+                russian_roulette(beta, &path_state->samplers[path_idx], &next_time_russian_roulette);
         }
 
         if (path_state->in_volume[path_idx]) {
@@ -115,8 +115,8 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
-                    const Real pdf_light = base->light_sampler->pmf(light) *
-                                           light->pdf_li(*prev_interaction, ray.d, true);
+                    const Real pdf_light =
+                        base->light_sampler->pmf(light) * light->pdf_li(*prev_interaction, ray.d, true);
 
                     const Real dir_pdf = *prev_direction_pdf * multi_transmittance_pdf.average();
 
@@ -162,8 +162,7 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
         else {
             // Compute MIS weight for area light
             const auto area_light = surface_interaction.area_light;
-            const Real pdf_light =
-                base->light_sampler->pmf(area_light) * area_light->pdf_li(*prev_interaction, ray.d);
+            const Real pdf_light = base->light_sampler->pmf(area_light) * area_light->pdf_li(*prev_interaction, ray.d);
 
             const Real dir_pdf = *prev_direction_pdf * multi_transmittance_pdf.average();
 
@@ -216,8 +215,8 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
     REPORT_FATAL_ERROR();
 }
 
-__global__ void write_frame_buffer(Film *film, const FrameBuffer *frame_buffer_queue,
-                                   const int num, const Spectrum *cie_y, const firefly::CascadeView cascade) {
+__global__ void write_frame_buffer(Film *film, const FrameBuffer *frame_buffer_queue, const int num,
+                                   const Spectrum *cie_y, const firefly::CascadeView cascade) {
     const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= num) {
         return;
@@ -231,8 +230,7 @@ __global__ void write_frame_buffer(Film *film, const FrameBuffer *frame_buffer_q
     for (int idx = queue_idx; idx < num && frame_buffer_queue[idx].pixel_idx == pixel_idx; ++idx) {
         // make sure the same pixels are written by the same thread
         const auto &frame_buffer = frame_buffer_queue[idx];
-        film->add_sample(frame_buffer.pixel_idx, frame_buffer.radiance, frame_buffer.lambda,
-                         frame_buffer.weight);
+        film->add_sample(frame_buffer.pixel_idx, frame_buffer.radiance, frame_buffer.lambda, frame_buffer.weight);
 
         // Completed paths are sorted by pixel, so one thread records all samples
         // for a pixel in this buffer. Sequential buffer flushes need no atomics.
@@ -252,8 +250,7 @@ __global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues) {
 }
 
 __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_state,
-                                      WavefrontPathIntegrator::Queues *queues,
-                                      const IntegratorBase *base) {
+                                      WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base) {
     const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= queues->new_paths->counter) {
         return;
@@ -283,8 +280,7 @@ __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_s
     const auto lu = sampler->get_1d();
     path_state->lambdas[path_idx] = SampledWavelengths::sample_visible(lu);
 
-    path_state->camera_rays[path_idx] =
-        base->camera->generate_ray(path_state->camera_samples[path_idx], sampler);
+    path_state->camera_rays[path_idx] = base->camera->generate_ray(path_state->camera_samples[path_idx], sampler);
 
     path_state->pixel_indices[path_idx] = pixel_idx;
     path_state->sample_indices[path_idx] = sample_idx;
@@ -295,23 +291,22 @@ __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_s
     queues->rays->append_path(path_idx);
 }
 
-void generate_new_path(WavefrontPathIntegrator::PathState *path_state,
-                       WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base) {
+void generate_new_path(WavefrontPathIntegrator::PathState *path_state, WavefrontPathIntegrator::Queues *queues,
+                       const IntegratorBase *base) {
     if (queues->new_paths->counter <= 0) {
         return;
     }
 
-    gpu_generate_new_path<<<divide_and_ceil(queues->new_paths->counter, NUM_THREADS),
-                            NUM_THREADS>>>(path_state, queues, base);
+    gpu_generate_new_path<<<divide_and_ceil(queues->new_paths->counter, NUM_THREADS), NUM_THREADS>>>(path_state, queues,
+                                                                                                     base);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     queues->new_paths->counter = 0;
 }
 
-__global__ void
-gpu_evaluate_interface_material(const WavefrontPathIntegrator::Queues::SingleQueue *queue,
-                                const WavefrontPathIntegrator *integrator) {
+__global__ void gpu_evaluate_interface_material(const WavefrontPathIntegrator::Queues::SingleQueue *queue,
+                                                const WavefrontPathIntegrator *integrator) {
     const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= queue->counter) {
         return;
@@ -328,9 +323,8 @@ gpu_evaluate_interface_material(const WavefrontPathIntegrator::Queues::SingleQue
     integrator->queues.rays->append_path(path_idx);
 }
 
-__global__ void
-gpu_evaluate_material(const WavefrontPathIntegrator::Queues::SingleQueue *material_queue,
-                      const WavefrontPathIntegrator *integrator) {
+__global__ void gpu_evaluate_material(const WavefrontPathIntegrator::Queues::SingleQueue *material_queue,
+                                      const WavefrontPathIntegrator *integrator) {
     const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= material_queue->counter) {
         return;
@@ -346,16 +340,16 @@ gpu_evaluate_material(const WavefrontPathIntegrator::Queues::SingleQueue *materi
 
     auto &surface_interaction = path_state.shape_intersections[path_idx]->interaction;
 
-    path_state.bsdf[path_idx] = surface_interaction.get_bsdf(lambda, integrator->base->camera,
-                                                             sampler.get_samples_per_pixel());
+    path_state.bsdf[path_idx] =
+        surface_interaction.get_bsdf(lambda, integrator->base->camera, sampler.get_samples_per_pixel());
 
     integrator->sample_bsdf(path_idx, &path_state);
 
     integrator->queues.rays->append_path(path_idx);
 }
 
-__global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
-                         WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base) {
+__global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state, WavefrontPathIntegrator::Queues *queues,
+                         const IntegratorBase *base) {
     const int ray_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (ray_queue_idx >= queues->rays->counter) {
         return;
@@ -374,8 +368,7 @@ __global__ void ray_cast(WavefrontPathIntegrator::PathState *path_state,
     }
 }
 
-__global__ void volume_scatter(WavefrontPathIntegrator::PathState *path_state,
-                               WavefrontPathIntegrator::Queues *queues,
+__global__ void volume_scatter(WavefrontPathIntegrator::PathState *path_state, WavefrontPathIntegrator::Queues *queues,
                                const IntegratorBase *base) {
 
     const int volume_queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -417,8 +410,7 @@ __global__ void volume_scatter(WavefrontPathIntegrator::PathState *path_state,
     medium_interaction.wo = -ray.d;
     medium_interaction.medium = ray.medium;
 
-    SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(medium_interaction, nullptr,
-                                                                    lambda, sampler, base);
+    SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(medium_interaction, nullptr, lambda, sampler, base);
     L += beta * Ld;
 
     auto phase_sample = ray.medium->phase.sample(-ray.d, sampler->get_2d());
@@ -457,8 +449,8 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, const PathState *p
     }
 
     if (pbrt::is_non_specular(path_state->bsdf[path_idx].flags())) {
-        const SampledSpectrum Ld = MegakernelPathIntegrator::sample_Ld_volume(
-            isect, &path_state->bsdf[path_idx], lambda, sampler, base);
+        const SampledSpectrum Ld =
+            MegakernelPathIntegrator::sample_Ld_volume(isect, &path_state->bsdf[path_idx], lambda, sampler, base);
         path_state->L[path_idx] += path_state->beta[path_idx] * Ld;
     }
 
@@ -489,8 +481,7 @@ void WavefrontPathIntegrator::evaluate_interface_material() {
     }
 
     const auto blocks = divide_and_ceil(queues.interface_material->counter, MAX_THREADS_PER_BLOCKS);
-    gpu_evaluate_interface_material<<<blocks, MAX_THREADS_PER_BLOCKS>>>(queues.interface_material,
-                                                                        this);
+    gpu_evaluate_interface_material<<<blocks, MAX_THREADS_PER_BLOCKS>>>(queues.interface_material, this);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -527,12 +518,10 @@ void WavefrontPathIntegrator::PathState::reset_path(const int path_idx) {
     mis_parameters[path_idx].reset();
 }
 
-WavefrontPathIntegrator::PathState::PathState(const Point2i &_resolution,
-                                              const int _samples_per_pixel,
+WavefrontPathIntegrator::PathState::PathState(const Point2i &_resolution, const int _samples_per_pixel,
                                               const Sampler::Type sampler_type)
-    : image_resolution(_resolution), samples_per_pixel(_samples_per_pixel),
-      sampler_type(sampler_type), total_path_num(static_cast<long long int>(_samples_per_pixel) *
-                                                 image_resolution.x * image_resolution.y) {
+    : image_resolution(_resolution), samples_per_pixel(_samples_per_pixel), sampler_type(sampler_type),
+      total_path_num(static_cast<long long int>(_samples_per_pixel) * image_resolution.x * image_resolution.y) {
     global_path_counter = 0;
 }
 
@@ -587,21 +576,17 @@ WavefrontPathIntegrator::Queues::Queues(GPUMemoryAllocator &allocator) {
     }
 }
 
-WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel,
-                                                 const Sampler::Type sampler_type,
-                                                 const ParameterDictionary &parameters,
-                                                 const IntegratorBase *_base,
+WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel, const Sampler::Type sampler_type,
+                                                 const ParameterDictionary &parameters, const IntegratorBase *_base,
                                                  GPUMemoryAllocator &allocator)
-    : path_state(PathState(_base->camera->get_camera_base()->resolution, _samples_per_pixel,
-                           sampler_type)),
+    : path_state(PathState(_base->camera->get_camera_base()->resolution, _samples_per_pixel, sampler_type)),
       queues(allocator), base(_base), cie_y(parameters.global_spectra->cie_y), samples_per_pixel(_samples_per_pixel),
-      max_depth(parameters.get_integer("maxdepth", 5)),
-      regularize(parameters.get_bool("regularize", false)) {
+      max_depth(parameters.get_integer("maxdepth", 5)), regularize(parameters.get_bool("regularize", false)) {
     path_state.build_path(allocator);
 }
 
-void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask,
-                                      const std::string &output_filename, const bool preview) {
+void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename,
+                                     const bool preview) {
     printf("wavefront pathtracing: path pool size: %u\n", PATH_POOL_SIZE);
 
     const auto image_resolution = this->path_state.image_resolution;
@@ -656,8 +641,7 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask,
         if (DEBUG_MODE) {
             printf("pass: %d, ray_cast(): %d\n", pass, queues.rays->counter);
         }
-        ray_cast<<<divide_and_ceil(queues.rays->counter, NUM_THREADS), NUM_THREADS>>>(
-            &path_state, &queues, base);
+        ray_cast<<<divide_and_ceil(queues.rays->counter, NUM_THREADS), NUM_THREADS>>>(&path_state, &queues, base);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         queues.rays->counter = 0;
@@ -665,8 +649,8 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask,
         timer.stop("stage 0 ray_cast()");
 
         if (queues.volume->counter > 0) {
-            volume_scatter<<<divide_and_ceil(queues.volume->counter, NUM_THREADS), NUM_THREADS>>>(
-                &path_state, &queues, base);
+            volume_scatter<<<divide_and_ceil(queues.volume->counter, NUM_THREADS), NUM_THREADS>>>(&path_state, &queues,
+                                                                                                  base);
             CHECK_CUDA_ERROR(cudaGetLastError());
             CHECK_CUDA_ERROR(cudaDeviceSynchronize());
             queues.volume->counter = 0;
@@ -681,8 +665,7 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask,
             const auto current_sample_idx =
                 std::min<int>(path_state.global_path_counter / num_pixels, samples_per_pixel);
 
-            gl_helper.draw_frame(
-                GLHelper::assemble_title(Real(current_sample_idx) / samples_per_pixel));
+            gl_helper.draw_frame(GLHelper::assemble_title(Real(current_sample_idx) / samples_per_pixel));
         }
         timer.stop("stage 2 write_frame_buffer()");
 
@@ -690,8 +673,8 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask,
             REPORT_FATAL_ERROR();
         }
 
-        control_logic<<<divide_and_ceil(PATH_POOL_SIZE, NUM_THREADS), NUM_THREADS>>>(
-            &path_state, &queues, ping_pong_idx, base, max_depth);
+        control_logic<<<divide_and_ceil(PATH_POOL_SIZE, NUM_THREADS), NUM_THREADS>>>(&path_state, &queues,
+                                                                                     ping_pong_idx, base, max_depth);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         mutex[ping_pong_idx].unlock();
@@ -717,8 +700,7 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask,
         timer.stop("stage 4 generate_new_path()");
 
         if (DEBUG_MODE) {
-            printf("pass: %d, evaluate_interface_material(): %d\n", pass,
-                   queues.interface_material->counter);
+            printf("pass: %d, evaluate_interface_material(): %d\n", pass, queues.interface_material->counter);
         }
 
         evaluate_interface_material();

@@ -61,6 +61,32 @@ pbrt::optional<BSDFSample> BSDF::sample_f(const Vector3f &wo_render, Real u, con
 }
 
 PBRT_CPU_GPU
+DielectricBSDFSample BSDF::sample_dielectric_f(const Vector3f &wo_render, const Point2f &u2,
+                                               TransportMode mode,
+                                               BxDFReflTransFlags sample_flags) const {
+    const auto wo = render_to_local(wo_render);
+
+    if (wo.z == 0 || !(bxdf.flags() & sample_flags)) {
+        return {};
+    }
+
+    auto samples = bxdf.sample_dielectric_f(wo, u2, mode, sample_flags);
+    pbrt::optional<BSDFSample> *branches[] = {&samples.reflection, &samples.transmission};
+    for (auto *branch : branches) {
+        if (!*branch) {
+            continue;
+        }
+        auto &bs = **branch;
+        if (!bs.f.is_positive() || !(bs.pdf > 0) || bs.wi.z == 0) {
+            branch->reset();
+            continue;
+        }
+        bs.wi = local_to_render(bs.wi);
+    }
+    return samples;
+}
+
+PBRT_CPU_GPU
 Real BSDF::pdf(const Vector3f &woRender, const Vector3f &wiRender, TransportMode mode,
                BxDFReflTransFlags sampleFlags) const {
     Vector3f wo = render_to_local(woRender);

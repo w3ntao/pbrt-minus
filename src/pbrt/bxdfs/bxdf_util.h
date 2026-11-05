@@ -2,6 +2,7 @@
 
 #include <pbrt/base/spectrum.h>
 #include <pbrt/gpu/macro.h>
+#include <pbrt/util/optional.h>
 
 enum BxDFFlags {
     Unset = 0,
@@ -138,4 +139,11 @@ struct BSDFSample {
     BxDFFlags flags;
     Real eta;
     bool pdf_is_proportional;
+};
+
+struct DielectricBSDFSample {
+    // Each sample's pdf stores its branch selection probability, including for
+    // rough dielectrics; it does not include the directional sampling density.
+    pbrt::optional<BSDFSample> reflection;
+    pbrt::optional<BSDFSample> transmission;
 };

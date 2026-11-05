@@ -24,6 +24,7 @@ RGBFilm::RGBFilm(const Filter *_filter, const ParameterDictionary &parameters,
     : filter(_filter), filter_integral(_filter->get_integral()) {
     auto resolution_x = parameters.get_integer("xresolution");
     auto resolution_y = parameters.get_integer("yresolution");
+    max_component_value = parameters.get_float("maxcomponentvalue", Infinity);
 
     resolution = Point2i(resolution_x, resolution_y);
     pixel_bound = Bounds2i(Point2i(0, 0), Point2i(resolution.x, resolution.y));
@@ -94,7 +95,9 @@ void RGBFilm::add_sample(int pixel_index, const SampledSpectrum &radiance_l,
         return;
     }
 
-    auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
+    // Match pbrt-v4: clamp each sensor-space contribution before recording
+    // statistics or applying reconstruction-filter weights.
+    const auto rgb = clamp_sensor_rgb(sensor->to_sensor_rgb(radiance_l, lambda));
 
     if (transformed_statistics) {
         // radiance_l already includes the camera-ray weight. Test complete
@@ -117,15 +120,13 @@ void RGBFilm::add_sample(int pixel_index, const SampledSpectrum &radiance_l,
         printf("RGBFilm::%s(): pixel (%d): carries NAN components\n", __func__, pixel_index);
     }
 
-    // TODO: should I clamp pixel rgb?
-
     pixels[pixel_index].rgb_sum += weight * rgb;
     pixels[pixel_index].weight_sum += weight;
 }
 
 void RGBFilm::add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
                         const SampledWavelengths &lambda) {
-    auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
+    const auto rgb = clamp_sensor_rgb(sensor->to_sensor_rgb(radiance_l, lambda));
     // Compute bounds of affected pixels for splat, _splatBounds_
     Point2f pDiscrete = p_film + Vector2f(0.5, 0.5);
     Vector2f radius = filter->get_radius();
@@ -194,7 +195,7 @@ void RGBFilm::add_masked_splat(const Point2f &p_film, const SampledSpectrum &rad
     if (bounds.is_empty()) {
         return;
     }
-    const auto rgb = sensor->to_sensor_rgb(radiance_l, lambda);
+    const auto rgb = clamp_sensor_rgb(sensor->to_sensor_rgb(radiance_l, lambda));
     for (int y = bounds.p_min.y; y < bounds.p_max.y; ++y) {
         for (int x = bounds.p_min.x; x < bounds.p_max.x; ++x) {
             const int pixel_index = x + y * resolution.x;

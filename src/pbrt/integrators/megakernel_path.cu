@@ -5,6 +5,7 @@
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
+#include <pbrt/base/material.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/base/spectrum.h>
 #include <pbrt/film/firefly_cascade.h>
@@ -72,8 +73,8 @@ __global__ static void megakernel_path_render(Film *film, uint8_t *gpu_frame_buf
 }
 
 static __global__ void path_denoising_statistics(Film *film, const int samples_per_pixel, Sampler *samplers,
-                                                 const IntegratorBase *base, const int max_depth,
-                                                 const bool regularize, const bool match_bdpt_depth) {
+                                                 const IntegratorBase *base, const int max_depth, const bool regularize,
+                                                 const bool match_bdpt_depth) {
     const auto resolution = film->get_resolution();
     const int pixel_index = threadIdx.x + blockIdx.x * blockDim.x;
     if (pixel_index >= resolution.x * resolution.y) {
@@ -155,25 +156,38 @@ void MegakernelPathIntegrator::render_denoising_statistics(Film *film, const boo
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
+struct MegakernelPathIntegrator::PathContinuation {
+    SampledSpectrum beta;
+    bool specular_bounce;
+    bool any_non_specular_bounces;
+    const SurfaceInteraction *prev_interaction;
+    Real prev_direction_pdf;
+    int next_time_russian_roulette;
+};
+
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const Ray &primary_ray,
                                                              SampledWavelengths &lambda, Sampler *sampler,
                                                              const IntegratorBase *base, int max_depth, bool regularize,
-                                                             bool match_bdpt_depth) {
+                                                             bool match_bdpt_depth, Real path_depth,
+                                                             const PathContinuation *continuation) {
     SampledSpectrum L = 0;
-    SampledSpectrum beta = 1;
-    bool specular_bounce = false;
-    bool any_non_specular_bounces = false;
+    SampledSpectrum beta = continuation ? continuation->beta : SampledSpectrum(1);
+    bool specular_bounce = continuation && continuation->specular_bounce;
+    bool any_non_specular_bounces = continuation && continuation->any_non_specular_bounces;
 
     pbrt::optional<Real> prev_direction_pdf;
     pbrt::optional<SurfaceInteraction> prev_interaction;
+    if (continuation) {
+        prev_direction_pdf = continuation->prev_direction_pdf;
+        prev_interaction = *continuation->prev_interaction;
+    }
     SampledSpectrum multi_transmittance_pdf = 1;
 
-    auto next_time_russian_roulette = start_russian_roulette;
+    auto next_time_russian_roulette = continuation ? continuation->next_time_russian_roulette : start_russian_roulette;
 
     auto ray = primary_ray;
 
-    Real path_depth = 0.0;
     int consecutive_interfaces = 0;
     // Legacy depth includes fractional interface hits. Selective mode counts
     // scattering events and still traces the final segment to an emitter.
@@ -311,6 +325,52 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
         }
 
         Vector3f wo = -ray.d;
+        // ray split:
+        // trace both reflection and refraction (rather than sampling one) for the first bounce
+        if (path_depth == 0.0 && surface_interaction.material->get_material_type() == Material::Type::dielectric) {
+            const auto samples = bsdf.sample_dielectric_f(wo, sampler->get_2d());
+            const pbrt::optional<BSDFSample> *branches[] = {&samples.reflection, &samples.transmission};
+            Real deepest_path = path_depth;
+            // ray split: trace both reflection and transmission branches, if any
+            for (const auto *branch : branches) {
+                if (!*branch) {
+                    continue;
+                }
+                const auto &sample = **branch;
+                const auto flags =
+                    sample.is_reflection() ? BxDFReflTransFlags::Reflection : BxDFReflTransFlags::Transmission;
+                // Tracing both branches retains Fresnel weights in f; only
+                // the conditional direction density divides throughput.
+                const Real direction_pdf =
+                    sample.is_specular() ? 1 : bsdf.pdf(wo, sample.wi, TransportMode::Radiance, flags);
+                if (!(direction_pdf > 0)) {
+                    continue;
+                }
+                const Real cos_theta = sample.wi.abs_dot(surface_interaction.shading.n.to_vector3());
+                const PathContinuation child{
+                    beta * sample.f * cos_theta / direction_pdf,
+                    sample.is_specular(),
+                    any_non_specular_bounces || !sample.is_specular(),
+                    &surface_interaction,
+                    // Preserve the mixture PDF used by direct-light MIS.
+                    sample.is_specular() ? sample.pdf : bsdf.pdf(wo, sample.wi),
+                    next_time_russian_roulette,
+                };
+                const auto child_ray = surface_interaction.spawn_ray(sample.wi);
+                auto child_lambda = lambda;
+                Real child_depth = path_depth + 1;
+                const auto child_L = evaluate_Li_volume(&child_depth, child_ray, child_lambda, sampler, base, max_depth,
+                                                        regularize, match_bdpt_depth, path_depth + 1, &child);
+                // A later dispersive hit may terminate wavelengths on just one
+                // branch. Convert its result to the parent's wavelength PDF.
+                L += child_L * lambda.pdf_as_sampled_spectrum().safe_div(child_lambda.pdf_as_sampled_spectrum());
+                deepest_path = std::max(deepest_path, child_depth);
+            }
+            path_depth = deepest_path;
+            break;
+        }
+
+        // othwerwise: not dielectric, sample one direction and continue
         auto bs = bsdf.sample_f(wo, sampler->get_1d(), sampler->get_2d());
         if (!bs) {
             break;

@@ -41,6 +41,18 @@ class BxDF : public HIDDEN::BxDFVariants {
     }
 
     PBRT_CPU_GPU
+    DielectricBSDFSample
+    sample_dielectric_f(Vector3f wo, Point2f u, TransportMode mode = TransportMode::Radiance,
+                        BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const {
+        if (const auto *dielectric = cuda::std::get_if<DielectricBxDF>(
+                static_cast<const HIDDEN::BxDFVariants *>(this))) {
+            return dielectric->sample_dielectric_f(wo, u, mode, sample_flags);
+        }
+        REPORT_FATAL_ERROR();
+        return {};
+    }
+
+    PBRT_CPU_GPU
     Real pdf(Vector3f wo, Vector3f wi, TransportMode mode,
              BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
         return cuda::std::visit([&](auto &x) { return x.pdf(wo, wi, mode, sampleFlags); }, *this);

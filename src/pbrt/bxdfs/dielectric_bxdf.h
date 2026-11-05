@@ -27,6 +27,11 @@ class DielectricBxDF {
              BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
 
     PBRT_CPU_GPU
+    DielectricBSDFSample
+    sample_dielectric_f(Vector3f wo, Point2f u, TransportMode mode = TransportMode::Radiance,
+                        BxDFReflTransFlags sample_flags = BxDFReflTransFlags::All) const;
+
+    PBRT_CPU_GPU
     SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const;
 
     PBRT_CPU_GPU
