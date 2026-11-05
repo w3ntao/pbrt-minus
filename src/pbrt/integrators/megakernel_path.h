@@ -12,6 +12,9 @@ struct IntegratorBase;
 
 class MegakernelPathIntegrator {
   public:
+    static constexpr int RAY_SPLIT_DEPTH = 1;
+    // 0: no split, otherwise split for the first n bounces (for dielectric materials only)
+
     struct PathContinuation;
 
     MegakernelPathIntegrator(int samples_per_pixel, Sampler::Type sampler_type, const ParameterDictionary &parameters,

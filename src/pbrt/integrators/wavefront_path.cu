@@ -59,6 +59,13 @@ struct MISParameter {
     }
 };
 
+static PBRT_CPU_GPU SampledSpectrum convert_to_camera_pdf(const SampledSpectrum &value,
+                                                          const SampledWavelengths &camera_lambda,
+                                                          const SampledWavelengths &path_lambda) {
+    // A dispersive material may terminate secondary wavelengths on this path.
+    return value * camera_lambda.pdf_as_sampled_spectrum().safe_div(path_lambda.pdf_as_sampled_spectrum());
+}
+
 static __global__ void gpu_reset_path_state(WavefrontPathIntegrator::PathState *path_state) {
     const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= WavefrontPathIntegrator::PATH_POOL_SIZE) {
@@ -212,25 +219,25 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
         return;
     }
 
-    const int secondary_idx = primary_idx + WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
-    if (path_state->finished[primary_idx] && path_state->finished[secondary_idx]) {
-        return;
+    bool had_active_before = false;
+    bool all_finished_after = true;
+    for (int branch = 0; branch < WavefrontPathIntegrator::RAY_NUM_PER_SAMPLE; ++branch) {
+        const int path_idx = primary_idx + branch * WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+        had_active_before |= !path_state->finished[path_idx];
+        process_path(path_idx, path_state, queues, base, max_depth);
+        all_finished_after &= path_state->finished[path_idx];
     }
-
-    process_path(primary_idx, path_state, queues, base, max_depth);
-    process_path(secondary_idx, path_state, queues, base, max_depth);
-
-    if (!path_state->finished[primary_idx] || !path_state->finished[secondary_idx]) {
+    if (!had_active_before || !all_finished_after) {
         return;
     }
 
     const auto &lambda = path_state->camera_lambdas[primary_idx];
-    const auto camera_pdf = lambda.pdf_as_sampled_spectrum();
-    const SampledSpectrum radiance =
-        path_state->camera_L[primary_idx] +
-        path_state->L[primary_idx] * camera_pdf.safe_div(path_state->lambdas[primary_idx].pdf_as_sampled_spectrum()) +
-        path_state->L[secondary_idx] *
-            camera_pdf.safe_div(path_state->lambdas[secondary_idx].pdf_as_sampled_spectrum());
+    SampledSpectrum radiance = 0;
+    for (int branch = 0; branch < WavefrontPathIntegrator::RAY_NUM_PER_SAMPLE; ++branch) {
+        const int path_idx = primary_idx + branch * WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+        radiance += path_state->camera_L[path_idx] +
+                    convert_to_camera_pdf(path_state->L[path_idx], lambda, path_state->lambdas[path_idx]);
+    }
 
     const int queue_idx = atomicAdd(&queues->ping_pong_counter[ping_pong_idx], 1);
     queues->ping_pong_buffer[ping_pong_idx][queue_idx] = FrameBuffer{
@@ -286,7 +293,6 @@ __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_s
     }
 
     const int path_idx = queues->new_paths->queue_array[queue_idx];
-    const int secondary_idx = path_idx + WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
 
     const auto unique_path_id = atomicAdd(&path_state->global_path_counter, 1);
     if (unique_path_id >= path_state->total_path_num) {
@@ -300,10 +306,11 @@ __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_s
     const int pixel_idx = unique_path_id % (width * height);
     const int sample_idx = unique_path_id / (width * height);
 
-    path_state->reset_path(path_idx);
-    path_state->reset_path(secondary_idx);
-    path_state->finished[secondary_idx] = true;
-    path_state->camera_L[path_idx] = 0;
+    for (int branch = 0; branch < WavefrontPathIntegrator::RAY_NUM_PER_SAMPLE; ++branch) {
+        const int branch_idx = path_idx + branch * WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+        path_state->reset_path(branch_idx);
+        path_state->finished[branch_idx] = branch != 0;
+    }
 
     auto sampler = &path_state->samplers[path_idx];
 
@@ -314,7 +321,10 @@ __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_s
     path_state->camera_samples[path_idx] = sampler->get_camera_sample(p_pixel, base->filter);
     const auto lu = sampler->get_1d();
     path_state->lambdas[path_idx] = SampledWavelengths::sample_visible(lu);
-    path_state->lambdas[secondary_idx] = path_state->lambdas[path_idx];
+    for (int branch = 1; branch < WavefrontPathIntegrator::RAY_NUM_PER_SAMPLE; ++branch) {
+        const int branch_idx = path_idx + branch * WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+        path_state->lambdas[branch_idx] = path_state->lambdas[path_idx];
+    }
     path_state->camera_lambdas[path_idx] = path_state->lambdas[path_idx];
 
     path_state->camera_rays[path_idx] = base->camera->generate_ray(path_state->camera_samples[path_idx], sampler);
@@ -368,6 +378,8 @@ __global__ void gpu_evaluate_material(const WavefrontPathIntegrator::Queues::Sin
     const int path_idx = material_queue->queue_array[queue_idx];
 
     auto &lambda = path_state.lambdas[path_idx];
+    const auto lambda_before_material = lambda;
+    const bool secondary_terminated_before = lambda.SecondaryTerminated();
 
     auto &sampler = path_state.samplers[path_idx];
 
@@ -375,6 +387,15 @@ __global__ void gpu_evaluate_material(const WavefrontPathIntegrator::Queues::Sin
 
     path_state.bsdf[path_idx] =
         surface_interaction.get_bsdf(lambda, integrator->base->camera, sampler.get_samples_per_pixel());
+
+    // get_bsdf() may terminate secondary wavelengths. Settle any radiance accumulated
+    // under the previous PDF before subsequent contributions use the reduced packet.
+    if (!secondary_terminated_before && lambda.SecondaryTerminated()) {
+        const int primary_idx = path_idx % WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+        path_state.camera_L[path_idx] += convert_to_camera_pdf(
+            path_state.L[path_idx], path_state.camera_lambdas[primary_idx], lambda_before_material);
+        path_state.L[path_idx] = 0;
+    }
 
     integrator->sample_bsdf(path_idx, &path_state);
 
@@ -507,18 +528,20 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, const PathState *p
 
     // Sample BSDF to get new path direction
     const Vector3f wo = -ray.d;
-    if (path_idx < INITIAL_RAY_POOL_SIZE && path_state->depth[path_idx] == 0 &&
+    if (path_state->depth[path_idx] < RAY_SPLIT_DEPTH &&
         isect.material->get_material_type() == Material::Type::dielectric) {
         const auto samples = path_state->bsdf[path_idx].sample_dielectric_f(wo, sampler->get_2d());
 
         // Freeze the shared prefix before either branch can terminate wavelengths.
-        path_state->camera_L[path_idx] =
-            path_state->L[path_idx] *
-            path_state->camera_lambdas[path_idx].pdf_as_sampled_spectrum().safe_div(lambda.pdf_as_sampled_spectrum());
+        const int primary_idx = path_idx % INITIAL_RAY_POOL_SIZE;
+        path_state->camera_L[path_idx] +=
+            convert_to_camera_pdf(path_state->L[path_idx], path_state->camera_lambdas[primary_idx], lambda);
         path_state->L[path_idx] = 0;
 
         if (samples.reflection && samples.transmission) {
-            const int secondary_idx = path_idx + INITIAL_RAY_POOL_SIZE;
+            // Each scattering event advances depth by one; lower bits identify earlier splits.
+            const int split_level = static_cast<int>(path_state->depth[path_idx]);
+            const int secondary_idx = path_idx + INITIAL_RAY_POOL_SIZE * (1 << split_level);
             path_state->reset_path(secondary_idx);
             path_state->camera_samples[secondary_idx] = path_state->camera_samples[path_idx];
             path_state->camera_rays[secondary_idx] = path_state->camera_rays[path_idx];
@@ -595,6 +618,7 @@ void WavefrontPathIntegrator::PathState::reset_path(const int path_idx) const {
     shape_intersections[path_idx] = {};
 
     L[path_idx] = 0;
+    camera_L[path_idx] = 0;
     beta[path_idx] = 1;
     multi_transmittance_pdf[path_idx] = 1;
     in_volume[path_idx] = false;
@@ -619,7 +643,7 @@ void WavefrontPathIntegrator::PathState::build_path(GPUMemoryAllocator &allocato
     camera_rays = allocator.allocate<CameraRay>(PATH_POOL_SIZE);
     lambdas = allocator.allocate<SampledWavelengths>(PATH_POOL_SIZE);
     camera_lambdas = allocator.allocate<SampledWavelengths>(INITIAL_RAY_POOL_SIZE);
-    camera_L = allocator.allocate<SampledSpectrum>(INITIAL_RAY_POOL_SIZE);
+    camera_L = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
 
     L = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
     beta = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
@@ -688,7 +712,7 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, co
         gl_helper.init("initializing", image_resolution);
     }
 
-    // Only primary slots generate camera samples; the other half is reserved for splits.
+    // Only primary slots generate camera samples; other slots in each group are reserved for splits.
     fill_new_path_queue<<<divide_and_ceil(INITIAL_RAY_POOL_SIZE, NUM_THREADS), NUM_THREADS>>>(&queues);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());

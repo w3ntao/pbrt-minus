@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cuda/atomic>
@@ -327,7 +328,8 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
         Vector3f wo = -ray.d;
         // ray split:
         // trace both reflection and refraction (rather than sampling one) for the first bounce
-        if (path_depth == 0.0 && surface_interaction.material->get_material_type() == Material::Type::dielectric) {
+        if (path_depth < RAY_SPLIT_DEPTH &&
+            surface_interaction.material->get_material_type() == Material::Type::dielectric) {
             const auto samples = bsdf.sample_dielectric_f(wo, sampler->get_2d());
             const pbrt::optional<BSDFSample> *branches[] = {&samples.reflection, &samples.transmission};
             const Real direction_pdfs[] = {samples.reflection_direction_pdf, samples.transmission_direction_pdf};
@@ -346,8 +348,10 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                     continue;
                 }
                 const Real cos_theta = sample.wi.abs_dot(surface_interaction.shading.n.to_vector3());
+                auto child_lambda = lambda;
+                const auto child_beta = beta * sample.f * cos_theta / direction_pdf;
                 const PathContinuation child{
-                    beta * sample.f * cos_theta / direction_pdf,
+                    child_beta,
                     sample.is_specular(),
                     any_non_specular_bounces || !sample.is_specular(),
                     &surface_interaction,
@@ -356,12 +360,11 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                     next_time_russian_roulette,
                 };
                 const auto child_ray = surface_interaction.spawn_ray(sample.wi);
-                auto child_lambda = lambda;
                 Real child_depth = path_depth + 1;
                 const auto child_L = evaluate_Li_volume(&child_depth, child_ray, child_lambda, sampler, base, max_depth,
                                                         regularize, match_bdpt_depth, path_depth + 1, &child);
-                // A later dispersive hit may terminate wavelengths on just one
-                // branch. Convert its result to the parent's wavelength PDF.
+                // A dispersive hit may terminate wavelengths on just one branch.
+                // Convert its contribution back to the parent's wavelength PDF.
                 L += child_L * lambda.pdf_as_sampled_spectrum().safe_div(child_lambda.pdf_as_sampled_spectrum());
                 deepest_path = std::max(deepest_path, child_depth);
             }
