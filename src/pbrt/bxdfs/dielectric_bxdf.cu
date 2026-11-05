@@ -132,12 +132,14 @@ DielectricBSDFSample DielectricBxDF::sample_dielectric_f(Vector3f wo, Point2f u,
     if (pr > 0) {
         result.reflection = sample_f(wo, 0, u, mode, BxDFReflTransFlags::Reflection);
         if (result.reflection) {
+            result.reflection_direction_pdf = result.reflection->pdf;
             result.reflection->pdf = pr / (pr + pt);
         }
     }
     if (pt > 0) {
         result.transmission = sample_f(wo, 0, u, mode, BxDFReflTransFlags::Transmission);
         if (result.transmission) {
+            result.transmission_direction_pdf = result.transmission->pdf;
             result.transmission->pdf = pt / (pr + pt);
         }
     }

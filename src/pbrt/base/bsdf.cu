@@ -72,13 +72,16 @@ DielectricBSDFSample BSDF::sample_dielectric_f(const Vector3f &wo_render, const 
 
     auto samples = bxdf.sample_dielectric_f(wo, u2, mode, sample_flags);
     pbrt::optional<BSDFSample> *branches[] = {&samples.reflection, &samples.transmission};
-    for (auto *branch : branches) {
+    Real *direction_pdfs[] = {&samples.reflection_direction_pdf, &samples.transmission_direction_pdf};
+    for (int i = 0; i < 2; ++i) {
+        auto *branch = branches[i];
         if (!*branch) {
             continue;
         }
         auto &bs = **branch;
-        if (!bs.f.is_positive() || !(bs.pdf > 0) || bs.wi.z == 0) {
+        if (!bs.f.is_positive() || !(bs.pdf > 0) || !(*direction_pdfs[i] > 0) || bs.wi.z == 0) {
             branch->reset();
+            *direction_pdfs[i] = 0;
             continue;
         }
         bs.wi = local_to_render(bs.wi);

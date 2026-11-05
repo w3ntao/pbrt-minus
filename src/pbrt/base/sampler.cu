@@ -110,6 +110,33 @@ void Sampler::start_pixel_sample(int pixel_idx, int sample_idx, int dimension) {
 }
 
 PBRT_CPU_GPU
+void Sampler::copy_state_from(const Sampler &source) {
+    if (type != source.type || !ptr || !source.ptr) {
+        REPORT_FATAL_ERROR();
+        return;
+    }
+
+    switch (type) {
+    case Type::independent: {
+        *static_cast<IndependentSampler *>(ptr) = *static_cast<const IndependentSampler *>(source.ptr);
+        return;
+    }
+
+    case Type::stratified: {
+        *static_cast<StratifiedSampler *>(ptr) = *static_cast<const StratifiedSampler *>(source.ptr);
+        return;
+    }
+
+    case Type::mlt: {
+        REPORT_FATAL_ERROR();
+        return;
+    }
+    }
+
+    REPORT_FATAL_ERROR();
+}
+
+PBRT_CPU_GPU
 int Sampler::get_samples_per_pixel() const {
     switch (type) {
     case Type::independent: {

@@ -146,4 +146,7 @@ struct DielectricBSDFSample {
     // rough dielectrics; it does not include the directional sampling density.
     pbrt::optional<BSDFSample> reflection;
     pbrt::optional<BSDFSample> transmission;
+    // Preserve the generated density before branch selection (1 for delta events).
+    Real reflection_direction_pdf = 0;
+    Real transmission_direction_pdf = 0;
 };

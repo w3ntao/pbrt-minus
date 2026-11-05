@@ -24,12 +24,18 @@ struct ShapeIntersection;
 
 class WavefrontPathIntegrator {
   public:
-    static constexpr int PATH_POOL_SIZE = 1 * 1024 * 1024;
+    static constexpr int PATH_POOL_SIZE = 2 * 1024 * 1024;
+    static constexpr int INITIAL_RAY_POOL_SIZE = PATH_POOL_SIZE / 2;
+    static_assert(PATH_POOL_SIZE == 2 * INITIAL_RAY_POOL_SIZE, "Each camera sample needs two path slots");
 
     struct PathState {
         CameraSample *camera_samples = nullptr;
         CameraRay *camera_rays = nullptr;
         SampledWavelengths *lambdas = nullptr;
+
+        // One entry per camera sample pair; these survive both branches.
+        SampledWavelengths *camera_lambdas = nullptr;
+        SampledSpectrum *camera_L = nullptr;
 
         SampledSpectrum *L = nullptr;
         SampledSpectrum *beta = nullptr;
@@ -65,7 +71,7 @@ class WavefrontPathIntegrator {
         void build_path(GPUMemoryAllocator &allocator);
 
         PBRT_CPU_GPU
-        void reset_path(int path_idx);
+        void reset_path(int path_idx) const;
     };
 
     struct Queues {
@@ -149,7 +155,7 @@ class WavefrontPathIntegrator {
     const int max_depth = 0;
     const bool regularize = false;
 
-    PBRT_CPU_GPU
+    PBRT_GPU
     void sample_bsdf(int path_idx, const PathState *path_state) const;
 
     void evaluate_interface_material();

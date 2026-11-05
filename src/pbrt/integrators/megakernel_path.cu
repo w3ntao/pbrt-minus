@@ -330,19 +330,18 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
         if (path_depth == 0.0 && surface_interaction.material->get_material_type() == Material::Type::dielectric) {
             const auto samples = bsdf.sample_dielectric_f(wo, sampler->get_2d());
             const pbrt::optional<BSDFSample> *branches[] = {&samples.reflection, &samples.transmission};
+            const Real direction_pdfs[] = {samples.reflection_direction_pdf, samples.transmission_direction_pdf};
             Real deepest_path = path_depth;
             // ray split: trace both reflection and transmission branches, if any
-            for (const auto *branch : branches) {
+            for (int branch_index = 0; branch_index < 2; ++branch_index) {
+                const auto *branch = branches[branch_index];
                 if (!*branch) {
                     continue;
                 }
                 const auto &sample = **branch;
-                const auto flags =
-                    sample.is_reflection() ? BxDFReflTransFlags::Reflection : BxDFReflTransFlags::Transmission;
                 // Tracing both branches retains Fresnel weights in f; only
                 // the conditional direction density divides throughput.
-                const Real direction_pdf =
-                    sample.is_specular() ? 1 : bsdf.pdf(wo, sample.wi, TransportMode::Radiance, flags);
+                const Real direction_pdf = direction_pdfs[branch_index];
                 if (!(direction_pdf > 0)) {
                     continue;
                 }

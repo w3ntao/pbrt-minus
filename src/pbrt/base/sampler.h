@@ -43,6 +43,9 @@ class Sampler {
     void start_pixel_sample(int pixel_idx, int sample_idx, int dimension);
 
     PBRT_CPU_GPU
+    void copy_state_from(const Sampler &source);
+
+    PBRT_CPU_GPU
     int get_samples_per_pixel() const;
 
     PBRT_CPU_GPU

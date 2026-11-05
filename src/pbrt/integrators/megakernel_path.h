@@ -14,12 +14,10 @@ class MegakernelPathIntegrator {
   public:
     struct PathContinuation;
 
-    MegakernelPathIntegrator(int samples_per_pixel, Sampler::Type sampler_type,
-                             const ParameterDictionary &parameters, const IntegratorBase *integrator_base,
-                             GPUMemoryAllocator &allocator);
+    MegakernelPathIntegrator(int samples_per_pixel, Sampler::Type sampler_type, const ParameterDictionary &parameters,
+                             const IntegratorBase *integrator_base, GPUMemoryAllocator &allocator);
 
-    void render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename,
-                  bool preview) const;
+    void render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename, bool preview) const;
 
     // Renders independent camera paths that only update transformed Film
     // statistics. Zero reconstruction weight leaves image pixels untouched.
@@ -32,8 +30,8 @@ class MegakernelPathIntegrator {
     // The reported depth is the maximum depth of the resulting paths.
     static SampledSpectrum evaluate_Li_volume(Real *depth, const Ray &primary_ray, SampledWavelengths &lambda,
                                               Sampler *sampler, const IntegratorBase *base, int max_depth,
-                                              bool regularize, bool match_bdpt_depth = false,
-                                              Real path_depth = 0.0, const PathContinuation *continuation = nullptr);
+                                              bool regularize, bool match_bdpt_depth = false, Real path_depth = 0.0,
+                                              const PathContinuation *continuation = nullptr);
 
     PBRT_CPU_GPU
     static SampledSpectrum sample_Ld_volume(const SurfaceInteraction &surface_interaction, const BSDF *bsdf,
