@@ -117,6 +117,33 @@ class SampledWavelengths {
     }
 
     PBRT_CPU_GPU
+    void rotate_lanes(int offset) {
+        if (NSpectrumSamples <= 1) {
+            return;
+        }
+
+        offset %= NSpectrumSamples;
+        if (offset < 0) {
+            offset += NSpectrumSamples;
+        }
+        if (offset == 0) {
+            return;
+        }
+
+        Real rotated_lambda[NSpectrumSamples];
+        Real rotated_pdf[NSpectrumSamples];
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
+            const int source_idx = (idx + offset) % NSpectrumSamples;
+            rotated_lambda[idx] = lambda[source_idx];
+            rotated_pdf[idx] = pdf[source_idx];
+        }
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
+            lambda[idx] = rotated_lambda[idx];
+            pdf[idx] = rotated_pdf[idx];
+        }
+    }
+
+    PBRT_CPU_GPU
     void terminate_secondary() {
         if (SecondaryTerminated()) {
             return;

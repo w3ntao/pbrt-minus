@@ -239,6 +239,29 @@ class SampledSpectrum {
         return sum / NSpectrumSamples;
     }
 
+    PBRT_CPU_GPU
+    void rotate_lanes(int offset) {
+        if (NSpectrumSamples <= 1) {
+            return;
+        }
+
+        offset %= NSpectrumSamples;
+        if (offset < 0) {
+            offset += NSpectrumSamples;
+        }
+        if (offset == 0) {
+            return;
+        }
+
+        Real rotated_values[NSpectrumSamples];
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
+            rotated_values[idx] = values[(idx + offset) % NSpectrumSamples];
+        }
+        for (int idx = 0; idx < NSpectrumSamples; ++idx) {
+            values[idx] = rotated_values[idx];
+        }
+    }
+
     PBRT_CPU_GPU void print() const {
         printf("[ ");
         for (int i = 0; i < NSpectrumSamples; ++i) {

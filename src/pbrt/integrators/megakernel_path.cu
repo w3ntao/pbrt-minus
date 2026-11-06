@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cuda/atomic>
@@ -347,8 +348,31 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                     continue;
                 }
                 const Real cos_theta = sample.wi.abs_dot(surface_interaction.shading.n.to_vector3());
+                auto child_lambda = lambda;
+                int lane_offset = 0;
+                if (branch_index == 1 && !child_lambda.SecondaryTerminated()) {
+                    const auto parent_pdf = lambda.pdf_as_sampled_spectrum();
+                    int best_lane_distance = -1;
+                    // Put the most distant active wavelength in lane 0. For a
+                    // full packet this is floor(NSpectrumSamples / 2), with
+                    // the lower offset winning the odd-count tie.
+                    for (int candidate = 1; candidate < NSpectrumSamples; ++candidate) {
+                        if (!(parent_pdf[candidate] > 0)) {
+                            continue;
+                        }
+                        const int lane_distance = std::min(candidate, NSpectrumSamples - candidate);
+                        if (lane_distance > best_lane_distance) {
+                            lane_offset = candidate;
+                            best_lane_distance = lane_distance;
+                        }
+                    }
+                    child_lambda.rotate_lanes(lane_offset);
+                }
+
+                auto child_beta = beta * sample.f * cos_theta / direction_pdf;
+                child_beta.rotate_lanes(lane_offset);
                 const PathContinuation child{
-                    beta * sample.f * cos_theta / direction_pdf,
+                    child_beta,
                     sample.is_specular(),
                     any_non_specular_bounces || !sample.is_specular(),
                     &surface_interaction,
@@ -357,13 +381,17 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                     next_time_russian_roulette,
                 };
                 const auto child_ray = surface_interaction.spawn_ray(sample.wi);
-                auto child_lambda = lambda;
                 Real child_depth = path_depth + 1;
                 const auto child_L = evaluate_Li_volume(&child_depth, child_ray, child_lambda, sampler, base, max_depth,
                                                         regularize, match_bdpt_depth, path_depth + 1, &child);
-                // A later dispersive hit may terminate wavelengths on just one
-                // branch. Convert its result to the parent's wavelength PDF.
-                L += child_L * lambda.pdf_as_sampled_spectrum().safe_div(child_lambda.pdf_as_sampled_spectrum());
+                // Compare PDFs in the child's lane order, then map the
+                // corrected contribution back to the parent's lane order.
+                auto child_parent_pdf = lambda.pdf_as_sampled_spectrum();
+                child_parent_pdf.rotate_lanes(lane_offset);
+                auto child_contribution =
+                    child_L * child_parent_pdf.safe_div(child_lambda.pdf_as_sampled_spectrum());
+                child_contribution.rotate_lanes(-lane_offset);
+                L += child_contribution;
                 deepest_path = std::max(deepest_path, child_depth);
             }
             path_depth = deepest_path;

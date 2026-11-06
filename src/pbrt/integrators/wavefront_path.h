@@ -38,12 +38,14 @@ class WavefrontPathIntegrator {
 
         // One entry per camera sample, shared by its branches.
         SampledWavelengths *camera_lambdas = nullptr;
-        // Per-slot prefixes converted to the camera wavelength PDF before splitting.
+        // Per-slot prefixes converted to camera wavelength order and PDF.
         SampledSpectrum *camera_L = nullptr;
 
         SampledSpectrum *L = nullptr;
         SampledSpectrum *beta = nullptr;
         SampledSpectrum *multi_transmittance_pdf = nullptr;
+        // Current lane i corresponds to camera lane (i + lane_offsets[path_idx]) % NSpectrumSamples.
+        int *lane_offsets = nullptr;
         bool *in_volume = nullptr;
 
         pbrt::optional<ShapeIntersection> *shape_intersections = nullptr;

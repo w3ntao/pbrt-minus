@@ -59,6 +59,55 @@ struct MISParameter {
     }
 };
 
+static PBRT_CPU_GPU SampledSpectrum map_path_spectrum_to_camera_lanes(const SampledSpectrum &value,
+                                                                      const SampledWavelengths &camera_lambda,
+                                                                      const SampledWavelengths &path_lambda,
+                                                                      const int lane_offset) {
+    auto camera_pdf_in_path_order = camera_lambda.pdf_as_sampled_spectrum();
+    camera_pdf_in_path_order.rotate_lanes(lane_offset);
+
+    auto camera_order_value = value * camera_pdf_in_path_order.safe_div(path_lambda.pdf_as_sampled_spectrum());
+    camera_order_value.rotate_lanes(-lane_offset);
+    return camera_order_value;
+}
+
+static PBRT_CPU_GPU int choose_transmission_lane_offset(const SampledWavelengths &lambda) {
+    if (NSpectrumSamples <= 1 || lambda.SecondaryTerminated()) {
+        return 0;
+    }
+
+    const auto pdf = lambda.pdf_as_sampled_spectrum();
+    int lane_offset = 0;
+    int best_lane_distance = -1;
+    // Move the most distant active wavelength to lane 0. For odd sample counts,
+    // scanning upward and keeping the first maximum selects the lower offset.
+    for (int candidate = 1; candidate < NSpectrumSamples; ++candidate) {
+        if (!(pdf[candidate] > 0)) {
+            continue;
+        }
+        const int lane_distance = std::min(candidate, NSpectrumSamples - candidate);
+        if (lane_distance > best_lane_distance) {
+            lane_offset = candidate;
+            best_lane_distance = lane_distance;
+        }
+    }
+    return lane_offset;
+}
+
+static PBRT_GPU void rotate_transmission_path(const int path_idx,
+                                               const WavefrontPathIntegrator::PathState *path_state) {
+    auto &lambda = path_state->lambdas[path_idx];
+    const int lane_offset = choose_transmission_lane_offset(lambda);
+    if (lane_offset == 0) {
+        return;
+    }
+
+    lambda.rotate_lanes(lane_offset);
+    path_state->beta[path_idx].rotate_lanes(lane_offset);
+    path_state->lane_offsets[path_idx] =
+        (path_state->lane_offsets[path_idx] + lane_offset) % NSpectrumSamples;
+}
+
 static __global__ void gpu_reset_path_state(WavefrontPathIntegrator::PathState *path_state) {
     const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (worker_idx >= WavefrontPathIntegrator::PATH_POOL_SIZE) {
@@ -225,13 +274,13 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
     }
 
     const auto &lambda = path_state->camera_lambdas[primary_idx];
-    const auto camera_pdf = lambda.pdf_as_sampled_spectrum();
     SampledSpectrum radiance = 0;
     for (int branch = 0; branch < WavefrontPathIntegrator::RAY_NUM_PER_SAMPLE; ++branch) {
         const int path_idx = primary_idx + branch * WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
-        radiance +=
-            path_state->camera_L[path_idx] +
-            path_state->L[path_idx] * camera_pdf.safe_div(path_state->lambdas[path_idx].pdf_as_sampled_spectrum());
+        radiance += path_state->camera_L[path_idx] +
+                    map_path_spectrum_to_camera_lanes(path_state->L[path_idx], lambda,
+                                                       path_state->lambdas[path_idx],
+                                                       path_state->lane_offsets[path_idx]);
     }
 
     const int queue_idx = atomicAdd(&queues->ping_pong_counter[ping_pong_idx], 1);
@@ -373,6 +422,8 @@ __global__ void gpu_evaluate_material(const WavefrontPathIntegrator::Queues::Sin
     const int path_idx = material_queue->queue_array[queue_idx];
 
     auto &lambda = path_state.lambdas[path_idx];
+    const auto lambda_before_material = lambda;
+    const bool secondary_terminated_before = lambda.SecondaryTerminated();
 
     auto &sampler = path_state.samplers[path_idx];
 
@@ -380,6 +431,16 @@ __global__ void gpu_evaluate_material(const WavefrontPathIntegrator::Queues::Sin
 
     path_state.bsdf[path_idx] =
         surface_interaction.get_bsdf(lambda, integrator->base->camera, sampler.get_samples_per_pixel());
+
+    // get_bsdf() may terminate secondary wavelengths. Settle any radiance accumulated
+    // under the previous PDF before subsequent contributions use the reduced packet.
+    if (!secondary_terminated_before && lambda.SecondaryTerminated()) {
+        const int primary_idx = path_idx % WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+        path_state.camera_L[path_idx] += map_path_spectrum_to_camera_lanes(
+            path_state.L[path_idx], path_state.camera_lambdas[primary_idx], lambda_before_material,
+            path_state.lane_offsets[path_idx]);
+        path_state.L[path_idx] = 0;
+    }
 
     integrator->sample_bsdf(path_idx, &path_state);
 
@@ -518,9 +579,9 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, const PathState *p
 
         // Freeze the shared prefix before either branch can terminate wavelengths.
         const int primary_idx = path_idx % INITIAL_RAY_POOL_SIZE;
-        path_state->camera_L[path_idx] +=
-            path_state->L[path_idx] * path_state->camera_lambdas[primary_idx].pdf_as_sampled_spectrum().safe_div(
-                                          lambda.pdf_as_sampled_spectrum());
+        path_state->camera_L[path_idx] += map_path_spectrum_to_camera_lanes(
+            path_state->L[path_idx], path_state->camera_lambdas[primary_idx], lambda,
+            path_state->lane_offsets[path_idx]);
         path_state->L[path_idx] = 0;
 
         if (samples.reflection && samples.transmission) {
@@ -532,6 +593,7 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, const PathState *p
             path_state->camera_rays[secondary_idx] = path_state->camera_rays[path_idx];
             path_state->lambdas[secondary_idx] = lambda;
             path_state->beta[secondary_idx] = path_state->beta[path_idx];
+            path_state->lane_offsets[secondary_idx] = path_state->lane_offsets[path_idx];
             path_state->depth[secondary_idx] = path_state->depth[path_idx] + 1;
             path_state->next_time_russian_roulette[secondary_idx] = path_state->next_time_russian_roulette[path_idx];
             path_state->mis_parameters[secondary_idx] = path_state->mis_parameters[path_idx];
@@ -542,6 +604,7 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, const PathState *p
             const auto &sample = *samples.transmission;
             const Real mis_pdf = sample.is_specular() ? sample.pdf : path_state->bsdf[path_idx].pdf(wo, sample.wi);
             apply_bsdf_sample(secondary_idx, sample, samples.transmission_direction_pdf, mis_pdf, isect, path_state);
+            rotate_transmission_path(secondary_idx, path_state);
             queues.rays->append_path(secondary_idx);
         }
 
@@ -606,6 +669,7 @@ void WavefrontPathIntegrator::PathState::reset_path(const int path_idx) const {
     camera_L[path_idx] = 0;
     beta[path_idx] = 1;
     multi_transmittance_pdf[path_idx] = 1;
+    lane_offsets[path_idx] = 0;
     in_volume[path_idx] = false;
     depth[path_idx] = 0;
     next_time_russian_roulette[path_idx] = start_russian_roulette;
@@ -633,6 +697,7 @@ void WavefrontPathIntegrator::PathState::build_path(GPUMemoryAllocator &allocato
     L = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
     beta = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
     multi_transmittance_pdf = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
+    lane_offsets = allocator.allocate<int>(PATH_POOL_SIZE);
     shape_intersections = allocator.allocate<pbrt::optional<ShapeIntersection>>(PATH_POOL_SIZE);
     in_volume = allocator.allocate<bool>(PATH_POOL_SIZE);
 
