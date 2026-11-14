@@ -53,13 +53,60 @@ class ProgressReporter {
   private:
     std::thread progress_thread;
 
-    static void print_progress(const double percentage, const double remaining, const double elapsed) {
-        if (percentage <= 0) {
-            std::printf("\r");
-        } else {
-            const auto space = std::string(30, ' ');
-            std::printf("\rrendering: %5.1f%%  #  %4.1f s | %4.1f s%s", percentage, elapsed, remaining, space.c_str());
+    static std::string text_remaining_time(const double remaining) {
+        const int total_seconds = static_cast<int>(remaining);
+        const int minutes = total_seconds / 60;
+        const int hours = minutes / 60;
+
+        const int max_hours = 10;
+
+        if (hours >= max_hours) {
+            return " > " + std::to_string(max_hours) + "h";
         }
+
+        if (hours > 0) {
+            return std::to_string(hours) + "h " + std::to_string(minutes % 60) + "m";
+        }
+
+        if (minutes >= 5) {
+            return std::to_string(minutes) + "m";
+        }
+
+        const int seconds = total_seconds % 60;
+
+        const std::string text = (seconds >= 10 ? "" : " ") + std::to_string(seconds) + "s";
+
+        if (minutes > 0) {
+            return std::to_string(minutes) + "m " + text;
+        }
+
+        return text;
+    }
+
+    static std::string text_elapsed_time(const double elapsed) {
+        const int total_seconds = static_cast<int>(elapsed);
+        const int minutes = total_seconds / 60;
+        const int hours = minutes / 60;
+        const int seconds = total_seconds % 60;
+
+        std::string text = (seconds >= 10 ? "" : " ") + std::to_string(seconds) + "s";
+
+        if (minutes > 0) {
+            text = std::to_string(minutes % 60) + "m " + text;
+        }
+
+        if (hours > 0) {
+            text = std::to_string(hours) + "h " + text;
+        }
+
+        return text;
+    }
+
+    static void print_progress(const double percentage, const double remaining, const double elapsed) {
+        const auto space = std::string(10, ' ');
+
+        std::printf("\rrendering: %5.1f%%  #  %s | %s %s", percentage, text_elapsed_time(elapsed).c_str(),
+                    text_remaining_time(remaining).c_str(), space.c_str());
 
         if (percentage >= 100) {
             std::printf("\n");

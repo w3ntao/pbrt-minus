@@ -36,8 +36,7 @@ std::string Sampler::sampler_type_to_string(const Type sampler_type) {
 }
 
 template <typename TypeOfSampler>
-static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers,
-                                     int samples_per_pixel, int size) {
+static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers, int samples_per_pixel, int size) {
     const int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= size) {
         return;
@@ -46,8 +45,7 @@ static __global__ void init_samplers(Sampler *samplers, TypeOfSampler *_samplers
     samplers[idx] = Sampler(&_samplers[idx]);
 }
 
-Sampler *Sampler::create_samplers(const Type sampler_type,
-                                  const int samples_per_pixel, const int size,
+Sampler *Sampler::create_samplers(const Type sampler_type, const int samples_per_pixel, const int size,
                                   GPUMemoryAllocator &allocator) {
     const int blocks = divide_and_ceil(size, MAX_THREADS_PER_BLOCKS);
 
@@ -55,8 +53,7 @@ Sampler *Sampler::create_samplers(const Type sampler_type,
 
     if (sampler_type == Type::independent) {
         auto independent_samplers = allocator.allocate<IndependentSampler>(size);
-        init_samplers<<<blocks, MAX_THREADS_PER_BLOCKS>>>(samplers, independent_samplers,
-                                                          samples_per_pixel, size);
+        init_samplers<<<blocks, MAX_THREADS_PER_BLOCKS>>>(samplers, independent_samplers, samples_per_pixel, size);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -65,8 +62,7 @@ Sampler *Sampler::create_samplers(const Type sampler_type,
 
     if (sampler_type == Type::stratified) {
         auto stratified_samplers = allocator.allocate<StratifiedSampler>(size);
-        init_samplers<<<blocks, MAX_THREADS_PER_BLOCKS>>>(samplers, stratified_samplers,
-                                                          samples_per_pixel, size);
+        init_samplers<<<blocks, MAX_THREADS_PER_BLOCKS>>>(samplers, stratified_samplers, samples_per_pixel, size);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -89,8 +85,7 @@ PBRT_CPU_GPU
 void Sampler::start_pixel_sample(int pixel_idx, int sample_idx, int dimension) {
     switch (type) {
     case Type::independent: {
-        static_cast<IndependentSampler *>(ptr)->start_pixel_sample(pixel_idx, sample_idx,
-                                                                   dimension);
+        static_cast<IndependentSampler *>(ptr)->start_pixel_sample(pixel_idx, sample_idx, dimension);
         return;
     }
 

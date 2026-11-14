@@ -6,7 +6,6 @@
 #include <pbrt/base/film.h>
 #include <pbrt/base/filter.h>
 #include <pbrt/base/float_texture.h>
-#include <pbrt/base/gbuffer_integrator.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/material.h>
 #include <pbrt/base/primitive.h>
@@ -14,8 +13,9 @@
 #include <pbrt/base/spectrum_texture.h>
 #include <pbrt/film/firefly_filter.h>
 #include <pbrt/film/grey_scale_film.h>
-#include <pbrt/film/statistical_denoiser.h>
+#include <pbrt/film/luminance.h>
 #include <pbrt/integrators/bdpt.h>
+#include <pbrt/integrators/gbuffer.h>
 #include <pbrt/integrators/megakernel_path.h>
 #include <pbrt/integrators/mlt_bdpt.h>
 #include <pbrt/integrators/mlt_path.h>
@@ -27,6 +27,7 @@
 #include <pbrt/samplers/stratified.h>
 #include <pbrt/scene/scene_builder.h>
 #include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/spectrum_util/rgb_color_space.h>
 #include <pbrt/spectrum_util/spectrum_constants_glass.h>
 #include <pbrt/spectrum_util/spectrum_constants_metal.h>
 #include <pbrt/util/std_container.h>
@@ -285,7 +286,7 @@ void SceneBuilder::build_integrator() {
     }
 
     if (integrator_name == "gbuffer") {
-        gbuffer_integrator = allocator.create<GBufferIntegrator>(parameters, integrator_base, allocator);
+        gbuffer_integrator = allocator.create<GBufferIntegrator>(parameters.global_spectra, integrator_base, allocator);
 
         return;
     }
@@ -1004,16 +1005,22 @@ void SceneBuilder::render() const {
         REPORT_FATAL_ERROR();
     }
 
-    GPUMemoryAllocator denoiser_allocator;
-    std::unique_ptr<statmc::Denoiser> statistical_denoiser;
-    statmc::TransformedStatistics *transformed_statistics = nullptr;
-    const bool radiance_integrator = selective_mlt_integrator != nullptr || bdpt_integrator != nullptr ||
-                                     mlt_bdpt_integrator != nullptr || mlt_path_integrator != nullptr ||
-                                     wavefront_path_integrator != nullptr || megakernel_path_integrator != nullptr;
-    if (radiance_integrator) {
-        statistical_denoiser = std::make_unique<statmc::Denoiser>(film_resolution, denoiser_allocator);
-        transformed_statistics = statistical_denoiser->transformed_statistics();
+    if (gbuffer_integrator != nullptr) {
+        std::cout << " (base samples per pixel: " << spp << ") with G-buffer\n" << std::flush;
+
+        gbuffer_integrator->render(spp);
+        gbuffer_integrator->write_images(output_filename);
+
+        const std::chrono::duration<Real> duration{std::chrono::system_clock::now() - start};
+        std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count() << " sec\n"
+                  << std::flush;
+        printf("GPU memory used: %s\n", allocator.get_allocated_memory_size().c_str());
+        return;
     }
+
+    GPUMemoryAllocator denoiser_allocator;
+    statmc::Denoiser statistical_denoiser(film_resolution, denoiser_allocator);
+    auto *transformed_statistics = statistical_denoiser.transformed_statistics();
 
     if (megakernel_path_integrator != nullptr || wavefront_path_integrator != nullptr) {
         // These two renderers emit ordinary per-pixel camera samples directly
@@ -1024,20 +1031,13 @@ void SceneBuilder::render() const {
 
     Real output_splat_scale = 1;
 
-    if (gbuffer_integrator != nullptr) {
-        std::cout << " (samples per pixel: " << spp << ") with G-buffer\n" << std::flush;
-
-        gbuffer_integrator->render(sampler_type, samples_per_pixel.value());
-        gbuffer_integrator->write_images(output_filename);
-
-    } else if (selective_mlt_integrator != nullptr) {
+    if (selective_mlt_integrator != nullptr) {
         std::cout << " (production PT samples per pixel: " << spp << ") with selective MLT\n" << std::flush;
         GreyScaleFilm firefly_mask(film_resolution);
         GreyScaleFilm sampling_density(film_resolution);
         const auto splat_scale =
             selective_mlt_integrator->render(film, firefly_mask, sampling_density, output_filename);
         output_splat_scale = splat_scale;
-        film->write_to_png(output_filename, splat_scale);
         sampling_density.write_to_png(density_path.string());
 
     } else if (bdpt_integrator != nullptr) {
@@ -1049,8 +1049,6 @@ void SceneBuilder::render() const {
 
         bdpt_integrator->render(film, spp, transformed_statistics);
 
-        film->write_to_png(output_filename, output_splat_scale);
-
     } else if (mlt_bdpt_integrator != nullptr) {
         std::cout << " (mutations per pixel: " << spp << ")"
                   << " with MLT-BDPT\n"
@@ -1060,7 +1058,6 @@ void SceneBuilder::render() const {
         const auto brightness = mlt_bdpt_integrator->render(film, sampling_density, spp);
 
         output_splat_scale = Real(brightness / spp);
-        film->write_to_png(output_filename, output_splat_scale);
 
         sampling_density.write_to_png(density_path.string());
 
@@ -1073,7 +1070,6 @@ void SceneBuilder::render() const {
         const auto brightness = mlt_path_integrator->render(film, sampling_density);
 
         output_splat_scale = Real(brightness / spp);
-        film->write_to_png(output_filename, output_splat_scale);
 
         sampling_density.write_to_png(density_path.string());
 
@@ -1103,78 +1099,88 @@ void SceneBuilder::render() const {
         REPORT_FATAL_ERROR();
     }
 
-    if (statistical_denoiser) {
-        const auto denoise_start = std::chrono::steady_clock::now();
-        film->attach_statistics(nullptr);
-        film->attach_transformed_statistics(nullptr);
+    const auto denoise_start = std::chrono::steady_clock::now();
+    film->attach_statistics(nullptr);
+    film->attach_transformed_statistics(nullptr);
 
-        const int denoising_budget = std::clamp(spp / 4, 1, 64);
-        const auto denoising_sampler_type = Sampler::default_sampler_type;
+    // Collect mean path depth and supplement StatMC moments with independent
+    // camera paths. Zero reconstruction weights leave the main image intact.
+    const int statistics_budget = std::clamp(spp / 4, 4, 64);
+    const auto statistics_sampler_type = Sampler::default_sampler_type;
+    const int statistics_spp = statistics_sampler_type == Sampler::Type::stratified
+                                   ? StratifiedSampler::round_down_samples_per_pixel(statistics_budget)
+                                   : statistics_budget;
+    const auto statistics_sampler_name = Sampler::sampler_type_to_string(statistics_sampler_type);
+    printf("preparing denoising statistics (%s sampler, %d samples per pixel)\n", statistics_sampler_name.c_str(),
+           statistics_spp);
+    const bool match_bdpt_depth = selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr;
+    const auto num_pixels = size_t(film_resolution.x) * film_resolution.y;
+    auto *path_depths = denoiser_allocator.allocate<Real>(num_pixels);
+    auto *statistics_integrator = denoiser_allocator.create<MegakernelPathIntegrator>(
+        statistics_spp, statistics_sampler_type, integrator_parameters, integrator_base, denoiser_allocator);
+    film->attach_transformed_statistics(transformed_statistics);
+    statistics_integrator->render_denoising_statistics(film, path_depths, match_bdpt_depth);
+    film->attach_transformed_statistics(nullptr);
 
-        const int denoising_spp = denoising_sampler_type == Sampler::Type::stratified
-                                      ? StratifiedSampler::round_down_samples_per_pixel(denoising_budget)
-                                      : denoising_budget;
-        const auto denoising_sampler_name = Sampler::sampler_type_to_string(denoising_sampler_type);
-
-        if (selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr || mlt_path_integrator != nullptr) {
-            // MLT chains are correlated splat sequences, so collect the
-            // statistical guide from a separate camera-path pass.
-            // Zero film weights leave the already rendered MLT image intact.
-            printf("preparing denoising statistics (%s sampler, %d samples per pixel)\n",
-                   denoising_sampler_name.c_str(), denoising_spp);
-            const bool match_bdpt_depth = selective_mlt_integrator != nullptr || mlt_bdpt_integrator != nullptr;
-            auto *statistics_integrator = denoiser_allocator.create<MegakernelPathIntegrator>(
-                denoising_spp, denoising_sampler_type, integrator_parameters, integrator_base, denoiser_allocator);
-            film->attach_transformed_statistics(transformed_statistics);
-            statistics_integrator->render_denoising_statistics(film, match_bdpt_depth);
-            film->attach_transformed_statistics(nullptr);
-        }
-
-        const auto raw_path = image_path.parent_path() / (image_path.stem().string() + "-before-firefly.png");
-        film->write_to_png(raw_path.string(), output_splat_scale);
-        auto *linear_rgb = denoiser_allocator.allocate<RGB>(size_t(film_resolution.x) * film_resolution.y);
-        film->copy_to_linear_rgb(linear_rgb, output_splat_scale);
-        printf("preparing denoising guides (normal, albedo, luminance; %s sampler, %d samples per pixel)\n",
-               denoising_sampler_name.c_str(), denoising_spp);
-        auto *guide_integrator =
-            denoiser_allocator.create<GBufferIntegrator>(global_spectra, integrator_base, denoiser_allocator);
-        guide_integrator->render_denoising_guides(denoising_sampler_type, denoising_spp);
-        // Use the actual beauty image, including normalized light splats,
-        // without tracing another radiance pass for the luminance guide.
-        guide_integrator->set_luminance_guide(linear_rgb);
-        const auto *guides = guide_integrator->get_gbuffer().data();
-        firefly::Prefilter firefly_filter(film_resolution, denoiser_allocator);
-        const auto *cleaned_rgb = firefly_filter.filter(linear_rgb, guides, transformed_statistics);
-        printf("firefly prefilter: attenuated %zu pixels\n", firefly_filter.modified_pixels());
-        // Both the luminance guide and Box-Cox moments must describe the
-        // attenuated image before StatMC computes its neighborhood weights.
-        guide_integrator->set_luminance_guide(cleaned_rgb);
-        const auto before_path = image_path.parent_path() / (image_path.stem().string() + "-before-denoise.png");
-        Film::write_linear_rgb_to_png(before_path.string(), film_resolution, cleaned_rgb);
-        const auto *denoised_rgb = statistical_denoiser->denoise(cleaned_rgb, guides);
-        Film::write_linear_rgb_to_png(output_filename, film_resolution, denoised_rgb);
-        if (guides) {
-            GreyScaleFilm neighbors(film_resolution), weights(film_resolution);
-            for (int index = 0; index < film_resolution.x * film_resolution.y; ++index) {
-                const Point2i pixel(index % film_resolution.x, index / film_resolution.x);
-                neighbors.add_sample(pixel, Real(statistical_denoiser->accepted_neighbors()[index]));
-                weights.add_sample(pixel, statistical_denoiser->weight_sums()[index]);
-            }
-            const auto prefix = image_path.parent_path() / image_path.stem();
-            neighbors.write_to_png(prefix.string() + "-denoise-neighbors.png", true);
-            weights.write_to_png(prefix.string() + "-denoise-weights.png", true);
-        }
-        const std::chrono::duration<double, std::milli> denoise_duration =
-            std::chrono::steady_clock::now() - denoise_start;
-        printf("statistical denoising took %.1f sec\n", denoise_duration.count() / 1000.0);
-        printf("image saved to `%s`\n", output_filename.c_str());
+    GreyScaleFilm path_depth_film(film_resolution);
+    for (int index = 0; index < film_resolution.x * film_resolution.y; ++index) {
+        const Point2i pixel(index % film_resolution.x, index / film_resolution.x);
+        path_depth_film.add_sample(pixel, path_depths[index]);
     }
+    const auto path_depth_path = image_path.parent_path() / (image_path.stem().string() + "-path-depth.png");
+    path_depth_film.write_to_png(path_depth_path.string());
+    printf("mean path depth saved to `%s`\n", path_depth_path.c_str());
+
+    const auto before_firefly_path = image_path.parent_path() / (image_path.stem().string() + "-before-firefly.png");
+    const auto before_denoise_path = image_path.parent_path() / (image_path.stem().string() + "-before-denoise.png");
+    auto *linear_rgb = denoiser_allocator.allocate<RGB>(num_pixels);
+    auto *luminance = denoiser_allocator.allocate<Real>(num_pixels);
+    const auto &xyz_from_rgb = global_spectra->rgb_color_space->xyz_from_rgb;
+    // Derive Y from the resolved HDR image so firefly detection sees the same
+    // camera samples, reconstruction, and normalized splats as its RGB input.
+    film->copy_to_linear_rgb(linear_rgb, luminance, xyz_from_rgb, output_splat_scale);
+
+    printf("preparing denoising G-buffer (%d samples per pixel)\n", statistics_spp);
+    auto *guide_integrator = denoiser_allocator.create<GBufferIntegrator>(integrator_parameters.global_spectra,
+                                                                          integrator_base, denoiser_allocator);
+    guide_integrator->render(statistics_spp);
+    const auto *guides = guide_integrator->get_gbuffer().data();
+    firefly::Prefilter firefly_filter(film_resolution, denoiser_allocator);
+    const auto *cleaned_rgb = firefly_filter.filter(linear_rgb, guides, luminance, transformed_statistics);
+    printf("firefly prefilter: attenuated %.1f%% pixels\n",
+           100.0 * firefly_filter.modified_pixels() / (film_resolution.x * film_resolution.y));
+    firefly_filter.apply_scales_to_luminance(luminance);
+    // The GPU has finished reading the original image. Write it now so
+    // PNG encoding does not migrate it to the CPU before firefly filtering.
+    Film::write_linear_rgb_to_png(before_firefly_path.string(), film_resolution, linear_rgb);
+    Film::write_linear_rgb_to_png(before_denoise_path.string(), film_resolution, cleaned_rgb);
+    const auto *denoised_rgb = statistical_denoiser.denoise(cleaned_rgb, guides, luminance);
+    Film::write_linear_rgb_to_png(output_filename, film_resolution, denoised_rgb);
+    // Export the luminance used by StatMC after its GPU reads are finished.
+    write_luminance_diagnostics(output_filename, film_resolution, luminance);
+
+    GreyScaleFilm neighbors(film_resolution), weights(film_resolution);
+    for (int index = 0; index < film_resolution.x * film_resolution.y; ++index) {
+        const Point2i pixel(index % film_resolution.x, index / film_resolution.x);
+        neighbors.add_sample(pixel, Real(statistical_denoiser.accepted_neighbors()[index]));
+        weights.add_sample(pixel, statistical_denoiser.weight_sums()[index]);
+    }
+    const auto prefix = image_path.parent_path() / image_path.stem();
+    const auto albedo_path = prefix.string() + "-albedo.png";
+    guide_integrator->get_gbuffer().write_to_png(albedo_path, GBufferChannel::Albedo);
+    printf("denoising albedo saved to `%s`\n", albedo_path.c_str());
+    neighbors.write_to_png(prefix.string() + "-denoise-neighbors.png", true);
+    weights.write_to_png(prefix.string() + "-denoise-weights.png", true);
+
+    const std::chrono::duration<double, std::milli> denoise_duration = std::chrono::steady_clock::now() - denoise_start;
+    printf("statistical denoising took %.1f sec\n", denoise_duration.count() / 1000.0);
+    printf("image saved to `%s`\n", output_filename.c_str());
 
     const std::chrono::duration<Real> duration{std::chrono::system_clock::now() - start};
 
-    std::cout << std::fixed << std::setprecision(1) << "rendering took " << duration.count() << " sec\n" << std::flush;
+    printf("rendering took %.1f sec\n", duration.count());
 
     printf("GPU memory used: %s\n", allocator.get_allocated_memory_size().c_str());
 
-    std::cout << "image saved to `" << output_filename << "`\n";
+    printf("image saved to `%s`\n", output_filename.c_str());
 }

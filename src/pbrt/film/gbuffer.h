@@ -13,10 +13,6 @@ struct GBufferPixel {
     RGB albedo{0};
     Real depth = Infinity;
     Real coverage = 0;
-    // Linear scene luminance and its maximum absolute 3x3 neighborhood
-    // difference, populated from a rendered radiance image when available.
-    Real luminance = NAN;
-    Real luminance_difference = NAN;
 };
 
 enum class GBufferChannel {
@@ -24,8 +20,6 @@ enum class GBufferChannel {
     SurfaceNormal,
     Albedo,
     Depth,
-    Luminance,
-    LuminanceDifference,
 };
 
 class GBuffer {

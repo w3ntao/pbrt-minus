@@ -7,7 +7,10 @@ description: 用中文理解和导航 pbrt-minus CUDA 光谱渲染器，说明�
 
 ## 维护元规则
 
+- 遇到任何有歧义的问题时，不得自行假定用户意图或盲目执行；先明确歧义、提出处理方案并与用户确认，获得确认后再继续执行相关操作。
 - 修改代码前先评估与已有架构的适配性，尽量遵循现有架构、模块职责和接口约定；若无法匹配已有架构，或匹配后会造成明显不合理的设计，则不进行相关代码修改，并向用户说明原因。
+- 每次编辑代码后，必须对修改过的代码运行 `clang-format`；优先使用 VS Code 配置或扩展自带的 `clang-format`，不可用时再使用系统安装的版本，并遵循工程现有的 `.clang-format` 配置。
+- 编译时（包括 `make` 和 `cmake --build`）必须显式指定并行任务数，按 `max(4, CPU 核数 / 2 向下取整)` 设置，CPU 核数以 `nproc` 返回的可用逻辑 CPU 数为准。
 - 回答用户问题时（尤其是论文相关问题），默认以 pbrt-minus 作为用户的知识边界，从本工程已有的概念和实现出发解释；超出此边界的术语、背景或算法，先补充必要的前置知识，再建立联系。用户明确说明其知识背景时，以该说明为准。
 - 解释时尽量以 pbrt-minus/pbrt-v4 的相关代码为基础，优先引用 pbrt-minus 中已核实的文件、类或函数；解读论文时，将关键概念、公式符号和算法步骤对应到具体实现。借助 pbrt-v4 补充或只能类比时，明确说明与本工程实现的差异；没有对应实现时如实指出，不暗示工程已支持。
 - Skill 只记录工程结构、模块职责、关键语义和代码定位，不记录具体算法的数值参数（如采样数量、滤波半径、标准差、阈值或距离比例）；需要这些数值时读取当前源码。
@@ -40,7 +43,7 @@ description: 用中文理解和导航 pbrt-minus CUDA 光谱渲染器，说明�
 
 ```bash
 cmake -S . -B build
-cmake --build build -j
+cmake --build build -j 10
 ./build/pbrt-minus ./example/cornell-box-specular.pbrt --spp 16 --preview
 ```
 
@@ -74,7 +77,7 @@ src/pbrt/main.cu::main
 |---|---|
 | `scene/` | 命令行、分词、参数字典、场景状态与对象构建；全局调度中心是 `SceneBuilder`。 |
 | `base/` | Camera、Film、Filter、Material、BxDF、Shape、Primitive、Light、Sampler、Spectrum、Texture 等统一接口、工厂和类型分发；也包含 Ray、Interaction、BSDF 和积分器共享上下文。 |
-| `integrators/` | 路径追踪、BDPT 和 MLT；G-buffer 诊断属性由 `base/gbuffer_integrator.*` 统一计算。 |
+| `integrators/` | 路径追踪、BDPT、MLT 和 G-buffer 诊断属性；后者由 `gbuffer.*` 统一计算。 |
 | `accelerator/` | 自实现 HLBVH：构建层次包围盒，提供详细求交和快速遮挡测试。 |
 | `gpu/` | 统一内存分配与释放、CPU/GPU 函数标记、浮点精度和 CUDA 错误检查。 |
 | `shapes/`、`primitives/` | Shape 负责几何求交、面积与表面采样；Primitive 将几何绑定到材质、面光源、介质或实例变换。 |
@@ -116,9 +119,9 @@ HLBVH 构建也横跨 CPU/GPU：GPU 计算 Morton 编码并建立下层 treelet�
 | `bdpt` | `BDPTIntegrator` 生成相机/光源子路径并连接，使用分批 GPU 计算与 CPU 累积。 |
 | `mlt`、`mltbdpt` | `MLTBDPTIntegrator`，以 bootstrap、变异和接受/拒绝流程驱动采样，复用 BDPT 子路径与连接函数。 |
 | `mltpath` | `MLTPathIntegrator`，复用 `MegakernelPathIntegrator::evaluate_Li_volume` 计算路径贡献。 |
-| `gbuffer` | `base/gbuffer_integrator.*` 的 `GBufferIntegrator` 通过单次渲染 kernel 同时计算环境遮蔽、表面法线、albedo 和深度；主 PNG 显示 AO，不提供窗口预览。 |
+| `gbuffer` | `integrators/gbuffer.*` 的 `GBufferIntegrator::render(samples_per_pixel)` 只接收相机 SPP，入口将正预算向下取到完全平方数，始终计算 AO、normal、albedo、depth、coverage，不追踪辐射或生成 luminance。按顺序执行非 albedo 与 albedo 两个 pass：前者初始化全部像素并写入 AO、normal、depth、coverage，后者只更新 albedo；两遍使用相同的相机样本，分别生成光线和求首表面交点，并使用取整后的相机 SPP。镜面局部预算在 `render()` 内由实际相机 SPP 限幅得到，不提供独立配置。相机与局部采样均使用线程本地 non-jitter stratified sampler，不提供窗口预览。 |
 
-G-buffer 原始值保存在 `film/gbuffer.*` 的浮点数组及 `*-gbuffer.exr` 中；独立生成 `*-ao.png`、`*-normal.png`、`*-albedo.png`、`*-depth.png` 可视化，绕过 Film 的光谱辐射转换。法线为世界空间 shading normal，深度为相机空间 Z；albedo 模仿 pbrt-v4，在每个首表面交点固定观察方向 `wo`，使用相同的固定 BSDF 样本组，以 Radiance 模式同时采样反射和透射并平均 `f * abs_cos / pdf`，失败样本贡献 0，仍按完整样本组数量求平均，再按 reference white 转为线性 RGB；玻璃包含折射率对应的 Radiance 缩放，结果不是简单的 `R + T = 1`，低 SPP 仍有波长采样噪声。未命中深度为正无穷，并记录 coverage。
+G-buffer 原始值保存在 `film/gbuffer.*` 的浮点数组及 `*-gbuffer.exr` 中；独立生成 `*-ao.png`、`*-normal.png`、`*-albedo.png`、`*-depth.png` 可视化，绕过 Film 的光谱辐射转换；不再保存亮度或亮度差通道。法线为世界空间 shading normal，深度为相机空间 Z。非镜面 albedo 模仿 pbrt-v4，在每个首表面交点固定观察方向 `wo`，使用相同的固定 BSDF 样本组，以 Radiance 模式同时采样反射和透射并平均 `f * abs_cos / pdf`，失败样本贡献为零，仍按完整样本组数量求平均，再按 reference white 转为线性 RGB。镜面首交点使用局部波长/BSDF 样本分别估计反射和透射分支，只追踪至下一个实际表面；后者仍为镜面时返回中性白，否则估计其 albedo。局部预算由实际相机 SPP 限幅，但纹理 footprint 始终使用取整后的相机 SPP。玻璃包含折射率对应的 Radiance 缩放，结果不是简单的 `R + T = 1`，低 SPP 仍有波长采样噪声。未命中深度为正无穷，并记录 coverage。
 
 AO 的最大射线距离按世界空间场景包围盒的尺度自动确定，用于估计局部遮蔽；不再读取场景中的 `maxdistance` 参数。环境遮蔽和表面法线不再使用独立积分器。
 
@@ -130,9 +133,9 @@ BDPT 内部的 `wavefront_render` kernel 是其批处理实现，阅读时不要
 
 渲染贡献沿 `SampledSpectrum + SampledWavelengths → PixelSensor → RGBFilm` 转为输出 RGB；`Film::write_to_png` 编码为 sRGB PNG，`copy_to_frame_buffer` 为预览提供 RGB 数据。BDPT 的 splat 按 `1 / spp` 缩放，MLT 按返回亮度与变异次数归一化，并额外输出 `heatmap-` 前缀的 PNG。
 
-所有 radiance integrator（`path`、`megakernelpath`、`bdpt`、`mltbdpt`、`mltpath`、`selectivemlt`）默认在最终输出前执行完整 StatMC 图像降噪：`RGBFilm` 对完整 camera sample 的未乘重建 filter 权重、未乘输出 RGB 矩阵的 CIE 1931 sensor XYZ 做 Box–Cox 变换，在线保存均值、二阶和三阶中心矩；负数或非有限 XYZ 样本会报错，转换后的负 RGB 分量不截断。这里使用 XYZ 检验是对论文 RGB 检验的光谱适配。Megakernel 和 wavefront path 使用实际逐像素 camera sample；BDPT 将统计指针传给独占像素的 worker film，但统计不包含其 light-to-camera splats；MLT 和 Selective MLT 使用额外的独立相机路径追踪 pass 生成逐像素统计引导，Markov-chain splats 不作为独立样本。后两类统计对最终图像是近似，且增加一次 PT pass 开销。`SceneBuilder::render` 用 `GBufferIntegrator::render_denoising_guides` 收集 normal、albedo、coverage，跳过 AO 和 depth。`film/statistical_denoiser.*` 组合联合双边权重与偏度修正统计检验，再滤原始线性 RGB；albedo 引导保持 RGB。非 Box filter、分层采样及 MLT 引导下统计检验为近似处理。输出保留 `*-before-denoise.png`，完整版本还输出 `*-denoise-neighbors.png` 和 `*-denoise-weights.png` 诊断图。
+所有 radiance integrator（`path`、`megakernelpath`、`bdpt`、`mltbdpt`、`mltpath`、`selectivemlt`）默认在最终输出前执行完整 StatMC 图像降噪：`RGBFilm` 对完整 camera sample 的未乘重建 filter 权重、未乘输出 RGB 矩阵的 CIE 1931 sensor XYZ 做 Box–Cox 变换，在线保存均值、二阶和三阶中心矩；负数或非有限 XYZ 样本会报错，转换后的负 RGB 分量不截断。这里使用 XYZ 检验是对论文 RGB 检验的光谱适配。Megakernel 和 wavefront path 使用实际逐像素 camera sample；BDPT 将统计指针传给独占像素的 worker film，但统计不包含其 light-to-camera splats；MLT 和 Selective MLT 使用额外的独立相机路径追踪 pass 生成逐像素统计引导，Markov-chain splats 不作为独立样本。后两类统计对最终图像是近似，且增加一次 PT pass 开销。`SceneBuilder::render` 在降噪时先将原始 SPP 按比例缩减并限制上下界，再调用 `GBufferIntegrator::render(guide_spp)`；G-buffer 始终计算全部表面属性，内部不区分降噪用途。MLT 的独立统计 pass 保留自身的采样预算与采样器约束。亮度放在独立数组中，`Film::copy_to_linear_rgb` 同时导出实际图像的线性 RGB 和 XYZ Y，包含归一化 splats；转换公式统一在 `film/luminance.h`。`film/luminance.h` 定义统计与降噪接口，`film/statistical_denoiser.cu` 组合联合双边权重与偏度修正统计检验，再滤线性 RGB；albedo 引导保持 RGB。非 Box filter、分层采样及 MLT 引导下统计检验为近似处理。输出保留 `*-raw.png` 原图，以及 `*-denoise-neighbors.png`、`*-denoise-weights.png` 诊断图。
 
-调用 StatMC 前，`SceneBuilder::render` 使用 `film/firefly_filter.*` 的 `firefly::Prefilter` 在完整线性 RGB（含已归一化的 splat）上抑制孤立异常亮点，以 normal、albedo 和 coverage 限制可参考的邻居，并保留有稳定相机样本统计支持的亮点。这是图像空间预处理，不是论文的逐样本重加权；小而孤立的真实高光仍可能被衰减。处理时统一缩放像素 RGB，并通过 `TransformedStatistics::rescale` 对 Box–Cox 均值及中心矩做相应变换，随后从处理后的图像更新 luminance 引导，再调用降噪器。`*-before-firefly.png` 保留原始渲染，`*-before-denoise.png` 保存实际送入 StatMC 的清理后图像。
+调用 StatMC 前，`SceneBuilder::render` 使用 `film/firefly_filter.*` 的 `firefly::Prefilter` 在完整线性 RGB（含已归一化的 splat）上抑制孤立异常亮点，以 normal、albedo 和 coverage 限制可参考的邻居，并保留有稳定相机样本统计支持的亮点。这是图像空间预处理，不是论文的逐样本重加权；小而孤立的真实高光仍可能被衰减。处理时统一缩放像素 RGB，并通过 `TransformedStatistics::rescale` 对 Box–Cox 均值及中心矩做相应变换。firefly 仅读取主图亮度，邻域读取结束后用同一像素缩放系数更新亮度；StatMC 仅读取处理后的亮度，避免原地更新污染邻居。独立相机路径 pass 只提供统计矩与平均路径深度，不再计算亮度。GPU 统计 firefly 修改像素数并查找首个统计错误，CPU 只回读标量和实际错误项。原始 PNG 复用已经导出的 RGB，避免重复解析 Film。降噪完成后，`film/luminance.h` 中的 `write_luminance_diagnostics()` 从 StatMC 使用的亮度数组导出 `*-luminance.png` 和 `*-luminance-difference.png`，沿用亮度分位数归一化、对数压缩及 Viridis 伪彩色；邻域最大绝对亮度差仅在 CPU 导出时计算，不参与降噪。独立 G-buffer 仍只生成表面属性输出。
 
 ## 常见阅读或修改入口
 

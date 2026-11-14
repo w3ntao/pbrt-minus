@@ -4,7 +4,7 @@
 #include <pbrt/base/film.h>
 #include <pbrt/base/integrator_base.h>
 #include <pbrt/base/sampler.h>
-#include <pbrt/film/statistical_denoiser.h>
+#include <pbrt/film/luminance.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/integrators/bdpt.h>
 #include <pbrt/light_samplers/power_light_sampler.h>

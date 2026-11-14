@@ -41,35 +41,30 @@ class Film : public HIDDEN::FilmVariants {
     }
 
     PBRT_CPU_GPU
-    void add_sample(int pixel_index, const SampledSpectrum &radiance_l,
-                    const SampledWavelengths &lambda, Real weight) {
-        cuda::std::visit([&](auto &x) { x.add_sample(pixel_index, radiance_l, lambda, weight); },
-                         *this);
+    void add_sample(int pixel_index, const SampledSpectrum &radiance_l, const SampledWavelengths &lambda, Real weight) {
+        cuda::std::visit([&](auto &x) { x.add_sample(pixel_index, radiance_l, lambda, weight); }, *this);
     }
 
     PBRT_CPU_GPU
-    void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l,
-                    const SampledWavelengths &lambda, Real weight) {
+    void add_sample(const Point2i &p_film, const SampledSpectrum &radiance_l, const SampledWavelengths &lambda,
+                    Real weight) {
         cuda::std::visit([&](auto &x) { x.add_sample(p_film, radiance_l, lambda, weight); }, *this);
     }
 
     // CPU only
-    void add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                   const SampledWavelengths &lambda) {
+    void add_splat(const Point2f &p_film, const SampledSpectrum &radiance_l, const SampledWavelengths &lambda) {
         cuda::std::visit([&](auto &x) { x.add_splat(p_film, radiance_l, lambda); }, *this);
     }
 
     // CPU only
     Real masked_splat_weight(const Point2f &p_film, const uint8_t *mask) const {
-        return cuda::std::visit([&](auto &x) { return x.masked_splat_weight(p_film, mask); },
-                                *this);
+        return cuda::std::visit([&](auto &x) { return x.masked_splat_weight(p_film, mask); }, *this);
     }
 
     // CPU only
-    void add_masked_splat(const Point2f &p_film, const SampledSpectrum &radiance_l,
-                         const SampledWavelengths &lambda, const uint8_t *mask) {
-        cuda::std::visit(
-            [&](auto &x) { x.add_masked_splat(p_film, radiance_l, lambda, mask); }, *this);
+    void add_masked_splat(const Point2f &p_film, const SampledSpectrum &radiance_l, const SampledWavelengths &lambda,
+                          const uint8_t *mask) {
+        cuda::std::visit([&](auto &x) { x.add_masked_splat(p_film, radiance_l, lambda, mask); }, *this);
     }
 
     void add_splats(const Film &other, Real scale = 1);
@@ -87,9 +82,13 @@ class Film : public HIDDEN::FilmVariants {
     // The destination must be GPU-accessible. This call synchronizes the copy.
     void copy_to_linear_rgb(RGB *pixels, Real splat_scale = 1) const;
 
+    // Resolve RGB and its linear XYZ Y together, including normalized splats.
+    // Both destinations must be GPU-accessible. This call synchronizes the copy.
+    void copy_to_linear_rgb(RGB *pixels, Real *luminance, const SquareMatrix<3> &xyz_from_rgb,
+                            Real splat_scale = 1) const;
+
     // The input must be CPU-accessible and ready to read.
-    static void write_linear_rgb_to_png(const std::string &filename, Point2i resolution,
-                                        const RGB *pixels);
+    static void write_linear_rgb_to_png(const std::string &filename, Point2i resolution, const RGB *pixels);
 
     // CPU only
     void write_to_png(const std::string &filename, Real splat_scale = 1) const;

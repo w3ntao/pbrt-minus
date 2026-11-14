@@ -63,7 +63,6 @@ add_executable(${PROJ_NAME}
         src/pbrt/base/interaction.cu
         src/pbrt/base/light.cu
         src/pbrt/base/material.cu
-        src/pbrt/base/gbuffer_integrator.cu
         src/pbrt/base/primitive.cu
         src/pbrt/base/sampler.cu
         src/pbrt/base/shape.cu
@@ -101,6 +100,7 @@ add_executable(${PROJ_NAME}
         src/pbrt/gpu/gpu_memory_allocator.cu
 
         src/pbrt/integrators/bdpt.cu
+        src/pbrt/integrators/gbuffer.cu
         src/pbrt/integrators/megakernel_path.cu
         src/pbrt/integrators/mlt_bdpt.cu
         src/pbrt/integrators/mlt_path.cu

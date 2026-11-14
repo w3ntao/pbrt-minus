@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <pbrt/accelerator/hlbvh.h>
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
@@ -14,6 +15,7 @@
 #include <pbrt/scene/parameter_dictionary.h>
 #include <pbrt/spectra/densely_sampled_spectrum.h>
 #include <pbrt/spectrum_util/global_spectra.h>
+#include <pbrt/util/progress_reporter.h>
 #include <pbrt/util/russian_roulette.h>
 #include <pbrt/util/thread_pool.h>
 #include <pbrt/util/timer.h>
@@ -118,7 +120,8 @@ static PBRT_GPU void process_path(const int path_idx, const WavefrontPathIntegra
                 const auto light = base->infinite_lights[idx];
                 const auto Le = light->le(ray, lambda);
 
-                if (depth == 0 || specular_bounce) {
+                // Camera rays may cross interfaces before their first scattering event.
+                if (!prev_interaction || specular_bounce) {
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
@@ -155,9 +158,10 @@ static PBRT_GPU void process_path(const int path_idx, const WavefrontPathIntegra
 
     const SampledSpectrum Le = surface_interaction.le(-ray.d, lambda);
     if (Le.is_positive()) {
-        if (depth == 0 || specular_bounce)
+        // Camera rays may cross interfaces before their first scattering event.
+        if (!prev_interaction || specular_bounce) {
             L += beta * Le;
-        else {
+        } else {
             // Compute MIS weight for area light
             const auto area_light = surface_interaction.area_light;
             const Real pdf_light = base->light_sampler->pmf(area_light) * area_light->pdf_li(*prev_interaction, ray.d);
@@ -388,8 +392,8 @@ __global__ void gpu_evaluate_material(const WavefrontPathIntegrator::Queues::Sin
     path_state.bsdf[path_idx] =
         surface_interaction.get_bsdf(lambda, integrator->base->camera, sampler.get_samples_per_pixel());
 
-    // get_bsdf() may terminate secondary wavelengths. Settle any radiance accumulated
-    // under the previous PDF before subsequent contributions use the reduced packet.
+    // get_bsdf() may terminate secondary wavelengths. Keep prior radiance separate
+    // from subsequent contributions evaluated with the reduced packet.
     if (!secondary_terminated_before && lambda.SecondaryTerminated()) {
         const int primary_idx = path_idx % WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
         path_state.camera_L[path_idx] += convert_to_camera_pdf(
@@ -529,7 +533,8 @@ void WavefrontPathIntegrator::sample_bsdf(const int path_idx, const PathState *p
     // Sample BSDF to get new path direction
     const Vector3f wo = -ray.d;
     if (path_state->depth[path_idx] < RAY_SPLIT_DEPTH &&
-        isect.material->get_material_type() == Material::Type::dielectric) {
+        isect.material->get_material_type() == Material::Type::dielectric &&
+        pbrt::is_reflective_and_transmissive(path_state->bsdf[path_idx].flags())) {
         const auto samples = path_state->bsdf[path_idx].sample_dielectric_f(wo, sampler->get_2d());
 
         // Freeze the shared prefix before either branch can terminate wavelengths.
@@ -727,6 +732,9 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, co
     }
 
     auto timer = Timer();
+    ProgressReporter progress_reporter(static_cast<long long>(image_resolution.x) * image_resolution.y *
+                                       samples_per_pixel);
+    progress_reporter.run();
     std::mutex mutex[2];
     auto clear_ping_pong_buffer = [&](const int ping_pong_idx) -> bool {
         const int size = queues.ping_pong_counter[ping_pong_idx];
@@ -738,6 +746,7 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, co
             film, queues.ping_pong_buffer[ping_pong_idx], size, cie_y, cascade_view);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        progress_reporter.increase(size);
 
         queues.ping_pong_counter[ping_pong_idx] = 0;
 
@@ -829,12 +838,14 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, co
     }
 
     thread_pool.sync(); // this is not technically necessary, yet a good practice
+
     for (auto ping_pong_idx : {0, 1}) {
         mutex[ping_pong_idx].lock();
         clear_ping_pong_buffer(ping_pong_idx);
         mutex[ping_pong_idx].unlock();
     }
     timer.stop("stage 2 write_frame_buffer()");
+    progress_reporter.join();
 
     printf("wavefront pathtracing benchmark:\n");
     timer.print();

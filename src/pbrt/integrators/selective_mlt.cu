@@ -40,8 +40,9 @@ __global__ void selective_pt_pilot(const Point2i resolution, const int spp, Samp
         const auto camera_sample = sampler->get_camera_sample(p_pixel, base->filter);
         auto lambda = SampledWavelengths::sample_visible(sampler->get_1d());
         const auto ray = base->camera->generate_ray(camera_sample, sampler);
-        const auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_Li_volume(
-                                               nullptr, ray.ray, lambda, sampler, base, max_depth, regularize, true);
+        const auto pt_sample =
+            MegakernelPathIntegrator::evaluate_Li_volume(ray.ray, lambda, sampler, base, max_depth, regularize, true);
+        const auto radiance = ray.weight * pt_sample.radiance;
         detector.record(pixel_index, radiance.y(lambda, cie_y));
     }
 }
@@ -64,8 +65,9 @@ __global__ void selective_pt_render(Film *film, const Point2i resolution, const 
         const auto camera_sample = sampler.get_camera_sample(p_pixel, base->filter);
         auto lambda = SampledWavelengths::sample_visible(sampler.get_1d());
         const auto ray = base->camera->generate_ray(camera_sample, &sampler);
-        const auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_Li_volume(
-                                               nullptr, ray.ray, lambda, &sampler, base, max_depth, regularize, true);
+        const auto pt_sample =
+            MegakernelPathIntegrator::evaluate_Li_volume(ray.ray, lambda, &sampler, base, max_depth, regularize, true);
+        const auto radiance = ray.weight * pt_sample.radiance;
         film->add_sample(pixel_index, radiance, lambda, camera_sample.filter_weight);
     }
 }

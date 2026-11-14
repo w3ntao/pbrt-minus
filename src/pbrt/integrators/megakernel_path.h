@@ -3,6 +3,7 @@
 #include <pbrt/base/ray.h>
 #include <pbrt/base/sampler.h>
 #include <pbrt/scene/parameter_dictionary.h>
+#include <pbrt/spectrum_util/sampled_spectrum.h>
 
 class Film;
 class GreyScaleFilm;
@@ -10,10 +11,15 @@ class GPUMemoryAllocator;
 class Spectrum;
 struct IntegratorBase;
 
+struct PTSample {
+    SampledSpectrum radiance;
+    Real depth = 0;
+};
+
 class MegakernelPathIntegrator {
   public:
-    static constexpr int RAY_SPLIT_DEPTH = 1;
-    // 0: no split, otherwise split for the first n bounces (for dielectric materials only)
+    static constexpr int RAY_SPLIT_DEPTH = 2;
+    // 0: no split, otherwise split for the first n bounces (for transmissive dielectric materials only)
 
     struct PathContinuation;
 
@@ -23,18 +29,20 @@ class MegakernelPathIntegrator {
     void render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename, bool preview) const;
 
     // Renders independent camera paths that only update transformed Film
-    // statistics. Zero reconstruction weight leaves image pixels untouched.
-    void render_denoising_statistics(Film *film, bool match_bdpt_depth = false) const;
+    // statistics and mean path depth for each pixel. Zero reconstruction
+    // weight leaves image pixels untouched; path_depths must be GPU-accessible
+    // and hold one value per pixel.
+    void render_denoising_statistics(Film *film, Real *path_depths, bool match_bdpt_depth = false) const;
 
     PBRT_CPU_GPU
     // Selective PT can match BDPT's scattering-depth limit while legacy callers
     // retain their existing truncation and emissive-surface behavior.
     // A dielectric hit at depth zero recursively traces reflection and transmission.
     // The reported depth is the maximum depth of the resulting paths.
-    static SampledSpectrum evaluate_Li_volume(Real *depth, const Ray &primary_ray, SampledWavelengths &lambda,
-                                              Sampler *sampler, const IntegratorBase *base, int max_depth,
-                                              bool regularize, bool match_bdpt_depth = false, Real path_depth = 0.0,
-                                              const PathContinuation *continuation = nullptr);
+    static PTSample evaluate_Li_volume(const Ray &primary_ray, SampledWavelengths &lambda, Sampler *sampler,
+                                       const IntegratorBase *base, int max_depth, bool regularize,
+                                       bool match_bdpt_depth = false, Real path_depth = 0.0,
+                                       const PathContinuation *continuation = nullptr);
 
     PBRT_CPU_GPU
     static SampledSpectrum sample_Ld_volume(const SurfaceInteraction &surface_interaction, const BSDF *bsdf,

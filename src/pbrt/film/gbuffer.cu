@@ -2,11 +2,12 @@
 #include <array>
 #include <cmath>
 #include <cstring>
-#include <ext/lodepng/lodepng.h>
 #include <ext/tinyexr/tinyexr.h>
 #include <limits>
 #include <new>
+#include <pbrt/base/film.h>
 #include <pbrt/film/gbuffer.h>
+#include <pbrt/film/heatmap.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <stdexcept>
@@ -25,11 +26,10 @@ GBuffer::GBuffer(Point2i resolution, GPUMemoryAllocator &allocator) : resolution
 }
 
 void GBuffer::write_to_exr(const std::string &filename) const {
-    constexpr int num_channels = 11;
+    constexpr int num_channels = 9;
     // EXR channels are stored in lexicographic order, with matching planar data.
     constexpr std::array<const char *, num_channels> names = {
-        "albedo.B", "albedo.G", "albedo.R", "ao", "coverage", "depth", "luminance",
-        "luminance_difference", "normal.X", "normal.Y", "normal.Z",
+        "albedo.B", "albedo.G", "albedo.R", "ao", "coverage", "depth", "normal.X", "normal.Y", "normal.Z",
     };
 
     const size_t num_pixels = size_t(resolution.x) * resolution.y;
@@ -45,11 +45,9 @@ void GBuffer::write_to_exr(const std::string &filename) const {
         channel_pixels[3][i] = float(pixel.ambient_occlusion);
         channel_pixels[4][i] = float(pixel.coverage);
         channel_pixels[5][i] = float(pixel.depth);
-        channel_pixels[6][i] = float(pixel.luminance);
-        channel_pixels[7][i] = float(pixel.luminance_difference);
-        channel_pixels[8][i] = float(pixel.normal.x);
-        channel_pixels[9][i] = float(pixel.normal.y);
-        channel_pixels[10][i] = float(pixel.normal.z);
+        channel_pixels[6][i] = float(pixel.normal.x);
+        channel_pixels[7][i] = float(pixel.normal.y);
+        channel_pixels[8][i] = float(pixel.normal.z);
     }
 
     std::array<unsigned char *, num_channels> image_data;
@@ -106,17 +104,27 @@ bool has_depth(const GBufferPixel &pixel) {
     return has_surface(pixel) && std::isfinite(pixel.depth) && pixel.depth > 0;
 }
 
-} // namespace
-
-void GBuffer::copy_to_frame_buffer(uint8_t *frame_buffer, GBufferChannel channel) const {
-    if (!frame_buffer) {
-        throw std::runtime_error("GBuffer frame buffer is null");
+RGB viridis_rgb(double value, const SRGBColorEncoding &srgb_encoding) {
+    if (!std::isfinite(value)) {
+        return RGB(0);
     }
 
-    const size_t num_pixels = size_t(resolution.x) * resolution.y;
+    const auto &colors = heatmap::viridis_srgb;
+    const double position = std::clamp(value, 0.0, 1.0) * (colors.size() - 1);
+    const size_t index = std::min(size_t(position), colors.size() - 2);
+    const Real t = Real(position - index);
+    RGB rgb;
+    for (int c = 0; c < 3; ++c) {
+        // The palette is sRGB; return linear RGB for Film's shared PNG writer.
+        rgb[c] =
+            (1 - t) * srgb_encoding.to_linear(colors[index][c]) + t * srgb_encoding.to_linear(colors[index + 1][c]);
+    }
+    return rgb;
+}
+
+std::vector<RGB> make_visualization_rgb(const GBufferPixel *pixels, size_t num_pixels, GBufferChannel channel) {
     double min_log_depth = std::numeric_limits<double>::infinity();
     double max_log_depth = -std::numeric_limits<double>::infinity();
-    double luminance_reference = 0;
     if (channel == GBufferChannel::Depth) {
         for (size_t i = 0; i < num_pixels; ++i) {
             if (has_depth(pixels[i])) {
@@ -125,53 +133,36 @@ void GBuffer::copy_to_frame_buffer(uint8_t *frame_buffer, GBufferChannel channel
                 max_log_depth = std::max(max_log_depth, log_depth);
             }
         }
-    } else if (channel == GBufferChannel::Luminance || channel == GBufferChannel::LuminanceDifference) {
-        std::vector<double> positive_values;
-        positive_values.reserve(num_pixels);
-        for (size_t i = 0; i < num_pixels; ++i) {
-            const double value = channel == GBufferChannel::Luminance ? double(pixels[i].luminance)
-                                                                      : double(pixels[i].luminance_difference);
-            if (std::isfinite(value) && value > 0) {
-                positive_values.push_back(value);
-            }
-        }
-        if (!positive_values.empty()) {
-            // Keep a few emissive pixels / fireflies from hiding weak shadow
-            // edges. The original HDR values remain untouched in the EXR.
-            const size_t percentile = size_t(0.99 * double(positive_values.size() - 1));
-            std::nth_element(positive_values.begin(), positive_values.begin() + percentile, positive_values.end());
-            luminance_reference = positive_values[percentile];
-        }
     }
 
     const SRGBColorEncoding srgb_encoding;
+    std::vector<RGB> rgb_pixels(num_pixels);
     for (size_t i = 0; i < num_pixels; ++i) {
-        auto *encoded = frame_buffer + 3 * i;
-        encoded[0] = encoded[1] = encoded[2] = 0;
+        auto &rgb = rgb_pixels[i];
         const auto &pixel = pixels[i];
-        if (channel != GBufferChannel::Luminance && channel != GBufferChannel::LuminanceDifference &&
-            !has_surface(pixel)) {
+        if (!has_surface(pixel)) {
             continue;
         }
 
         switch (channel) {
         case GBufferChannel::AmbientOcclusion: {
-            encoded[0] = encoded[1] = encoded[2] = encode_unit(pixel.ambient_occlusion);
+            rgb = viridis_rgb(pixel.ambient_occlusion, srgb_encoding);
             break;
         }
         case GBufferChannel::SurfaceNormal: {
             const double length = std::hypot(double(pixel.normal.x), double(pixel.normal.y), double(pixel.normal.z));
             if (std::isfinite(length) && length > 0) {
-                encoded[0] = encode_unit(0.5 + 0.5 * double(pixel.normal.x) / length);
-                encoded[1] = encode_unit(0.5 + 0.5 * double(pixel.normal.y) / length);
-                encoded[2] = encode_unit(0.5 + 0.5 * double(pixel.normal.z) / length);
+                // Preserve the existing normal display colors through the sRGB round trip.
+                rgb.r = srgb_encoding.to_linear(encode_unit(0.5 + 0.5 * double(pixel.normal.x) / length));
+                rgb.g = srgb_encoding.to_linear(encode_unit(0.5 + 0.5 * double(pixel.normal.y) / length));
+                rgb.b = srgb_encoding.to_linear(encode_unit(0.5 + 0.5 * double(pixel.normal.z) / length));
             }
             break;
         }
         case GBufferChannel::Albedo: {
             for (int c = 0; c < 3; ++c) {
                 const auto value = pixel.albedo[c];
-                encoded[c] = std::isfinite(value) ? srgb_encoding.from_linear(value) : 0;
+                rgb[c] = std::isfinite(value) ? value : 0;
             }
             break;
         }
@@ -179,33 +170,34 @@ void GBuffer::copy_to_frame_buffer(uint8_t *frame_buffer, GBufferChannel channel
             if (has_depth(pixel)) {
                 double value = 1;
                 if (max_log_depth > min_log_depth) {
-                    value = 1 - (std::log1p(double(pixel.depth)) - min_log_depth) /
-                                    (max_log_depth - min_log_depth);
+                    value = 1 - (std::log1p(double(pixel.depth)) - min_log_depth) / (max_log_depth - min_log_depth);
                 }
-                encoded[0] = encoded[1] = encoded[2] = encode_unit(value);
+                rgb = viridis_rgb(value, srgb_encoding);
             }
             break;
         }
-        case GBufferChannel::Luminance:
-        case GBufferChannel::LuminanceDifference: {
-            const double raw = channel == GBufferChannel::Luminance ? double(pixel.luminance)
-                                                                    : double(pixel.luminance_difference);
-            if (std::isfinite(raw) && raw > 0 && luminance_reference > 0) {
-                constexpr double compression = 100;
-                const double value = std::log1p(compression * raw / luminance_reference) / std::log1p(compression);
-                encoded[0] = encoded[1] = encoded[2] = encode_unit(value);
-            }
-            break;
         }
+    }
+    return rgb_pixels;
+}
+
+} // namespace
+
+void GBuffer::copy_to_frame_buffer(uint8_t *frame_buffer, GBufferChannel channel) const {
+    if (!frame_buffer) {
+        throw std::runtime_error("GBuffer frame buffer is null");
+    }
+
+    const auto rgb_pixels = make_visualization_rgb(pixels, size_t(resolution.x) * resolution.y, channel);
+    const SRGBColorEncoding srgb_encoding;
+    for (size_t i = 0; i < rgb_pixels.size(); ++i) {
+        for (int c = 0; c < 3; ++c) {
+            frame_buffer[3 * i + c] = srgb_encoding.from_linear(rgb_pixels[i][c]);
         }
     }
 }
 
 void GBuffer::write_to_png(const std::string &filename, GBufferChannel channel) const {
-    std::vector<unsigned char> encoded(size_t(resolution.x) * resolution.y * 3);
-    copy_to_frame_buffer(encoded.data(), channel);
-    const unsigned error = lodepng::encode(filename, encoded, resolution.x, resolution.y, LCT_RGB, 8);
-    if (error) {
-        throw std::runtime_error("Cannot write G-buffer PNG '" + filename + "': " + lodepng_error_text(error));
-    }
+    const auto rgb_pixels = make_visualization_rgb(pixels, size_t(resolution.x) * resolution.y, channel);
+    Film::write_linear_rgb_to_png(filename, resolution, rgb_pixels.data());
 }

@@ -3,6 +3,7 @@
 #include <ext/lodepng/lodepng.h>
 #include <pbrt/base/filter.h>
 #include <pbrt/film/grey_scale_film.h>
+#include <pbrt/film/heatmap.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <pbrt/spectrum_util/rgb.h>
 #include <pbrt/util/math.h>
@@ -33,24 +34,20 @@ const std::vector rainbow_6 = {
 
 const std::vector rainbow_7 = {black, blue, cyan, green, yellow, red, white};
 
-const std::vector palette_viridis_7 = {RGB(68, 1, 84) / 255,    RGB(68, 57, 131) / 255,  RGB(49, 104, 142) / 255,
-                                       RGB(33, 145, 140) / 255, RGB(53, 183, 121) / 255, RGB(144, 215, 67) / 251,
-                                       RGB(253, 231, 37) / 255};
-
 static RGB convert_to_heatmap_rgb(double linear) {
-    // auto colors = &rainbow_6;
-    auto colors = &palette_viridis_7;
+    const auto &colors = heatmap::viridis_srgb;
+    const auto normalized_rgb = [](const auto &color) { return RGB(color[0], color[1], color[2]) / 255; };
 
-    const auto gap = 1.0 / (colors->size() - 1);
+    const auto gap = 1.0 / (colors.size() - 1);
 
-    for (int idx = 0; idx < colors->size() - 1; ++idx) {
+    for (int idx = 0; idx < colors.size() - 1; ++idx) {
         if (linear >= gap * idx && linear < gap * (idx + 1)) {
             auto x = 1 - (linear - gap * idx) / gap;
-            return colors->at(idx) * x + colors->at(idx + 1) * (1 - x);
+            return normalized_rgb(colors[idx]) * x + normalized_rgb(colors[idx + 1]) * (1 - x);
         }
     }
 
-    return colors->at(colors->size() - 1);
+    return normalized_rgb(colors.back());
 }
 
 void GreyScaleFilm::write_to_png(const std::string &filename, bool grey) const {

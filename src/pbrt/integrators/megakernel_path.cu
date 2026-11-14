@@ -10,6 +10,7 @@
 #include <pbrt/base/sampler.h>
 #include <pbrt/base/spectrum.h>
 #include <pbrt/film/firefly_cascade.h>
+#include <pbrt/film/grey_scale_film.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/gui/gl_helper.h>
 #include <pbrt/integrators/megakernel_path.h>
@@ -75,7 +76,7 @@ __global__ static void megakernel_path_render(Film *film, uint8_t *gpu_frame_buf
 
 static __global__ void path_denoising_statistics(Film *film, const int samples_per_pixel, Sampler *samplers,
                                                  const IntegratorBase *base, const int max_depth, const bool regularize,
-                                                 const bool match_bdpt_depth) {
+                                                 const bool match_bdpt_depth, Real *path_depths) {
     const auto resolution = film->get_resolution();
     const int pixel_index = threadIdx.x + blockIdx.x * blockDim.x;
     if (pixel_index >= resolution.x * resolution.y) {
@@ -84,17 +85,20 @@ static __global__ void path_denoising_statistics(Film *film, const int samples_p
 
     const Point2i pixel(pixel_index % resolution.x, pixel_index / resolution.x);
     auto *sampler = &samplers[pixel_index];
+    Real path_depth_sum = 0;
     for (int sample_idx = 0; sample_idx < samples_per_pixel; ++sample_idx) {
         sampler->start_pixel_sample(pixel_index, sample_idx, 0);
         const auto camera_sample = sampler->get_camera_sample(pixel, base->filter);
         auto lambda = SampledWavelengths::sample_visible(sampler->get_1d());
         const auto camera_ray = base->camera->generate_ray(camera_sample, sampler);
-        const auto radiance = camera_ray.weight * MegakernelPathIntegrator::evaluate_Li_volume(
-                                                      nullptr, camera_ray.ray, lambda, sampler, base, max_depth,
-                                                      regularize, match_bdpt_depth);
+        const auto pt_sample = MegakernelPathIntegrator::evaluate_Li_volume(camera_ray.ray, lambda, sampler, base,
+                                                                            max_depth, regularize, match_bdpt_depth);
+        path_depth_sum += pt_sample.depth;
+        const auto radiance = camera_ray.weight * pt_sample.radiance;
         // RGBFilm records transformed sensor XYZ before returning for weight 0.
         film->add_sample(pixel_index, radiance, lambda, 0);
     }
+    path_depths[pixel_index] = path_depth_sum / samples_per_pixel;
 }
 
 MegakernelPathIntegrator::MegakernelPathIntegrator(const int samples_per_pixel, const Sampler::Type sampler_type,
@@ -144,15 +148,17 @@ void MegakernelPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, c
     cascade.finalize(firefly_mask, samples_per_pixel, output_filename);
 }
 
-void MegakernelPathIntegrator::render_denoising_statistics(Film *film, const bool match_bdpt_depth) const {
-    if (film == nullptr || samples_per_pixel <= 0) {
-        throw std::invalid_argument("denoising statistics require a Film and positive samples per pixel");
+void MegakernelPathIntegrator::render_denoising_statistics(Film *film, Real *path_depths,
+                                                           const bool match_bdpt_depth) const {
+    if (film == nullptr || path_depths == nullptr || samples_per_pixel <= 0) {
+        throw std::invalid_argument(
+            "denoising statistics require a Film, path-depth buffer, and positive samples per pixel");
     }
     const auto resolution = film->get_resolution();
     const int num_pixels = resolution.x * resolution.y;
     constexpr int threads = 256;
     path_denoising_statistics<<<divide_and_ceil(num_pixels, threads), threads>>>(
-        film, samples_per_pixel, samplers, base, max_depth, regularize, match_bdpt_depth);
+        film, samples_per_pixel, samplers, base, max_depth, regularize, match_bdpt_depth, path_depths);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
@@ -167,11 +173,10 @@ struct MegakernelPathIntegrator::PathContinuation {
 };
 
 PBRT_CPU_GPU
-SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const Ray &primary_ray,
-                                                             SampledWavelengths &lambda, Sampler *sampler,
-                                                             const IntegratorBase *base, int max_depth, bool regularize,
-                                                             bool match_bdpt_depth, Real path_depth,
-                                                             const PathContinuation *continuation) {
+PTSample MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray, SampledWavelengths &lambda,
+                                                      Sampler *sampler, const IntegratorBase *base, int max_depth,
+                                                      bool regularize, bool match_bdpt_depth, Real path_depth,
+                                                      const PathContinuation *continuation) {
     SampledSpectrum L = 0;
     SampledSpectrum beta = continuation ? continuation->beta : SampledSpectrum(1);
     bool specular_bounce = continuation && continuation->specular_bounce;
@@ -253,7 +258,8 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                 auto light = base->infinite_lights[idx];
                 auto Le = light->le(ray, lambda);
 
-                if (path_depth == 0 || specular_bounce) {
+                // Camera rays may cross interfaces before their first scattering event.
+                if (!prev_interaction || specular_bounce) {
                     L += beta * Le;
                 } else {
                     // Compute MIS weight for infinite light
@@ -287,7 +293,8 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
 
         // Incorporate emission from surface hit by ray
         if (const SampledSpectrum Le = surface_interaction.le(-ray.d, lambda); Le.is_positive()) {
-            if (path_depth == 0 || specular_bounce) {
+            // Camera rays may cross interfaces before their first scattering event.
+            if (!prev_interaction || specular_bounce) {
                 L += beta * Le;
             } else {
                 // Compute MIS weight for area light
@@ -326,15 +333,16 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
         }
 
         Vector3f wo = -ray.d;
-        // ray split:
-        // trace both reflection and refraction (rather than sampling one) for the first bounce
+        // Trace both reflection and refraction only for dielectric BSDFs that
+        // provide both lobes. Otherwise sample one BSDF direction.
         if (path_depth < RAY_SPLIT_DEPTH &&
-            surface_interaction.material->get_material_type() == Material::Type::dielectric) {
+            surface_interaction.material->get_material_type() == Material::Type::dielectric &&
+            pbrt::is_reflective_and_transmissive(bsdf.flags())) {
             const auto samples = bsdf.sample_dielectric_f(wo, sampler->get_2d());
             const pbrt::optional<BSDFSample> *branches[] = {&samples.reflection, &samples.transmission};
             const Real direction_pdfs[] = {samples.reflection_direction_pdf, samples.transmission_direction_pdf};
             Real deepest_path = path_depth;
-            // ray split: trace both reflection and transmission branches, if any
+            // Trace both branches when the dielectric sample provides them.
             for (int branch_index = 0; branch_index < 2; ++branch_index) {
                 const auto *branch = branches[branch_index];
                 if (!*branch) {
@@ -360,13 +368,13 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
                     next_time_russian_roulette,
                 };
                 const auto child_ray = surface_interaction.spawn_ray(sample.wi);
-                Real child_depth = path_depth + 1;
-                const auto child_L = evaluate_Li_volume(&child_depth, child_ray, child_lambda, sampler, base, max_depth,
-                                                        regularize, match_bdpt_depth, path_depth + 1, &child);
+                const auto child_sample = evaluate_Li_volume(child_ray, child_lambda, sampler, base, max_depth,
+                                                             regularize, match_bdpt_depth, path_depth + 1, &child);
                 // A dispersive hit may terminate wavelengths on just one branch.
                 // Convert its contribution back to the parent's wavelength PDF.
-                L += child_L * lambda.pdf_as_sampled_spectrum().safe_div(child_lambda.pdf_as_sampled_spectrum());
-                deepest_path = std::max(deepest_path, child_depth);
+                L += child_sample.radiance *
+                     lambda.pdf_as_sampled_spectrum().safe_div(child_lambda.pdf_as_sampled_spectrum());
+                deepest_path = std::max(deepest_path, child_sample.depth);
             }
             path_depth = deepest_path;
             break;
@@ -394,17 +402,13 @@ SampledSpectrum MegakernelPathIntegrator::evaluate_Li_volume(Real *depth, const 
         consecutive_interfaces = 0;
     }
 
-    if (depth != nullptr) {
-        *depth = path_depth;
-    }
-
-    return L;
+    return PTSample{L, path_depth};
 }
 
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
                                              Sampler *sampler) const {
-    return evaluate_Li_volume(nullptr, primary_ray, lambda, sampler, base, max_depth, regularize);
+    return evaluate_Li_volume(primary_ray, lambda, sampler, base, max_depth, regularize).radiance;
 }
 
 PBRT_CPU_GPU

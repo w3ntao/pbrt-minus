@@ -87,8 +87,10 @@ void Cascade::finalize(GreyScaleFilm &firefly_mask, const int samples_per_pixel,
     printf("firefly detector: %d layers (alpha %.3g, beta %d, tau %.6g, max %.1f), candidate: %.1f%%\n", layer_count,
            double(alpha), beta, double(threshold), double(max_luminance), float(candidate_pixels) / num_pixels * 100);
 
-    // Export all count layers, including empty ones, before the allocator releases them.
-    write_firefly_cascade(detector.counts, resolution, output_filename);
+    if (DEBUG_MODE) {
+        // Export all count layers, including empty ones, before the allocator releases them.
+        write_firefly_cascade(detector.counts, resolution, output_filename);
+    }
 }
 
 } // namespace firefly

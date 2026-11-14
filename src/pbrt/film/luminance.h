@@ -1,9 +1,24 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <filesystem>
 #include <limits>
+#include <pbrt/base/film.h>
 #include <pbrt/euclidean_space/point2.h>
+#include <pbrt/film/heatmap.h>
+#include <pbrt/spectrum_util/color_encoding.h>
 #include <pbrt/spectrum_util/rgb.h>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+// Keep image-space luminance in the same linear XYZ Y units as the Film.
+PBRT_CPU_GPU
+inline Real linear_rgb_luminance(const RGB &rgb, const SquareMatrix<3> &xyz_from_rgb) {
+    return rgb.has_nan() ? NAN : (xyz_from_rgb * rgb).g;
+}
 
 class GPUMemoryAllocator;
 struct GBufferPixel;
@@ -72,8 +87,8 @@ struct PixelStatistics {
     // stratified samples, rather than an exact Student-t sampling model.
     PBRT_CPU_GPU
     bool estimate(RGB &xyz_mean, RGB &mean_variance) const {
-        if (n < 2 || mean.has_nan() || m2.has_nan() || covariance.has_nan() ||
-            !std::isfinite(mean_weight) || !std::isfinite(m2_weight) || m2_weight < 0 || mean_weight == 0) {
+        if (n < 2 || mean.has_nan() || m2.has_nan() || covariance.has_nan() || !std::isfinite(mean_weight) ||
+            !std::isfinite(m2_weight) || m2_weight < 0 || mean_weight == 0) {
             return false;
         }
         const Real epsilon = std::numeric_limits<Real>::epsilon();
@@ -151,9 +166,7 @@ struct TransformedStatistics {
             return;
         }
         // Fixed Box-Cox lambda = 1/2. Invalid XYZ values are never clamped.
-        const RGB transformed(2 * (std::sqrt(xyz.r) - 1),
-                              2 * (std::sqrt(xyz.g) - 1),
-                              2 * (std::sqrt(xyz.b) - 1));
+        const RGB transformed(2 * (std::sqrt(xyz.r) - 1), 2 * (std::sqrt(xyz.g) - 1), 2 * (std::sqrt(xyz.b) - 1));
         if (n == 1) {
             mean = transformed;
             return;
@@ -240,12 +253,13 @@ class Denoiser {
     const RGB *denoise(const RGB *linear_rgb);
 
     // Full mode uses Box-Cox / skewness-corrected XYZ moments, raw albedo and
-    // normal guides, and pairwise linear luminance differences. Populate guide
-    // luminance from this input image; the diagnostic luminance_difference
-    // field is unused. Non-unit reconstruction filters use the unweighted
-    // observation stream as an approximate gate for the weighted Film image.
+    // normal guides, and pairwise linear luminance differences. The caller
+    // supplies one linear XYZ Y value per input RGB pixel. Non-unit
+    // reconstruction filters use the unweighted observation stream as an
+    // approximate gate for the weighted Film image.
+    // The surface guides, luminance, and input image remain unchanged.
     // Throws on any recorded negative, NaN, or infinite XYZ camera sample.
-    const RGB *denoise(const RGB *linear_rgb, const GBufferPixel *guides);
+    const RGB *denoise(const RGB *linear_rgb, const GBufferPixel *guides, const Real *luminance);
 
     // Full-mode diagnostics, available after denoise: neighbors exclude the
     // center, while total weights include its fixed weight of one.
@@ -266,8 +280,115 @@ class Denoiser {
     TransformedStatistics *transformed = nullptr;
     RGB *corrected_means = nullptr;
     RGB *mean_variances = nullptr;
+    unsigned int *first_error_index = nullptr;
     uint32_t *neighbor_counts = nullptr;
     Real *total_weights = nullptr;
 };
 
 } // namespace statmc
+
+namespace luminance_detail {
+
+inline Real luminance_difference(const Real *luminance, const Point2i resolution, const int x, const int y) {
+    const Real center = luminance[size_t(y) * resolution.x + x];
+    if (!std::isfinite(center)) {
+        return NAN;
+    }
+
+    Real max_difference = 0;
+    for (int dy = -1; dy <= 1; ++dy) {
+        const int ny = y + dy;
+        if (ny < 0 || ny >= resolution.y) {
+            continue;
+        }
+        for (int dx = -1; dx <= 1; ++dx) {
+            const int nx = x + dx;
+            if (nx < 0 || nx >= resolution.x) {
+                continue;
+            }
+            const Real neighbor = luminance[size_t(ny) * resolution.x + nx];
+            if (!std::isfinite(neighbor)) {
+                return NAN;
+            }
+            max_difference = std::max(max_difference, std::abs(center - neighbor));
+        }
+    }
+    return max_difference;
+}
+
+inline RGB viridis_rgb(const double value, const SRGBColorEncoding &srgb_encoding) {
+    if (!std::isfinite(value)) {
+        return RGB(0);
+    }
+
+    const auto &colors = heatmap::viridis_srgb;
+    const double position = std::clamp(value, 0.0, 1.0) * (colors.size() - 1);
+    const size_t index = std::min(size_t(position), colors.size() - 2);
+    const Real t = Real(position - index);
+    RGB rgb;
+    for (int c = 0; c < 3; ++c) {
+        // Interpolate in linear RGB; Film applies the shared sRGB PNG encoding.
+        rgb[c] =
+            (1 - t) * srgb_encoding.to_linear(colors[index][c]) + t * srgb_encoding.to_linear(colors[index + 1][c]);
+    }
+    return rgb;
+}
+
+inline void write_visualization(const std::string &filename, const Point2i resolution, const Real *values) {
+    const size_t num_pixels = size_t(resolution.x) * resolution.y;
+    std::vector<double> positive_values;
+    positive_values.reserve(num_pixels);
+    for (size_t i = 0; i < num_pixels; ++i) {
+        const double value = double(values[i]);
+        if (std::isfinite(value) && value > 0) {
+            positive_values.push_back(value);
+        }
+    }
+
+    double reference = 0;
+    if (!positive_values.empty()) {
+        // Keep sparse bright pixels from hiding weaker edges in the display.
+        const size_t percentile = size_t(0.99 * double(positive_values.size() - 1));
+        std::nth_element(positive_values.begin(), positive_values.begin() + percentile, positive_values.end());
+        reference = positive_values[percentile];
+    }
+
+    const SRGBColorEncoding srgb_encoding;
+    std::vector<RGB> rgb_pixels(num_pixels);
+    for (size_t i = 0; i < num_pixels; ++i) {
+        const double raw = double(values[i]);
+        if (std::isfinite(raw) && raw > 0 && reference > 0) {
+            constexpr double compression = 100;
+            const double value = std::log1p(compression * raw / reference) / std::log1p(compression);
+            rgb_pixels[i] = viridis_rgb(value, srgb_encoding);
+        }
+    }
+    Film::write_linear_rgb_to_png(filename, resolution, rgb_pixels.data());
+}
+
+} // namespace luminance_detail
+
+// GPU writes must be complete, and luminance must contain one CPU-readable
+// linear CIE Y estimate per pixel. Writes luminance and maximum absolute 3x3
+// luminance-difference PNGs beside output_filename without changing the input.
+inline void write_luminance_diagnostics(const std::string &output_filename, const Point2i resolution,
+                                        const Real *luminance) {
+    if (resolution.x <= 0 || resolution.y <= 0 || luminance == nullptr) {
+        throw std::invalid_argument("Luminance diagnostics require a positive resolution and a luminance image");
+    }
+
+    const std::filesystem::path path(output_filename);
+    const auto prefix = path.parent_path() / path.stem();
+    luminance_detail::write_visualization(prefix.string() + "-luminance.png", resolution, luminance);
+
+    const size_t num_pixels = size_t(resolution.x) * resolution.y;
+    std::vector<Real> differences(num_pixels);
+    for (int y = 0; y < resolution.y; ++y) {
+        for (int x = 0; x < resolution.x; ++x) {
+            differences[size_t(y) * resolution.x + x] =
+                luminance_detail::luminance_difference(luminance, resolution, x, y);
+        }
+    }
+    luminance_detail::write_visualization(prefix.string() + "-luminance-difference.png", resolution,
+                                          differences.data());
+}

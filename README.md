@@ -10,7 +10,7 @@ A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT
 * CUDA acceleration (without OptiX)
 * HLBVH with work queues ([HLBVH](https://research.nvidia.com/publication/2010-06_hlbvh-hierarchical-lbvh-construction-real-time-ray-tracing), [HLBVH with Work Queues](https://research.nvidia.com/publication/simpler-and-faster-hlbvh-work-queues))
 * [wavefront path tracing](https://research.nvidia.com/publication/2013-07_megakernels-considered-harmful-wavefront-path-tracing-gpus), BDPT (CPU), MLT-path (CPU), MLT-BDPT (CPU)， selective-MLT
-* spectral rendering, volumetric rendering, multiple importance sampling, ray split (trace reflection and refraction separately), light sampling (by power)
+* spectral rendering, volumetric rendering, multiple importance sampling, ray split (trace both reflection and refraction), light sampling (by power)
 * Sampler: stratified sampler
 * Denoising ([Statistical MC Denoising](https://www.cg.tuwien.ac.at/research/publications/2024/sakai-2024-asa/sakai-2024-asa-paper.pdf), [Edge-Avoiding à-trous](https://jo.dreggn.org/home/2010_atrous.pdf), [Reweighting Firefly Samples](https://cg.ivd.kit.edu/publications/2018/rwmc/reweighting-fireflies-preprint.pdf))
 
@@ -33,7 +33,7 @@ Setting up for other distros should be similar.
 * [CUDA on WSL 2](https://docs.nvidia.com/cuda/wsl-user-guide/#getting-started-with-cuda-on-wsl-2) might help set up CUDA.
 
 
-## build and render
+## Build and render
 
 ```
 $ git clone --recursive https://github.com/w3ntao/pbrt-minus.git

@@ -22,8 +22,7 @@ class Sampler {
     PBRT_CPU_GPU
     Sampler() : type(Type::independent), ptr(nullptr) {}
 
-    static Sampler *create_samplers(Type sampler_type, int samples_per_pixel, int size,
-                                    GPUMemoryAllocator &allocator);
+    static Sampler *create_samplers(Type sampler_type, int samples_per_pixel, int size, GPUMemoryAllocator &allocator);
 
     Type get_type() const {
         return type;

@@ -21,14 +21,17 @@ class Prefilter {
   public:
     Prefilter(Point2i resolution, GPUMemoryAllocator &allocator);
 
-    // Input and guides must be GPU-accessible and ready to read. Guide
-    // luminance must come from this input via set_luminance_guide(), so its
-    // color-space conversion matches the renderer. Rebuild that guide from
-    // the returned image before calling StatMC.
-    // Returns synchronized, separate output; input and guides are unchanged.
+    // Input, surface guides, and luminance must be GPU-accessible and ready
+    // to read. Luminance is the linear CIE Y of each input RGB pixel. Returns
+    // synchronized, separate output; input, guides, and luminance are
+    // unchanged.
     // Optional Box-Cox moments are rescaled consistently with the RGB clamp.
-    const RGB *filter(const RGB *linear_rgb, const GBufferPixel *guides,
+    const RGB *filter(const RGB *linear_rgb, const GBufferPixel *guides, const Real *luminance,
                       statmc::TransformedStatistics *statistics = nullptr);
+
+    // Apply the last filter() call's per-pixel scales to the input luminance
+    // guide so it stays aligned with the returned RGB image.
+    void apply_scales_to_luminance(Real *luminance) const;
 
     // Available after filter(): a common RGB scale in [0, 1] for each pixel.
     const Real *scales() const {
@@ -43,6 +46,7 @@ class Prefilter {
     Point2i resolution;
     RGB *output;
     Real *pixel_scales;
+    unsigned int *modified_pixel_count_gpu;
     size_t modified_pixel_count = 0;
 };
 

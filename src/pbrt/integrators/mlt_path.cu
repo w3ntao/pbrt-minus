@@ -157,11 +157,10 @@ PathSample MLTPathIntegrator::generate_path_sample(Sampler *sampler) const {
 
     const auto ray = base->camera->generate_ray(camera_sample, sampler);
 
-    Real depth = 0;
-    const auto radiance = ray.weight * MegakernelPathIntegrator::evaluate_Li_volume(&depth, ray.ray, lambda, sampler,
-                                                                                    base.get(), max_depth, regularize);
+    const auto pt_sample =
+        MegakernelPathIntegrator::evaluate_Li_volume(ray.ray, lambda, sampler, base.get(), max_depth, regularize);
 
-    return PathSample(p_film, radiance, lambda, depth);
+    return PathSample(p_film, ray.weight * pt_sample.radiance, lambda, pt_sample.depth);
 }
 
 double MLTPathIntegrator::render(Film *film, GreyScaleFilm &sampling_density) const {

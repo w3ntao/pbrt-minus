@@ -1,5 +1,6 @@
 #include <ext/lodepng/lodepng.h>
 #include <pbrt/base/film.h>
+#include <pbrt/film/luminance.h>
 #include <pbrt/gpu/gpu_memory_allocator.h>
 #include <pbrt/spectrum_util/color_encoding.h>
 #include <vector>
@@ -70,18 +71,27 @@ void Film::copy_to_frame_buffer(uint8_t *gpu_frame_buffer, Real splat_scale) con
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-static __global__ void copy_linear_pixels(RGB *pixels, const Film *film, int num_pixels,
-                                           Real splat_scale) {
+static __global__ void copy_linear_pixels(RGB *pixels, Real *luminance, const SquareMatrix<3> xyz_from_rgb,
+                                          const Film *film, int num_pixels, Real splat_scale) {
     const int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= num_pixels) {
         return;
     }
 
     const auto resolution = film->get_resolution();
-    pixels[index] = film->get_pixel_rgb(Point2i(index % resolution.x, index / resolution.x), splat_scale);
+    const auto rgb = film->get_pixel_rgb(Point2i(index % resolution.x, index / resolution.x), splat_scale);
+    pixels[index] = rgb;
+    if (luminance) {
+        luminance[index] = linear_rgb_luminance(rgb, xyz_from_rgb);
+    }
 }
 
 void Film::copy_to_linear_rgb(RGB *pixels, Real splat_scale) const {
+    copy_to_linear_rgb(pixels, nullptr, SquareMatrix<3>(), splat_scale);
+}
+
+void Film::copy_to_linear_rgb(RGB *pixels, Real *luminance, const SquareMatrix<3> &xyz_from_rgb,
+                              Real splat_scale) const {
     if (!pixels) {
         REPORT_FATAL_ERROR();
     }
@@ -89,7 +99,8 @@ void Film::copy_to_linear_rgb(RGB *pixels, Real splat_scale) const {
     const auto resolution = get_resolution();
     const int num_pixels = resolution.x * resolution.y;
     constexpr int threads = 256;
-    copy_linear_pixels<<<divide_and_ceil(num_pixels, threads), threads>>>(pixels, this, num_pixels, splat_scale);
+    copy_linear_pixels<<<divide_and_ceil(num_pixels, threads), threads>>>(pixels, luminance, xyz_from_rgb, this,
+                                                                          num_pixels, splat_scale);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
@@ -97,8 +108,7 @@ void Film::copy_to_linear_rgb(RGB *pixels, Real splat_scale) const {
 namespace {
 
 template <typename ReadPixel>
-void write_rgb_to_png(const std::string &filename, Point2i resolution, const char *operation,
-                       ReadPixel read_pixel) {
+void write_rgb_to_png(const std::string &filename, Point2i resolution, const char *operation, ReadPixel read_pixel) {
     const int width = resolution.x;
     const int height = resolution.y;
     if (width <= 0 || height <= 0) {
@@ -128,8 +138,8 @@ void write_rgb_to_png(const std::string &filename, Point2i resolution, const cha
     }
 
     if (invalid_pixels > 0) {
-        printf("%sFilm::%s(): %d/%d (%.1f%%) pixels carry non-finite components%s\n", FLAG_COLORFUL_PRINT_RED_START, operation,
-               invalid_pixels, width * height, static_cast<Real>(invalid_pixels) / (width * height) * 100,
+        printf("%sFilm::%s(): %d/%d (%.1f%%) pixels carry non-finite components%s\n", FLAG_COLORFUL_PRINT_RED_START,
+               operation, invalid_pixels, width * height, static_cast<Real>(invalid_pixels) / (width * height) * 100,
                FLAG_COLORFUL_PRINT_END);
 
         REPORT_FATAL_ERROR();
@@ -149,8 +159,7 @@ void Film::write_linear_rgb_to_png(const std::string &filename, Point2i resoluti
     if (!pixels) {
         REPORT_FATAL_ERROR();
     }
-    write_rgb_to_png(filename, resolution, __func__,
-                     [&](const Point2i p) { return pixels[p.x + p.y * resolution.x]; });
+    write_rgb_to_png(filename, resolution, __func__, [&](const Point2i p) { return pixels[p.x + p.y * resolution.x]; });
 }
 
 void Film::write_to_png(const std::string &filename, Real splat_scale) const {

@@ -18,7 +18,7 @@ class StratifiedSampler {
     }
 
     PBRT_CPU_GPU
-    StratifiedSampler(int samples_per_pixel)
+    explicit StratifiedSampler(int samples_per_pixel)
         : samples_per_dimension(static_cast<int>(std::sqrt(samples_per_pixel))) {
         if (sqr(samples_per_dimension) != samples_per_pixel) {
             REPORT_FATAL_ERROR();
@@ -46,7 +46,7 @@ class StratifiedSampler {
 
         dimension += 1;
 
-        auto delta = rng.uniform<Real>();
+        const Real delta = rng.uniform<Real>();
 
         return (stratum + delta) / get_samples_per_pixel();
     }
@@ -59,11 +59,10 @@ class StratifiedSampler {
         auto x = stratum % samples_per_dimension;
         auto y = stratum / samples_per_dimension;
 
-        auto delta_x = rng.uniform<Real>();
-        auto delta_y = rng.uniform<Real>();
+        const Real delta_x = rng.uniform<Real>();
+        const Real delta_y = rng.uniform<Real>();
 
-        return Point2f((x + delta_x) / samples_per_dimension,
-                       (y + delta_y) / samples_per_dimension);
+        return Point2f((x + delta_x) / samples_per_dimension, (y + delta_y) / samples_per_dimension);
     }
 
     PBRT_CPU_GPU Point2f get_pixel_2d() {
@@ -72,7 +71,6 @@ class StratifiedSampler {
 
   private:
     int samples_per_dimension;
-
     RNG rng;
     int pixel_idx = 0;
     int sample_idx = 0;

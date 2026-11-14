@@ -29,6 +29,9 @@ PBRT_CPU_GPU inline bool is_reflective(BxDFFlags f) {
 PBRT_CPU_GPU inline bool is_transmissive(BxDFFlags f) {
     return f & BxDFFlags::Transmission;
 }
+PBRT_CPU_GPU inline bool is_reflective_and_transmissive(BxDFFlags f) {
+    return is_reflective(f) && is_transmissive(f);
+}
 PBRT_CPU_GPU inline bool is_diffuse(BxDFFlags f) {
     return f & BxDFFlags::Diffuse;
 }
@@ -109,8 +112,7 @@ struct BSDFSample {
     PBRT_CPU_GPU
     BSDFSample(SampledSpectrum f, Vector3f wi, Real pdf, BxDFFlags flags, Real eta = 1,
                bool _pdf_is_proportional = false)
-        : f(f), wi(wi), pdf(pdf), flags(flags), eta(eta),
-          pdf_is_proportional(_pdf_is_proportional) {}
+        : f(f), wi(wi), pdf(pdf), flags(flags), eta(eta), pdf_is_proportional(_pdf_is_proportional) {}
 
     PBRT_CPU_GPU
     bool is_reflection() const {
