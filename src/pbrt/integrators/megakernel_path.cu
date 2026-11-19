@@ -76,7 +76,8 @@ __global__ static void megakernel_path_render(Film *film, uint8_t *gpu_frame_buf
 
 static __global__ void path_denoising_statistics(Film *film, const int samples_per_pixel, Sampler *samplers,
                                                  const IntegratorBase *base, const int max_depth, const bool regularize,
-                                                 const bool match_bdpt_depth, Real *path_depths) {
+                                                 const bool match_bdpt_depth, const int ray_split_depth,
+                                                 const bool use_russian_roulette, Real *path_depths) {
     const auto resolution = film->get_resolution();
     const int pixel_index = threadIdx.x + blockIdx.x * blockDim.x;
     if (pixel_index >= resolution.x * resolution.y) {
@@ -91,8 +92,9 @@ static __global__ void path_denoising_statistics(Film *film, const int samples_p
         const auto camera_sample = sampler->get_camera_sample(pixel, base->filter);
         auto lambda = SampledWavelengths::sample_visible(sampler->get_1d());
         const auto camera_ray = base->camera->generate_ray(camera_sample, sampler);
-        const auto pt_sample = MegakernelPathIntegrator::evaluate_Li_volume(camera_ray.ray, lambda, sampler, base,
-                                                                            max_depth, regularize, match_bdpt_depth);
+        const auto pt_sample = MegakernelPathIntegrator::evaluate_Li_volume(
+            camera_ray.ray, lambda, sampler, base, max_depth, regularize, match_bdpt_depth, 0.0, nullptr,
+            ray_split_depth, use_russian_roulette);
         path_depth_sum += pt_sample.depth;
         const auto radiance = camera_ray.weight * pt_sample.radiance;
         // RGBFilm records transformed sensor XYZ before returning for weight 0.
@@ -103,9 +105,11 @@ static __global__ void path_denoising_statistics(Film *film, const int samples_p
 
 MegakernelPathIntegrator::MegakernelPathIntegrator(const int samples_per_pixel, const Sampler::Type sampler_type,
                                                    const ParameterDictionary &parameters,
-                                                   const IntegratorBase *integrator_base, GPUMemoryAllocator &allocator)
-    : base(integrator_base), cie_y(parameters.global_spectra->cie_y), samples_per_pixel(samples_per_pixel),
-      max_depth(parameters.get_integer("maxdepth", 5)), regularize(parameters.get_bool("regularize", false)) {
+                                                   const IntegratorBase *integrator_base, GPUMemoryAllocator &allocator,
+                                                   const int ray_split_depth, const bool _use_russian_roulette)
+    : RAY_SPLIT_DEPTH(ray_split_depth), base(integrator_base), cie_y(parameters.global_spectra->cie_y),
+      samples_per_pixel(samples_per_pixel), max_depth(parameters.get_integer("maxdepth", 5)),
+      regularize(parameters.get_bool("regularize", false)), use_russian_roulette(_use_russian_roulette) {
     const auto resolution = base->camera->get_camera_base()->resolution;
     samplers = Sampler::create_samplers(sampler_type, samples_per_pixel, resolution.x * resolution.y, allocator);
 }
@@ -158,7 +162,8 @@ void MegakernelPathIntegrator::render_denoising_statistics(Film *film, Real *pat
     const int num_pixels = resolution.x * resolution.y;
     constexpr int threads = 256;
     path_denoising_statistics<<<divide_and_ceil(num_pixels, threads), threads>>>(
-        film, samples_per_pixel, samplers, base, max_depth, regularize, match_bdpt_depth, path_depths);
+        film, samples_per_pixel, samplers, base, max_depth, regularize, match_bdpt_depth, RAY_SPLIT_DEPTH,
+        use_russian_roulette, path_depths);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
@@ -176,7 +181,8 @@ PBRT_CPU_GPU
 PTSample MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray, SampledWavelengths &lambda,
                                                       Sampler *sampler, const IntegratorBase *base, int max_depth,
                                                       bool regularize, bool match_bdpt_depth, Real path_depth,
-                                                      const PathContinuation *continuation) {
+                                                      const PathContinuation *continuation, const int ray_split_depth,
+                                                      const bool use_russian_roulette) {
     SampledSpectrum L = 0;
     SampledSpectrum beta = continuation ? continuation->beta : SampledSpectrum(1);
     bool specular_bounce = continuation && continuation->specular_bounce;
@@ -198,7 +204,8 @@ PTSample MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray, Sa
     // Legacy depth includes fractional interface hits. Selective mode counts
     // scattering events and still traces the final segment to an emitter.
     while ((match_bdpt_depth ? path_depth <= max_depth : path_depth < max_depth) && beta.is_positive()) {
-        if (path_depth >= next_time_russian_roulette && russian_roulette(beta, sampler, &next_time_russian_roulette)) {
+        if (use_russian_roulette && path_depth >= next_time_russian_roulette &&
+            russian_roulette(beta, sampler, &next_time_russian_roulette)) {
             break;
         }
 
@@ -335,7 +342,7 @@ PTSample MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray, Sa
         Vector3f wo = -ray.d;
         // Trace both reflection and refraction only for dielectric BSDFs that
         // provide both lobes. Otherwise sample one BSDF direction.
-        if (path_depth < RAY_SPLIT_DEPTH &&
+        if (path_depth < ray_split_depth &&
             surface_interaction.material->get_material_type() == Material::Type::dielectric &&
             pbrt::is_reflective_and_transmissive(bsdf.flags())) {
             const auto samples = bsdf.sample_dielectric_f(wo, sampler->get_2d());
@@ -368,8 +375,9 @@ PTSample MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray, Sa
                     next_time_russian_roulette,
                 };
                 const auto child_ray = surface_interaction.spawn_ray(sample.wi);
-                const auto child_sample = evaluate_Li_volume(child_ray, child_lambda, sampler, base, max_depth,
-                                                             regularize, match_bdpt_depth, path_depth + 1, &child);
+                const auto child_sample =
+                    evaluate_Li_volume(child_ray, child_lambda, sampler, base, max_depth, regularize, match_bdpt_depth,
+                                       path_depth + 1, &child, ray_split_depth, use_russian_roulette);
                 // A dispersive hit may terminate wavelengths on just one branch.
                 // Convert its contribution back to the parent's wavelength PDF.
                 L += child_sample.radiance *
@@ -408,7 +416,9 @@ PTSample MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray, Sa
 PBRT_CPU_GPU
 SampledSpectrum MegakernelPathIntegrator::li(const Ray &primary_ray, SampledWavelengths &lambda,
                                              Sampler *sampler) const {
-    return evaluate_Li_volume(primary_ray, lambda, sampler, base, max_depth, regularize).radiance;
+    return evaluate_Li_volume(primary_ray, lambda, sampler, base, max_depth, regularize, false, 0.0, nullptr,
+                              RAY_SPLIT_DEPTH, use_russian_roulette)
+        .radiance;
 }
 
 PBRT_CPU_GPU

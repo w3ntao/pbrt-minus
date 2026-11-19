@@ -25,11 +25,10 @@ struct ShapeIntersection;
 
 class WavefrontPathIntegrator {
   public:
-    static constexpr int RAY_SPLIT_DEPTH = MegakernelPathIntegrator::RAY_SPLIT_DEPTH;
+    const int RAY_SPLIT_DEPTH;
     static constexpr int PATH_POOL_SIZE = 2 * 1024 * 1024;
-    static constexpr int RAY_NUM_PER_SAMPLE = 1 << RAY_SPLIT_DEPTH;
-    static constexpr int INITIAL_RAY_POOL_SIZE = PATH_POOL_SIZE / RAY_NUM_PER_SAMPLE;
-    static_assert(PATH_POOL_SIZE % INITIAL_RAY_POOL_SIZE == 0, "The path pool must hold complete camera sample groups");
+    const int RAY_NUM_PER_SAMPLE;
+    const int INITIAL_RAY_POOL_SIZE;
 
     struct PathState {
         CameraSample *camera_samples = nullptr;
@@ -72,7 +71,7 @@ class WavefrontPathIntegrator {
 
         PathState(const Point2i &_resolution, int _samples_per_pixel, Sampler::Type sampler_type);
 
-        void build_path(GPUMemoryAllocator &allocator);
+        void build_path(GPUMemoryAllocator &allocator, int initial_ray_pool_size);
 
         PBRT_CPU_GPU
         void reset_path(int path_idx) const;
@@ -144,7 +143,8 @@ class WavefrontPathIntegrator {
     };
 
     WavefrontPathIntegrator(int _samples_per_pixel, Sampler::Type sampler_type, const ParameterDictionary &parameters,
-                            const IntegratorBase *_base, GPUMemoryAllocator &allocator);
+                            const IntegratorBase *_base, GPUMemoryAllocator &allocator, int ray_split_depth,
+                            bool use_russian_roulette);
 
     void render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename, bool preview);
 
@@ -158,6 +158,7 @@ class WavefrontPathIntegrator {
 
     const int max_depth = 0;
     const bool regularize = false;
+    const bool use_russian_roulette = true;
 
     PBRT_GPU
     void sample_bsdf(int path_idx, const PathState *path_state) const;

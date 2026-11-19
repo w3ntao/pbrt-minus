@@ -8,8 +8,8 @@ A simpler, less performant, physically based, GPU ray tracer rewritten from PBRT
 ## Features
 
 * CUDA acceleration (without OptiX)
-* HLBVH with work queues ([HLBVH](https://research.nvidia.com/publication/2010-06_hlbvh-hierarchical-lbvh-construction-real-time-ray-tracing), [HLBVH with Work Queues](https://research.nvidia.com/publication/simpler-and-faster-hlbvh-work-queues))
-* [wavefront path tracing](https://research.nvidia.com/publication/2013-07_megakernels-considered-harmful-wavefront-path-tracing-gpus), BDPT (CPU), MLT-path (CPU), MLT-BDPT (CPU)， selective-MLT
+* [HLBVH](https://research.nvidia.com/publication/2010-06_hlbvh-hierarchical-lbvh-construction-real-time-ray-tracing) with [Work Queues](https://research.nvidia.com/publication/simpler-and-faster-hlbvh-work-queues)
+* [wavefront path tracing](https://research.nvidia.com/publication/2013-07_megakernels-considered-harmful-wavefront-path-tracing-gpus), BDPT (CPU), MLT-path (CPU), MLT-BDPT (CPU), [selective-MLT](https://benedikt-bitterli.me/smlt/)
 * spectral rendering, volumetric rendering, multiple importance sampling, ray split (trace both reflection and refraction), light sampling (by power)
 * Sampler: stratified sampler
 * Denoising ([Statistical MC Denoising](https://www.cg.tuwien.ac.at/research/publications/2024/sakai-2024-asa/sakai-2024-asa-paper.pdf), [Edge-Avoiding à-trous](https://jo.dreggn.org/home/2010_atrous.pdf), [Reweighting Firefly Samples](https://cg.ivd.kit.edu/publications/2018/rwmc/reweighting-fireflies-preprint.pdf))
@@ -48,28 +48,59 @@ $ ./pbrt-minus ../example/cornell-box-specular.pbrt --preview --spp 16
 
 ## Gallery
 
-More scenes at https://github.com/w3ntao/pbrt-minus-scenes.
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/raw/main/frame300-1024.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/raw/main/frame300-gbuffer-diag.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/raw/main/frame675-wavefrontpath-4096.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/raw/main/book-1024.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/raw/main/bathroom-1024.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/raw/main/staircase-1024.png)
-
-![](https://github.com/w3ntao/pbrt-minus-gallery/raw/main/material-testball-sequence-1024.png)
+source: https://github.com/w3ntao/pbrt-minus-scenes
 
 <p align="center">
-  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/caustic-glass-v4-1024-before-denoise.png" width="49%">
-  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/caustic-glass-v4-1024-density.png" width="49%">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/zero-day/frame300-1024.png" alt="">
 </p>
+<p align="center">zero-day/frame300.pbrt</p>
+<br>
 
 <p align="center">
-  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/volumetric-caustic-1024.png" width="49%">
-  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/volumetric-caustic-1024-density.png" width="49%">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/zero-day/frame300-gbuffer-diag.png" alt="">
 </p>
+<p align="center">denoiser input: normal, albedo, luminance</p>
+<br>
+
+<p align="center">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/transparent-machines/frame675-1024-before-denoise.png" alt="">
+</p>
+<p align="center">transparent-machines/frame675.pbrt</p>
+<br>
+
+<p align="center">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/book-1024.png" alt="">
+</p>
+<p align="center">pbrt-book/book.pbrt</p>
+<br>
+
+<p align="center">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/chopper-titan-v4-1024.png" alt="">
+</p>
+<p align="center">chopper-titan/chopper-titan-v4.pbrt</p>
+<br>
+
+<p align="center">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/staircase-1024.png" alt="">
+</p>
+<p align="center">staircase/staircase.pbrt</p>
+<br>
+
+<p align="center">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/material-testball-sequence-1024.png" alt="">
+</p>
+<p align="center">material-testball/material-testball-sequence.pbrt</p>
+<br>
+
+<p align="center">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/caustic-glass-v4-1024-before-denoise.png" width="49%" alt="">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/caustic-glass-v4-1024-density.png" width="49%" alt="">
+</p>
+<p align="center">caustic-glass/caustic-glass-v4.pbrt &nbsp;|&nbsp; MLT sampling density</p>
+<br>
+
+<p align="center">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/volumetric-caustic-1024.png" width="49%" alt="">
+  <img src="https://github.com/w3ntao/pbrt-minus-gallery/raw/main/volumetric-caustic-1024-density.png" width="49%" alt="">
+</p>
+<p align="center">volumetric-caustic/volumetric-caustic.pbrt &nbsp;|&nbsp; MLT sampling density</p>

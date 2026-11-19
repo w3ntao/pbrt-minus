@@ -237,6 +237,12 @@ void SceneBuilder::build_integrator() {
     integrator_parameters = build_parameter_dictionary(sub_vector(integrator_tokens, 2));
     const auto &parameters = integrator_parameters;
 
+    const int ray_split_depth = parameters.get_integer("raysplit", 1);
+    if (ray_split_depth < 0 || ray_split_depth > 8) {
+        printf("\nERROR: illegal raysplit `%d`; expected a value in [0, 8]\n", ray_split_depth);
+        REPORT_FATAL_ERROR();
+    }
+
     if (!integrator_name.has_value()) {
         integrator_name = parameters.get_one_string("Integrator", "path");
     }
@@ -274,14 +280,18 @@ void SceneBuilder::build_integrator() {
     }
 
     if (integrator_name == "path") {
+        const bool use_russian_roulette = parameters.get_bool("russianroulette", true);
         wavefront_path_integrator = allocator.create<WavefrontPathIntegrator>(samples_per_pixel.value(), sampler_type,
-                                                                              parameters, integrator_base, allocator);
+                                                                              parameters, integrator_base, allocator,
+                                                                              ray_split_depth, use_russian_roulette);
         return;
     }
 
     if (integrator_name == "megakernelpath") {
+        const bool use_russian_roulette = parameters.get_bool("russianroulette", true);
         megakernel_path_integrator = allocator.create<MegakernelPathIntegrator>(samples_per_pixel.value(), sampler_type,
-                                                                                parameters, integrator_base, allocator);
+                                                                                parameters, integrator_base, allocator,
+                                                                                ray_split_depth, use_russian_roulette);
         return;
     }
 
@@ -1117,7 +1127,7 @@ void SceneBuilder::render() const {
     const auto num_pixels = size_t(film_resolution.x) * film_resolution.y;
     auto *path_depths = denoiser_allocator.allocate<Real>(num_pixels);
     auto *statistics_integrator = denoiser_allocator.create<MegakernelPathIntegrator>(
-        statistics_spp, statistics_sampler_type, integrator_parameters, integrator_base, denoiser_allocator);
+        statistics_spp, statistics_sampler_type, integrator_parameters, integrator_base, denoiser_allocator, 1, true);
     film->attach_transformed_statistics(transformed_statistics);
     statistics_integrator->render_denoising_statistics(film, path_depths, match_bdpt_depth);
     film->attach_transformed_statistics(nullptr);

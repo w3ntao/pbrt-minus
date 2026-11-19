@@ -18,13 +18,14 @@ struct PTSample {
 
 class MegakernelPathIntegrator {
   public:
-    static constexpr int RAY_SPLIT_DEPTH = 2;
+    const int RAY_SPLIT_DEPTH;
     // 0: no split, otherwise split for the first n bounces (for transmissive dielectric materials only)
 
     struct PathContinuation;
 
     MegakernelPathIntegrator(int samples_per_pixel, Sampler::Type sampler_type, const ParameterDictionary &parameters,
-                             const IntegratorBase *integrator_base, GPUMemoryAllocator &allocator);
+                             const IntegratorBase *integrator_base, GPUMemoryAllocator &allocator, int ray_split_depth,
+                             bool use_russian_roulette);
 
     void render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename, bool preview) const;
 
@@ -42,7 +43,8 @@ class MegakernelPathIntegrator {
     static PTSample evaluate_Li_volume(const Ray &primary_ray, SampledWavelengths &lambda, Sampler *sampler,
                                        const IntegratorBase *base, int max_depth, bool regularize,
                                        bool match_bdpt_depth = false, Real path_depth = 0.0,
-                                       const PathContinuation *continuation = nullptr);
+                                       const PathContinuation *continuation = nullptr, int ray_split_depth = 2,
+                                       bool use_russian_roulette = true);
 
     PBRT_CPU_GPU
     static SampledSpectrum sample_Ld_volume(const SurfaceInteraction &surface_interaction, const BSDF *bsdf,
@@ -59,4 +61,5 @@ class MegakernelPathIntegrator {
     int samples_per_pixel = 0;
     int max_depth = 0;
     bool regularize = true;
+    bool use_russian_roulette = true;
 };

@@ -19,6 +19,7 @@
 #include <pbrt/util/russian_roulette.h>
 #include <pbrt/util/thread_pool.h>
 #include <pbrt/util/timer.h>
+#include <stdexcept>
 
 static constexpr int NUM_THREADS = 256;
 
@@ -80,7 +81,7 @@ static __global__ void gpu_reset_path_state(WavefrontPathIntegrator::PathState *
 
 static PBRT_GPU void process_path(const int path_idx, const WavefrontPathIntegrator::PathState *path_state,
                                   WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base,
-                                  const int max_depth) {
+                                  const int max_depth, const bool use_russian_roulette) {
     if (path_state->finished[path_idx]) {
         return;
     }
@@ -102,7 +103,7 @@ static PBRT_GPU void process_path(const int path_idx, const WavefrontPathIntegra
 
     if (!should_terminate_path) {
         auto &next_time_russian_roulette = path_state->next_time_russian_roulette[path_idx];
-        if (depth >= next_time_russian_roulette) {
+        if (use_russian_roulette && depth >= next_time_russian_roulette) {
             // possibly terminate the path with Russian roulette
             should_terminate_path |=
                 russian_roulette(beta, &path_state->samplers[path_idx], &next_time_russian_roulette);
@@ -217,18 +218,19 @@ static PBRT_GPU void process_path(const int path_idx, const WavefrontPathIntegra
 
 __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_state,
                               WavefrontPathIntegrator::Queues *queues, const int ping_pong_idx,
-                              const IntegratorBase *base, const int max_depth) {
+                              const IntegratorBase *base, const int max_depth, const bool use_russian_roulette,
+                              const int ray_num_per_sample, const int initial_ray_pool_size) {
     const int primary_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (primary_idx >= WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE) {
+    if (primary_idx >= initial_ray_pool_size) {
         return;
     }
 
     bool had_active_before = false;
     bool all_finished_after = true;
-    for (int branch = 0; branch < WavefrontPathIntegrator::RAY_NUM_PER_SAMPLE; ++branch) {
-        const int path_idx = primary_idx + branch * WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+    for (int branch = 0; branch < ray_num_per_sample; ++branch) {
+        const int path_idx = primary_idx + branch * initial_ray_pool_size;
         had_active_before |= !path_state->finished[path_idx];
-        process_path(path_idx, path_state, queues, base, max_depth);
+        process_path(path_idx, path_state, queues, base, max_depth, use_russian_roulette);
         all_finished_after &= path_state->finished[path_idx];
     }
     if (!had_active_before || !all_finished_after) {
@@ -237,8 +239,8 @@ __global__ void control_logic(const WavefrontPathIntegrator::PathState *path_sta
 
     const auto &lambda = path_state->camera_lambdas[primary_idx];
     SampledSpectrum radiance = 0;
-    for (int branch = 0; branch < WavefrontPathIntegrator::RAY_NUM_PER_SAMPLE; ++branch) {
-        const int path_idx = primary_idx + branch * WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+    for (int branch = 0; branch < ray_num_per_sample; ++branch) {
+        const int path_idx = primary_idx + branch * initial_ray_pool_size;
         radiance += path_state->camera_L[path_idx] +
                     convert_to_camera_pdf(path_state->L[path_idx], lambda, path_state->lambdas[path_idx]);
     }
@@ -280,9 +282,9 @@ __global__ void write_frame_buffer(Film *film, const FrameBuffer *frame_buffer_q
     }
 }
 
-__global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues) {
+__global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues, const int initial_ray_pool_size) {
     const int worker_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (worker_idx >= WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE) {
+    if (worker_idx >= initial_ray_pool_size) {
         return;
     }
 
@@ -290,7 +292,8 @@ __global__ void fill_new_path_queue(WavefrontPathIntegrator::Queues *queues) {
 }
 
 __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_state,
-                                      WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base) {
+                                      WavefrontPathIntegrator::Queues *queues, const IntegratorBase *base,
+                                      const int ray_num_per_sample, const int initial_ray_pool_size) {
     const int queue_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (queue_idx >= queues->new_paths->counter) {
         return;
@@ -310,8 +313,8 @@ __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_s
     const int pixel_idx = unique_path_id % (width * height);
     const int sample_idx = unique_path_id / (width * height);
 
-    for (int branch = 0; branch < WavefrontPathIntegrator::RAY_NUM_PER_SAMPLE; ++branch) {
-        const int branch_idx = path_idx + branch * WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+    for (int branch = 0; branch < ray_num_per_sample; ++branch) {
+        const int branch_idx = path_idx + branch * initial_ray_pool_size;
         path_state->reset_path(branch_idx);
         path_state->finished[branch_idx] = branch != 0;
     }
@@ -325,8 +328,8 @@ __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_s
     path_state->camera_samples[path_idx] = sampler->get_camera_sample(p_pixel, base->filter);
     const auto lu = sampler->get_1d();
     path_state->lambdas[path_idx] = SampledWavelengths::sample_visible(lu);
-    for (int branch = 1; branch < WavefrontPathIntegrator::RAY_NUM_PER_SAMPLE; ++branch) {
-        const int branch_idx = path_idx + branch * WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+    for (int branch = 1; branch < ray_num_per_sample; ++branch) {
+        const int branch_idx = path_idx + branch * initial_ray_pool_size;
         path_state->lambdas[branch_idx] = path_state->lambdas[path_idx];
     }
     path_state->camera_lambdas[path_idx] = path_state->lambdas[path_idx];
@@ -339,13 +342,13 @@ __global__ void gpu_generate_new_path(WavefrontPathIntegrator::PathState *path_s
 }
 
 void generate_new_path(WavefrontPathIntegrator::PathState *path_state, WavefrontPathIntegrator::Queues *queues,
-                       const IntegratorBase *base) {
+                       const IntegratorBase *base, const int ray_num_per_sample, const int initial_ray_pool_size) {
     if (queues->new_paths->counter <= 0) {
         return;
     }
 
-    gpu_generate_new_path<<<divide_and_ceil(queues->new_paths->counter, NUM_THREADS), NUM_THREADS>>>(path_state, queues,
-                                                                                                     base);
+    gpu_generate_new_path<<<divide_and_ceil(queues->new_paths->counter, NUM_THREADS), NUM_THREADS>>>(
+        path_state, queues, base, ray_num_per_sample, initial_ray_pool_size);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
@@ -395,7 +398,7 @@ __global__ void gpu_evaluate_material(const WavefrontPathIntegrator::Queues::Sin
     // get_bsdf() may terminate secondary wavelengths. Keep prior radiance separate
     // from subsequent contributions evaluated with the reduced packet.
     if (!secondary_terminated_before && lambda.SecondaryTerminated()) {
-        const int primary_idx = path_idx % WavefrontPathIntegrator::INITIAL_RAY_POOL_SIZE;
+        const int primary_idx = path_idx % integrator->INITIAL_RAY_POOL_SIZE;
         path_state.camera_L[path_idx] += convert_to_camera_pdf(
             path_state.L[path_idx], path_state.camera_lambdas[primary_idx], lambda_before_material);
         path_state.L[path_idx] = 0;
@@ -639,7 +642,7 @@ WavefrontPathIntegrator::PathState::PathState(const Point2i &_resolution, const 
     global_path_counter = 0;
 }
 
-void WavefrontPathIntegrator::PathState::build_path(GPUMemoryAllocator &allocator) {
+void WavefrontPathIntegrator::PathState::build_path(GPUMemoryAllocator &allocator, const int initial_ray_pool_size) {
     if (total_path_num / samples_per_pixel != image_resolution.x * image_resolution.y) {
         REPORT_FATAL_ERROR();
     }
@@ -647,7 +650,7 @@ void WavefrontPathIntegrator::PathState::build_path(GPUMemoryAllocator &allocato
     camera_samples = allocator.allocate<CameraSample>(PATH_POOL_SIZE);
     camera_rays = allocator.allocate<CameraRay>(PATH_POOL_SIZE);
     lambdas = allocator.allocate<SampledWavelengths>(PATH_POOL_SIZE);
-    camera_lambdas = allocator.allocate<SampledWavelengths>(INITIAL_RAY_POOL_SIZE);
+    camera_lambdas = allocator.allocate<SampledWavelengths>(initial_ray_pool_size);
     camera_L = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
 
     L = allocator.allocate<SampledSpectrum>(PATH_POOL_SIZE);
@@ -694,11 +697,18 @@ WavefrontPathIntegrator::Queues::Queues(GPUMemoryAllocator &allocator) {
 
 WavefrontPathIntegrator::WavefrontPathIntegrator(const int _samples_per_pixel, const Sampler::Type sampler_type,
                                                  const ParameterDictionary &parameters, const IntegratorBase *_base,
-                                                 GPUMemoryAllocator &allocator)
-    : path_state(PathState(_base->camera->get_camera_base()->resolution, _samples_per_pixel, sampler_type)),
+                                                 GPUMemoryAllocator &allocator, const int ray_split_depth,
+                                                 const bool _use_russian_roulette)
+    : RAY_SPLIT_DEPTH(ray_split_depth), RAY_NUM_PER_SAMPLE(1 << ray_split_depth),
+      INITIAL_RAY_POOL_SIZE(PATH_POOL_SIZE / RAY_NUM_PER_SAMPLE),
+      path_state(PathState(_base->camera->get_camera_base()->resolution, _samples_per_pixel, sampler_type)),
       queues(allocator), base(_base), cie_y(parameters.global_spectra->cie_y), samples_per_pixel(_samples_per_pixel),
-      max_depth(parameters.get_integer("maxdepth", 5)), regularize(parameters.get_bool("regularize", false)) {
-    path_state.build_path(allocator);
+      max_depth(parameters.get_integer("maxdepth", 5)), regularize(parameters.get_bool("regularize", false)),
+      use_russian_roulette(_use_russian_roulette) {
+    if (PATH_POOL_SIZE % RAY_NUM_PER_SAMPLE != 0) {
+        throw std::invalid_argument("raysplit produces an incomplete wavefront path pool");
+    }
+    path_state.build_path(allocator, INITIAL_RAY_POOL_SIZE);
 }
 
 void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, const std::string &output_filename,
@@ -718,14 +728,15 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, co
     }
 
     // Only primary slots generate camera samples; other slots in each group are reserved for splits.
-    fill_new_path_queue<<<divide_and_ceil(INITIAL_RAY_POOL_SIZE, NUM_THREADS), NUM_THREADS>>>(&queues);
+    fill_new_path_queue<<<divide_and_ceil(INITIAL_RAY_POOL_SIZE, NUM_THREADS), NUM_THREADS>>>(&queues,
+                                                                                              INITIAL_RAY_POOL_SIZE);
     CHECK_CUDA_ERROR(cudaGetLastError());
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     queues.new_paths->counter = INITIAL_RAY_POOL_SIZE;
     queues.rays->counter = 0;
 
-    generate_new_path(&path_state, &queues, base);
+    generate_new_path(&path_state, &queues, base, RAY_NUM_PER_SAMPLE, INITIAL_RAY_POOL_SIZE);
 
     if (queues.rays->counter <= 0) {
         REPORT_FATAL_ERROR();
@@ -794,7 +805,8 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, co
         }
 
         control_logic<<<divide_and_ceil(INITIAL_RAY_POOL_SIZE, NUM_THREADS), NUM_THREADS>>>(
-            &path_state, &queues, ping_pong_idx, base, max_depth);
+            &path_state, &queues, ping_pong_idx, base, max_depth, use_russian_roulette, RAY_NUM_PER_SAMPLE,
+            INITIAL_RAY_POOL_SIZE);
         CHECK_CUDA_ERROR(cudaGetLastError());
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         mutex[ping_pong_idx].unlock();
@@ -815,7 +827,7 @@ void WavefrontPathIntegrator::render(Film *film, GreyScaleFilm &firefly_mask, co
             printf("pass: %d, generate_new_path(): %d\n", pass, queues.rays->counter);
         }
 
-        generate_new_path(&path_state, &queues, base);
+        generate_new_path(&path_state, &queues, base, RAY_NUM_PER_SAMPLE, INITIAL_RAY_POOL_SIZE);
 
         timer.stop("stage 4 generate_new_path()");
 
