@@ -35,7 +35,7 @@ class Timer {
 
         Real examine_time = 0;
         for (auto const &[tag, value] : recorder) {
-            printf("    %s: %.1f sec (%.1f%)\n", tag.c_str(), value, value * 100.f / all_time);
+            printf("    %s: %.1f sec (%.1f%%)\n", tag.c_str(), value, value * 100.f / all_time);
 
             examine_time += value;
         }

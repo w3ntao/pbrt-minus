@@ -221,7 +221,7 @@ class SceneBuilder {
         const auto input_file = command_line_option.input_file;
 
         if (std::filesystem::path p(input_file); p.extension() != ".pbrt") {
-            printf("ERROR: input file `%s` not ended with `.pbrt`\n", input_file.c_str());
+            printf("ERROR: input filename `%s` does not end with `.pbrt`\n", input_file.c_str());
             REPORT_FATAL_ERROR();
         }
 

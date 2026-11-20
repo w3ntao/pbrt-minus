@@ -388,7 +388,7 @@ PTSample MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray, Sa
             break;
         }
 
-        // othwerwise: not dielectric, sample one direction and continue
+        // otherwise: not dielectric, sample one direction and continue
         auto bs = bsdf.sample_f(wo, sampler->get_1d(), sampler->get_2d());
         if (!bs) {
             break;
@@ -404,7 +404,7 @@ PTSample MegakernelPathIntegrator::evaluate_Li_volume(const Ray &primary_ray, Sa
 
         prev_interaction = surface_interaction;
         ray = surface_interaction.spawn_ray(bs->wi);
-        // different with PBRT-v4: ignore the DifferentialRay
+        // Unlike PBRT-v4: ignore the DifferentialRay
 
         path_depth += 1;
         consecutive_interfaces = 0;

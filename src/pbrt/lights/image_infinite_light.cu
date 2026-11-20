@@ -59,7 +59,7 @@ ImageInfiniteLight::ImageInfiniteLight(const Transform &render_from_light, const
     }
 
     if (num_ignore > 0) {
-        printf("ImageInfiniteLight::%s(): %d/%d (%.1f%) pixels ignored (ignored threshold: %.1f%)\n", __func__,
+        printf("ImageInfiniteLight::%s(): %d/%d (%.1f%%) pixels ignored (ignored threshold: %.1f%%)\n", __func__,
                num_ignore, num_pixels, Real(num_ignore) / num_pixels * 100, ignore_threshold * 100);
     }
 

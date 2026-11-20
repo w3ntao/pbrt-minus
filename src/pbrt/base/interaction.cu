@@ -7,7 +7,7 @@
 
 PBRT_CPU_GPU
 void SurfaceInteraction::compute_differentials(const Camera *camera, int samples_per_pixel) {
-    // different with PBRT-v4: ignore the DifferentialRay
+    // Unlike PBRT-v4: ignore the DifferentialRay
     camera->approximate_dp_dxy(p(), n, samples_per_pixel, &dpdx, &dpdy);
 
     // Estimate screen-space change in $(u,v)$
@@ -39,10 +39,8 @@ void SurfaceInteraction::compute_differentials(const Camera *camera, int samples
 }
 
 PBRT_CPU_GPU
-void SurfaceInteraction::set_intersection_properties(const Material *_material,
-                                                     const Light *_area_light,
-                                                     const MediumInterface *_medium_interface,
-                                                     const Medium *_medium) {
+void SurfaceInteraction::set_intersection_properties(const Material *_material, const Light *_area_light,
+                                                     const MediumInterface *_medium_interface, const Medium *_medium) {
     if (_material == nullptr) {
         material = nullptr;
     } else {
@@ -64,9 +62,8 @@ void SurfaceInteraction::set_intersection_properties(const Material *_material,
 }
 
 PBRT_CPU_GPU
-void SurfaceInteraction::set_shading_geometry(const Normal3f &ns, const Vector3f &dpdus,
-                                              const Vector3f &dpdvs, const Normal3f &dndus,
-                                              const Normal3f &dndvs,
+void SurfaceInteraction::set_shading_geometry(const Normal3f &ns, const Vector3f &dpdus, const Vector3f &dpdvs,
+                                              const Normal3f &dndus, const Normal3f &dndvs,
                                               bool orientationIsAuthoritative) {
     // Compute _shading.n_ for _SurfaceInteraction_
     shading.n = ns;
@@ -90,8 +87,7 @@ void SurfaceInteraction::set_shading_geometry(const Normal3f &ns, const Vector3f
 }
 
 PBRT_CPU_GPU
-BSDF SurfaceInteraction::get_bsdf(SampledWavelengths &lambda, const Camera *camera,
-                                  int samples_per_pixel) {
+BSDF SurfaceInteraction::get_bsdf(SampledWavelengths &lambda, const Camera *camera, int samples_per_pixel) {
     compute_differentials(camera, samples_per_pixel);
 
     auto material_eval_context = MaterialEvalContext(*this);

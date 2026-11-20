@@ -493,7 +493,7 @@ __global__ void volume_scatter(WavefrontPathIntegrator::PathState *path_state, W
 
     path_state->depth[path_idx] += 1;
     path_state->in_volume[path_idx] = true;
-    // dont't add this path into ray_cast() immediately
+    // don't add this path into ray_cast() immediately
     // that would bypass russian roulette, leading to possibly infinite bounce
 
     path_state->mis_parameters[path_idx].specular_bounce = false;

@@ -103,7 +103,7 @@ void GreyScaleFilm::write_to_png(const std::string &filename, bool grey) const {
     // if there's an error, display it
     if (unsigned error = lodepng::encode(filename, png_pixels, resolution.x, resolution.y); error) {
         std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error) << std::endl;
-        throw std::runtime_error("lodepng::encode() fail");
+        throw std::runtime_error("lodepng::encode() failed");
     }
 }
 
@@ -116,6 +116,6 @@ void GreyScaleFilm::write_mask_to_png(const std::string &filename) const {
 
     if (unsigned error = lodepng::encode(filename, png_pixels, resolution.x, resolution.y, LCT_GREY, 8); error) {
         std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error) << std::endl;
-        throw std::runtime_error("lodepng::encode() fail");
+        throw std::runtime_error("lodepng::encode() failed");
     }
 }

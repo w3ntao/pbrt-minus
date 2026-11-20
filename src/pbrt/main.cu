@@ -8,7 +8,7 @@ inline int _ConvertSMVer2Cores(int major, int minor) {
     // Defines for GPU Architecture types (using the SM version to determine
     // the # of cores per SM
     typedef struct {
-        int SM; // 0xMm (hexidecimal notation), M = SM Major version,
+        int SM; // 0xMm (hexadecimal notation), M = SM Major version,
         // and m = SM minor version
         int Cores;
     } sSMtoCores;
@@ -87,7 +87,7 @@ void display_system_info() {
         printf("        cuda cores:         %u\n", cuda_cores);
         printf("        total memory:       %.1f GB\n", float(props.totalGlobalMem / 1024 / 1024) / 1024.0f);
         printf("        max threads per block: %u\n", props.maxThreadsPerBlock);
-        printf("        wrap size:             %u\n", props.warpSize);
+        printf("        warp size:             %u\n", props.warpSize);
     }
 
     print_arch_global<<<1, 1>>>();

@@ -559,7 +559,7 @@ void SceneBuilder::parse_make_named_medium(const std::vector<Token> &tokens) {
     const auto parameters = build_parameter_dictionary(sub_vector(tokens, 2));
 
     if (const auto type_of_medium = parameters.get_one_string("type"); type_of_medium != "homogeneous") {
-        printf("%s(): : only `homogeneous` supported\n");
+        printf("%s(): only `homogeneous` supported\n", __func__);
         REPORT_FATAL_ERROR();
     }
 
@@ -624,7 +624,7 @@ void SceneBuilder::parse_area_light_source(const std::vector<Token> &tokens) {
     }
 
     if (tokens[1] != Token(TokenType::String, "diffuse")) {
-        printf("%s(): : only `diffuse` supported\n");
+        printf("%s(): only `diffuse` supported\n", __func__);
         REPORT_FATAL_ERROR();
     }
 
@@ -961,7 +961,7 @@ void SceneBuilder::preprocess() {
     const auto light_size = gpu_lights.size();
     printf("total lights: %zu\n", light_size);
     for (auto const &kv : light_type_counter) {
-        printf("    %s: %d (%.1f%)\n", kv.first.c_str(), kv.second, static_cast<double>(kv.second) / light_size * 100);
+        printf("    %s: %d (%.1f%%)\n", kv.first.c_str(), kv.second, static_cast<double>(kv.second) / light_size * 100);
     }
     printf("\n");
 
@@ -973,7 +973,7 @@ void SceneBuilder::preprocess() {
 
     printf("total materials: %zu\n", material_type_counter.size());
     for (const auto &[name, num] : material_type_counter) {
-        printf("    %s: %d (%.1f%)\n", name.c_str(), num, static_cast<double>(num) / total_material_size * 100);
+        printf("    %s: %d (%.1f%%)\n", name.c_str(), num, static_cast<double>(num) / total_material_size * 100);
     }
     printf("\n");
 }

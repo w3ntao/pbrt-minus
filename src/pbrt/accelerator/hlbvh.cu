@@ -300,7 +300,7 @@ HLBVH::HLBVH(const std::vector<const Primitive *> &gpu_primitives, const std::st
         }
 
         if (DEBUG_MODE) {
-            printf("HLBVH: %zu/%d (%.1f%) treelets filled (max primitives in a treelet: %d)\n",
+            printf("HLBVH: %zu/%d (%.1f%%) treelets filled (max primitives in a treelet: %d)\n",
                    dense_treelet_indices.size(), MAX_TREELET_NUM,
                    double(dense_treelet_indices.size()) / MAX_TREELET_NUM * 100, max_primitive_num_in_a_treelet);
         }

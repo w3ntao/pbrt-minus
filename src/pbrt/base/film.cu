@@ -149,7 +149,7 @@ void write_rgb_to_png(const std::string &filename, Point2i resolution, const cha
     // if there's an error, display it
     if (unsigned error = lodepng::encode(filename, png_pixels, width, height); error) {
         std::cerr << "lodepng::encoder error " << error << ": " << lodepng_error_text(error) << std::endl;
-        throw std::runtime_error("lodepng::encode() fail");
+        throw std::runtime_error("lodepng::encode() failed");
     }
 }
 
